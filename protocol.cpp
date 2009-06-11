@@ -60,7 +60,7 @@ int message_transmit_entropy_data(int socket_fd, unsigned char *bytes, int n_byt
 	char reply[8 + 1];
 	char header[8 + 1];
 
-	dolog(LOG_DEBUG, "request to send %d bytes", sizeof(bytes) - 8);
+	dolog(LOG_DEBUG, "request to send %d bytes", n_bytes);
 
 	snprintf(header, sizeof(header), "0002%04d", n_bytes * 8);
 

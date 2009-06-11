@@ -12,6 +12,14 @@ const char *server_type = "server_timers v" VERSION;
 #include "log.h"
 #include "protocol.h"
 
+void help(void)
+{
+	printf("-i host   eb-host to connect to\n");
+	printf("-l file   log to file 'file'\n");
+	printf("-s        log to syslog\n");
+	printf("-n        do not fork\n");
+}
+
 double gen_entropy_data(void)
 {
 	double start;
@@ -29,21 +37,54 @@ double gen_entropy_data(void)
 
 int main(int argc, char *argv[])
 {
-	unsigned char bytes[1240];
+	unsigned char bytes[1249];
 	unsigned char byte;
-	int bits = 0, index = 8;
+	int bits = 0, index = 0;
 	char *host = (char *)"localhost";
 	int port = 55225;
 	int socket_fd = -1;
+	int c;
+	char do_not_fork = 0, log_console = 0, log_syslog = 0;
+	char *log_logfile = NULL;
+
+	printf("%s, (C) 2009 by folkert@vanheusden.com\n", server_type);
+
+	while((c = getopt(argc, argv, "i:l:sn")) != -1)
+	{
+		switch(c)
+		{
+			case 'i':
+				host = optarg;
+				break;
+
+			case 's':
+				log_syslog = 1;
+				break;
+
+			case 'l':
+				log_logfile = optarg;
+				break;
+
+			case 'n':
+				do_not_fork = 1;
+				log_console = 1;
+				break;
+
+			default:
+				help();
+				return 1;
+		}
+	}
+
+	set_logging_parameters(log_console, log_logfile, log_syslog);
+
+	if (!do_not_fork)
+	{
+		if (daemon(-1, -1) == -1)
+			error_exit("fork failed");
+	}
 
 	signal(SIGPIPE, SIG_IGN);
-
-//	printf("timer_entropyd v" VERSION ", (C) 2009 by folkert@vanheusden.com\n\n");
-
-//	if (daemon(-1, -1) == -1)
-//		error_exit("failed to become daemon process");
-
-	sprintf((char *)bytes, "0002%04d", (int)(sizeof(bytes) - 8) * 8);
 
 	for(;;)
 	{
@@ -70,13 +111,7 @@ int main(int argc, char *argv[])
 
 			if (index == sizeof(bytes))
 			{
-				int value;
-				char reply[8 + 1];
-
-				dolog(LOG_DEBUG, "request to send %d bytes", sizeof(bytes) - 8);
-
-				// header
-				if (WRITE(socket_fd, (char *)bytes, 8) != 8)
+				if (message_transmit_entropy_data(socket_fd, bytes, index) == -1)
 				{
 					dolog(LOG_INFO, "connection closed");
 					close(socket_fd);
@@ -84,45 +119,7 @@ int main(int argc, char *argv[])
 					continue;
 				}
 
-				// ack from server?
-				if (READ(socket_fd, reply, 8) != 8)
-				{
-					dolog(LOG_INFO, "connection closed");
-					close(socket_fd);
-					socket_fd = -1;
-					continue;
-				}
-
-				value = atoi(&reply[4]);
-				reply[4] = 0x00;
-
-				if (value <= 0)
-					error_exit("value %d less then 1", value);
-
-				if (strcmp(reply, "0001") == 0)			// ACK
-				{
-					int cur_n_bytes = (value + 7) / 8;
-
-					dolog(LOG_DEBUG, "Transmitting %d bytes to %s:%d", cur_n_bytes, host, port);
-
-					if (WRITE(socket_fd, (char *)&bytes[8], cur_n_bytes) != cur_n_bytes)
-					{
-						dolog(LOG_INFO, "connection closed");
-						close(socket_fd);
-						socket_fd = -1;
-						continue;
-					}
-				}
-				else if (strcmp(reply, "9001") == 0)		// NACK
-				{
-					dolog(LOG_DEBUG, "pool full, sleeping %d seconds", value);
-
-					sleep(value);
-				}
-				else
-					error_exit("garbage received: %s", reply);
-
-				index = 8; // skip header
+				index = 0; // skip header
 			}
 		}
 	}

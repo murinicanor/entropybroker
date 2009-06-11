@@ -17,6 +17,9 @@ server_audio:
 server_timers:
 	gcc $(CXXFLAGS) -lstdc++ -o server_timers server_timers.cpp log.cpp utils.cpp error.cpp kernel_prng_io.cpp protocol.cpp
 
+server_v4l:
+	gcc -lstdc++ -DVERSION=\"0.1\" -o server_v4l server_v4l.cpp error.cpp log.cpp protocol.cpp utils.cpp kernel_prng_io.cpp
+
 client_linux_kernel:
 	gcc -lstdc++ $(CXXFLAGS) -o client_linux_kernel client_linux_kernel.cpp error.cpp kernel_prng_io.cpp utils.cpp log.cpp math.cpp
 

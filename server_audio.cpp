@@ -81,6 +81,15 @@ int setparams(snd_pcm_t *chandle, int sample_rate, snd_pcm_format_t *format)
 
 #define order(a, b)     (((a) == (b)) ? -1 : (((a) > (b)) ? 1 : 0))
 
+void help(void)
+{
+	printf("-i host   eb-host to connect to\n");
+	printf("-d dev    audio-device, default %s\n", cdevice);
+	printf("-l file   log to file 'file'\n");
+	printf("-s        log to syslog\n");
+	printf("-n        do not fork\n");
+}
+
 void main_loop(char *host, int port)
 {
 	int n_to_do, bits_out=0, loop;
@@ -96,7 +105,6 @@ void main_loop(char *host, int port)
 	int socket_fd = -1;
 	unsigned char bytes[1249]; // 1249 * 8: 9992, must be less then 9999
 	int bytes_out = 0;
-
 	if ((err = snd_pcm_open(&chandle, cdevice, SND_PCM_STREAM_CAPTURE, 0)) < 0)
 		error_exit("Record open error: %s", snd_strerror(err));
 
@@ -232,6 +240,51 @@ int main(int argc, char *argv[])
 {
 	char *host = (char *)"localhost";
 	int port = 55225;
+	int c;
+	char do_not_fork = 0, log_console = 0, log_syslog = 0;
+	char *log_logfile = NULL;
+
+	printf("%s, (C) 2009 by folkert@vanheusden.com\n", server_type);
+
+	while((c = getopt(argc, argv, "i:d:l:sn")) != -1)
+	{
+		switch(c)
+		{
+			case 'd':
+				cdevice = optarg;
+				break;
+
+			case 'i':
+				host = optarg;
+				break;
+
+			case 's':
+				log_syslog = 1;
+				break;
+
+			case 'l':
+				log_logfile = optarg;
+				break;
+
+			case 'n':
+				do_not_fork = 1;
+				log_console = 1;
+				break;
+
+			default:
+				help();
+				return 1;
+		}
+	}
+
+	set_logging_parameters(log_console, log_logfile, log_syslog);
+
+	if (!do_not_fork)
+	{
+		if (daemon(-1, -1) == -1)
+			error_exit("fork failed");
+	}
+
 
 	signal(SIGPIPE, SIG_IGN);
 

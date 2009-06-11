@@ -2,27 +2,71 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <signal.h>
+#include <unistd.h>
 
+#include "error.h"
 #include "pool.h"
 #include "client.h"
 #include "utils.h"
 #include "log.h"
 #include "handle_pool.h"
 
+void help(void)
+{
+        printf("-l file   log to file 'file'\n");
+        printf("-s        log to syslog\n");
+        printf("-n        do not fork\n");
+}
+
 int main(int argc, char *argv[])
 {
 	int loop;
 	pool **pools;
 	int n_pools = 14;
+	int c;
+	char do_not_fork = 0, log_console = 0, log_syslog = 0;
+	char *log_logfile = NULL;
+
+	printf("eb v " VERSION ", (C) 2009 by folkert@vanheusden.com\n");
+
+	while((c = getopt(argc, argv, "l:sn")) != -1)
+	{
+		switch(c)
+		{
+			case 's':
+				log_syslog = 1;
+				break;
+
+			case 'l':
+				log_logfile = optarg;
+				break;
+
+			case 'n':
+				do_not_fork = 1;
+				log_console = 1;
+				break;
+
+			default:
+				help();
+				return 1;
+		}
+	}
+
+	set_logging_parameters(log_console, log_logfile, log_syslog);
+
+	if (!do_not_fork)
+	{
+		if (daemon(-1, -1) == -1)
+			error_exit("fork failed");
+	}
 
 	signal(SIGPIPE, SIG_IGN);
-
-//	set_logging_parameters(1, "LOG", 0);
 
 	pools = (pool **)malloc(sizeof(pool *) * n_pools);
 	for(loop=0; loop<n_pools; loop++)
 		pools[loop] = new pool();
 
+#if 0
 {
 unsigned char *buffer;
 
@@ -52,8 +96,8 @@ for(;;)
 	}
 }
 #endif
-	int event_bits = add_event(pools, n_pools, get_ts());
-	dolog(LOG_DEBUG, "added %d bits of startup-event-entropy to pool", event_bits);
+#endif
+	dolog(LOG_DEBUG, "added %d bits of startup-event-entropy to pool", add_event(pools, n_pools, get_ts()));
 
 	main_loop(pools, n_pools, 60, "0.0.0.0", 55225);
 

@@ -26,9 +26,22 @@ int send_denied_empty(int fd, statistics_t *stats)
 	int seconds = DEFAULT_SLEEP_WHEN_POOLS_EMPTY;
 	char buffer[4+4+1];
 
+	stats -> n_times_empty++;
+
 	// FIXME seconds = ... depending on stats
 
 	snprintf(buffer, sizeof(buffer), "9000%04d", seconds);
+
+	return WRITE(fd, buffer, 8) == 8 ? 0 : -1;
+}
+
+int send_denied_quota(int fd, statistics_t *stats, int reset_counters_interval)
+{
+	char buffer[4+4+1];
+
+	stats -> n_times_quota++;
+
+	snprintf(buffer, sizeof(buffer), "9002%04d", reset_counters_interval);
 
 	return WRITE(fd, buffer, 8) == 8 ? 0 : -1;
 }
@@ -37,6 +50,8 @@ int send_denied_full(client_t *client, pool **pools, int n_pools, statistics_t *
 {
 	char buffer[4+4+1];
 	int seconds = DEFAULT_SLEEP_WHEN_POOLS_FULL;
+
+	stats -> n_times_full++;
 
 	if (stats -> bps != 0)
 	{
@@ -54,7 +69,7 @@ int send_denied_full(client_t *client, pool **pools, int n_pools, statistics_t *
 	return 0;
 }
 
-int do_client_get(pool **pools, int n_pools, client_t *client, statistics_t *stats)
+int do_client_get(pool **pools, int n_pools, client_t *client, statistics_t *stats, int reset_counters_interval)
 {
 	unsigned char *buffer, *ent_buffer;
 	int cur_n_bits, cur_n_bytes;
@@ -82,10 +97,10 @@ int do_client_get(pool **pools, int n_pools, client_t *client, statistics_t *sta
 
 	dolog(LOG_DEBUG, "%s requested %d bits", client -> host, cur_n_bits);
 
-	//		cur_n_bits = min(cur_n_bits, client -> max_bits_per_interval - client -> bits_sent);
+	cur_n_bits = min(cur_n_bits, client -> max_bits_per_interval - client -> bits_sent);
 	dolog(LOG_DEBUG, "%s is allowed to now receive %d bits", client -> host, cur_n_bits);
 	if (cur_n_bits == 0)
-		return send_denied_empty(client -> socket_fd, stats);
+		return send_denied_quota(client -> socket_fd, stats, reset_counters_interval); // FIXME: send_denied_quota
 	if (cur_n_bits < 0)
 		error_exit("cur_n_bits < 0");
 
@@ -247,7 +262,7 @@ int do_client_server_type(pool **pools, int n_pools, client_t *client)
 	return 0;
 }
 
-int do_client(pool **pools, int n_pools, client_t *client, statistics_t *stats)
+int do_client(pool **pools, int n_pools, client_t *client, statistics_t *stats, int reset_counters_interval)
 {
 	char cmd[4 + 1];
 	cmd[4] = 0x00;
@@ -260,7 +275,7 @@ int do_client(pool **pools, int n_pools, client_t *client, statistics_t *stats)
 
 	if (strcmp(cmd, "0001") == 0)		// GET bits
 	{
-		return do_client_get(pools, n_pools, client, stats);
+		return do_client_get(pools, n_pools, client, stats, reset_counters_interval);
 	}
 	else if (strcmp(cmd, "0002") == 0)	// PUT bits
 	{
@@ -284,7 +299,7 @@ int do_client(pool **pools, int n_pools, client_t *client, statistics_t *stats)
 int lookup_client_settings(struct sockaddr_in *client_addr, client_t *client)
 {
 	// FIXME
-	client -> max_bits_per_interval=16000;
+	client -> max_bits_per_interval=16000000;
 }
 
 void main_loop(pool **pools, int n_pools, int reset_counters_interval, char *adapter, int port)
@@ -362,7 +377,7 @@ void main_loop(pool **pools, int n_pools, int reset_counters_interval, char *ada
 			{
 				if (FD_ISSET(clients[loop].socket_fd, &rfds))
 				{
-					if (do_client(pools, n_pools, &clients[loop], &stats) == -1)
+					if (do_client(pools, n_pools, &clients[loop], &stats, reset_counters_interval) == -1)
 					{
 						int n_to_move;
 
