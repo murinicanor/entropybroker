@@ -1,37 +1,61 @@
 #include <sys/time.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <signal.h>
+
 #include "pool.h"
-
-double get_ts(void)
-{
-        struct timeval ts;
-
-        if (gettimeofday(&ts, NULL) == -1)
-		printf("get_ts failed\n");
-
-        return (((double)ts.tv_sec) + ((double)ts.tv_usec)/1000000.0);
-}
-
+#include "client.h"
+#include "utils.h"
+#include "log.h"
+#include "handle_pool.h"
 
 int main(int argc, char *argv[])
 {
-	pool p;
 	int loop;
-	unsigned char buffer[8] = { "test" };
-	double start, end;
-	const int n = 1024*1024;
+	pool **pools;
+	int n_pools = 14;
 
-	p.add_entropy_data(buffer);
+	signal(SIGPIPE, SIG_IGN);
 
-	start = get_ts();
+//	set_logging_parameters(1, "LOG", 0);
 
-	for(loop=0; loop<(n / 8); loop++)
-		p.get_entropy_data(buffer);
+	pools = (pool **)malloc(sizeof(pool *) * n_pools);
+	for(loop=0; loop<n_pools; loop++)
+		pools[loop] = new pool();
 
-	end = get_ts();
+{
+unsigned char *buffer;
 
-	printf("%f s/byte\n", (end - start) / (double)n);
-	printf("%f bps\n", (double)n / (end - start));
+printf("total bits; %d\n", get_bit_sum(pools, n_pools));
+for(loop=0; loop<1000; loop++)
+	int event_bits = add_event(pools, n_pools, lrand48());
+printf("total bits; %d\n", get_bit_sum(pools, n_pools));
+//printf("%d\n", get_bits_from_pools(1000, pools, n_pools, &buffer, 0));
+//exit(1);
+}
+#if 0
+for(;;)
+{
+	static int cnt = 0;
+	unsigned char *buffer;
+
+	get_bits_from_pools(myrand(240) + 1, pools, n_pools, &buffer, 0);
+	free(buffer);
+
+	if (++cnt % 10000 == 0)
+		printf("%d\r", cnt);
+
+	if (get_bit_sum(pools, n_pools) < 8)
+	{
+		for(loop=0; loop<1000; loop++)
+			int event_bits = add_event(pools, n_pools, myrand(4000000));
+	}
+}
+#endif
+	int event_bits = add_event(pools, n_pools, get_ts());
+	dolog(LOG_DEBUG, "added %d bits of startup-event-entropy to pool", event_bits);
+
+	main_loop(pools, n_pools, 60, "0.0.0.0", 55225);
 
 	return 0;
 }
