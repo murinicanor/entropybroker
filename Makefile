@@ -2,35 +2,44 @@ VERSION=0.1
 
 DEBUG= -g #-D_DEBUG #-fprofile-arcs -ftest-coverage # -pg -g
 CXXFLAGS+=-O0 -DVERSION=\"${VERSION}\" $(DEBUG)
-LDFLAGS+=$(DEBUG) -lstdc++ -lcrypto -lssl
+LDFLAGS+=$(DEBUG) -lstdc++
 
-OBJS=client.o error.o handle_pool.o kernel_prng_io.o log.o main.o math.o pool.o utils.o
+OBJSeb=client.o error.o handle_pool.o kernel_prng_io.o log.o main.o math.o pool.o utils.o
+OBJSsa=server_audio.o error.o utils.o log.o kernel_prng_io.o protocol.o
+OBJSst=server_timers.o log.o utils.o error.o kernel_prng_io.o protocol.o
+OBJSsv=server_v4l.o error.o log.o protocol.o utils.o kernel_prng_io.o
+OBJSclk=client_linux_kernel.o error.o kernel_prng_io.o utils.o log.o math.o
 
-all: eb
+all: eb server_audio server_timers server_v4l client_linux_kernel
 
-eb: $(OBJS)
-	$(CC) -Wall -W $(OBJS) $(LDFLAGS) -o eb
+eb: $(OBJSeb)
+	$(CC) -Wall -W $(OBJSeb) $(LDFLAGS) -lcrypto -lssl -o eb
 
-server_audio:
-	gcc -pedantic -Wall -lstdc++ -lasound -g  $(CXXFLAGS) -o server_audio server_audio.cpp error.cpp utils.cpp log.cpp kernel_prng_io.cpp protocol.cpp
+server_audio: $(OBJSsa)
+	$(CC) -Wall -W $(OBJSsa) $(LDFLAGS) -lasound -o server_audio
 
-server_timers:
-	gcc $(CXXFLAGS) -lstdc++ -o server_timers server_timers.cpp log.cpp utils.cpp error.cpp kernel_prng_io.cpp protocol.cpp
+server_timers: $(OBJSst)
+	$(CC) -Wall -W $(OBJSst) $(LDFLAGS) -o server_timers
 
-server_v4l:
-	gcc -lstdc++ -DVERSION=\"0.1\" -o server_v4l server_v4l.cpp error.cpp log.cpp protocol.cpp utils.cpp kernel_prng_io.cpp
+server_v4l: $(OBJSsv)
+	$(CC) -Wall -W $(OBJSsv) $(LDFLAGS) -o server_v4l
 
-client_linux_kernel:
-	gcc -lstdc++ $(CXXFLAGS) -o client_linux_kernel client_linux_kernel.cpp error.cpp kernel_prng_io.cpp utils.cpp log.cpp math.cpp
+client_linux_kernel: $(OBJSclk)
+	$(CC) -Wall -W $(OBJSclk) $(LDFLAGS) -o client_linux_kernel
 
-install: eb
-	cp eb /usr/local/sbin
+install: eb server_audio server_timers server_v4l client_linux_kernel
+	mkdir -p /usr/local/entropybroker/bin
+	cp eb /usr/local/entropybroker/bin
+	cp server_audio /usr/local/entropybroker/bin
+	cp server_timers /usr/local/entropybroker/bin
+	cp server_v4l /usr/local/entropybroker/bin
+	cp client_linux_kernel /usr/local/entropybroker/bin
 
 clean:
-	rm -f $(OBJS) eb core *.da *.gcov *.bb*
+	rm -f $(OBJSeb) $(OBJSsa) $(OBJSst) $(OBJSsv) $(OBJSclk) eb core *.da *.gcov *.bb* server_audio server_timers server_v4l client_linux_kernel
 
 package: clean
 	mkdir eb-$(VERSION)
-	cp *.c* *.h Makefile Changes readme.txt license.txt todo eb-$(VERSION)
+	cp *.cpp *.h Makefile Changes readme.txt license.txt todo eb-$(VERSION)
 	tar czf eb-$(VERSION).tgz eb-$(VERSION)
 	rm -rf eb-$(VERSION)
