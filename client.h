@@ -16,4 +16,4 @@ typedef struct
 	int n_times_empty, n_times_not_allowed, n_times_full, n_times_quota;
 } statistics_t;
 
-void main_loop(pool **pools, int n_pools, int reset_counters_interval, char *adapter, int port);
+void main_loop(pool **pools, int n_pools, int reset_counters_interval, char *adapter, int port, char *stats_file);

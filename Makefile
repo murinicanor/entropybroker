@@ -1,4 +1,4 @@
-VERSION=0.1
+VERSION=0.2
 
 DEBUG= -g #-D_DEBUG #-fprofile-arcs -ftest-coverage # -pg -g
 CXXFLAGS+=-O0 -DVERSION=\"${VERSION}\" $(DEBUG)

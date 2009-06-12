@@ -15,6 +15,7 @@ void help(void)
 {
         printf("-l file   log to file 'file'\n");
         printf("-s        log to syslog\n");
+	printf("-S        statistics-file to log to\n");
         printf("-n        do not fork\n");
 }
 
@@ -26,13 +27,18 @@ int main(int argc, char *argv[])
 	int c;
 	char do_not_fork = 0, log_console = 0, log_syslog = 0;
 	char *log_logfile = NULL;
+	char *stats_file = NULL;
 
 	printf("eb v " VERSION ", (C) 2009 by folkert@vanheusden.com\n");
 
-	while((c = getopt(argc, argv, "l:sn")) != -1)
+	while((c = getopt(argc, argv, "S:l:sn")) != -1)
 	{
 		switch(c)
 		{
+			case 'S':
+				stats_file = optarg;
+				break;
+
 			case 's':
 				log_syslog = 1;
 				break;
@@ -99,7 +105,7 @@ for(;;)
 #endif
 	dolog(LOG_DEBUG, "added %d bits of startup-event-entropy to pool", add_event(pools, n_pools, get_ts()));
 
-	main_loop(pools, n_pools, 60, "0.0.0.0", 55225);
+	main_loop(pools, n_pools, 60, "0.0.0.0", 55225, stats_file);
 
 	return 0;
 }

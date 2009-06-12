@@ -62,6 +62,9 @@ int message_transmit_entropy_data(int socket_fd, unsigned char *bytes, int n_byt
 
 	dolog(LOG_DEBUG, "request to send %d bytes", n_bytes);
 
+	if ((n_bytes * 8) > 9999)
+		error_exit("internal error: too many bytes to transmit in 1 message (%d)", n_bytes);
+
 	snprintf(header, sizeof(header), "0002%04d", n_bytes * 8);
 
 	// header

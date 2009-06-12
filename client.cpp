@@ -10,6 +10,7 @@
 #include <netdb.h>
 #include <unistd.h>
 #include <sys/time.h>
+#include <sys/resource.h>
 
 #include "error.h"
 #include "log.h"
@@ -303,11 +304,12 @@ int lookup_client_settings(struct sockaddr_in *client_addr, client_t *client)
 	client -> max_bits_per_interval=16000000;
 }
 
-void main_loop(pool **pools, int n_pools, int reset_counters_interval, char *adapter, int port)
+void main_loop(pool **pools, int n_pools, int reset_counters_interval, char *adapter, int port, char *stats_file)
 {
 	client_t *clients = NULL;
 	int n_clients = 0;
 	time_t last_counters_reset = time(NULL);
+	time_t last_statistics_emit = time(NULL);
 	event_state_t event_state;
 	int listen_socket_fd = start_listen(adapter, port);
 	statistics_t	stats;
@@ -321,7 +323,7 @@ void main_loop(pool **pools, int n_pools, int reset_counters_interval, char *ada
 		int event_bits;
 		int loop, rc;
 		fd_set rfds;
-		double now;
+		double now = get_ts();
 		struct timeval tv;
 		int max_fd = 0;
 
@@ -336,7 +338,7 @@ void main_loop(pool **pools, int n_pools, int reset_counters_interval, char *ada
 		FD_SET(listen_socket_fd, &rfds);
 		max_fd = max(max_fd, listen_socket_fd);
 
-		tv.tv_sec = max(0, (last_counters_reset + reset_counters_interval) - time(NULL));
+		tv.tv_sec = max(0, min((last_statistics_emit + 300) - now, (last_counters_reset + reset_counters_interval) - now));
 		tv.tv_usec = 0;
 
 		rc = select(max_fd + 1, &rfds, NULL, NULL, &tv);
@@ -355,6 +357,7 @@ void main_loop(pool **pools, int n_pools, int reset_counters_interval, char *ada
 
 		if (((last_counters_reset + reset_counters_interval) - now) <= 0)
 		{
+			int total_n_bits = get_bit_sum(pools, n_pools);
 			double runtime = now - start_ts;
 
 			for(loop=0; loop<n_clients; loop++)
@@ -367,9 +370,36 @@ void main_loop(pool **pools, int n_pools, int reset_counters_interval, char *ada
 
 			dolog(LOG_DEBUG, "client bps: %d (in last %ds interval)", stats.bps, reset_counters_interval);
 			dolog(LOG_DEBUG, "total recv: %ld (%fbps), total sent: %ld (%fbps), run time: %f", stats.total_recv, (double)stats.total_recv/runtime, stats.total_sent, (double)stats.total_sent/runtime, runtime);
-			dolog(LOG_DEBUG, "recv requests: %d, sent: %d, clients/servers: %d, bits: %d", stats.total_recv_requests, stats.total_sent_requests, n_clients, get_bit_sum(pools, n_pools));
+			dolog(LOG_DEBUG, "recv requests: %d, sent: %d, clients/servers: %d, bits: %d", stats.total_recv_requests, stats.total_sent_requests, n_clients, total_n_bits);
 
 			last_counters_reset = now;
+		}
+
+		if (((last_statistics_emit + 300) - now) <= 0)
+		{
+			if (stats_file)
+			{
+				double proc_usage;
+				struct rusage usage;
+				int total_n_bits = get_bit_sum(pools, n_pools);
+				FILE *fh = fopen(stats_file, "a+");
+				if (!fh)
+					error_exit("cannot access file %s", stats_file);
+
+				if (getrusage(RUSAGE_SELF, &usage) == -1)
+					error_exit("getrusage() failed");
+
+				proc_usage = (double)usage.ru_utime.tv_sec + (double)usage.ru_utime.tv_usec / 1000000.0 +
+						(double)usage.ru_stime.tv_sec + (double)usage.ru_stime.tv_usec / 1000000.0;
+
+				fprintf(fh, "%f %ld %ld %d %d %d %d %f\n", now, stats.total_recv, stats.total_sent,
+									stats.total_recv_requests, stats.total_sent_requests,
+									n_clients, total_n_bits, proc_usage);
+
+				fclose(fh);
+			}
+
+			last_statistics_emit = now;
 		}
 
 		if (rc > 0)
