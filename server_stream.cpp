@@ -4,12 +4,16 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 const char *server_type = "server_stream v" VERSION;
 
 #include "error.h"
 #include "utils.h"
 #include "log.h"
+#include "protocol.h"
 
 void help(void)
 {
@@ -35,7 +39,7 @@ int main(int argc, char *argv[])
 
 	printf("%s, (C) 2009 by folkert@vanheusden.com\n", server_type);
 
-	while((c = getopt(argc, argv, "d:l:sn")) != -1)
+	while((c = getopt(argc, argv, "i:d:l:sn")) != -1)
 	{
 		switch(c)
 		{

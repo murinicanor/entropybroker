@@ -105,32 +105,35 @@ void main_loop(char *host, int port)
 	int socket_fd = -1;
 	unsigned char bytes[1249]; // 1249 * 8: 9992, must be less then 9999
 	int bytes_out = 0;
-	if ((err = snd_pcm_open(&chandle, cdevice, SND_PCM_STREAM_CAPTURE, 0)) < 0)
-		error_exit("Record open error: %s", snd_strerror(err));
-
-	/* Open and set up ALSA device for reading */
-	setparams(chandle, DEFAULT_SAMPLE_RATE, &format);
-
-	input_buffer_size = snd_pcm_frames_to_bytes(chandle, DEFAULT_SAMPLE_RATE * 2);
-	input_buffer = (char *)malloc(input_buffer_size);
-	if (!input_buffer)
-		error_exit("problem allocating %d bytes of memory", input_buffer_size);
-
-	/* Discard the first data read */
-	/* it often contains weird looking data - probably a click from */
-	/* driver loading / card initialisation */
-	snd_pcm_sframes_t garbage_frames_read = snd_pcm_readi(chandle, input_buffer, DEFAULT_SAMPLE_RATE);
-	/* Make sure we aren't hitting a disconnect/suspend case */
-	if (garbage_frames_read < 0)
-		snd_pcm_recover(chandle, garbage_frames_read, 0);
-	/* Nope, something else is wrong. Bail. */
-	if (garbage_frames_read < 0)
-		error_exit("Get random data: read error: %m");
 
 	for(;;)
 	{
+		char got_any = 0;
+
 		if (reconnect_server_socket(host, port, &socket_fd, server_type) == -1)
 			continue;
+
+		if ((err = snd_pcm_open(&chandle, cdevice, SND_PCM_STREAM_CAPTURE, 0)) < 0)
+			error_exit("Record open error: %s", snd_strerror(err));
+
+		/* Open and set up ALSA device for reading */
+		setparams(chandle, DEFAULT_SAMPLE_RATE, &format);
+
+		input_buffer_size = snd_pcm_frames_to_bytes(chandle, DEFAULT_SAMPLE_RATE * 2);
+		input_buffer = (char *)malloc(input_buffer_size);
+		if (!input_buffer)
+			error_exit("problem allocating %d bytes of memory", input_buffer_size);
+
+		/* Discard the first data read */
+		/* it often contains weird looking data - probably a click from */
+		/* driver loading / card initialisation */
+		snd_pcm_sframes_t garbage_frames_read = snd_pcm_readi(chandle, input_buffer, DEFAULT_SAMPLE_RATE);
+		/* Make sure we aren't hitting a disconnect/suspend case */
+		if (garbage_frames_read < 0)
+			snd_pcm_recover(chandle, garbage_frames_read, 0);
+		/* Nope, something else is wrong. Bail. */
+		if (garbage_frames_read < 0)
+			error_exit("Get random data: read error: %m");
 
 		/* Read a buffer of audio */
 		n_to_do = DEFAULT_SAMPLE_RATE * 2;
@@ -155,6 +158,8 @@ void main_loop(char *host, int port)
 				dummy += frames_read;	
 			}
 		}
+
+		snd_pcm_close(chandle);
 
 		/* de-biase the data */
 		for(loop=0; loop<(DEFAULT_SAMPLE_RATE * 2/*16bits*/ * 2/*stereo*/ * 2); loop+=8)
@@ -210,6 +215,8 @@ void main_loop(char *host, int port)
 
 				bits_out++;
 
+				got_any = 1;
+
 				if (bits_out>=8)
 				{
 					bytes[bytes_out++] = byte_out;
@@ -231,9 +238,12 @@ void main_loop(char *host, int port)
 				}
 			}
 		}
-	}
 
-	snd_pcm_close(chandle);
+		if (!got_any)
+			dolog(LOG_WARNING, "no bits in audio-stream, please make sure the recording channel is not muted");
+
+		free(input_buffer);
+	}
 }
 
 int main(int argc, char *argv[])
