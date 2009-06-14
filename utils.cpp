@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <sys/time.h>
 #include <stdio.h>
+#include <sys/select.h>
 
 #include "error.h"
 #include "kernel_prng_io.h"
@@ -17,6 +18,16 @@
 #define MAX_LRAND48_GETS 250
 
 #define incopy(a)       *((struct in_addr *)a)
+
+double get_ts(void)
+{
+	struct timeval ts;
+
+	if (gettimeofday(&ts, NULL) == -1)
+		error_exit("gettimeofday failed");
+
+	return (((double)ts.tv_sec) + ((double)ts.tv_usec)/1000000.0);
+}
 
 int READ(int fd, char *whereto, size_t len)
 {
@@ -48,39 +59,160 @@ int READ(int fd, char *whereto, size_t len)
 	return cnt;
 }
 
+int READ_TO(int fd, char *whereto, size_t len, int to)
+{
+	double end_ts = get_ts() + (double)to;
+	ssize_t cnt=0;
+
+	while(len>0)
+	{
+		fd_set rfds;
+		struct timeval tv;
+		double now_ts = get_ts();
+		double time_left = end_ts - now_ts;
+		ssize_t rc;
+
+		if (time_left <= 0.0)
+			return -1;
+
+		tv.tv_sec = time_left;
+		tv.tv_usec = (time_left - (double)tv.tv_sec) * 1000000.0;
+
+		FD_ZERO(&rfds);
+		FD_SET(fd, &rfds);
+
+		rc = select(fd + 1, &rfds, NULL, NULL, &tv);
+		if (rc == -1)
+		{
+			if (errno == EINTR || errno == EINPROGRESS || errno == EAGAIN)
+				continue;
+
+			return -1;
+		}
+		else if (rc == 0)
+		{
+			return -1;
+		}
+
+		if (FD_ISSET(fd, &rfds))	// should always evaluate to true at this point
+		{
+			rc = read(fd, whereto, len);
+
+			if (rc == -1)
+			{
+				if (errno != EINTR && errno != EINPROGRESS && errno != EAGAIN)
+					return -1;
+			}
+			else if (rc == 0)
+			{
+				return -1;
+			}
+			else
+			{
+				whereto += rc;
+				len -= rc;
+				cnt += rc;
+			}
+		}
+	}
+
+	return cnt;
+}
+
 int WRITE(int fd, char *whereto, size_t len)
 {
-        ssize_t cnt=0;
+	ssize_t cnt=0;
 
-        while(len>0)
-        {
-                ssize_t rc;
+	while(len>0)
+	{
+		ssize_t rc;
 
-                rc = write(fd, whereto, len);
+		rc = write(fd, whereto, len);
 
-                if (rc == -1)
-                {
-                        if (errno != EINTR && errno != EINPROGRESS && errno != EAGAIN)
+		if (rc == -1)
+		{
+			if (errno != EINTR && errno != EINPROGRESS && errno != EAGAIN)
 				return -1;
-                }
-                else if (rc == 0)
-                {
-                        return -1;
-                }
-                else
-                {
-                        whereto += rc;
-                        len -= rc;
-                        cnt += rc;
-                }
-        }
+		}
+		else if (rc == 0)
+		{
+			return -1;
+		}
+		else
+		{
+			whereto += rc;
+			len -= rc;
+			cnt += rc;
+		}
+	}
 
-        return cnt;
+	return cnt;
+}
+
+int WRITE_TO(int fd, char *whereto, size_t len, int to)
+{
+	double end_ts = get_ts() + (double)to;
+	ssize_t cnt=0;
+
+	while(len>0)
+	{
+		fd_set wfds;
+		struct timeval tv;
+		double now_ts = get_ts();
+		double time_left = end_ts - now_ts;
+		ssize_t rc;
+
+		if (time_left <= 0.0)
+			return -1;
+
+		tv.tv_sec = time_left;
+		tv.tv_usec = (time_left - (double)tv.tv_sec) * 1000000.0;
+
+		FD_ZERO(&wfds);
+		FD_SET(fd, &wfds);
+
+		rc = select(fd + 1, NULL, &wfds, NULL, &tv);
+		if (rc == -1)
+		{
+			if (errno == EINTR || errno == EINPROGRESS || errno == EAGAIN)
+				continue;
+
+			return -1;
+		}
+		else if (rc == 0)
+		{
+			return -1;
+		}
+
+		if (FD_ISSET(fd, &wfds))	// should always evaluate to true at this point
+		{
+
+			rc = write(fd, whereto, len);
+
+			if (rc == -1)
+			{
+				if (errno != EINTR && errno != EINPROGRESS && errno != EAGAIN)
+					return -1;
+			}
+			else if (rc == 0)
+			{
+				return -1;
+			}
+			else
+			{
+				whereto += rc;
+				len -= rc;
+				cnt += rc;
+			}
+		}
+	}
+
+	return cnt;
 }
 
 int start_listen(char *adapter, int portnr)
 {
-        int reuse_addr = 1;
+	int reuse_addr = 1;
 	struct sockaddr_in server_addr;
 	int	server_addr_len;
 	int fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -199,14 +331,4 @@ int myrand(int max)
 	}
 
 	return lrand48() % max;
-}
-
-double get_ts(void)
-{
-        struct timeval ts;
-
-        if (gettimeofday(&ts, NULL) == -1)
-		error_exit("gettimeofday failed");
-
-        return (((double)ts.tv_sec) + ((double)ts.tv_usec)/1000000.0);
 }

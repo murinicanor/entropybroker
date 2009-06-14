@@ -116,7 +116,6 @@ int main(int argc, char *argv[])
 					dolog(LOG_INFO, "connection closed");
 					close(socket_fd);
 					socket_fd = -1;
-					continue;
 				}
 
 				index = 0; // skip header

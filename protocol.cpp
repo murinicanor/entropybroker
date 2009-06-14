@@ -7,6 +7,8 @@
 #include "log.h"
 #include "utils.h"
 
+#define DEFAULT_COMM_TO 15
+
 int reconnect_server_socket(char *host, int port, int *socket_fd, const char *server_type)
 {
 	char connect_msg = 0;
@@ -41,7 +43,7 @@ int reconnect_server_socket(char *host, int port, int *socket_fd, const char *se
 		sprintf((char *)buffer, "0003%04d%s", (int)(strlen(server_type) * 8), server_type);
 		str_len = strlen(buffer);
 
-		if (WRITE(*socket_fd, buffer, str_len) != str_len)
+		if (WRITE_TO(*socket_fd, buffer, str_len, DEFAULT_COMM_TO) != str_len)
 		{
 			dolog(LOG_INFO, "connection closed");
 			close(*socket_fd);
@@ -68,14 +70,14 @@ int message_transmit_entropy_data(int socket_fd, unsigned char *bytes, int n_byt
 	snprintf(header, sizeof(header), "0002%04d", n_bytes * 8);
 
 	// header
-	if (WRITE(socket_fd, (char *)header, 8) != 8)
+	if (WRITE_TO(socket_fd, (char *)header, 8, DEFAULT_COMM_TO) != 8)
 	{
 		dolog(LOG_INFO, "error transmitting header");
 		return -1;
 	}
 
 	// ack from server?
-	if (READ(socket_fd, reply, 8) != 8)
+	if (READ_TO(socket_fd, reply, 8, DEFAULT_COMM_TO) != 8)
 	{
 		dolog(LOG_INFO, "error receiving ack/nack");
 		return -1;
@@ -96,7 +98,7 @@ int message_transmit_entropy_data(int socket_fd, unsigned char *bytes, int n_byt
 
 		dolog(LOG_DEBUG, "Transmitting %d bytes", cur_n_bytes);
 
-		if (WRITE(socket_fd, (char *)bytes, cur_n_bytes) != cur_n_bytes)
+		if (WRITE_TO(socket_fd, (char *)bytes, cur_n_bytes, DEFAULT_COMM_TO) != cur_n_bytes)
 		{
 			dolog(LOG_INFO, "error transmitting data");
 			return -1;

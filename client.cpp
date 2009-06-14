@@ -22,6 +22,7 @@
 #define DEFAULT_SLEEP_WHEN_POOLS_FULL 10
 #define DEFAULT_SLEEP_WHEN_POOLS_EMPTY 1
 #define DEFAULT_MAX_SLEEP_WHEN_POOL_FULL 60
+#define DEFAULT_COMM_TO 15
 
 int send_denied_empty(int fd, statistics_t *stats)
 {
@@ -34,7 +35,7 @@ int send_denied_empty(int fd, statistics_t *stats)
 
 	snprintf(buffer, sizeof(buffer), "9000%04d", seconds);
 
-	return WRITE(fd, buffer, 8) == 8 ? 0 : -1;
+	return WRITE_TO(fd, buffer, 8, DEFAULT_COMM_TO) == 8 ? 0 : -1;
 }
 
 int send_denied_quota(int fd, statistics_t *stats, int reset_counters_interval)
@@ -45,7 +46,7 @@ int send_denied_quota(int fd, statistics_t *stats, int reset_counters_interval)
 
 	snprintf(buffer, sizeof(buffer), "9002%04d", reset_counters_interval);
 
-	return WRITE(fd, buffer, 8) == 8 ? 0 : -1;
+	return WRITE_TO(fd, buffer, 8, DEFAULT_COMM_TO) == 8 ? 0 : -1;
 }
 
 int send_denied_full(client_t *client, pool **pools, int n_pools, statistics_t *stats)
@@ -65,7 +66,7 @@ int send_denied_full(client_t *client, pool **pools, int n_pools, statistics_t *
 	sprintf(buffer, "9001%04d", seconds);
 	dolog(LOG_INFO, "%s all pools full, sleep of %d seconds", client -> host, seconds);
 
-	if (WRITE(client -> socket_fd, buffer, 8) != 8)
+	if (WRITE_TO(client -> socket_fd, buffer, 8, DEFAULT_COMM_TO) != 8)
 		return -1;
 
 	return 0;
@@ -79,7 +80,7 @@ int do_client_get(pool **pools, int n_pools, client_t *client, statistics_t *sta
 	char n_bits[4 + 1];
 	n_bits[4] = 0x00;
 
-	if (READ(client -> socket_fd, n_bits, 4) != 4)
+	if (READ_TO(client -> socket_fd, n_bits, 4, DEFAULT_COMM_TO) != 4)
 	{
 		dolog(LOG_INFO, "%s short read while retrieving number of bits to send", client -> host);
 		return -1;
@@ -139,7 +140,7 @@ int do_client_get(pool **pools, int n_pools, client_t *client, statistics_t *sta
 	memcpy(&buffer[8], ent_buffer, cur_n_bytes);
 	free(ent_buffer);
 
-	if (WRITE(client -> socket_fd, (char *)buffer, transmit_size) != transmit_size)
+	if (WRITE_TO(client -> socket_fd, (char *)buffer, transmit_size, DEFAULT_COMM_TO) != transmit_size)
 	{
 		dolog(LOG_INFO, "%s error while sending to client", client -> host);
 		free(buffer);
@@ -157,7 +158,7 @@ int do_client_put(pool **pools, int n_pools, client_t *client, statistics_t *sta
 		int seconds = DEFAULT_SLEEP_WHEN_POOLS_FULL;
 		char dummy_buffer[4];
 
-		if (READ(client -> socket_fd, dummy_buffer, 4) != 4)	// flush number of bits
+		if (READ_TO(client -> socket_fd, dummy_buffer, 4, DEFAULT_COMM_TO) != 4)	// flush number of bits
 			return -1;
 
 		return send_denied_full(client, pools, n_pools, stats);
@@ -171,7 +172,7 @@ int do_client_put(pool **pools, int n_pools, client_t *client, statistics_t *sta
 		char n_bits[4 + 1];
 		n_bits[4] = 0x00;
 
-		if (READ(client -> socket_fd, n_bits, 4) != 4)
+		if (READ_TO(client -> socket_fd, n_bits, 4, DEFAULT_COMM_TO) != 4)
 		{
 			dolog(LOG_INFO, "%s short read while retrieving number of bits to recv", client -> host);
 			return -1;
@@ -190,7 +191,7 @@ int do_client_put(pool **pools, int n_pools, client_t *client, statistics_t *sta
 		}
 
 		sprintf(msg, "0001%04d", cur_n_bits);
-		if (WRITE(client -> socket_fd, msg, 8) != 8)
+		if (WRITE_TO(client -> socket_fd, msg, 8, DEFAULT_COMM_TO) != 8)
 		{
 			dolog(LOG_INFO, "%s short write while sending ack", client -> host);
 			free(buffer);
@@ -203,7 +204,7 @@ int do_client_put(pool **pools, int n_pools, client_t *client, statistics_t *sta
 		if (!buffer)
 			error_exit("%s error allocating %d bytes of memory", client -> host, cur_n_bytes);
 
-		if (READ(client -> socket_fd, (char *)buffer, cur_n_bytes) != cur_n_bytes)
+		if (READ_TO(client -> socket_fd, (char *)buffer, cur_n_bytes, DEFAULT_COMM_TO) != cur_n_bytes)
 		{
 			dolog(LOG_INFO, "%s short read while retrieving entropy data", client -> host);
 			free(buffer);
@@ -230,7 +231,7 @@ int do_client_server_type(pool **pools, int n_pools, client_t *client)
 	int n_bits, n_bytes;
 	char string_size[4 + 1];
 
-	if (READ(client -> socket_fd, string_size, 4) != 4)	// flush number of bits
+	if (READ_TO(client -> socket_fd, string_size, 4, DEFAULT_COMM_TO) != 4)	// flush number of bits
 		return -1;
 
 	string_size[4] = 0x00;
@@ -248,7 +249,7 @@ int do_client_server_type(pool **pools, int n_pools, client_t *client)
 	if (!buffer)
 		error_exit("%s out of memory while allocating %d bytes", client -> host, n_bytes + 1);
 
-	if (READ(client -> socket_fd, buffer, n_bytes) != n_bytes)
+	if (READ_TO(client -> socket_fd, buffer, n_bytes, DEFAULT_COMM_TO) != n_bytes)
 	{
 		free(buffer);
 		dolog(LOG_INFO, "%s short read for 0003", client -> host);
@@ -269,7 +270,7 @@ int do_client(pool **pools, int n_pools, client_t *client, statistics_t *stats, 
 	char cmd[4 + 1];
 	cmd[4] = 0x00;
 
-	if (READ(client -> socket_fd, cmd, 4) != 4)
+	if (READ_TO(client -> socket_fd, cmd, 4, DEFAULT_COMM_TO) != 4)
 	{
 		dolog(LOG_INFO, "%s short read while retrieving command", client -> host);
 		return -1;
@@ -308,8 +309,8 @@ void main_loop(pool **pools, int n_pools, int reset_counters_interval, char *ada
 {
 	client_t *clients = NULL;
 	int n_clients = 0;
-	time_t last_counters_reset = time(NULL);
-	time_t last_statistics_emit = time(NULL);
+	double last_counters_reset = get_ts();
+	double last_statistics_emit = get_ts();
 	event_state_t event_state;
 	int listen_socket_fd = start_listen(adapter, port);
 	statistics_t	stats;
@@ -326,6 +327,7 @@ void main_loop(pool **pools, int n_pools, int reset_counters_interval, char *ada
 		double now = get_ts();
 		struct timeval tv;
 		int max_fd = 0;
+		double time_left;
 
 		FD_ZERO(&rfds);
 
@@ -338,8 +340,9 @@ void main_loop(pool **pools, int n_pools, int reset_counters_interval, char *ada
 		FD_SET(listen_socket_fd, &rfds);
 		max_fd = max(max_fd, listen_socket_fd);
 
-		tv.tv_sec = max(0, min((last_statistics_emit + 300) - now, (last_counters_reset + reset_counters_interval) - now));
-		tv.tv_usec = 0;
+		time_left = max(0, min((last_statistics_emit + 300) - now, (last_counters_reset + reset_counters_interval) - now));
+		tv.tv_sec = time_left;
+		tv.tv_usec = (time_left - (double)tv.tv_sec) * 1000000.0;
 
 		rc = select(max_fd + 1, &rfds, NULL, NULL, &tv);
 		if (rc == -1)
@@ -355,7 +358,7 @@ void main_loop(pool **pools, int n_pools, int reset_counters_interval, char *ada
 		event_bits = add_event(pools, n_pools, now);
 		dolog(LOG_DEBUG, "added %d bits of event-entropy to pool", event_bits);
 
-		if (((last_counters_reset + reset_counters_interval) - now) <= 0)
+		if (((last_counters_reset + (double)reset_counters_interval) - now) <= 0)
 		{
 			int total_n_bits = get_bit_sum(pools, n_pools);
 			double runtime = now - start_ts;
@@ -368,14 +371,14 @@ void main_loop(pool **pools, int n_pools, int reset_counters_interval, char *ada
 			stats.bps = stats.bps_cur / reset_counters_interval;
 			stats.bps_cur = 0;
 
-			dolog(LOG_DEBUG, "client bps: %d (in last %ds interval)", stats.bps, reset_counters_interval);
+			dolog(LOG_DEBUG, "client bps: %d (in last %ds interval), disconnects: %d", stats.bps, reset_counters_interval, stats.disconnects);
 			dolog(LOG_DEBUG, "total recv: %ld (%fbps), total sent: %ld (%fbps), run time: %f", stats.total_recv, (double)stats.total_recv/runtime, stats.total_sent, (double)stats.total_sent/runtime, runtime);
 			dolog(LOG_DEBUG, "recv requests: %d, sent: %d, clients/servers: %d, bits: %d", stats.total_recv_requests, stats.total_sent_requests, n_clients, total_n_bits);
 
 			last_counters_reset = now;
 		}
 
-		if (((last_statistics_emit + 300) - now) <= 0)
+		if (((last_statistics_emit + 300.0) - now) <= 0)
 		{
 			if (stats_file)
 			{
@@ -413,6 +416,8 @@ void main_loop(pool **pools, int n_pools, int reset_counters_interval, char *ada
 						int n_to_move;
 
 						dolog(LOG_INFO, "main_loop: removing client %s from list", clients[loop].host);
+
+						stats.disconnects++;
 
 						close(clients[loop].socket_fd);
 

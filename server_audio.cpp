@@ -228,7 +228,6 @@ void main_loop(char *host, int port)
 							dolog(LOG_INFO, "connection closed");
 							close(socket_fd);
 							socket_fd = -1;
-							continue;
 						}
 
 						bytes_out = 0;

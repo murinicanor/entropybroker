@@ -15,6 +15,8 @@
 #include "log.h"
 #include "math.h"
 
+#define DEFAULT_COMM_TO 15
+
 void help(void)
 {
         printf("-i host   eb-host to connect to\n");
@@ -139,7 +141,7 @@ int main(int argc, char *argv[])
 
 		snprintf(recv_msg, sizeof(recv_msg), "0001%04d", n_bits_to_get);
 
-		if (WRITE(socket_fd, recv_msg, 8) != 8)
+		if (WRITE_TO(socket_fd, recv_msg, 8, DEFAULT_COMM_TO) != 8)
 		{
 			dolog(LOG_INFO, "write error to %s:%d", host, port);
 			close(socket_fd);
@@ -149,7 +151,7 @@ int main(int argc, char *argv[])
 
 		dolog(LOG_DEBUG, "request sent");
 
-		if (READ(socket_fd, reply, 8) != 8)
+		if (READ_TO(socket_fd, reply, 8, DEFAULT_COMM_TO) != 8)
 		{
 			dolog(LOG_INFO, "read error from %s:%d", host, port);
 			close(socket_fd);
@@ -179,7 +181,7 @@ int main(int argc, char *argv[])
 		if (!buffer)
 			error_exit("out of memory allocating %d bytes", will_get_n_bytes);
 
-		if (READ(socket_fd, (char *)buffer, will_get_n_bytes) != will_get_n_bytes)
+		if (READ_TO(socket_fd, (char *)buffer, will_get_n_bytes, DEFAULT_COMM_TO) != will_get_n_bytes)
 		{
 			dolog(LOG_INFO, "read error from %s:%d", host, port);
 			close(socket_fd);
