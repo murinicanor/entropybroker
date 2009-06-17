@@ -16,6 +16,7 @@
 #include "error.h"
 #include "log.h"
 #include "protocol.h"
+#include "server_utils.h"
 
 const char *server_type = "server_v4l v" VERSION;
 
@@ -120,12 +121,11 @@ unsigned char * take_picture(vconfig *vconf)
 void help(void)
 {
 	printf("-d x   device to use\n");
+	printf("-o file   file to write entropy data to (mututal exclusive with -d)\n");
+	printf("-f x   skip x frames before processing images (in case the device\n");
+	printf("       needs a few frames to settle)\n");
+	printf("-H     use highest resolution instead of the default lowest res.\n");
 	printf("-n     do not fork\n");
-}
-
-void version(void)
-{
-	printf("video_entropyd v" VERSION ", by folkert@vanheusden.com (www.vanheusden.com)\n");
 }
 
 int main(int argc, char *argv[])
@@ -133,7 +133,7 @@ int main(int argc, char *argv[])
 	int device_settle = 25;
 	vconfig vconf;
 	int c;
-	char *host = "localhost";
+	char *host = NULL;
 	int port = 55225;
 	unsigned char *img1, *img2, *unbiased;
 	int imginbytes, nunbiased = 0;
@@ -143,13 +143,29 @@ int main(int argc, char *argv[])
 	unsigned char byte;
 	int nbits = 0;
 	int socket_fd = -1;
+	char *bytes_file = NULL;
+	int res = RES_LOW;
 
-	printf("%s, (C) 2009 by folkert@vanheusden.com\n", server_type);
+	fprintf(stderr, "%s, (C) 2009 by folkert@vanheusden.com\n", server_type);
 
-	while((c = getopt(argc, argv, "i:d:l:sn")) != -1)
+	while((c = getopt(argc, argv, "Hf:o:i:d:l:sn")) != -1)
 	{
 		switch(c)
 		{
+			case 'H':
+				res = RES_HIGH;
+				break;
+
+			case 'f':
+				device_settle = atoi(optarg);
+				if (device_settle < 0)
+					error_exit("-f requires a value >= 0");
+				break;
+
+			case 'o':
+				bytes_file = optarg;
+				break;
+
 			case 'i':
 				host = optarg;
 				break;
@@ -177,6 +193,12 @@ int main(int argc, char *argv[])
 		}
 	}
 
+	if (!host && !bytes_file)
+		error_exit("no host to connect to given");
+
+	if (host != NULL && bytes_file != NULL)
+		error_exit("-o and -d are mutual exclusive");
+
 	if (!device)
 		error_exit("Please select a video4linux video device (e.g. a webcam, tv-card, etc.)");
 
@@ -193,11 +215,14 @@ int main(int argc, char *argv[])
 		unsigned char *cur_img;
 		int loop;
 
-		if (reconnect_server_socket(host, port, &socket_fd, server_type) == -1)
-			continue;
+		if (!bytes_file)
+		{
+			if (reconnect_server_socket(host, port, &socket_fd, server_type) == -1)
+				continue;
+		}
 
 		/* open device */
-		if (open_device(&vconf, device, RES_LOW) == -1)
+		if (open_device(&vconf, device, res) == -1)
 			error_exit("failure opening %s", device);
 
 		imginbytes = vconf.vidmbuf.size / vconf.vidmbuf.frames;
@@ -262,11 +287,18 @@ int main(int argc, char *argv[])
 
 		if (nunbiased > 0)
 		{
-			if (message_transmit_entropy_data(socket_fd, unbiased, nunbiased) == -1)
+			if (bytes_file)
 			{
-				dolog(LOG_INFO, "connection closed");
-				close(socket_fd);
-				socket_fd = -1;
+				emit_buffer_to_file(bytes_file, unbiased, nunbiased);
+			}
+			else
+			{
+				if (message_transmit_entropy_data(socket_fd, unbiased, nunbiased) == -1)
+				{
+					dolog(LOG_INFO, "connection closed");
+					close(socket_fd);
+					socket_fd = -1;
+				}
 			}
 		}
 

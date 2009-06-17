@@ -22,6 +22,7 @@ const char *server_type = "server_audio v" VERSION;
 #include "utils.h"
 #include "log.h"
 #include "protocol.h"
+#include "server_utils.h"
 
 #define DEFAULT_SAMPLE_RATE			11025
 #define DEFAULT_CLICK_READ			(1 * DEFAULT_SAMPLE_RATE)
@@ -85,12 +86,13 @@ void help(void)
 {
 	printf("-i host   eb-host to connect to\n");
 	printf("-d dev    audio-device, default %s\n", cdevice);
+	printf("-o file   file to write entropy data to (mututal exclusive with -d)\n");
 	printf("-l file   log to file 'file'\n");
 	printf("-s        log to syslog\n");
 	printf("-n        do not fork\n");
 }
 
-void main_loop(char *host, int port)
+void main_loop(char *host, int port, char *bytes_file)
 {
 	int n_to_do, bits_out=0, loop;
 	char *dummy;
@@ -110,8 +112,11 @@ void main_loop(char *host, int port)
 	{
 		char got_any = 0;
 
-		if (reconnect_server_socket(host, port, &socket_fd, server_type) == -1)
-			continue;
+		if (!bytes_file)
+		{
+			if (reconnect_server_socket(host, port, &socket_fd, server_type) == -1)
+				continue;
+		}
 
 		if ((err = snd_pcm_open(&chandle, cdevice, SND_PCM_STREAM_CAPTURE, 0)) < 0)
 			error_exit("Record open error: %s", snd_strerror(err));
@@ -223,11 +228,18 @@ void main_loop(char *host, int port)
 
 					if (bytes_out == sizeof(bytes))
 					{
-						if (message_transmit_entropy_data(socket_fd, bytes, bytes_out) == -1)
+						if (bytes_file)
 						{
-							dolog(LOG_INFO, "connection closed");
-							close(socket_fd);
-							socket_fd = -1;
+							emit_buffer_to_file(bytes_file, bytes, bytes_out);
+						}
+						else
+						{
+							if (message_transmit_entropy_data(socket_fd, bytes, bytes_out) == -1)
+							{
+								dolog(LOG_INFO, "connection closed");
+								close(socket_fd);
+								socket_fd = -1;
+							}
 						}
 
 						bytes_out = 0;
@@ -247,18 +259,23 @@ void main_loop(char *host, int port)
 
 int main(int argc, char *argv[])
 {
-	char *host = (char *)"localhost";
+	char *host = NULL;
 	int port = 55225;
 	int c;
 	char do_not_fork = 0, log_console = 0, log_syslog = 0;
 	char *log_logfile = NULL;
+	char *bytes_file = NULL;
 
-	printf("%s, (C) 2009 by folkert@vanheusden.com\n", server_type);
+	fprintf(stderr, "%s, (C) 2009 by folkert@vanheusden.com\n", server_type);
 
-	while((c = getopt(argc, argv, "i:d:l:sn")) != -1)
+	while((c = getopt(argc, argv, "o:i:d:l:sn")) != -1)
 	{
 		switch(c)
 		{
+			case 'o':
+				bytes_file = optarg;
+				break;
+
 			case 'd':
 				cdevice = optarg;
 				break;
@@ -286,6 +303,12 @@ int main(int argc, char *argv[])
 		}
 	}
 
+	if (!host && !bytes_file)
+		error_exit("no host to connect to given");
+
+	if (host != NULL && bytes_file != NULL)
+		error_exit("-o and -d are mutual exclusive");
+
 	set_logging_parameters(log_console, log_logfile, log_syslog);
 
 	if (!do_not_fork)
@@ -297,5 +320,5 @@ int main(int argc, char *argv[])
 
 	signal(SIGPIPE, SIG_IGN);
 
-	main_loop(host, port);
+	main_loop(host, port, bytes_file);
 }

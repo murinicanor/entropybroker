@@ -330,5 +330,5 @@ int myrand(int max)
 		n_retrieved = MAX_LRAND48_GETS;
 	}
 
-	return lrand48() % max;
+	return (int)(drand48() * (double)max);
 }

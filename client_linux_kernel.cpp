@@ -197,7 +197,7 @@ int main(int argc, char *argv[])
 		{
 			int information_n_bits = determine_number_of_bits_of_data(buffer, will_get_n_bytes);
 
-			dolog(LOG_DEBUG, "%d bits from server contains %d bits of information", will_get_n_bits, information_n_bits);
+			dolog(LOG_DEBUG, "%d bits from server contains %d bits of information, new entropy count: %d", will_get_n_bits, information_n_bits, kernel_rng_get_entropy_count());
 
 			rc = kernel_rng_add_entropy(buffer, will_get_n_bytes, information_n_bits);
 		}

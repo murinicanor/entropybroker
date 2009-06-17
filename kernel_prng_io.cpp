@@ -103,12 +103,14 @@ int kernel_rng_get_entropy_count()
 
 int kernel_rng_add_entropy(unsigned char *data, int n, int n_bits)
 {
+	int total_size;
         struct rand_pool_info *output;
 	int fd = open(DEV_RANDOM, O_WRONLY);
 	if (fd == -1)
 		error_exit("Failed to open %s", DEV_RANDOM);
 
-        output = (struct rand_pool_info *)malloc(sizeof(struct rand_pool_info) + n);
+	total_size = sizeof(struct rand_pool_info) + n;
+        output = (struct rand_pool_info *)malloc(total_size);
         if (!output)
                 error_exit("malloc failure in kernel_rng_add_entropy_no_bitcount_increase(%d)", n);
 
