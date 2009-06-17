@@ -55,7 +55,7 @@ int open_device(vconfig *vconf, char *dev_name, char res)
 		error_exit("ioctl(VIDIOCGWIN)");
 
 	vconf -> vidwin.x =
-	vconf -> vidwin.y = 0;
+		vconf -> vidwin.y = 0;
 
 	if (res == RES_LOW)
 	{
@@ -145,6 +145,7 @@ int main(int argc, char *argv[])
 	int socket_fd = -1;
 	char *bytes_file = NULL;
 	int res = RES_LOW;
+	int loop;
 
 	fprintf(stderr, "%s, (C) 2009 by folkert@vanheusden.com\n", server_type);
 
@@ -210,10 +211,21 @@ int main(int argc, char *argv[])
 			error_exit("fork failed");
 	}
 
+	/* open device */
+	if (open_device(&vconf, device, res) == -1)
+		error_exit("failure opening %s", device);
+
+	imginbytes = vconf.vidmbuf.size / vconf.vidmbuf.frames;
+	dolog(LOG_DEBUG, "img size in bytes %d", imginbytes);
+
+	/* let device settle */
+	dolog(LOG_DEBUG, "waiting for device to settle");
+	for(loop=0; loop<device_settle; loop++)
+		(void)take_picture(&vconf);
+
 	for(;;)
 	{
 		unsigned char *cur_img;
-		int loop;
 
 		if (!bytes_file)
 		{
@@ -221,23 +233,11 @@ int main(int argc, char *argv[])
 				continue;
 		}
 
-		/* open device */
-		if (open_device(&vconf, device, res) == -1)
-			error_exit("failure opening %s", device);
-
-		imginbytes = vconf.vidmbuf.size / vconf.vidmbuf.frames;
-		dolog(LOG_DEBUG, "img size in bytes %d", imginbytes);
-
 		img1 = (unsigned char *)malloc(imginbytes);
 		img2 = (unsigned char *)malloc(imginbytes);
 		unbiased = (unsigned char *)malloc(imginbytes);
 		if (!img1 || !img2 || !unbiased)
 			error_exit("out of memory");
-
-		/* let device settle */
-		dolog(LOG_DEBUG, "waiting for device to settle");
-		for(loop=0; loop<device_settle; loop++)
-			cur_img = take_picture(&vconf);
 
 		/* take pictures */
 		dolog(LOG_DEBUG, "Smile!");
@@ -245,9 +245,6 @@ int main(int argc, char *argv[])
 		memcpy(img1, cur_img, imginbytes);
 		cur_img = take_picture(&vconf);
 		memcpy(img2, cur_img, imginbytes);
-
-		dolog(LOG_DEBUG, "Cleaning up");
-		close_device(&vconf);
 
 		/* unbiase */
 		dolog(LOG_DEBUG, "Filtering...");
@@ -304,6 +301,9 @@ int main(int argc, char *argv[])
 
 		free(unbiased);
 	}
+
+	dolog(LOG_DEBUG, "Cleaning up");
+	close_device(&vconf);
 
 	return 0;
 }

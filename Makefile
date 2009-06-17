@@ -4,12 +4,12 @@ DEBUG= -g #-D_DEBUG #-fprofile-arcs -ftest-coverage # -pg -g
 CXXFLAGS+=-O0 -DVERSION=\"${VERSION}\" $(DEBUG)
 LDFLAGS+=$(DEBUG) -lstdc++
 
-OBJSeb=client.o error.o handle_pool.o kernel_prng_io.o log.o main.o math.o pool.o utils.o
-OBJSsa=server_audio.o error.o utils.o log.o kernel_prng_io.o protocol.o
-OBJSst=server_timers.o log.o utils.o error.o kernel_prng_io.o protocol.o
-OBJSsv=server_v4l.o error.o log.o protocol.o utils.o kernel_prng_io.o
+OBJSeb=client.o error.o handle_pool.o kernel_prng_io.o log.o main.o math.o pool.o utils.o rngtest.o
+OBJSsa=server_audio.o error.o utils.o log.o kernel_prng_io.o protocol.o server_utils.o
+OBJSst=server_timers.o log.o utils.o error.o kernel_prng_io.o protocol.o server_utils.o
+OBJSsv=server_v4l.o error.o log.o protocol.o utils.o kernel_prng_io.o server_utils.o
+OBJSss=server_stream.o error.o log.o protocol.o utils.o kernel_prng_io.o server_utils.o
 OBJSclk=client_linux_kernel.o error.o kernel_prng_io.o utils.o log.o math.o
-OBJSss=server_stream.o error.o log.o protocol.o utils.o kernel_prng_io.o
 
 all: eb server_audio server_timers server_v4l server_stream client_linux_kernel
 

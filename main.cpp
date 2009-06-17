@@ -2,10 +2,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <signal.h>
+#include <string.h>
 #include <unistd.h>
 
 #include "error.h"
 #include "pool.h"
+#include "rngtest.h"
 #include "client.h"
 #include "utils.h"
 #include "log.h"
@@ -28,6 +30,9 @@ int main(int argc, char *argv[])
 	char do_not_fork = 0, log_console = 0, log_syslog = 0;
 	char *log_logfile = NULL;
 	char *stats_file = NULL;
+	rngtest_stats_t rtst;
+
+	memset(&rtst, 0x00, sizeof(rtst));
 
 	printf("eb v " VERSION ", (C) 2009 by folkert@vanheusden.com\n");
 
@@ -59,6 +64,8 @@ int main(int argc, char *argv[])
 	}
 
 	set_logging_parameters(log_console, log_logfile, log_syslog);
+
+	RNGTEST_init(&rtst);
 
 	if (!do_not_fork)
 	{
@@ -105,7 +112,7 @@ for(;;)
 #endif
 	dolog(LOG_DEBUG, "added %d bits of startup-event-entropy to pool", add_event(pools, n_pools, get_ts()));
 
-	main_loop(pools, n_pools, 60, "0.0.0.0", 55225, stats_file);
+	main_loop(pools, n_pools, 60, "0.0.0.0", 55225, stats_file, &rtst);
 
 	return 0;
 }

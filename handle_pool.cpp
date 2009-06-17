@@ -5,6 +5,7 @@
 #include "error.h"
 #include "pool.h"
 #include "utils.h"
+#include "rngtest.h"
 #include "handle_pool.h"
 
 int select_pool_with_enough_bits_available(pool **pools, int n_pools, int n_bits_to_read)
@@ -31,7 +32,7 @@ int select_pool_with_enough_bits_available(pool **pools, int n_pools, int n_bits
 	return max_n_bits_index;
 }
 
-int get_bits_from_pools(int n_bits_requested, pool **pools, int n_pools, unsigned char **buffer, char allow_prng)
+int get_bits_from_pools(int n_bits_requested, pool **pools, int n_pools, unsigned char **buffer, char allow_prng, char ignore_rngtest)
 {
 	int loop;
 	int n_to_do_bytes = (n_bits_requested + 7) / 8;
@@ -49,6 +50,7 @@ int get_bits_from_pools(int n_bits_requested, pool **pools, int n_pools, unsigne
 
 		while((n_bits_in_cur_pool = pools[loop] -> get_n_bits_in_pool()) > pool_block_size)
 		{
+			int rngtest_loop;
 			int cur_n_to_get_bits = min(n_to_do_bits, pool_block_size);
 			int cur_n_to_get_bytes = (cur_n_to_get_bits + 7) / 8;
 			int got_n_bytes, got_n_bits;
@@ -56,12 +58,18 @@ int get_bits_from_pools(int n_bits_requested, pool **pools, int n_pools, unsigne
 			got_n_bytes = pools[loop] -> get_entropy_data(cur_p, cur_n_to_get_bytes, 0);
 			got_n_bits = got_n_bytes * 8;
 
-			cur_p += got_n_bytes;
-			n_to_do_bits -= got_n_bits;
-			n_bits_retrieved += got_n_bits;
+			for(rngtest_loop=0; rngtest_loop<got_n_bytes; rngtest_loop++)
+					RNGTEST_add(cur_p[rngtest_loop]);
 
-if (n_to_do_bits < 0)
-	error_exit("overflow3");
+			if (ignore_rngtest || RNGTEST() == 0)
+			{
+				cur_p += got_n_bytes;
+				n_to_do_bits -= got_n_bits;
+				n_bits_retrieved += got_n_bits;
+			}
+
+			if (n_to_do_bits < 0)
+				error_exit("overflow3");
 			if (n_to_do_bits == 0)
 				return n_bits_retrieved;
 		}
@@ -73,16 +81,23 @@ if (n_to_do_bits < 0)
 
 		do
 		{
+			int rngtest_loop;
 			int cur_n_to_get_bits = min(pools[index] -> get_pool_size(), n_to_do_bits);
 			int cur_n_to_get_bytes = (cur_n_to_get_bits + 7) / 8;
 			int got_n_bits, got_n_bytes;
 
-			got_n_bits = pools[index] -> get_entropy_data(cur_p, cur_n_to_get_bytes, 1);
-			got_n_bytes = (got_n_bits + 7) /8;
+			got_n_bytes = pools[index] -> get_entropy_data(cur_p, cur_n_to_get_bytes, 1);
+			got_n_bits = got_n_bytes * 8;
 
-			cur_p += got_n_bytes;
-			n_to_do_bits -= got_n_bits;
-			n_bits_retrieved += got_n_bits;
+			for(rngtest_loop=0; rngtest_loop<got_n_bytes; rngtest_loop++)
+					RNGTEST_add(cur_p[rngtest_loop]);
+
+			if (ignore_rngtest || RNGTEST() == 0)
+			{
+				cur_p += got_n_bytes;
+				n_to_do_bits -= got_n_bits;
+				n_bits_retrieved += got_n_bits;
+			}
 
 			index++;
 			if (index == n_pools)

@@ -11,6 +11,7 @@ const char *server_type = "server_test v" VERSION;
 #include "utils.h"
 #include "log.h"
 #include "kernel_prng_io.h"
+#include "protocol.h"
 #include "server_utils.h"
 
 void help(void)
@@ -97,7 +98,7 @@ int main(int argc, char *argv[])
 
 		if (bytes_file)
 		{
-			emit_buffer_to_file(bytes_file, bytes, index);
+			emit_buffer_to_file(bytes_file, bytes, (cur_n_bits + 7) / 8);
 		}
 		else
 		{

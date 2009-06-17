@@ -15,6 +15,7 @@
 #include "error.h"
 #include "log.h"
 #include "pool.h"
+#include "rngtest.h"
 #include "client.h"
 #include "handle_pool.h"
 #include "utils.h"
@@ -111,7 +112,7 @@ int do_client_get(pool **pools, int n_pools, client_t *client, statistics_t *sta
 
 	dolog(LOG_DEBUG, "%s memory allocated, retrieving bits", client -> host);
 
-	cur_n_bits = get_bits_from_pools(cur_n_bits, pools, n_pools, &ent_buffer, client -> allow_prng);
+	cur_n_bits = get_bits_from_pools(cur_n_bits, pools, n_pools, &ent_buffer, client -> allow_prng, client -> ignore_rngtest);
 	if (cur_n_bits == 0)
 	{
 		dolog(LOG_WARNING, "%s no bits in pools", client -> host);
@@ -303,9 +304,10 @@ int lookup_client_settings(struct sockaddr_in *client_addr, client_t *client)
 {
 	// FIXME
 	client -> max_bits_per_interval=16000000;
+	client -> ignore_rngtest = 0;
 }
 
-void main_loop(pool **pools, int n_pools, int reset_counters_interval, char *adapter, int port, char *stats_file)
+void main_loop(pool **pools, int n_pools, int reset_counters_interval, char *adapter, int port, char *stats_file, rngtest_stats_t *rtst)
 {
 	client_t *clients = NULL;
 	int n_clients = 0;
@@ -374,6 +376,7 @@ void main_loop(pool **pools, int n_pools, int reset_counters_interval, char *ada
 			dolog(LOG_DEBUG, "client bps: %d (in last %ds interval), disconnects: %d", stats.bps, reset_counters_interval, stats.disconnects);
 			dolog(LOG_DEBUG, "total recv: %ld (%fbps), total sent: %ld (%fbps), run time: %f", stats.total_recv, (double)stats.total_recv/runtime, stats.total_sent, (double)stats.total_sent/runtime, runtime);
 			dolog(LOG_DEBUG, "recv requests: %d, sent: %d, clients/servers: %d, bits: %d", stats.total_recv_requests, stats.total_sent_requests, n_clients, total_n_bits);
+			dolog(LOG_DEBUG, "%s", RNGTEST_stats());
 
 			last_counters_reset = now;
 		}

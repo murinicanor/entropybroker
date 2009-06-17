@@ -5,6 +5,7 @@ typedef struct
 	int bits_sent, bits_recv;
 	int max_bits_per_interval;
 	char allow_prng;
+	char ignore_rngtest;
 } client_t;
 
 typedef struct
@@ -14,6 +15,8 @@ typedef struct
 	long long int total_recv, total_sent;
 	int total_recv_requests, total_sent_requests;
 	int n_times_empty, n_times_not_allowed, n_times_full, n_times_quota;
+
+	int disconnects;
 } statistics_t;
 
-void main_loop(pool **pools, int n_pools, int reset_counters_interval, char *adapter, int port, char *stats_file);
+void main_loop(pool **pools, int n_pools, int reset_counters_interval, char *adapter, int port, char *stats_file, rngtest_stats_t *rtst);
