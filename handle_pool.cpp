@@ -5,7 +5,8 @@
 #include "error.h"
 #include "pool.h"
 #include "utils.h"
-#include "rngtest.h"
+#include "fips140.h"
+#include "scc.h"
 #include "handle_pool.h"
 
 int select_pool_with_enough_bits_available(pool **pools, int n_pools, int n_bits_to_read)
@@ -32,7 +33,7 @@ int select_pool_with_enough_bits_available(pool **pools, int n_pools, int n_bits
 	return max_n_bits_index;
 }
 
-int get_bits_from_pools(int n_bits_requested, pool **pools, int n_pools, unsigned char **buffer, char allow_prng, char ignore_rngtest)
+int get_bits_from_pools(int n_bits_requested, pool **pools, int n_pools, unsigned char **buffer, char allow_prng, char ignore_rngtest_fips140, fips140 *pfips, char ignore_rngtest_scc, scc *pscc)
 {
 	int loop;
 	int n_to_do_bytes = (n_bits_requested + 7) / 8;
@@ -50,7 +51,7 @@ int get_bits_from_pools(int n_bits_requested, pool **pools, int n_pools, unsigne
 
 		while((n_bits_in_cur_pool = pools[loop] -> get_n_bits_in_pool()) > pool_block_size)
 		{
-			int rngtest_loop;
+			int rngtest_loop, rc_fips140 = 0, rc_scc = 0;
 			int cur_n_to_get_bits = min(n_to_do_bits, pool_block_size);
 			int cur_n_to_get_bytes = (cur_n_to_get_bits + 7) / 8;
 			int got_n_bytes, got_n_bits;
@@ -59,9 +60,16 @@ int get_bits_from_pools(int n_bits_requested, pool **pools, int n_pools, unsigne
 			got_n_bits = got_n_bytes * 8;
 
 			for(rngtest_loop=0; rngtest_loop<got_n_bytes; rngtest_loop++)
-					RNGTEST_add(cur_p[rngtest_loop]);
+			{
+				pfips -> add(cur_p[rngtest_loop]);
+				pscc -> add(cur_p[rngtest_loop]);
+			}
 
-			if (ignore_rngtest || RNGTEST() == 0)
+			if (!ignore_rngtest_fips140)
+				rc_fips140 = pfips -> is_ok();
+			if (!ignore_rngtest_scc)
+				rc_scc = pfips -> is_ok();
+			if (rc_fips140 == 0 && rc_scc == 0)
 			{
 				cur_p += got_n_bytes;
 				n_to_do_bits -= got_n_bits;
@@ -81,7 +89,7 @@ int get_bits_from_pools(int n_bits_requested, pool **pools, int n_pools, unsigne
 
 		do
 		{
-			int rngtest_loop;
+			int rngtest_loop, rc_fips140 = 0, rc_scc = 0;
 			int cur_n_to_get_bits = min(pools[index] -> get_pool_size(), n_to_do_bits);
 			int cur_n_to_get_bytes = (cur_n_to_get_bits + 7) / 8;
 			int got_n_bits, got_n_bytes;
@@ -90,9 +98,16 @@ int get_bits_from_pools(int n_bits_requested, pool **pools, int n_pools, unsigne
 			got_n_bits = got_n_bytes * 8;
 
 			for(rngtest_loop=0; rngtest_loop<got_n_bytes; rngtest_loop++)
-					RNGTEST_add(cur_p[rngtest_loop]);
+			{
+				pfips -> add(cur_p[rngtest_loop]);
+				pscc -> add(cur_p[rngtest_loop]);
+			}
 
-			if (ignore_rngtest || RNGTEST() == 0)
+			if (!ignore_rngtest_fips140)
+				rc_fips140 = pfips -> is_ok();
+			if (!ignore_rngtest_scc)
+				rc_scc = pfips -> is_ok();
+			if (rc_fips140 == 0 && rc_scc == 0)
 			{
 				cur_p += got_n_bytes;
 				n_to_do_bits -= got_n_bits;
@@ -122,7 +137,7 @@ int find_non_full_pool(pool **pools, int n_pools)
 	return -1;
 }
 
-int add_bits_to_pools(pool **pools, int n_pools, unsigned char *data, int n_bytes)
+int add_bits_to_pools(pool **pools, int n_pools, unsigned char *data, int n_bytes, char ignore_rngtest_fips140, fips140 *pfips, char ignore_rngtest_scc, scc *pscc)
 {
 	int index;
 	int n_bits_added = 0;
@@ -132,12 +147,26 @@ int add_bits_to_pools(pool **pools, int n_pools, unsigned char *data, int n_byte
 
 	while(n_bytes > 0)
 	{
+		int rngtest_loop, rc_fips140 = 0, rc_scc = 0;
 		int n_bytes_to_add = min(8, n_bytes);
 		unsigned char buffer[8];
 
 		memcpy(buffer, data, n_bytes_to_add);
 
-		n_bits_added += pools[index] -> add_entropy_data(buffer);
+		for(rngtest_loop=0; rngtest_loop<n_bytes_to_add; rngtest_loop++)
+		{
+			pfips -> add(buffer[rngtest_loop]);
+			pscc -> add(buffer[rngtest_loop]);
+		}
+
+		if (!ignore_rngtest_fips140)
+			rc_fips140 = pfips -> is_ok();
+		if (!ignore_rngtest_scc)
+			rc_scc = pfips -> is_ok();
+		if (rc_fips140 == 0 && rc_scc == 0)
+		{
+			n_bits_added += pools[index] -> add_entropy_data(buffer);
+		}
 
 		n_bytes -= n_bytes_to_add;
 		data += n_bytes_to_add;

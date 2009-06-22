@@ -1,20 +1,23 @@
 #include <sys/time.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <signal.h>
 #include <string.h>
 #include <unistd.h>
 
 #include "error.h"
 #include "pool.h"
-#include "rngtest.h"
+#include "fips140.h"
+#include "scc.h"
+#include "config.h"
 #include "client.h"
 #include "utils.h"
 #include "log.h"
 #include "handle_pool.h"
+#include "signals.h"
 
 void help(void)
 {
+	printf("-c file   config-file to read\n");
         printf("-l file   log to file 'file'\n");
         printf("-s        log to syslog\n");
 	printf("-S        statistics-file to log to\n");
@@ -25,21 +28,31 @@ int main(int argc, char *argv[])
 {
 	int loop;
 	pool **pools;
-	int n_pools = 14;
+	int n_pools = 0;
 	int c;
 	char do_not_fork = 0, log_console = 0, log_syslog = 0;
 	char *log_logfile = NULL;
 	char *stats_file = NULL;
-	rngtest_stats_t rtst;
+	fips140 *eb_output_fips140 = new fips140();
+	scc *eb_output_scc = new scc();
+	char *config_file = (char *)"/etc/entropybroker.conf";
+	config_t config;
 
-	memset(&rtst, 0x00, sizeof(rtst));
+	memset(&config, 0x00, sizeof(config));
 
 	printf("eb v " VERSION ", (C) 2009 by folkert@vanheusden.com\n");
 
-	while((c = getopt(argc, argv, "S:l:sn")) != -1)
+	eb_output_fips140 -> set_user((char *)"output");
+	eb_output_scc     -> set_user((char *)"output");
+
+	while((c = getopt(argc, argv, "c:S:l:sn")) != -1)
 	{
 		switch(c)
 		{
+			case 'c':
+				config_file = optarg;
+				break;
+
 			case 'S':
 				stats_file = optarg;
 				break;
@@ -65,7 +78,11 @@ int main(int argc, char *argv[])
 
 	set_logging_parameters(log_console, log_logfile, log_syslog);
 
-	RNGTEST_init(&rtst);
+	load_config(config_file, &config);
+	if (stats_file)
+		config.stats_file = stats_file;
+
+	eb_output_scc -> set_threshold(config.scc_threshold);
 
 	if (!do_not_fork)
 	{
@@ -73,46 +90,17 @@ int main(int argc, char *argv[])
 			error_exit("fork failed");
 	}
 
-	signal(SIGPIPE, SIG_IGN);
+	set_signal_handlers();
+
+	n_pools = config.number_of_pools;
 
 	pools = (pool **)malloc(sizeof(pool *) * n_pools);
 	for(loop=0; loop<n_pools; loop++)
 		pools[loop] = new pool();
 
-#if 0
-{
-unsigned char *buffer;
-
-printf("total bits; %d\n", get_bit_sum(pools, n_pools));
-for(loop=0; loop<1000; loop++)
-	int event_bits = add_event(pools, n_pools, lrand48());
-printf("total bits; %d\n", get_bit_sum(pools, n_pools));
-//printf("%d\n", get_bits_from_pools(1000, pools, n_pools, &buffer, 0));
-//exit(1);
-}
-#if 0
-for(;;)
-{
-	static int cnt = 0;
-	unsigned char *buffer;
-
-	get_bits_from_pools(myrand(240) + 1, pools, n_pools, &buffer, 0);
-	free(buffer);
-
-	if (++cnt % 10000 == 0)
-		printf("%d\r", cnt);
-
-	if (get_bit_sum(pools, n_pools) < 8)
-	{
-		for(loop=0; loop<1000; loop++)
-			int event_bits = add_event(pools, n_pools, myrand(4000000));
-	}
-}
-#endif
-#endif
 	dolog(LOG_DEBUG, "added %d bits of startup-event-entropy to pool", add_event(pools, n_pools, get_ts()));
 
-	main_loop(pools, n_pools, 60, "0.0.0.0", 55225, stats_file, &rtst);
+	main_loop(pools, n_pools, &config, eb_output_fips140, eb_output_scc);
 
 	return 0;
 }

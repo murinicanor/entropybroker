@@ -10,6 +10,7 @@
 #include <sys/time.h>
 #include <stdio.h>
 #include <sys/select.h>
+#include <netinet/tcp.h>
 
 #include "error.h"
 #include "kernel_prng_io.h"
@@ -210,7 +211,7 @@ int WRITE_TO(int fd, char *whereto, size_t len, int to)
 	return cnt;
 }
 
-int start_listen(char *adapter, int portnr)
+int start_listen(char *adapter, int portnr, int listen_queue_size)
 {
 	int reuse_addr = 1;
 	struct sockaddr_in server_addr;
@@ -218,7 +219,6 @@ int start_listen(char *adapter, int portnr)
 	int fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (fd == -1)
 		error_exit("failed creating socket");
-
 
 	if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (char *)&reuse_addr, sizeof(reuse_addr)) == -1)
 		error_exit("setsockopt(SO_REUSEADDR) failed");
@@ -240,7 +240,7 @@ int start_listen(char *adapter, int portnr)
 	if (bind(fd, (struct sockaddr *)&server_addr, server_addr_len) == -1)
 		error_exit("bind() failed");
 
-	if (listen(fd, 5) == -1)
+	if (listen(fd, listen_queue_size) == -1)
 		error_exit("listen() failed");
 
 	return fd;
@@ -289,7 +289,6 @@ int connect_to(char *host, int portnr)
 {
 	int fd;
 	struct sockaddr_in addr;
-	int keep_alive = 1;
 
 	/* resolve */
 	memset(&addr, 0x00, sizeof(addr));
@@ -300,9 +299,6 @@ int connect_to(char *host, int portnr)
 	fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (fd == -1)
 		error_exit("connect_to: problem creating socket");
-
-	if (setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, (char *)&keep_alive, sizeof(keep_alive)) == -1)
-		error_exit("connect_to: problem setting KEEPALIVE");
 
 	/* connect to peer */
 	if (connect(fd, (struct sockaddr *)&addr, sizeof(struct sockaddr)) == 0)
@@ -331,4 +327,20 @@ int myrand(int max)
 	}
 
 	return (int)(drand48() * (double)max);
+}
+
+void disable_nagle(int fd)
+{
+      int disable = 1;
+
+      if (setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, (char *)&disable, sizeof(disable)) == -1)
+		error_exit("setsockopt(IPPROTO_TCP, TCP_NODELAY) failed");
+}
+
+void enable_tcp_keepalive(int fd)
+{
+	int keep_alive = 1;
+
+	if (setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, (char *)&keep_alive, sizeof(keep_alive)) == -1)
+		error_exit("problem setting KEEPALIVE");
 }

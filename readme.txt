@@ -19,5 +19,8 @@ the servers/clients/eb log to syslog.
 
 It uses port 55225 (TCP) for communication.
 
+Send a HUP signal to the eb-daemon to let it log the current
+state. E.g. recv/sent requests, etc.
+
 
 --- folkert@vanheusden.com

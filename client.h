@@ -1,11 +1,19 @@
 typedef struct
 {
 	int socket_fd;
-	char host[128];
+	char host[128], type[128];
+	char is_server;
 	int bits_sent, bits_recv;
 	int max_bits_per_interval;
 	char allow_prng;
-	char ignore_rngtest;
+	char ignore_rngtest_fips140, ignore_rngtest_scc;
+	double last_message, last_put_message;
+	double connected_since;
+
+	fips140 *pfips140;
+	scc *pscc;
+
+	int ping_nr;
 } client_t;
 
 typedef struct
@@ -16,7 +24,7 @@ typedef struct
 	int total_recv_requests, total_sent_requests;
 	int n_times_empty, n_times_not_allowed, n_times_full, n_times_quota;
 
-	int disconnects;
+	int disconnects, timeouts;
 } statistics_t;
 
-void main_loop(pool **pools, int n_pools, int reset_counters_interval, char *adapter, int port, char *stats_file, rngtest_stats_t *rtst);
+void main_loop(pool **pools, int n_pools, config_t *config, fips140 *eb_output_fips140, scc *eb_output_scc);

@@ -30,7 +30,7 @@ pool::pool()
 
 pool::pool(char *state_file)
 {
-	int fd = open(state_file, O_RDWR);
+	int fd = open(state_file, O_RDONLY);
 	if (fd == -1)
 		error_exit("error opening %s", state_file);
 
@@ -55,11 +55,11 @@ pool::~pool()
 void pool::update_ivec(void)
 {
 	int loop;
-	char bit = ivec[7] & 127;
+	char bit = ivec[7] & 128;
 
 	for(loop=0; loop<8; loop++)
 	{
-		char new_bit = ivec[loop] & 127;
+		char new_bit = ivec[loop] & 128;
 
 		ivec[loop] <<= 1;
 		ivec[loop] |= bit ? 1 : 0;

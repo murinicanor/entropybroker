@@ -55,6 +55,9 @@ int main(int argc, char *argv[])
                 if (connect_msg)
                         dolog(LOG_INFO, "Connected");
 
+		disable_nagle(socket_fd);
+		enable_tcp_keepalive(socket_fd);
+
 		n_bits_to_get = myrand(9992) + 1;
 		dolog(LOG_INFO, "will get %d bits", n_bits_to_get);
 

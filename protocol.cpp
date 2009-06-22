@@ -9,7 +9,7 @@
 
 #define DEFAULT_COMM_TO 15
 
-int reconnect_server_socket(char *host, int port, int *socket_fd, const char *server_type)
+int reconnect_server_socket(char *host, int port, int *socket_fd, const char *type, char is_server)
 {
 	char connect_msg = 0;
 
@@ -40,7 +40,13 @@ int reconnect_server_socket(char *host, int port, int *socket_fd, const char *se
 
 		dolog(LOG_INFO, "Connected");
 
-		sprintf((char *)buffer, "0003%04d%s", (int)(strlen(server_type) * 8), server_type);
+		if (strlen(type) == 0)
+			error_exit("client/server-type should not be 0 bytes in size");
+
+		if (is_server)
+			sprintf((char *)buffer, "0003%04d%s", (int)strlen(type), type);
+		else
+			sprintf((char *)buffer, "0006%04d%s", (int)strlen(type), type);
 		str_len = strlen(buffer);
 
 		if (WRITE_TO(*socket_fd, buffer, str_len, DEFAULT_COMM_TO) != str_len)

@@ -14,20 +14,72 @@
 #include "utils.h"
 #include "log.h"
 #include "math.h"
+#include "protocol.h"
 
 #define DEFAULT_COMM_TO 15
 
+int proces_server_msg(int socket_fd)
+{
+	char msg_cmd[4+1], msg_par[4+1];
+
+	if (READ(socket_fd, msg_cmd, 4) != 4)
+	{
+		dolog(LOG_INFO, "short read on socket");
+		return -1;
+	}
+	msg_cmd[4] = 0x00;
+
+	if (READ(socket_fd, msg_par, 4) != 4)
+	{
+		dolog(LOG_INFO, "short read on socket");
+		return -1;
+	}
+	msg_par[4] = 0x00;
+
+	if (strcmp(msg_cmd, "0004") == 0)	/* ping request */
+	{
+		static int pingnr = 0;
+		char xmit_buffer[8 + 1];
+
+		snprintf(xmit_buffer, sizeof(xmit_buffer), "0005%04d", pingnr++);
+
+		dolog(LOG_DEBUG, "Got a ping request (with parameter %s), sending reply (%s)", msg_par, xmit_buffer);
+
+		if (WRITE(socket_fd, xmit_buffer, 8) != 8)
+			return -1;
+	}
+	else if (strcmp(msg_cmd, "0007") == 0)	/* kernel entropy count */
+	{
+		char xmit_buffer[128], val_buffer[128];
+
+		snprintf(val_buffer, sizeof(val_buffer), "%d", kernel_rng_get_entropy_count());
+		snprintf(xmit_buffer, sizeof(xmit_buffer), "0008%04d%s", (int)strlen(val_buffer), val_buffer);
+
+		dolog(LOG_DEBUG, "Got a kernel entropy count request (with parameter %s), sending reply (%s)", msg_par, xmit_buffer);
+
+		if (WRITE(socket_fd, xmit_buffer, strlen(xmit_buffer)) != strlen(xmit_buffer))
+			return -1;
+	}
+	else
+	{
+		dolog(LOG_CRIT, "Got unknown request: %s", msg_cmd);
+		return -1;
+	}
+
+	return 0;
+}
+
 void help(void)
 {
-        printf("-i host   eb-host to connect to\n");
-        printf("-l file   log to file 'file'\n");
-        printf("-s        log to syslog\n");
-        printf("-n        do not fork\n");
+	printf("-i host   eb-host to connect to\n");
+	printf("-l file   log to file 'file'\n");
+	printf("-s        log to syslog\n");
+	printf("-n        do not fork\n");
 }
 
 int main(int argc, char *argv[])
 {
-	char *host = (char *)"localhost";
+	char *host = NULL;
 	int port = 55225;
 	int socket_fd = -1, dev_random_fd = open(DEV_RANDOM, O_RDWR);
 	int max_bits_in_kernel_rng = kernel_rng_get_max_entropy_count();
@@ -42,9 +94,9 @@ int main(int argc, char *argv[])
 	{
 		switch(c)
 		{
-                        case 'i':
-                                host = optarg;
-                                break;
+			case 'i':
+				host = optarg;
+				break;
 
 			case 's':
 				log_syslog = 1;
@@ -64,6 +116,9 @@ int main(int argc, char *argv[])
 				return 1;
 		}
 	}
+
+	if (!host)
+		error_exit("no host to connect to selected");
 
 	set_logging_parameters(log_console, log_logfile, log_syslog);
 
@@ -87,41 +142,26 @@ int main(int argc, char *argv[])
 		int will_get_n_bits, will_get_n_bytes;
 		char recv_msg[8 + 1], reply[8 + 1];
 		int n_bits_in_kernel_rng, n_bits_to_get;
-                fd_set write_fd;
-                char connect_msg = 0;
+		fd_set write_fd;
+		fd_set read_fd;
 
-		// connect to server
-                if (socket_fd == -1)
-                {
-                        dolog(LOG_INFO, "Connecting to %s:%d", host, port);
-                        connect_msg = 1;
-                }
+		if (reconnect_server_socket(host, port, &socket_fd, argv[0], 0) == -1) // FIXME set client-type
+			continue;
 
-                while(socket_fd == -1)
-                {
-                        socket_fd = connect_to(host, port);
-                        if (socket_fd == -1)
-                        {
-                                long int sleep_micro_seconds = myrand(4000000) + 1;
-
-                                dolog(LOG_WARNING, "Failed connecting, sleeping for %f seconds", (double)sleep_micro_seconds / 1000000.0);
-
-                                usleep((long)sleep_micro_seconds);
-                        }
-                }
-
-                if (connect_msg)
-                        dolog(LOG_INFO, "Connected");
+		disable_nagle(socket_fd);
+		enable_tcp_keepalive(socket_fd);
 
 		// wait for /dev/random te become writable which means the entropy-
 		// level dropped below a certain threshold
 		FD_ZERO(&write_fd);
+		FD_ZERO(&read_fd);
 		FD_SET(dev_random_fd, &write_fd);
+		FD_SET(socket_fd, &read_fd);
 
 		dolog(LOG_DEBUG, "wait for low-event");
 		for(;;)
 		{
-			int rc = select(dev_random_fd+1, NULL, &write_fd, NULL, NULL); /* wait for krng */
+			int rc = select(max(socket_fd, dev_random_fd) + 1, &read_fd, &write_fd, NULL, NULL); /* wait for krng */
 			dolog(LOG_DEBUG, "select returned with %d", rc);
 			if (rc >= 0) break;
 			if (errno != EINTR && errno != EAGAIN)
@@ -129,83 +169,97 @@ int main(int argc, char *argv[])
 		}
 		dolog(LOG_DEBUG, "back from low-event wait");
 
-		/* find out how many bits to add */
-		n_bits_in_kernel_rng = kernel_rng_get_entropy_count();
-		n_bits_to_get = max_bits_in_kernel_rng - n_bits_in_kernel_rng;
-		if (n_bits_to_get <= 0)
-			error_exit("number of bits to get <= 0: %d", n_bits_to_get);
-		if (n_bits_to_get > 9999)
-			n_bits_to_get = 9999;
-
-		dolog(LOG_INFO, "%d bits left (%d max), will get %d bits", n_bits_in_kernel_rng, max_bits_in_kernel_rng, n_bits_to_get);
-
-		snprintf(recv_msg, sizeof(recv_msg), "0001%04d", n_bits_to_get);
-
-		if (WRITE_TO(socket_fd, recv_msg, 8, DEFAULT_COMM_TO) != 8)
+		if (FD_ISSET(socket_fd, &read_fd))
 		{
-			dolog(LOG_INFO, "write error to %s:%d", host, port);
-			close(socket_fd);
-			socket_fd = -1;
-			continue;
+			if (proces_server_msg(socket_fd) == -1)
+			{
+				close(socket_fd);
+				socket_fd = -1;
+				continue;
+			}
 		}
 
-		dolog(LOG_DEBUG, "request sent");
-
-		if (READ_TO(socket_fd, reply, 8, DEFAULT_COMM_TO) != 8)
+		if (FD_ISSET(dev_random_fd, &write_fd))
 		{
-			dolog(LOG_INFO, "read error from %s:%d", host, port);
-			close(socket_fd);
-			socket_fd = -1;
-			continue;
+			/* find out how many bits to add */
+			n_bits_in_kernel_rng = kernel_rng_get_entropy_count();
+			n_bits_to_get = max_bits_in_kernel_rng - n_bits_in_kernel_rng;
+			if (n_bits_to_get <= 0)
+				error_exit("number of bits to get <= 0: %d", n_bits_to_get);
+			if (n_bits_to_get > 9999)
+				n_bits_to_get = 9999;
+
+			dolog(LOG_INFO, "%d bits left (%d max), will get %d bits", n_bits_in_kernel_rng, max_bits_in_kernel_rng, n_bits_to_get);
+
+			snprintf(recv_msg, sizeof(recv_msg), "0001%04d", n_bits_to_get);
+
+			if (WRITE_TO(socket_fd, recv_msg, 8, DEFAULT_COMM_TO) != 8)
+			{
+				dolog(LOG_INFO, "write error to %s:%d", host, port);
+				close(socket_fd);
+				socket_fd = -1;
+				continue;
+			}
+
+			dolog(LOG_DEBUG, "request sent");
+
+			if (READ_TO(socket_fd, reply, 8, DEFAULT_COMM_TO) != 8)
+			{
+				dolog(LOG_INFO, "read error from %s:%d", host, port);
+				close(socket_fd);
+				socket_fd = -1;
+				continue;
+			}
+			reply[8] = 0x00;
+			dolog(LOG_DEBUG, "received reply: %s", reply);
+			if (reply[0] == '9' && reply[1] == '0' && reply[2] == '0' && (reply[3] == '0' || reply[3] == '2'))
+			{
+				double seconds = (double)atoi(&reply[4]) + (double)myrand(1000000)/1000000.0;
+
+				dolog(LOG_WARNING, "server has no data/quota, sleeping for %f seconds", seconds);
+
+				usleep(seconds * 1000000.0);
+
+				dolog(LOG_DEBUG, "wokeup with %d bits in kernel rng", kernel_rng_get_entropy_count());
+
+				continue;
+			}
+			will_get_n_bits = atoi(&reply[4]);
+			will_get_n_bytes = (will_get_n_bits + 7) / 8;
+
+			dolog(LOG_INFO, "server is offering %d bits (%d bytes)", will_get_n_bits, will_get_n_bytes);
+
+			buffer = (unsigned char *)malloc(will_get_n_bytes);
+			if (!buffer)
+				error_exit("out of memory allocating %d bytes", will_get_n_bytes);
+
+			if (READ_TO(socket_fd, (char *)buffer, will_get_n_bytes, DEFAULT_COMM_TO) != will_get_n_bytes)
+			{
+				dolog(LOG_INFO, "read error from %s:%d", host, port);
+				free(buffer);
+				close(socket_fd);
+				socket_fd = -1;
+				continue;
+			}
+
+			dolog(LOG_DEBUG, "data received");
+
+			if (use_as_is)
+				rc = kernel_rng_add_entropy(buffer, will_get_n_bytes, will_get_n_bytes * 8);
+			else
+			{
+				int information_n_bits = determine_number_of_bits_of_data(buffer, will_get_n_bytes);
+
+				dolog(LOG_DEBUG, "%d bits from server contains %d bits of information, new entropy count: %d", will_get_n_bits, information_n_bits, kernel_rng_get_entropy_count());
+
+				rc = kernel_rng_add_entropy(buffer, will_get_n_bytes, information_n_bits);
+			}
+
+			if (rc == -1)
+				error_exit("error submiting entropy data to kernel");
+
+			free(buffer);
 		}
-		reply[8] = 0x00;
-		dolog(LOG_DEBUG, "received reply: %s", reply);
-		if (reply[0] == '9' && reply[1] == '0' && reply[2] == '0' && (reply[3] == '0' || reply[3] == '2'))
-		{
-			double seconds = (double)atoi(&reply[4]) + (double)myrand(1000000)/1000000.0;
-
-			dolog(LOG_WARNING, "server has no data/quota, sleeping for %f seconds", seconds);
-
-			usleep(seconds * 1000000.0);
-
-			dolog(LOG_DEBUG, "wokeup with %d bits in kernel rng", kernel_rng_get_entropy_count());
-
-			continue;
-		}
-		will_get_n_bits = atoi(&reply[4]);
-		will_get_n_bytes = (will_get_n_bits + 7) / 8;
-
-		dolog(LOG_INFO, "server is offering %d bits (%d bytes)", will_get_n_bits, will_get_n_bytes);
-
-		buffer = (unsigned char *)malloc(will_get_n_bytes);
-		if (!buffer)
-			error_exit("out of memory allocating %d bytes", will_get_n_bytes);
-
-		if (READ_TO(socket_fd, (char *)buffer, will_get_n_bytes, DEFAULT_COMM_TO) != will_get_n_bytes)
-		{
-			dolog(LOG_INFO, "read error from %s:%d", host, port);
-			close(socket_fd);
-			socket_fd = -1;
-			continue;
-		}
-
-		dolog(LOG_DEBUG, "data received");
-
-		if (use_as_is)
-			rc = kernel_rng_add_entropy(buffer, will_get_n_bytes, will_get_n_bytes * 8);
-		else
-		{
-			int information_n_bits = determine_number_of_bits_of_data(buffer, will_get_n_bytes);
-
-			dolog(LOG_DEBUG, "%d bits from server contains %d bits of information, new entropy count: %d", will_get_n_bits, information_n_bits, kernel_rng_get_entropy_count());
-
-			rc = kernel_rng_add_entropy(buffer, will_get_n_bytes, information_n_bits);
-		}
-
-		if (rc == -1)
-			error_exit("error submiting entropy data to kernel");
-
-		free(buffer);
 	}
 
 	return 0;
