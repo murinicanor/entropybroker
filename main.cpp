@@ -98,7 +98,7 @@ int main(int argc, char *argv[])
 	for(loop=0; loop<n_pools; loop++)
 		pools[loop] = new pool();
 
-	dolog(LOG_DEBUG, "added %d bits of startup-event-entropy to pool", add_event(pools, n_pools, get_ts()));
+	dolog(LOG_DEBUG, "added %d bits of startup-event-entropy to pool", add_event(pools, n_pools, get_ts(), NULL, 0));
 
 	main_loop(pools, n_pools, &config, eb_output_fips140, eb_output_scc);
 

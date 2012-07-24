@@ -16,8 +16,8 @@ void error_exit(const char *format, ...)
 	vsnprintf(buffer, sizeof(buffer), format, ap);
 	va_end(ap);
 
-	fprintf(stderr, "%s: errno=%d (if applicable) -> %s\n", buffer, errno, strerror(errno));
-	syslog(LOG_ERR, "'%s': %m", buffer);
+	fprintf(stderr, "FATAL|%s: errno=%d (if applicable) -> %s\n", buffer, errno, strerror(errno));
+	syslog(LOG_ERR, "FATAL|%s: %m", buffer);
 
 	exit(EXIT_FAILURE);
 }

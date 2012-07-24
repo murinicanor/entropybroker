@@ -1,3 +1,19 @@
+/*
+  GPL 2 applies to entropybroker.
+
+  In addition, as a special exception, the copyright holders give
+  permission to link the code of portions of this program with the
+  OpenSSL library under certain conditions as described in each
+  individual source file, and distribute linked combinations
+  including the two.
+  You must obey the GNU General Public License in all respects
+  for all of the code used other than OpenSSL.  If you modify
+  file(s) with this exception, you may extend this exception to your
+  version of the file(s), but you are not obligated to do so.  If you
+  do not wish to do so, delete this exception statement from your
+  version.  If you delete this exception statement from all source
+  files in the program, then also delete it here.
+*/
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -11,7 +27,7 @@
 
 #include "pool.h"
 #include "error.h"
-#include "kernel_prng_io.h"
+#include "kernel_prng_rw.h"
 #include "math.h"
 #include "utils.h"
 
@@ -98,29 +114,25 @@ int pool::get_entropy_data(unsigned char *entropy_data, int n_bytes_requested, c
 {
 	unsigned char temp_buffer[POOL_SIZE / 8];
 	BF_KEY key;
-	int n_given;
+	int n_given, half_sha512_hash_len = SHA512_DIGEST_LENGTH / 2;;
 	unsigned char hash[SHA512_DIGEST_LENGTH];
-	uint32_t *hash_words = (uint32_t *)hash;
 
 	update_ivec();
 
 	n_given = n_bytes_requested;
 	if (!prng_ok)
 		n_given = min(n_given, bits_in_pool / 8);
-	n_given = min(n_given, SHA512_DIGEST_LENGTH / 2); // FIXME: see folding below
+	n_given = min(n_given, half_sha512_hash_len); // FIXME: see folding below
 
 	if (n_given > 0)
 	{
-		uint16_t w2a = hash_words[2] >> 16;
-		uint16_t w2b = hash_words[2] & 0xffff;
+		int loop;
 
 		SHA512(entropy_pool, sizeof(entropy_pool), hash);
 
-		// fold into 10 bytes (like linux kernel does):
-		// W0^W3, W1^W4, W2[0-15] ^ W2[16-31]
-		hash_words[0] ^= hash_words[3];
-		hash_words[1] ^= hash_words[4];
-		hash_words[2] = (w2a ^ w2b) | ((w2a ^ w2b) << 16);
+		// fold into 32 bytes
+		for(loop=0; loop<half_sha512_hash_len; loop++)
+			hash[loop] ^= hash[loop + half_sha512_hash_len];
 		memcpy(entropy_data, hash, n_given);
 
 		bits_in_pool -= (n_given * 8);
@@ -151,7 +163,7 @@ int pool::is_full(void)
 }
 
 /* taken from random driver from linux-kernel */
-int pool::add_event(double ts)
+int pool::add_event(double ts, unsigned char *event_data, int n_event_data)
 {
 	unsigned char temp_buffer[POOL_SIZE / 8];
 	BF_KEY key;
@@ -192,6 +204,13 @@ int pool::add_event(double ts)
 	BF_set_key(&key, sizeof(ts), (const unsigned char *)&ts);
 	BF_cbc_encrypt(entropy_pool, temp_buffer, (POOL_SIZE / 8), &key, ivec, BF_ENCRYPT);
 	memcpy(entropy_pool, temp_buffer, (POOL_SIZE / 8));
+
+	if (event_data)
+	{
+		BF_set_key(&key, n_event_data, event_data);
+		BF_cbc_encrypt(entropy_pool, temp_buffer, (POOL_SIZE / 8), &key, ivec, BF_ENCRYPT);
+		memcpy(entropy_pool, temp_buffer, (POOL_SIZE / 8));
+	}
 
 	return n_bits_added;
 }

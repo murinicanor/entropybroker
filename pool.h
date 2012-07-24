@@ -31,5 +31,5 @@ public:
 	int get_n_bits_in_pool(void);
 	int get_pool_size(void);
 	int is_full(void);
-	int add_event(double ts);
+	int add_event(double ts, unsigned char *event_data, int n_event_data);
 };

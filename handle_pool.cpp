@@ -194,14 +194,14 @@ int get_bit_sum(pool **pools, int n_pools)
 	return bit_count;
 }
 
-int add_event(pool **pools, int n_pools, double event)
+int add_event(pool **pools, int n_pools, double event, unsigned char *event_data, int n_event_data)
 {
 	int index;
 
 	if ((index = find_non_full_pool(pools, n_pools)) == -1)
 		index = myrand(n_pools);
 
-	return pools[index] -> add_event(event);
+	return pools[index] -> add_event(event, event_data, n_event_data);
 }
 
 char all_pools_full(pool **pools, int n_pools)

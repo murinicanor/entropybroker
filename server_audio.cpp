@@ -87,12 +87,13 @@ void help(void)
 	printf("-i host   eb-host to connect to\n");
 	printf("-d dev    audio-device, default %s\n", cdevice);
 	printf("-o file   file to write entropy data to (mututal exclusive with -d)\n");
+	printf("-S        show bps (mutual exclusive with -n)\n");
 	printf("-l file   log to file 'file'\n");
 	printf("-s        log to syslog\n");
 	printf("-n        do not fork\n");
 }
 
-void main_loop(char *host, int port, char *bytes_file)
+void main_loop(char *host, int port, char *bytes_file, char show_bps)
 {
 	int n_to_do, bits_out=0, loop;
 	char *dummy;
@@ -107,12 +108,16 @@ void main_loop(char *host, int port, char *bytes_file)
 	int socket_fd = -1;
 	unsigned char bytes[1249]; // 1249 * 8: 9992, must be less then 9999
 	int bytes_out = 0;
+	double start_ts, cur_start_ts;
+	long int total_byte_cnt = 0;
 
+	start_ts = get_ts();
+	cur_start_ts = start_ts;
 	for(;;)
 	{
 		char got_any = 0;
 
-		if (!bytes_file)
+		if (host)
 		{
 			if (reconnect_server_socket(host, port, &socket_fd, server_type, 1) == -1)
 				continue;
@@ -249,6 +254,20 @@ void main_loop(char *host, int port, char *bytes_file)
 					}
 
 					bits_out = 0;
+
+					if (show_bps)
+					{
+						double now_ts = get_ts();
+
+						total_byte_cnt++;
+
+						if ((now_ts - cur_start_ts) >= 1.0)
+						{
+							int diff_t = now_ts - start_ts;
+							cur_start_ts = now_ts;
+							printf("Total number of bytes: %ld, avg/s: %f\n", total_byte_cnt, (double)total_byte_cnt / diff_t);
+						}
+					}
 				}
 			}
 		}
@@ -268,13 +287,18 @@ int main(int argc, char *argv[])
 	char do_not_fork = 0, log_console = 0, log_syslog = 0;
 	char *log_logfile = NULL;
 	char *bytes_file = NULL;
+	char show_bps = 0;
 
 	fprintf(stderr, "%s, (C) 2009 by folkert@vanheusden.com\n", server_type);
 
-	while((c = getopt(argc, argv, "o:i:d:l:sn")) != -1)
+	while((c = getopt(argc, argv, "So:i:d:l:sn")) != -1)
 	{
 		switch(c)
 		{
+			case 'S':
+				show_bps = 1;
+				break;
+
 			case 'o':
 				bytes_file = optarg;
 				break;
@@ -314,7 +338,7 @@ int main(int argc, char *argv[])
 
 	set_logging_parameters(log_console, log_logfile, log_syslog);
 
-	if (!do_not_fork)
+	if (!do_not_fork && !show_bps)
 	{
 		if (daemon(-1, -1) == -1)
 			error_exit("fork failed");
@@ -323,5 +347,5 @@ int main(int argc, char *argv[])
 
 	signal(SIGPIPE, SIG_IGN);
 
-	main_loop(host, port, bytes_file);
+	main_loop(host, port, bytes_file, show_bps);
 }

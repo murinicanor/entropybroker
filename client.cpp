@@ -119,9 +119,9 @@ int do_client_get(pool **pools, int n_pools, client_t *client, statistics_t *sta
 		return send_denied_empty(client -> socket_fd, stats, config);
 	}
 	if (cur_n_bits < 0)
-		error_exit("internal error: %d", cur_n_bits);
+		error_exit("internal error: %d < 0", cur_n_bits);
 	cur_n_bytes = (cur_n_bits + 7) / 8;
-	dolog(LOG_DEBUG, "get|got %d bits from pool", cur_n_bits);
+	dolog(LOG_DEBUG, "get|%s got %d bits from pool", client -> host, cur_n_bits);
 
 	// update statistics for accounting
 	client -> bits_sent += cur_n_bits;
@@ -177,26 +177,26 @@ int do_client_put(pool **pools, int n_pools, client_t *client, statistics_t *sta
 		}
 
 		if (full_allow_interval_submit)
-			dolog(LOG_DEBUG, "put|%s allow submit when full, after %f seconds", client -> host, last_submit_ago);
+			dolog(LOG_DEBUG, "put|%s(%s) allow submit when full, after %f seconds", client -> host, client -> type, last_submit_ago);
 	}
 
 	n_bits[4] = 0x00;
 
 	if (READ_TO(client -> socket_fd, n_bits, 4, config -> communication_timeout) != 4)
 	{
-		dolog(LOG_INFO, "put|%s short read while retrieving number of bits to recv", client -> host);
+		dolog(LOG_INFO, "put|%s(%s) short read while retrieving number of bits to recv", client -> host, client -> type);
 		return -1;
 	}
 
 	cur_n_bits = atoi(n_bits);
 	if (cur_n_bits == 0)
 	{
-		dolog(LOG_INFO, "put|%s 0 bits requested", client -> host);
+		dolog(LOG_INFO, "put|%s(%s) 0 bits requested", client -> host, client -> type);
 		return -1;
 	}
 	if (cur_n_bits > 9992)
 	{
-		dolog(LOG_WARNING, "put|%s client requested more than 9992 bits: %d", client -> host, cur_n_bits);
+		dolog(LOG_WARNING, "put|%s(%s) client requested more than 9992 bits: %d", client -> host, client -> type, cur_n_bits);
 		return -1;
 	}
 
@@ -251,7 +251,10 @@ int do_client_server_type(pool **pools, int n_pools, client_t *client, config_t 
 
 	n_bytes = atoi(string_size);
 	if (n_bytes <= 0)
-		error_exit("%s sends 0003 msg with 0 bytes of contents", client -> host);
+	{
+		dolog(LOG_WARNING, "%s sends 0003 msg with 0 bytes of contents", client -> host);
+		return -1;
+	}
 
 	buffer = (char *)malloc(n_bytes + 1);
 	if (!buffer)
@@ -321,7 +324,10 @@ int do_client_kernelpoolfilled_reply(client_t *client, config_t *config)
 
 	n_bytes = atoi(string_size);
 	if (n_bytes <= 0)
-		error_exit("%s sends 0008 msg with 0 bytes of contents", client -> host);
+	{
+		dolog(LOG_WARNING, "%s sends 0008 msg with 0 bytes of contents", client -> host);
+		return -1;
+	}
 
 	buffer = (char *)malloc(n_bytes + 1);
 	if (!buffer)
@@ -367,9 +373,10 @@ int do_client(pool **pools, int n_pools, client_t *client, statistics_t *stats, 
 	char cmd[4 + 1];
 	cmd[4] = 0x00;
 
-	if (READ_TO(client -> socket_fd, cmd, 4, config -> communication_timeout) != 4)
+	int rc = READ_TO(client -> socket_fd, cmd, 4, config -> communication_timeout);
+	if (rc != 4)
 	{
-		dolog(LOG_INFO, "client|%s short read while retrieving command", client -> host);
+		dolog(LOG_INFO, "client|%s short read while retrieving command (%d)", client -> host, rc);
 		return -1;
 	}
 
@@ -509,7 +516,7 @@ void main_loop(pool **pools, int n_pools, config_t *config, fips140 *eb_output_f
 
 		if (config -> allow_event_entropy_addition)
 		{
-			event_bits = add_event(pools, n_pools, now);
+			event_bits = add_event(pools, n_pools, now, (unsigned char *)&rfds, sizeof(rfds));
 			dolog(LOG_DEBUG, "main|added %d bits of event-entropy to pool", event_bits);
 		}
 

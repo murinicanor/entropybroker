@@ -297,7 +297,7 @@ int fips140::is_ok(void)
 
 char *fips140::stats(void)
 {
-	char stats_buffer[4096];
+	static char stats_buffer[4096];
 
 	snprintf(stats_buffer, sizeof(stats_buffer), "monobit: %d, poker: %d, longrun: %d, runs: %d",
 			stats_t.monobit, stats_t.poker, stats_t.longrun, stats_t.runs);

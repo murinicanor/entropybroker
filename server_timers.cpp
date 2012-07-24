@@ -17,6 +17,7 @@ void help(void)
 {
 	printf("-i host   eb-host to connect to\n");
 	printf("-o file   file to write entropy data to\n");
+	printf("-S        show bps (mutual exclusive with -n)\n");
 	printf("-l file   log to file 'file'\n");
 	printf("-s        log to syslog\n");
 	printf("-n        do not fork\n");
@@ -49,13 +50,20 @@ int main(int argc, char *argv[])
 	char do_not_fork = 0, log_console = 0, log_syslog = 0;
 	char *log_logfile = NULL;
 	char *bytes_file = NULL;
+	char show_bps = 0;
+	double start_ts, cur_start_ts;
+	long int total_byte_cnt = 0;
 
 	fprintf(stderr, "%s, (C) 2009 by folkert@vanheusden.com\n", server_type);
 
-	while((c = getopt(argc, argv, "o:i:l:sn")) != -1)
+	while((c = getopt(argc, argv, "So:i:l:sn")) != -1)
 	{
 		switch(c)
 		{
+			case 'S':
+				show_bps = 1;
+				break;
+
 			case 'o':
 				bytes_file = optarg;
 				break;
@@ -83,15 +91,12 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if (!host && !bytes_file)
-		error_exit("no host to connect to given");
-
-	if (host != NULL && bytes_file != NULL)
-		error_exit("-o and -d are mutual exclusive");
+	if (!host && !bytes_file && show_bps == 0)
+		error_exit("no host to connect to/file to write to given");
 
 	set_logging_parameters(log_console, log_logfile, log_syslog);
 
-	if (!do_not_fork)
+	if (!do_not_fork && !show_bps)
 	{
 		if (daemon(-1, -1) == -1)
 			error_exit("fork failed");
@@ -99,11 +104,13 @@ int main(int argc, char *argv[])
 
 	signal(SIGPIPE, SIG_IGN);
 
+	start_ts = get_ts();
+	cur_start_ts = start_ts;
 	for(;;)
 	{
 		double t1, t2;
 
-		if (!bytes_file)
+		if (host != NULL)
 		{
 			if (reconnect_server_socket(host, port, &socket_fd, server_type, 1) == -1)
 				continue;
@@ -134,7 +141,7 @@ int main(int argc, char *argv[])
 				{
 					emit_buffer_to_file(bytes_file, bytes, index);
 				}
-				else
+				if (host)
 				{
 					if (message_transmit_entropy_data(socket_fd, bytes, index) == -1)
 					{
@@ -145,6 +152,20 @@ int main(int argc, char *argv[])
 				}
 
 				index = 0; // skip header
+			}
+
+			if (show_bps)
+			{
+				double now_ts = get_ts();
+
+				total_byte_cnt++;
+
+				if ((now_ts - cur_start_ts) >= 1.0)
+				{
+					int diff_t = now_ts - start_ts;
+					cur_start_ts = now_ts;
+					printf("Total number of bytes: %ld, avg/s: %f\n", total_byte_cnt, (double)total_byte_cnt / diff_t);
+				}
 			}
 		}
 	}

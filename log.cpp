@@ -38,7 +38,7 @@ void dolog(int level, const char *format, ...)
                 fclose(fh);
         }
 
-	if (log_syslog)
+	if (log_syslog && level < 6)
 		syslog(level, "%s", buffer);
 }
 

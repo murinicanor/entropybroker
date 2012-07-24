@@ -185,7 +185,10 @@ int main(int argc, char *argv[])
 			n_bits_in_kernel_rng = kernel_rng_get_entropy_count();
 			n_bits_to_get = max_bits_in_kernel_rng - n_bits_in_kernel_rng;
 			if (n_bits_to_get <= 0)
-				error_exit("number of bits to get <= 0: %d", n_bits_to_get);
+			{
+				dolog(LOG_DEBUG, "number of bits to get <= 0: %d", n_bits_to_get);
+				continue;
+			}
 			if (n_bits_to_get > 9999)
 				n_bits_to_get = 9999;
 

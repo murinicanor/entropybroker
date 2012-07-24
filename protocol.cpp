@@ -93,14 +93,20 @@ int message_transmit_entropy_data(int socket_fd, unsigned char *bytes, int n_byt
 	reply[4] = 0x00;
 
 	if (value <= 0)
-		error_exit("value %d less then 1", value);
+	{
+		dolog(LOG_CRIT, "%s value %d less then 1", reply, value);
+		return -1;
+	}
 
 	if (strcmp(reply, "0001") == 0)                 // ACK
 	{
 		int cur_n_bytes = (value + 7) / 8;
 
 		if (cur_n_bytes > n_bytes)
-			error_exit("server requesting more data than available");
+		{
+			dolog(LOG_CRIT, "server requesting more data than available");
+			return -1;
+		}
 
 		dolog(LOG_DEBUG, "Transmitting %d bytes", cur_n_bytes);
 
@@ -117,7 +123,10 @@ int message_transmit_entropy_data(int socket_fd, unsigned char *bytes, int n_byt
 		sleep(value);
 	}
 	else
-		error_exit("garbage received: %s", reply);
+	{
+		dolog(LOG_CRIT, "garbage received: %s", reply);
+		return -1;
+	}
 
 	return 0;
 }

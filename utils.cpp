@@ -13,8 +13,8 @@
 #include <netinet/tcp.h>
 
 #include "error.h"
-#include "kernel_prng_io.h"
 #include "log.h"
+#include "kernel_prng_rw.h"
 
 #define MAX_LRAND48_GETS 250
 
@@ -312,6 +312,22 @@ int connect_to(char *host, int portnr)
 	return -1;
 }
 
+void disable_nagle(int fd)
+{
+      int disable = 1;
+
+      if (setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, (char *)&disable, sizeof(disable)) == -1)
+		error_exit("setsockopt(IPPROTO_TCP, TCP_NODELAY) failed");
+}
+
+void enable_tcp_keepalive(int fd)
+{
+	int keep_alive = 1;
+
+	if (setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, (char *)&keep_alive, sizeof(keep_alive)) == -1)
+		error_exit("problem setting KEEPALIVE");
+}
+
 int myrand(int max)
 {
 	static int n_retrieved = MAX_LRAND48_GETS;
@@ -327,20 +343,4 @@ int myrand(int max)
 	}
 
 	return (int)(drand48() * (double)max);
-}
-
-void disable_nagle(int fd)
-{
-      int disable = 1;
-
-      if (setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, (char *)&disable, sizeof(disable)) == -1)
-		error_exit("setsockopt(IPPROTO_TCP, TCP_NODELAY) failed");
-}
-
-void enable_tcp_keepalive(int fd)
-{
-	int keep_alive = 1;
-
-	if (setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, (char *)&keep_alive, sizeof(keep_alive)) == -1)
-		error_exit("problem setting KEEPALIVE");
 }
