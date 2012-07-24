@@ -166,7 +166,7 @@ int main(int argc, char *argv[])
 	char *uds = NULL;
 	int listen_fd, nListen = 5;
 
-	printf("client_linux_kernel v" VERSION ", (C) 2009 by folkert@vanheusden.com\n");
+	printf("client_egd v" VERSION ", (C) 2009-2012 by folkert@vanheusden.com\n");
 
 	while((c = getopt(argc, argv, "d:i:l:sn")) != -1)
 	{

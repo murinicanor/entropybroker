@@ -50,6 +50,9 @@ pool::pool(char *state_file)
 	if (fd == -1)
 		error_exit("error opening %s", state_file);
 
+	if (kernel_rng_read_non_blocking(ivec, sizeof(ivec)) == -1)
+		error_exit("failed reading entropy data from kernel RNG");
+
 	memset(&state, 0x00, sizeof(state));
 
 	bits_in_pool = 0;
@@ -92,13 +95,13 @@ int pool::add_entropy_data(unsigned char entropy_data[8])
 
 	update_ivec();
 
-	n_added = determine_number_of_bits_of_data(entropy_data, sizeof(entropy_data));
+	n_added = determine_number_of_bits_of_data(entropy_data, 8);
 
 	bits_in_pool += n_added;
 	if (bits_in_pool > POOL_SIZE)
 		bits_in_pool = POOL_SIZE;
 
-	BF_set_key(&key, sizeof(entropy_data), entropy_data);
+	BF_set_key(&key, 8, entropy_data);
 	BF_cbc_encrypt(entropy_pool, temp_buffer, (POOL_SIZE / 8), &key, ivec, BF_ENCRYPT);
 	memcpy(entropy_pool, temp_buffer, (POOL_SIZE / 8));
 

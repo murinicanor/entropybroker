@@ -40,7 +40,7 @@ int main(int argc, char *argv[])
 
 	memset(&config, 0x00, sizeof(config));
 
-	printf("eb v " VERSION ", (C) 2009 by folkert@vanheusden.com\n");
+	printf("eb v " VERSION ", (C) 2009-2012 by folkert@vanheusden.com\n");
 
 	eb_output_fips140 -> set_user((char *)"output");
 	eb_output_scc     -> set_user((char *)"output");

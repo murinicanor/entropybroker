@@ -72,7 +72,7 @@ int main(int argc, char *argv[])
 	int verbose = 0;
 	char server_type[128];
 
-	fprintf(stderr, "server_egb v" VERSION ", (C) 2009 by folkert@vanheusden.com\n");
+	fprintf(stderr, "server_egb v" VERSION ", (C) 2009-2012 by folkert@vanheusden.com\n");
 
 	while((c = getopt(argc, argv, "a:b:o:i:d:l:snv")) != -1)
 	{

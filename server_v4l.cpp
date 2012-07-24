@@ -300,6 +300,7 @@ int main(int argc, char *argv[])
 	}
 
 	dolog(LOG_DEBUG, "Cleaning up");
+	close_device(fd, io_buffer, io_buffer_len);
 
 	return 0;
 }

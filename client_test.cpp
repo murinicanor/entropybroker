@@ -24,11 +24,10 @@ int main(int argc, char *argv[])
 
 	for(;;)
 	{
-		int rc;
 		unsigned char *buffer;
 		int will_get_n_bits, will_get_n_bytes;
 		char recv_msg[8 + 1], reply[8 + 1];
-		int n_bits_in_kernel_rng, n_bits_to_get;
+		int n_bits_to_get;
                 fd_set write_fd;
                 char connect_msg = 0;
 

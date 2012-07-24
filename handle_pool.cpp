@@ -47,9 +47,9 @@ int get_bits_from_pools(int n_bits_requested, pool **pools, int n_pools, unsigne
 
 	for(loop=0; loop<n_pools; loop++)
 	{
-		int n_bits_in_cur_pool, pool_block_size = pools[loop] -> get_get_size();
+		int pool_block_size = pools[loop] -> get_get_size();
 
-		while((n_bits_in_cur_pool = pools[loop] -> get_n_bits_in_pool()) > pool_block_size)
+		while(pools[loop] -> get_n_bits_in_pool() > pool_block_size)
 		{
 			int rngtest_loop, rc_fips140 = 0, rc_scc = 0;
 			int cur_n_to_get_bits = min(n_to_do_bits, pool_block_size);

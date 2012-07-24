@@ -289,7 +289,7 @@ int main(int argc, char *argv[])
 	char *bytes_file = NULL;
 	char show_bps = 0;
 
-	fprintf(stderr, "%s, (C) 2009 by folkert@vanheusden.com\n", server_type);
+	fprintf(stderr, "%s, (C) 2009-2012 by folkert@vanheusden.com\n", server_type);
 
 	while((c = getopt(argc, argv, "So:i:d:l:sn")) != -1)
 	{

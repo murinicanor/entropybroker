@@ -239,7 +239,7 @@ int main(int argc, char *argv[])
 	char *serial = NULL;
 	char *bytes_file = NULL;
 
-	fprintf(stderr, "%s, (C) 2009 by folkert@vanheusden.com\n", server_type);
+	fprintf(stderr, "%s, (C) 2009-2012 by folkert@vanheusden.com\n", server_type);
 
 	while((c = getopt(argc, argv, "o:p:i:d:l:sn")) != -1)
 	{
@@ -307,7 +307,6 @@ int main(int argc, char *argv[])
 	for(;;)
 	{
 		char byte;
-		double t1, t2;
 
 		if (!bytes_file)
 		{

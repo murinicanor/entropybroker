@@ -37,7 +37,7 @@
 #include "log.h"
 #include "fips140.h"
 
-fips140::fips140()
+fips140::fips140() : user(NULL)
 {
 	int loop, bit;
 
@@ -69,6 +69,8 @@ fips140::~fips140()
 
 void fips140::set_user(char *puser)
 {
+	free(user);
+
 	user = strdup(puser);
 	if (!user)
 		error_exit("memory allocation error");

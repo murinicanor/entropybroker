@@ -54,7 +54,7 @@ int main(int argc, char *argv[])
 	double start_ts, cur_start_ts;
 	long int total_byte_cnt = 0;
 
-	fprintf(stderr, "%s, (C) 2009 by folkert@vanheusden.com\n", server_type);
+	fprintf(stderr, "%s, (C) 2009-2012 by folkert@vanheusden.com\n", server_type);
 
 	while((c = getopt(argc, argv, "So:i:l:sn")) != -1)
 	{

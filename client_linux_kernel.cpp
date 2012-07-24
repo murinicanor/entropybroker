@@ -88,7 +88,7 @@ int main(int argc, char *argv[])
 	char do_not_fork = 0, log_console = 0, log_syslog = 0;
 	char *log_logfile = NULL;
 
-	printf("client_linux_kernel v" VERSION ", (C) 2009 by folkert@vanheusden.com\n");
+	printf("client_linux_kernel v" VERSION ", (C) 2009-2012 by folkert@vanheusden.com\n");
 
 	while((c = getopt(argc, argv, "i:l:sn")) != -1)
 	{
@@ -139,9 +139,7 @@ int main(int argc, char *argv[])
 	{
 		int rc;
 		unsigned char *buffer;
-		int will_get_n_bits, will_get_n_bytes;
 		char recv_msg[8 + 1], reply[8 + 1];
-		int n_bits_in_kernel_rng, n_bits_to_get;
 		fd_set write_fd;
 		fd_set read_fd;
 
@@ -182,8 +180,8 @@ int main(int argc, char *argv[])
 		if (FD_ISSET(dev_random_fd, &write_fd))
 		{
 			/* find out how many bits to add */
-			n_bits_in_kernel_rng = kernel_rng_get_entropy_count();
-			n_bits_to_get = max_bits_in_kernel_rng - n_bits_in_kernel_rng;
+			int n_bits_in_kernel_rng = kernel_rng_get_entropy_count();
+			int n_bits_to_get = max_bits_in_kernel_rng - n_bits_in_kernel_rng;
 			if (n_bits_to_get <= 0)
 			{
 				dolog(LOG_DEBUG, "number of bits to get <= 0: %d", n_bits_to_get);
@@ -227,8 +225,8 @@ int main(int argc, char *argv[])
 
 				continue;
 			}
-			will_get_n_bits = atoi(&reply[4]);
-			will_get_n_bytes = (will_get_n_bits + 7) / 8;
+			int will_get_n_bits = atoi(&reply[4]);
+			int will_get_n_bytes = (will_get_n_bits + 7) / 8;
 
 			dolog(LOG_INFO, "server is offering %d bits (%d bytes)", will_get_n_bits, will_get_n_bytes);
 

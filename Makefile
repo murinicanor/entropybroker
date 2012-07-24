@@ -31,6 +31,9 @@ OBJSte=test_egd_speed.o utils.o kernel_prng_rw.o error.o
 
 all: eb server_audio server_timers server_v4l server_stream client_linux_kernel server_egd client_egd test_egd_speed
 
+check:
+	cppcheck -v --enable=all --std=c++11 --inconclusive . 2> err.txt
+
 eb: $(OBJSeb)
 	$(CC) -Wall -W $(OBJSeb) $(LDFLAGS) -lcrypto -o eb
 
