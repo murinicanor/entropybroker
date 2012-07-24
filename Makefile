@@ -22,7 +22,7 @@ DEBUG= -g #-D_DEBUG #-fprofile-arcs -ftest-coverage # -pg -g
 CXXFLAGS+=-O3 -DVERSION=\"${VERSION}\" $(DEBUG) -Wall -DCONFIG=\"${ETC}/entropybroker.conf\" -DCACHE=\"${VAR}/pools.dat\"
 LDFLAGS+=$(DEBUG)
 
-OBJSeb=client.o config.o error.o fips140.o handle_pool.o kernel_prng_rw.o log.o main.o math.o pool.o scc.o signals.o utils.o
+OBJSeb=handle_client.o config.o error.o fips140.o handle_pool.o kernel_prng_rw.o log.o main.o math.o pool.o scc.o signals.o utils.o
 OBJSsa=server_audio.o error.o utils.o kernel_prng_rw.o log.o protocol.o server_utils.o
 OBJSst=server_timers.o log.o utils.o error.o kernel_prng_rw.o protocol.o server_utils.o
 OBJSsv=server_v4l.o error.o log.o protocol.o kernel_prng_rw.o utils.o server_utils.o

@@ -19,7 +19,7 @@
 #include "fips140.h"
 #include "config.h"
 #include "scc.h"
-#include "client.h"
+#include "handle_client.h"
 #include "handle_pool.h"
 #include "utils.h"
 #include "signals.h"
