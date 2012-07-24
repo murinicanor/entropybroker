@@ -18,6 +18,7 @@ BIN=$(PREFIX)/bin
 ETC=$(PREFIX)/etc
 VAR=$(PREFIX)/var
 
+CXX=g++
 DEBUG= -g #-D_DEBUG #-fprofile-arcs -ftest-coverage # -pg -g
 CXXFLAGS+=-O3 -DVERSION=\"${VERSION}\" $(DEBUG) -Wall -DCONFIG=\"${ETC}/entropybroker.conf\" -DCACHE=\"${VAR}/pools.dat\"
 LDFLAGS+=$(DEBUG)
