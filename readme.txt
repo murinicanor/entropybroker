@@ -39,6 +39,13 @@ is when it only has 128 bits left), then write a new value to:
 E.g.:
 	echo 512 > cat /proc/sys/kernel/random/write_wakeup_threshold
 
+If one of the server processes quits after a while (or even
+immediately), then check its logging to see what the problem is. All
+processes have the following command-line switches for that:
+-s       log to syslog
+-l file  log to a file
+-n       do not fork: messages will appear in your terminal
+
 Please invoke these commands first with -h to see a list of
 options. You probably need to use '-i' to select the server
 on which 'eb' runs. Also adding '-s' is usefull as it'll make
