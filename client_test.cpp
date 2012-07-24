@@ -14,6 +14,12 @@
 #include "utils.h"
 #include "math.h"
 
+void sig_handler(int sig)
+{
+	fprintf(stderr, "Exit due to signal %d\n", sig);
+	exit(0);
+}
+
 int main(int argc, char *argv[])
 {
 	char *host = (char *)"192.168.64.100";
@@ -21,6 +27,9 @@ int main(int argc, char *argv[])
 	int socket_fd = -1;
 
 	signal(SIGPIPE, SIG_IGN);
+	signal(SIGTERM, sig_handler);
+	signal(SIGINT , sig_handler);
+	signal(SIGQUIT, sig_handler);
 
 	for(;;)
 	{

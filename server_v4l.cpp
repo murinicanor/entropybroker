@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <signal.h>
 #include <sys/ioctl.h>
 #include <syslog.h>
 #include <sys/mman.h>
@@ -23,6 +24,12 @@ const char *server_type = "server_v4l v" VERSION;
 
 #define RES_LOW  0
 #define RES_HIGH 127
+
+void sig_handler(int sig)
+{
+	fprintf(stderr, "Exit due to signal %d\n", sig);
+	exit(0);
+}
 
 void open_dev(char *dev_name, int *fd, unsigned char **io_buffer, int *io_buffer_len)
 {
@@ -183,6 +190,11 @@ int main(int argc, char *argv[])
 		error_exit("Please select a video4linux video device (e.g. a webcam, tv-card, etc.)");
 
 	set_logging_parameters(log_console, log_logfile, log_syslog);
+
+	signal(SIGHUP , SIG_IGN);
+	signal(SIGTERM, sig_handler);
+	signal(SIGINT , sig_handler);
+	signal(SIGQUIT, sig_handler);
 
 	if (!do_not_fork)
 	{

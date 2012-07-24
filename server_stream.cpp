@@ -17,6 +17,12 @@ const char *server_type = "server_stream v" VERSION;
 #include "protocol.h"
 #include "server_utils.h"
 
+void sig_handler(int sig)
+{
+	fprintf(stderr, "Exit due to signal %d\n", sig);
+	exit(0);
+}
+
 void split_string(char *in, char split, char ***out, int *n_out)
 {
 	char *copy_in = strdup(in);
@@ -303,6 +309,9 @@ int main(int argc, char *argv[])
 	}
 
 	signal(SIGPIPE, SIG_IGN);
+	signal(SIGTERM, sig_handler);
+	signal(SIGINT , sig_handler);
+	signal(SIGQUIT, sig_handler);
 
 	for(;;)
 	{

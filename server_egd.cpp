@@ -18,6 +18,12 @@
 #include "protocol.h"
 #include "server_utils.h"
 
+void sig_handler(int sig)
+{
+	fprintf(stderr, "Exit due to signal %d\n", sig);
+	exit(0);
+}
+
 int open_unixdomain_socket(char *path)
 {
         int len;
@@ -145,6 +151,9 @@ int main(int argc, char *argv[])
 	}
 
 	signal(SIGPIPE, SIG_IGN);
+	signal(SIGTERM, sig_handler);
+	signal(SIGINT , sig_handler);
+	signal(SIGQUIT, sig_handler);
 
 	for(;;)
 	{

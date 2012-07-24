@@ -18,6 +18,12 @@
 
 #define DEFAULT_COMM_TO 15
 
+void sig_handler(int sig)
+{
+	fprintf(stderr, "Exit due to signal %d\n", sig);
+	exit(0);
+}
+
 int proces_server_msg(int socket_fd)
 {
 	char msg_cmd[4+1], msg_par[4+1];
@@ -129,6 +135,9 @@ int main(int argc, char *argv[])
 	}
 
 	signal(SIGPIPE, SIG_IGN);
+	signal(SIGTERM, sig_handler);
+	signal(SIGINT , sig_handler);
+	signal(SIGQUIT, sig_handler);
 
 	dolog(LOG_INFO, "started with %d bits in kernel rng", kernel_rng_get_entropy_count());
 

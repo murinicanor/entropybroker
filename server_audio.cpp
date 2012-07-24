@@ -31,6 +31,12 @@ const char *id = "capture";
 
 #define max(x, y)	((x)>(y)?(x):(y))
 
+void sig_handler(int sig)
+{
+	fprintf(stderr, "Exit due to signal %d\n", sig);
+	exit(0);
+}
+
 int setparams(snd_pcm_t *chandle, int sample_rate, snd_pcm_format_t *format)
 {
 	int err;
@@ -346,6 +352,9 @@ int main(int argc, char *argv[])
 
 
 	signal(SIGPIPE, SIG_IGN);
+	signal(SIGTERM, sig_handler);
+	signal(SIGINT , sig_handler);
+	signal(SIGQUIT, sig_handler);
 
 	main_loop(host, port, bytes_file, show_bps);
 }

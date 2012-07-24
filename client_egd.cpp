@@ -21,6 +21,12 @@
 
 #define DEFAULT_COMM_TO 15
 
+void sig_handler(int sig)
+{
+	fprintf(stderr, "Exit due to signal %d\n", sig);
+	exit(0);
+}
+
 void handle_client(int fd, char *host, int port)
 {
 	int socket_fd = -1;
@@ -217,6 +223,9 @@ int main(int argc, char *argv[])
 
 	signal(SIGPIPE, SIG_IGN);
 	signal(SIGCHLD, SIG_IGN);
+	signal(SIGTERM, sig_handler);
+	signal(SIGINT , sig_handler);
+	signal(SIGQUIT, sig_handler);
 
 	for(;;)
 	{

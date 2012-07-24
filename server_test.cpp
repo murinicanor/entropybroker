@@ -14,6 +14,12 @@ const char *server_type = "server_test v" VERSION;
 #include "protocol.h"
 #include "server_utils.h"
 
+void sig_handler(int sig)
+{
+	fprintf(stderr, "Exit due to signal %d\n", sig);
+	exit(0);
+}
+
 void help(void)
 {
         printf("-i host   eb-host to connect to\n");
@@ -82,6 +88,9 @@ int main(int argc, char *argv[])
 	}
 
 	signal(SIGPIPE, SIG_IGN);
+	signal(SIGTERM, sig_handler);
+	signal(SIGINT , sig_handler);
+	signal(SIGQUIT, sig_handler);
 
 	kernel_rng_read_non_blocking(bytes, sizeof(bytes));
 
