@@ -18,9 +18,12 @@
 #include "protocol.h"
 #include "server_utils.h"
 
+const char *pid_file = PID_DIR "/server_egb.pid";
+
 void sig_handler(int sig)
 {
 	fprintf(stderr, "Exit due to signal %d\n", sig);
+	unlink(pid_file);
 	exit(0);
 }
 
@@ -58,6 +61,7 @@ void help(void)
         printf("-l file   log to file 'file'\n");
         printf("-s        log to syslog\n");
         printf("-n        do not fork\n");
+	printf("-p file   write pid to file\n");
 }
 
 int main(int argc, char *argv[])
@@ -80,10 +84,14 @@ int main(int argc, char *argv[])
 
 	fprintf(stderr, "server_egb v" VERSION ", (C) 2009-2012 by folkert@vanheusden.com\n");
 
-	while((c = getopt(argc, argv, "a:b:o:i:d:l:snv")) != -1)
+	while((c = getopt(argc, argv, "p:a:b:o:i:d:l:snv")) != -1)
 	{
 		switch(c)
 		{
+			case 'p':
+				pid_file = optarg;
+				break;
+
 			case 'v':
 				verbose++;
 				break;
@@ -150,6 +158,8 @@ int main(int argc, char *argv[])
 			error_exit("fork failed");
 	}
 
+	write_pid(pid_file);
+
 	signal(SIGPIPE, SIG_IGN);
 	signal(SIGTERM, sig_handler);
 	signal(SIGINT , sig_handler);
@@ -205,6 +215,8 @@ int main(int argc, char *argv[])
 		if (index == 0 || bytes_to_read == 0)
 			sleep(read_interval);
 	}
+
+	unlink(pid_file);
 
 	return 0;
 }

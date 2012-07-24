@@ -24,6 +24,8 @@
 #include "utils.h"
 #include "signals.h"
 
+extern const char *pid_file;
+
 int send_denied_empty(int fd, statistics_t *stats, config_t *config)
 {
 	int seconds = config -> default_sleep_when_pools_empty; // & default_max_sleep_when_pools_empty
@@ -512,6 +514,7 @@ void main_loop(pool **pools, int n_pools, config_t *config, fips140 *eb_output_f
 			if (is_SIGEXIT())
 			{
 				dolog(LOG_INFO, "Program stopping due to either SIGTERM, SIGQUIT or SIGINT");
+				unlink(pid_file);
 				break;
 			}
 

@@ -6,6 +6,7 @@
 #include <string.h>
 
 const char *server_type = "server_timers v" VERSION;
+const char *pid_file = PID_DIR "/server_timers.pid";
 
 #include "error.h"
 #include "utils.h"
@@ -16,6 +17,7 @@ const char *server_type = "server_timers v" VERSION;
 void sig_handler(int sig)
 {
 	fprintf(stderr, "Exit due to signal %d\n", sig);
+	unlink(pid_file);
 	exit(0);
 }
 
@@ -27,6 +29,7 @@ void help(void)
 	printf("-l file   log to file 'file'\n");
 	printf("-s        log to syslog\n");
 	printf("-n        do not fork\n");
+	printf("-p file   write pid to file\n");
 }
 
 double gen_entropy_data(void)
@@ -62,10 +65,14 @@ int main(int argc, char *argv[])
 
 	fprintf(stderr, "%s, (C) 2009-2012 by folkert@vanheusden.com\n", server_type);
 
-	while((c = getopt(argc, argv, "So:i:l:sn")) != -1)
+	while((c = getopt(argc, argv, "p:So:i:l:sn")) != -1)
 	{
 		switch(c)
 		{
+			case 'p':
+				pid_file = optarg;
+				break;
+
 			case 'S':
 				show_bps = 1;
 				break;
@@ -107,6 +114,8 @@ int main(int argc, char *argv[])
 		if (daemon(-1, -1) == -1)
 			error_exit("fork failed");
 	}
+
+	write_pid(pid_file);
 
 	signal(SIGPIPE, SIG_IGN);
 	signal(SIGTERM, sig_handler);
@@ -178,6 +187,8 @@ int main(int argc, char *argv[])
 			}
 		}
 	}
+
+	unlink(pid_file);
 
 	return 0;
 }

@@ -1,1 +1,2 @@
 - client: in classes
+- /var/run/pidfile

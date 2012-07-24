@@ -17,6 +17,7 @@
 #include <alsa/asoundlib.h>
 
 const char *server_type = "server_audio v" VERSION;
+const char *pid_file = PID_DIR "/server_audio.pid";
 
 #include "error.h"
 #include "utils.h"
@@ -34,6 +35,7 @@ const char *id = "capture";
 void sig_handler(int sig)
 {
 	fprintf(stderr, "Exit due to signal %d\n", sig);
+	unlink(pid_file);
 	exit(0);
 }
 
@@ -97,6 +99,7 @@ void help(void)
 	printf("-l file   log to file 'file'\n");
 	printf("-s        log to syslog\n");
 	printf("-n        do not fork\n");
+	printf("-p file   write pid to file\n");
 }
 
 void main_loop(char *host, int port, char *bytes_file, char show_bps)
@@ -297,10 +300,14 @@ int main(int argc, char *argv[])
 
 	fprintf(stderr, "%s, (C) 2009-2012 by folkert@vanheusden.com\n", server_type);
 
-	while((c = getopt(argc, argv, "So:i:d:l:sn")) != -1)
+	while((c = getopt(argc, argv, "p:So:i:d:l:sn")) != -1)
 	{
 		switch(c)
 		{
+			case 'p':
+				pid_file = optarg;
+				break;
+
 			case 'S':
 				show_bps = 1;
 				break;
@@ -350,6 +357,7 @@ int main(int argc, char *argv[])
 			error_exit("fork failed");
 	}
 
+	write_pid(pid_file);
 
 	signal(SIGPIPE, SIG_IGN);
 	signal(SIGTERM, sig_handler);
@@ -357,4 +365,6 @@ int main(int argc, char *argv[])
 	signal(SIGQUIT, sig_handler);
 
 	main_loop(host, port, bytes_file, show_bps);
+
+	unlink(pid_file);
 }

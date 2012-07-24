@@ -344,3 +344,14 @@ int myrand(int max)
 
 	return (int)(drand48() * (double)max);
 }
+
+void write_pid(const char *file)
+{
+	FILE *fh = fopen(file, "w");
+	if (!fh)
+		error_exit("Failed to write PID-file %s", file);
+
+	fprintf(fh, "%d\n", getpid());
+
+	fclose(fh);
+}

@@ -21,6 +21,7 @@
 #include "utils.h"
 
 const char *server_type = "server_v4l v" VERSION;
+const char *pid_file = PID_DIR "/server_v4l.pid";
 
 #define RES_LOW  0
 #define RES_HIGH 127
@@ -28,6 +29,7 @@ const char *server_type = "server_v4l v" VERSION;
 void sig_handler(int sig)
 {
 	fprintf(stderr, "Exit due to signal %d\n", sig);
+	unlink(pid_file);
 	exit(0);
 }
 
@@ -124,6 +126,7 @@ void help(void)
 	printf("-l file   log to file 'file'\n");
 	printf("-s        log to syslog\n");
 	printf("-n     do not fork\n");
+	printf("-p file   write pid to file\n");
 }
 
 int main(int argc, char *argv[])
@@ -143,10 +146,14 @@ int main(int argc, char *argv[])
 
 	fprintf(stderr, "%s, (C) 2009-2012 by folkert@vanheusden.com\n", server_type);
 
-	while((c = getopt(argc, argv, "f:o:i:d:l:sn")) != -1)
+	while((c = getopt(argc, argv, "p:f:o:i:d:l:sn")) != -1)
 	{
 		switch(c)
 		{
+			case 'p':
+				pid_file = optarg;
+				break;
+
 			case 'f':
 				device_settle = atoi(optarg);
 				if (device_settle < 0)
@@ -205,6 +212,8 @@ int main(int argc, char *argv[])
 		if (daemon(-1, -1) == -1)
 			error_exit("fork failed");
 	}
+
+	write_pid(pid_file);
 
 	/* open device */
 	int fd = -1;
@@ -319,6 +328,8 @@ int main(int argc, char *argv[])
 
 	dolog(LOG_DEBUG, "Cleaning up");
 	close_device(fd, io_buffer, io_buffer_len);
+
+	unlink(pid_file);
 
 	return 0;
 }

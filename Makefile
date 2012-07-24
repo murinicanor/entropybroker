@@ -17,10 +17,11 @@ PREFIX=/usr/local/entropybroker
 BIN=$(PREFIX)/bin
 ETC=$(PREFIX)/etc
 VAR=$(PREFIX)/var
+PID=$(VAR)/run
 
 CXX=g++
 DEBUG= -g #-D_DEBUG #-fprofile-arcs -ftest-coverage # -pg -g
-CXXFLAGS+=-O3 -DVERSION=\"${VERSION}\" $(DEBUG) -Wall -DCONFIG=\"${ETC}/entropybroker.conf\" -DCACHE=\"${VAR}/pools.dat\"
+CXXFLAGS+=-O3 -DVERSION=\"${VERSION}\" $(DEBUG) -Wall -DCONFIG=\"${ETC}/entropybroker.conf\" -DCACHE=\"${VAR}/pools.dat\" -DPID_DIR=\"${PID}\"
 LDFLAGS+=$(DEBUG)
 
 OBJSeb=handle_client.o config.o error.o fips140.o handle_pool.o kernel_prng_rw.o log.o main.o math.o pool.o scc.o signals.o utils.o
@@ -66,7 +67,7 @@ test_egd_speed: $(OBJSte)
 	$(CXX) -Wall -W $(OBJSte) $(LDFLAGS) -o test_egd_speed
 
 install: eb server_audio server_timers server_v4l server_stream server_egd client_linux_kernel client_egd test_egd_speed
-	mkdir -p $(BIN) $(ETC) $(VAR)
+	mkdir -p $(BIN) $(ETC) $(VAR) $(PID)
 	cp eb $(BIN)
 	cp server_audio $(BIN)
 	cp server_timers $(BIN)

@@ -10,6 +10,7 @@
 #include <termios.h>
 
 const char *server_type = "server_stream v" VERSION;
+const char *pid_file = PID_DIR "/server_stream.pid";
 
 #include "error.h"
 #include "utils.h"
@@ -20,6 +21,7 @@ const char *server_type = "server_stream v" VERSION;
 void sig_handler(int sig)
 {
 	fprintf(stderr, "Exit due to signal %d\n", sig);
+	unlink(pid_file);
 	exit(0);
 }
 
@@ -228,6 +230,7 @@ void help(void)
         printf("-l file   log to file 'file'\n");
         printf("-s        log to syslog\n");
         printf("-n        do not fork\n");
+	printf("-P file   write pid to file\n");
 }
 
 int main(int argc, char *argv[])
@@ -247,10 +250,14 @@ int main(int argc, char *argv[])
 
 	fprintf(stderr, "%s, (C) 2009-2012 by folkert@vanheusden.com\n", server_type);
 
-	while((c = getopt(argc, argv, "o:p:i:d:l:sn")) != -1)
+	while((c = getopt(argc, argv, "P:o:p:i:d:l:sn")) != -1)
 	{
 		switch(c)
 		{
+			case 'P':
+				pid_file = optarg;
+				break;
+
 			case 'o':
 				bytes_file = optarg;
 				break;
@@ -308,6 +315,8 @@ int main(int argc, char *argv[])
 			error_exit("fork failed");
 	}
 
+	write_pid(pid_file);
+
 	signal(SIGPIPE, SIG_IGN);
 	signal(SIGTERM, sig_handler);
 	signal(SIGINT , sig_handler);
@@ -351,6 +360,8 @@ int main(int argc, char *argv[])
 			index = 0;
 		}
 	}
+
+	unlink(pid_file);
 
 	return 0;
 }

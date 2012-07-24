@@ -11,3 +11,4 @@ int connect_to(char *host, int portnr);
 void disable_nagle(int fd);
 void enable_tcp_keepalive(int fd);
 int myrand(int max);
+void write_pid(const char *file);

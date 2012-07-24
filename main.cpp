@@ -15,6 +15,8 @@
 #include "handle_pool.h"
 #include "signals.h"
 
+const char *pid_file = PID_DIR "/eb.pid";
+
 void dump_pools(pool **pools, int n_pools)
 {
 	FILE *fh = fopen(CACHE, "wb");
@@ -34,6 +36,7 @@ void help(void)
         printf("-s        log to syslog\n");
 	printf("-S        statistics-file to log to\n");
         printf("-n        do not fork\n");
+	printf("-p file   write pid to file\n");
 }
 
 int main(int argc, char *argv[])
@@ -56,10 +59,14 @@ int main(int argc, char *argv[])
 	eb_output_fips140 -> set_user((char *)"output");
 	eb_output_scc     -> set_user((char *)"output");
 
-	while((c = getopt(argc, argv, "c:S:l:sn")) != -1)
+	while((c = getopt(argc, argv, "p:c:S:l:sn")) != -1)
 	{
 		switch(c)
 		{
+			case 'p':
+				pid_file = optarg;
+				break;
+
 			case 'c':
 				config_file = optarg;
 				break;
@@ -120,6 +127,8 @@ int main(int argc, char *argv[])
 			error_exit("fork failed");
 	}
 
+	write_pid(pid_file);
+
 	set_signal_handlers();
 
 	dolog(LOG_DEBUG, "added %d bits of startup-event-entropy to pool", add_event(pools, n_pools, get_ts(), NULL, 0));
@@ -127,6 +136,8 @@ int main(int argc, char *argv[])
 	main_loop(pools, n_pools, &config, eb_output_fips140, eb_output_scc);
 
 	dump_pools(pools, n_pools);
+
+	unlink(pid_file);
 
 	return 0;
 }
