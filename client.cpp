@@ -154,7 +154,7 @@ int do_client_get(pool **pools, int n_pools, client_t *client, statistics_t *sta
 
 int do_client_put(pool **pools, int n_pools, client_t *client, statistics_t *stats, config_t *config)
 {
-	unsigned char *buffer;
+	unsigned char *buffer = NULL;
 	char msg[4+4+1];
 	int cur_n_bits, cur_n_bytes;
 	int n_bits_added;
@@ -504,8 +504,15 @@ void main_loop(pool **pools, int n_pools, config_t *config, fips140 *eb_output_f
 		{
 			if (is_SIGHUP())
 			{
+				dolog(LOG_DEBUG, "Got SIGHUP");
 				reset_SIGHUP();
 				force_stats = 1;
+			}
+
+			if (is_SIGEXIT())
+			{
+				dolog(LOG_INFO, "Program stopping due to either SIGTERM, SIGQUIT or SIGINT");
+				break;
 			}
 
 			if (errno == EBADF || errno == ENOMEM || errno == EINVAL)
@@ -698,5 +705,5 @@ void main_loop(pool **pools, int n_pools, config_t *config, fips140 *eb_output_f
 		}
 	}
 
-	dolog(LOG_WARNING, "main|end of main loop?!");
+	dolog(LOG_WARNING, "main|end of main loop");
 }

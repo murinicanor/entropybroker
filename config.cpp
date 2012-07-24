@@ -16,7 +16,7 @@ char config_yes_no(char *what)
         return 0;
 }
 
-void load_config(char *config, config_t *pconfig)
+void load_config(const char *config, config_t *pconfig)
 {
         int linenr = 0;
         FILE *fh = fopen(config, "r");

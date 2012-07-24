@@ -1,0 +1,3 @@
+- clarify server/client naming
+- pool: store state in files, also periodically? then infocount can be higher then neto
+- client: in classes

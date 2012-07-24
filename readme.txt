@@ -1,3 +1,20 @@
+How it works
+------------
+The 'eb' process is the central process of it all. It collects all
+entropy data, mixes it within its pool(s), measures the amount of
+randomness in that data en then serves it to clients.
+server_* processes, which can run in other systems than the eb-
+process, collect the random-data and transmit that to the central
+eb-process.
+client_* processes, which also can run everywhere, get random-data
+from the central eb-process and feed that to for example the local
+linux-kernel (/dev/random so to say) or to processes that read
+from a egb-compatible unix-domain socket.
+If that eb-process is on a different system than the server_- or
+client_- processes, then you're advised to let that communication
+proceed over a network seperate from production-lan, unless no-
+one can intercept the communication.
+
 Building
 --------
 	make install
@@ -37,7 +54,7 @@ If you want the kernel buffers to be filled much earlier (the default
 is when it only has 128 bits left), then write a new value to:
 /proc/sys/kernel/random/write_wakeup_threshold
 E.g.:
-	echo 512 > cat /proc/sys/kernel/random/write_wakeup_threshold
+	echo 512 > /proc/sys/kernel/random/write_wakeup_threshold
 
 If one of the server processes quits after a while (or even
 immediately), then check its logging to see what the problem is. All

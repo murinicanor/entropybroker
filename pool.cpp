@@ -29,6 +29,7 @@
 #include "error.h"
 #include "kernel_prng_rw.h"
 #include "math.h"
+#include "log.h"
 #include "utils.h"
 
 pool::pool()
@@ -44,33 +45,53 @@ pool::pool()
 		error_exit("failed reading entropy data from kernel RNG");
 }
 
-pool::pool(char *state_file)
+pool::pool(int pool_nr, FILE *fh)
 {
-	int fd = open(state_file, O_RDONLY);
-	if (fd == -1)
-		error_exit("error opening %s", state_file);
+	unsigned char val_buffer[4];
 
-	if (kernel_rng_read_non_blocking(ivec, sizeof(ivec)) == -1)
-		error_exit("failed reading entropy data from kernel RNG");
+	if (fread(val_buffer, 1, 4, fh) <= 0)
+		bits_in_pool = 0;
+	else
+	{
+		bits_in_pool = (val_buffer[0] << 24) + (val_buffer[1] << 16) + (val_buffer[2] << 8) + val_buffer[3];
+
+		if (fread(entropy_pool, 1, POOL_SIZE / 8, fh) != POOL_SIZE / 8)
+			error_exit("Dump is corrupt (1)");
+
+		if (fread(ivec, 1, 8, fh) != 8)
+			error_exit("Dump is corrupt (2)");
+
+		dolog(LOG_DEBUG, "Pool %d: loaded %d bits from cache", pool_nr, bits_in_pool);
+	}
 
 	memset(&state, 0x00, sizeof(state));
-
-	bits_in_pool = 0;
-
-	// FIXME also retrieve bitcount
-	if (READ(fd, (char *)entropy_pool, sizeof(entropy_pool)) != sizeof(entropy_pool))
-		error_exit("file %s does not contain required %d bytes", state_file, sizeof(entropy_pool));
-
-	close(fd);
 }
 
 pool::~pool()
 {
-// FIXME store contents with bitcount to file
 	if (kernel_rng_write_non_blocking(entropy_pool, sizeof(entropy_pool)) == -1)
 		error_exit("failed writing entropy data to kernel RNG");
 
 	memset(entropy_pool, 0x00, sizeof(entropy_pool));
+}
+
+void pool::dump(FILE *fh)
+{
+	unsigned char val_buffer[4];
+
+	val_buffer[0] = (bits_in_pool >> 24) & 255;
+	val_buffer[1] = (bits_in_pool >> 16) & 255;
+	val_buffer[2] = (bits_in_pool >>  8) & 255;
+	val_buffer[3] = (bits_in_pool      ) & 255;
+
+	if (fwrite(val_buffer, 1, 4, fh) != 4)
+		error_exit("Cannot write to dump (1)");
+
+	if (fwrite(entropy_pool, 1, POOL_SIZE / 8, fh) != POOL_SIZE / 8)
+		error_exit("Cannot write to dump (2)");
+
+	if (fwrite(ivec, 1, 8, fh) != 8)
+		error_exit("Cannot write to dump (3)");
 }
 
 void pool::update_ivec(void)

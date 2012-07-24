@@ -33,4 +33,4 @@ typedef struct
 	char allow_prng;
 } config_t;
 
-void load_config(char *config, config_t *pconfig);
+void load_config(const char *config, config_t *pconfig);

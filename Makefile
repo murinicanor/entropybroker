@@ -13,11 +13,14 @@
 # files in the program, then also delete it here.
 VERSION=0.9
 
+PREFIX=/usr/local/entropybroker
+BIN=$(PREFIX)/bin
+ETC=$(PREFIX)/etc
+VAR=$(PREFIX)/var
+
 DEBUG= -g #-D_DEBUG #-fprofile-arcs -ftest-coverage # -pg -g
-CXXFLAGS+=-O3 -DVERSION=\"${VERSION}\" $(DEBUG) -Wall
+CXXFLAGS+=-O3 -DVERSION=\"${VERSION}\" $(DEBUG) -Wall -DCONFIG=\"${ETC}/entropybroker.conf\" -DCACHE=\"${VAR}/pools.dat\"
 LDFLAGS+=$(DEBUG)
-SBINDIR=/usr/sbin
-CONFDIR=/etc
 
 OBJSeb=client.o config.o error.o fips140.o handle_pool.o kernel_prng_rw.o log.o main.o math.o pool.o scc.o signals.o utils.o
 OBJSsa=server_audio.o error.o utils.o kernel_prng_rw.o log.o protocol.o server_utils.o
@@ -62,17 +65,17 @@ test_egd_speed: $(OBJSte)
 	$(CXX) -Wall -W $(OBJSte) $(LDFLAGS) -o test_egd_speed
 
 install: eb server_audio server_timers server_v4l server_stream server_egd client_linux_kernel client_egd test_egd_speed
-	mkdir -p /usr/local/entropybroker/bin
-	cp eb /usr/local/entropybroker/bin
-	cp server_audio /usr/local/entropybroker/bin
-	cp server_timers /usr/local/entropybroker/bin
-	cp server_v4l /usr/local/entropybroker/bin
-	cp server_stream /usr/local/entropybroker/bin
-	cp server_egd /usr/local/entropybroker/bin
-	cp client_linux_kernel /usr/local/entropybroker/bin
-	cp client_egd /usr/local/entropybroker/bin
-	cp test_egd_speed /usr/local/entropybroker/bin
-	echo do not forget to copy entropybroker.conf to /etc
+	mkdir -p $(BIN) $(ETC) $(VAR)
+	cp eb $(BIN)
+	cp server_audio $(BIN)
+	cp server_timers $(BIN)
+	cp server_v4l $(BIN)
+	cp server_stream $(BIN)
+	cp server_egd $(BIN)
+	cp client_linux_kernel $(BIN)
+	cp client_egd $(BIN)
+	cp test_egd_speed $(BIN)
+	cp entropybroker.conf $(ETC)
 
 clean:
 	rm -f $(OBJSeb) $(OBJSsa) $(OBJSst) $(OBJSsv) $(OBJSss)$(OBJSse) $(OBJSclk) $(OBJSte) eb core *.da *.gcov *.bb* *.o server_audio server_timers server_v4l server_stream server_egd client_linux_kernel client_egd test_egd_speed

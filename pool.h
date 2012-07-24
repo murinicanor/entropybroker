@@ -17,11 +17,11 @@ private:
 
 	void update_ivec(void);
 
-
 public:
 	pool();
-	pool(char *state_file);
+	pool(int pool_nr, FILE *fh);
 	~pool();
+	void dump(FILE *fh);
 
 	/* -1 if not full, 0 if full */
 	int add_entropy_data(unsigned char entropy_data[8]);

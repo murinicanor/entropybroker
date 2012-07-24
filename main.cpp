@@ -15,9 +15,21 @@
 #include "handle_pool.h"
 #include "signals.h"
 
+void dump_pools(pool **pools, int n_pools)
+{
+	FILE *fh = fopen(CACHE, "wb");
+	if (!fh)
+		error_exit("Failed to create %s", CACHE);
+
+	for(int index=0; index<n_pools; index++)
+		pools[index] -> dump(fh);
+
+	fclose(fh);
+}
+
 void help(void)
 {
-	printf("-c file   config-file to read\n");
+	printf("-c file   config-file to read (default: " CONFIG "\n");
         printf("-l file   log to file 'file'\n");
         printf("-s        log to syslog\n");
 	printf("-S        statistics-file to log to\n");
@@ -26,7 +38,6 @@ void help(void)
 
 int main(int argc, char *argv[])
 {
-	int loop;
 	pool **pools;
 	int n_pools = 0;
 	int c;
@@ -35,7 +46,7 @@ int main(int argc, char *argv[])
 	char *stats_file = NULL;
 	fips140 *eb_output_fips140 = new fips140();
 	scc *eb_output_scc = new scc();
-	char *config_file = (char *)"/etc/entropybroker.conf";
+	const char *config_file = CONFIG;
 	config_t config;
 
 	memset(&config, 0x00, sizeof(config));
@@ -84,6 +95,25 @@ int main(int argc, char *argv[])
 
 	eb_output_scc -> set_threshold(config.scc_threshold);
 
+	n_pools = config.number_of_pools;
+
+	pools = (pool **)malloc(sizeof(pool *) * n_pools);
+	FILE *fh = fopen(CACHE, "rb");
+	if (!fh)
+	{
+		fprintf(stderr, "No cache-file found, continuing...\n");
+
+		for(int loop=0; loop<n_pools; loop++)
+			pools[loop] = new pool();
+	}
+	else
+	{
+		for(int loop=0; loop<n_pools; loop++)
+			pools[loop] = new pool(loop + 1, fh);
+
+		fclose(fh);
+	}
+
 	if (!do_not_fork)
 	{
 		if (daemon(-1, -1) == -1)
@@ -92,15 +122,11 @@ int main(int argc, char *argv[])
 
 	set_signal_handlers();
 
-	n_pools = config.number_of_pools;
-
-	pools = (pool **)malloc(sizeof(pool *) * n_pools);
-	for(loop=0; loop<n_pools; loop++)
-		pools[loop] = new pool();
-
 	dolog(LOG_DEBUG, "added %d bits of startup-event-entropy to pool", add_event(pools, n_pools, get_ts(), NULL, 0));
 
 	main_loop(pools, n_pools, &config, eb_output_fips140, eb_output_scc);
+
+	dump_pools(pools, n_pools);
 
 	return 0;
 }
