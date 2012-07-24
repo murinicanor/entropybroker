@@ -11,7 +11,7 @@
 # do not wish to do so, delete this exception statement from your
 # version.  If you delete this exception statement from all source
 # files in the program, then also delete it here.
-VERSION=0.8
+VERSION=0.9
 
 DEBUG= -g #-D_DEBUG #-fprofile-arcs -ftest-coverage # -pg -g
 CXXFLAGS+=-O0 -DVERSION=\"${VERSION}\" $(DEBUG) -Wall
