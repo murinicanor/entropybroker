@@ -57,6 +57,7 @@ pool::pool(char *state_file)
 
 	bits_in_pool = 0;
 
+	// FIXME also retrieve bitcount
 	if (READ(fd, (char *)entropy_pool, sizeof(entropy_pool)) != sizeof(entropy_pool))
 		error_exit("file %s does not contain required %d bytes", state_file, sizeof(entropy_pool));
 
@@ -65,6 +66,7 @@ pool::pool(char *state_file)
 
 pool::~pool()
 {
+// FIXME store contents with bitcount to file
 	if (kernel_rng_write_non_blocking(entropy_pool, sizeof(entropy_pool)) == -1)
 		error_exit("failed writing entropy data to kernel RNG");
 
