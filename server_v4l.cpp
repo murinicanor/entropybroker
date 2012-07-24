@@ -43,9 +43,9 @@ void open_dev(char *dev_name, int *fd, unsigned char **io_buffer, int *io_buffer
 		error_exit("Cannot VIDIOC_QUERYCAP");
 	else
 	{
-		printf("Device %s is:\n", dev_name);
-		printf(" %s %s %s\n", cap.driver, cap.card, cap.bus_info);
-		printf(" version: %d %d %d\n", (cap.version >> 16) & 255, (cap.version >> 8) & 255, cap.version & 255);
+		dolog(LOG_DEBUG, "Device %s is:", dev_name);
+		dolog(LOG_DEBUG, " %s %s %s", cap.driver, cap.card, cap.bus_info);
+		dolog(LOG_DEBUG, " version: %d %d %d", (cap.version >> 16) & 255, (cap.version >> 8) & 255, cap.version & 255);
 		if ((cap.capabilities & V4L2_CAP_VIDEO_CAPTURE) == 0)
 			error_exit("Video4linux device cannot capture video");
 	}
@@ -59,7 +59,8 @@ void open_dev(char *dev_name, int *fd, unsigned char **io_buffer, int *io_buffer
 	char format[5];
 	memcpy(format, &fmt.fmt.pix.pixelformat, 4);
 	format[4]=0x00;
-	printf(" %dx%d: %d/%s\n", fmt.fmt.pix.width, fmt.fmt.pix.height, fmt.type, format);
+	dolog(LOG_DEBUG, " %dx%d: %d/%s\n", fmt.fmt.pix.width, fmt.fmt.pix.height, fmt.type, format);
+
 	fmt.type                = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 	if (ioctl(*fd, VIDIOC_S_FMT, &fmt) == -1)
 		error_exit("ioctl(VIDIOC_S_FMT) failed");
@@ -88,7 +89,10 @@ void open_dev(char *dev_name, int *fd, unsigned char **io_buffer, int *io_buffer
 		error_exit("ioctl(VIDIOC_STREAMON) failed");
 
 	*io_buffer_len = buf.length;
+	dolog(LOG_DEBUG, "%d bytes", *io_buffer_len);
 	*io_buffer = static_cast<unsigned char *>(mmap(NULL, buf.length, PROT_READ | PROT_WRITE, MAP_SHARED, *fd, buf.m.offset));
+	if (!*io_buffer)
+		dolog(LOG_CRIT, "mmap() failed %s", strerror(errno));
 }
 
 void close_device(int fd, unsigned char *p, int p_len)
@@ -100,12 +104,14 @@ void close_device(int fd, unsigned char *p, int p_len)
 
 void take_picture(int fd, struct v4l2_buffer *buf)
 {
-	ioctl(fd, VIDIOC_DQBUF, buf);
+	if (ioctl(fd, VIDIOC_DQBUF, buf) == -1)
+		dolog(LOG_CRIT, "VIDIOC_DQBUF failed %s", strerror(errno));
 }
 
 void untake_picture(int fd, struct v4l2_buffer *buf)
 {
-	ioctl(fd, VIDIOC_QBUF, buf);
+	if (ioctl(fd, VIDIOC_QBUF, buf) == -1)
+		dolog(LOG_CRIT, "VIDIOC_QBUF failed %s", strerror(errno));
 }
 
 void help(void)
@@ -127,12 +133,10 @@ int main(int argc, char *argv[])
 	char *host = NULL;
 	int port = 55225;
 	unsigned char *img1, *img2, *unbiased;
-	int nunbiased = 0;
 	char do_not_fork = 0, log_console = 0, log_syslog = 0;
 	char *log_logfile = NULL;
 	char *device = NULL;
 	unsigned char byte; // NO NEED FOR INITIALIZATION
-	int nbits = 0;
 	int socket_fd = -1;
 	char *bytes_file = NULL;
 	int loop;
@@ -212,12 +216,13 @@ int main(int argc, char *argv[])
 
 	/* let device settle */
 	dolog(LOG_DEBUG, "waiting for device to settle");
-	struct v4l2_buffer buf;
-	memset(&buf, 0x00, sizeof(buf));
-	buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-	buf.memory = V4L2_MEMORY_MMAP;
 	for(loop=0; loop<device_settle; loop++)
 	{
+		struct v4l2_buffer buf;
+		memset(&buf, 0x00, sizeof(buf));
+		buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+		buf.memory = V4L2_MEMORY_MMAP;
+
 		take_picture(fd, &buf);
 		untake_picture(fd, &buf);
 	}
@@ -238,6 +243,7 @@ int main(int argc, char *argv[])
 		unbiased = (unsigned char *)malloc(io_buffer_len);
 		if (!img1 || !img2 || !unbiased)
 			error_exit("out of memory");
+		struct v4l2_buffer buf;
 
 		/* take pictures */
 		dolog(LOG_DEBUG, "Smile!");
@@ -257,7 +263,7 @@ int main(int argc, char *argv[])
 
 		/* unbiase */
 		dolog(LOG_DEBUG, "Filtering...");
-		nunbiased=0;
+		int nunbiased=0, nbits = 0;
 		for(loop=0; loop<io_buffer_len; loop+=2)
 		{
 			/* calculate difference between the images */
@@ -289,7 +295,7 @@ int main(int argc, char *argv[])
 		free(img2);
 		free(img1);
 
-		dolog(LOG_DEBUG, "got %d bytes of entropy", nunbiased);
+		dolog(LOG_DEBUG, "got %d bytes of entropy%s", nunbiased, loop<io_buffer_len?" (more available)":"");
 
 		if (nunbiased > 0)
 		{
