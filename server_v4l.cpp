@@ -1,6 +1,6 @@
 #include <errno.h>
 #include <fcntl.h>
-#include <linux/videodev.h>
+#include <linux/videodev2.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -24,120 +24,103 @@ const char *server_type = "server_v4l v" VERSION;
 #define RES_LOW  0
 #define RES_HIGH 127
 
-typedef struct
+void open_dev(char *dev_name, int *fd, unsigned char **io_buffer, int *io_buffer_len)
 {
-	struct video_picture vidpic;
-	struct video_window vidwin;
-	struct video_mbuf vidmbuf;
-	struct video_mmap vidmmap;
-	struct video_capability vidcap;
+	*fd = open(dev_name, O_RDWR);
+	if (*fd == -1)
+		return;
 
-	int fd;
-
-	unsigned char *img;
-} vconfig;
-
-int open_device(vconfig *vconf, char *dev_name, char res)
-{
-	vconf -> fd = open(dev_name, O_RDONLY);
-	if (vconf -> fd == -1)
-		error_exit("error opening device %s", dev_name);
-
-	/* get parameters */
-	if (ioctl(vconf -> fd, VIDIOCGPICT, &vconf -> vidpic, sizeof(vconf -> vidpic)) == -1)
-		error_exit("ioctl(VIDIOCGPICT)");
-
-	/* get capabilities */
-	if (ioctl(vconf -> fd, VIDIOCGCAP, &vconf -> vidcap, sizeof(vconf -> vidcap)) == -1)
-		error_exit("ioctl(VIDIOCGCAP)");
-
-	/* set capture window */
-	if (ioctl(vconf -> fd, VIDIOCGWIN, &vconf -> vidwin, sizeof(vconf -> vidwin)) == -1)
-		error_exit("ioctl(VIDIOCGWIN)");
-
-	vconf -> vidwin.x =
-		vconf -> vidwin.y = 0;
-
-	if (res == RES_LOW)
+	struct v4l2_capability cap;
+	memset(&cap, 0x00, sizeof(cap));
+	if (ioctl(*fd, VIDIOC_QUERYCAP, &cap) == -1)
+		error_exit("Cannot VIDIOC_QUERYCAP");
+	else
 	{
-		vconf -> vidwin.width = vconf -> vidcap.minwidth;
-		vconf -> vidwin.height = vconf -> vidcap.minheight;
-	}
-	else if (res == RES_HIGH)
-	{
-		vconf -> vidwin.width = vconf -> vidcap.maxwidth;
-		vconf -> vidwin.height = vconf -> vidcap.maxheight;
+		printf("Device %s is:\n", dev_name);
+		printf(" %s %s %s\n", cap.driver, cap.card, cap.bus_info);
+		printf(" version: %d %d %d\n", (cap.version >> 16) & 255, (cap.version >> 8) & 255, cap.version & 255);
+		if ((cap.capabilities & V4L2_CAP_VIDEO_CAPTURE) == 0)
+			error_exit("Video4linux device cannot capture video");
 	}
 
-	if (ioctl(vconf -> fd, VIDIOCSWIN, &vconf -> vidwin, sizeof(vconf -> vidwin)) == -1)
-		error_exit("ioctl(VIDIOCSWIN)");
+	struct v4l2_format fmt;
+	memset(&fmt, 0x00, sizeof(fmt));
+	fmt.type                = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+	fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_YUV420;
+	if (ioctl(*fd, VIDIOC_G_FMT, &fmt) == -1)
+		error_exit("ioctl(VIDIOC_G_FMT) failed");
+	char format[5];
+	memcpy(format, &fmt.fmt.pix.pixelformat, 4);
+	format[4]=0x00;
+	printf(" %dx%d: %d/%s\n", fmt.fmt.pix.width, fmt.fmt.pix.height, fmt.type, format);
+	fmt.type                = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+	if (ioctl(*fd, VIDIOC_S_FMT, &fmt) == -1)
+		error_exit("ioctl(VIDIOC_S_FMT) failed");
 
-	/* map to memory */
-	if (ioctl(vconf -> fd, VIDIOCGMBUF, &vconf -> vidmbuf, sizeof(vconf -> vidmbuf)) == -1)
-		error_exit("ioctl(VIDIOCGMBUF)");
+	struct v4l2_requestbuffers req;
+	memset(&req, 0x00, sizeof(req));
+	req.count  = 1;
+	req.type   = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+	req.memory = V4L2_MEMORY_MMAP;
+	if (ioctl(*fd, VIDIOC_REQBUFS, &req) == -1)
+		error_exit("ioctl(VIDIOC_REQBUFS) failed");
 
-	vconf -> img = (unsigned char *)mmap(NULL, vconf -> vidmbuf.size, PROT_READ, MAP_SHARED, vconf -> fd, 0);
-	if (!vconf -> img)
-		error_exit("mmap");
+	struct v4l2_buffer buf;
+	memset(&buf, 0x00, sizeof(buf));
+	buf.type        = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+	buf.memory      = V4L2_MEMORY_MMAP;
+	buf.index       = 0;
+	if (ioctl(*fd, VIDIOC_QUERYBUF, &buf) == -1)
+		error_exit("ioctl(VIDIOC_QUERYBUF) failed");
 
-	/* set device */
-	vconf -> vidmmap.frame = 0;
-	vconf -> vidmmap.width = vconf -> vidwin.width;
-	vconf -> vidmmap.height = vconf -> vidwin.height;
-	vconf -> vidmmap.format = vconf -> vidpic.palette;
+	if (ioctl(*fd, VIDIOC_QBUF, &buf) == -1)
+		error_exit("ioctl(VIDIOC_QBUF) failed");
 
-	return 0;
+	enum v4l2_buf_type buf_type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+	if (ioctl(*fd, VIDIOC_STREAMON, &buf_type) == -1)
+		error_exit("ioctl(VIDIOC_STREAMON) failed");
+
+	*io_buffer_len = buf.length;
+	*io_buffer = static_cast<unsigned char *>(mmap(NULL, buf.length, PROT_READ | PROT_WRITE, MAP_SHARED, *fd, buf.m.offset));
 }
 
-void close_device(vconfig *vconf)
+void close_device(int fd, unsigned char *p, int p_len)
 {
-	munmap(vconf -> img, vconf -> vidmbuf.size);
+	munmap(p, p_len);
 
-	close(vconf -> fd);
+	close(fd);
 }
 
-unsigned char * take_picture(vconfig *vconf)
+void take_picture(int fd, struct v4l2_buffer *buf)
 {
-	unsigned char *pic;
+	ioctl(fd, VIDIOC_DQBUF, buf);
+}
 
-	/* start capture */
-	if (ioctl(vconf -> fd, VIDIOCMCAPTURE, &vconf -> vidmmap, sizeof(vconf -> vidmmap)) == -1)
-		error_exit("ioctl(VIDIOCMCAPTURE)");
-
-	/* synchronize frame */
-	if (ioctl(vconf -> fd, VIDIOCSYNC, &vconf -> vidmmap.frame, sizeof(vconf -> vidmmap.frame)) == -1)
-		error_exit("ioctl(VIDIOCSYNC)");
-
-	/* return pointer to current frame */
-	pic = (unsigned char *)&vconf -> img[vconf -> vidmbuf.offsets[vconf -> vidmmap.frame]];
-
-	/* next time; next frame! */
-	vconf -> vidmmap.frame++;
-	if (vconf -> vidmmap.frame >= vconf -> vidmbuf.frames)
-		vconf -> vidmmap.frame = 0;
-
-	return pic;
+void untake_picture(int fd, struct v4l2_buffer *buf)
+{
+	ioctl(fd, VIDIOC_QBUF, buf);
 }
 
 void help(void)
 {
+	printf("-i host   eb-host to connect to\n");
 	printf("-d x   device to use\n");
 	printf("-o file   file to write entropy data to (mututal exclusive with -d)\n");
 	printf("-f x   skip x frames before processing images (in case the device\n");
 	printf("       needs a few frames to settle)\n");
-	printf("-H     use highest resolution instead of the default lowest res.\n");
+	printf("-l file   log to file 'file'\n");
+	printf("-s        log to syslog\n");
 	printf("-n     do not fork\n");
 }
 
 int main(int argc, char *argv[])
 {
 	int device_settle = 25;
-	vconfig vconf;
 	int c;
 	char *host = NULL;
 	int port = 55225;
 	unsigned char *img1, *img2, *unbiased;
-	int imginbytes, nunbiased = 0;
+	int nunbiased = 0;
 	char do_not_fork = 0, log_console = 0, log_syslog = 0;
 	char *log_logfile = NULL;
 	char *device = NULL;
@@ -145,19 +128,14 @@ int main(int argc, char *argv[])
 	int nbits = 0;
 	int socket_fd = -1;
 	char *bytes_file = NULL;
-	int res = RES_LOW;
 	int loop;
 
-	fprintf(stderr, "%s, (C) 2009 by folkert@vanheusden.com\n", server_type);
+	fprintf(stderr, "%s, (C) 2009-2012 by folkert@vanheusden.com\n", server_type);
 
-	while((c = getopt(argc, argv, "Hf:o:i:d:l:sn")) != -1)
+	while((c = getopt(argc, argv, "f:o:i:d:l:sn")) != -1)
 	{
 		switch(c)
 		{
-			case 'H':
-				res = RES_HIGH;
-				break;
-
 			case 'f':
 				device_settle = atoi(optarg);
 				if (device_settle < 0)
@@ -213,21 +191,27 @@ int main(int argc, char *argv[])
 	}
 
 	/* open device */
-	if (open_device(&vconf, device, res) == -1)
+	int fd = -1;
+	unsigned char *io_buffer = NULL;
+	int io_buffer_len = -1;
+	open_dev(device, &fd, &io_buffer, &io_buffer_len);
+	if (fd == -1)
 		error_exit("failure opening %s", device);
-
-	imginbytes = vconf.vidmbuf.size / vconf.vidmbuf.frames;
-	dolog(LOG_DEBUG, "img size in bytes %d", imginbytes);
 
 	/* let device settle */
 	dolog(LOG_DEBUG, "waiting for device to settle");
+	struct v4l2_buffer buf;
+	memset(&buf, 0x00, sizeof(buf));
+	buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+	buf.memory = V4L2_MEMORY_MMAP;
 	for(loop=0; loop<device_settle; loop++)
-		(void)take_picture(&vconf);
+	{
+		take_picture(fd, &buf);
+		untake_picture(fd, &buf);
+	}
 
 	for(;;)
 	{
-		unsigned char *cur_img;
-
 		if (!bytes_file)
 		{
 			if (reconnect_server_socket(host, port, &socket_fd, server_type, 1) == -1)
@@ -237,23 +221,32 @@ int main(int argc, char *argv[])
 			enable_tcp_keepalive(socket_fd);
 		}
 
-		img1 = (unsigned char *)malloc(imginbytes);
-		img2 = (unsigned char *)malloc(imginbytes);
-		unbiased = (unsigned char *)malloc(imginbytes);
+		img1 = (unsigned char *)malloc(io_buffer_len);
+		img2 = (unsigned char *)malloc(io_buffer_len);
+		unbiased = (unsigned char *)malloc(io_buffer_len);
 		if (!img1 || !img2 || !unbiased)
 			error_exit("out of memory");
 
 		/* take pictures */
 		dolog(LOG_DEBUG, "Smile!");
-		cur_img = take_picture(&vconf);
-		memcpy(img1, cur_img, imginbytes);
-		cur_img = take_picture(&vconf);
-		memcpy(img2, cur_img, imginbytes);
+		memset(&buf, 0x00, sizeof(buf));
+		buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+		buf.memory = V4L2_MEMORY_MMAP;
+		take_picture(fd, &buf);
+		memcpy(img1, io_buffer, io_buffer_len);
+		untake_picture(fd, &buf);
+		//
+		memset(&buf, 0x00, sizeof(buf));
+		buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+		buf.memory = V4L2_MEMORY_MMAP;
+		take_picture(fd, &buf);
+		memcpy(img2, io_buffer, io_buffer_len);
+		untake_picture(fd, &buf);
 
 		/* unbiase */
 		dolog(LOG_DEBUG, "Filtering...");
 		nunbiased=0;
-		for(loop=0; loop<imginbytes; loop+=2)
+		for(loop=0; loop<io_buffer_len; loop+=2)
 		{
 			/* calculate difference between the images */
 			int diff1 = abs(img2[loop + 0] - img1[loop + 0]);
@@ -307,7 +300,6 @@ int main(int argc, char *argv[])
 	}
 
 	dolog(LOG_DEBUG, "Cleaning up");
-	close_device(&vconf);
 
 	return 0;
 }
