@@ -124,7 +124,7 @@ int main(int argc, char *argv[])
 	char do_not_fork = 0, log_console = 0, log_syslog = 0;
 	char *log_logfile = NULL;
 	char *device = NULL;
-	unsigned char byte;
+	unsigned char byte; // NO NEED FOR INITIALIZATION
 	int nbits = 0;
 	int socket_fd = -1;
 	char *bytes_file = NULL;

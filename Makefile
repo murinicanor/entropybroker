@@ -14,8 +14,8 @@
 VERSION=0.9
 
 DEBUG= -g #-D_DEBUG #-fprofile-arcs -ftest-coverage # -pg -g
-CXXFLAGS+=-O0 -DVERSION=\"${VERSION}\" $(DEBUG) -Wall
-LDFLAGS+=$(DEBUG) -lstdc++
+CXXFLAGS+=-O3 -DVERSION=\"${VERSION}\" $(DEBUG) -Wall
+LDFLAGS+=$(DEBUG)
 SBINDIR=/usr/sbin
 CONFDIR=/etc
 
@@ -35,31 +35,31 @@ check:
 	cppcheck -v --enable=all --std=c++11 --inconclusive . 2> err.txt
 
 eb: $(OBJSeb)
-	$(CC) -Wall -W $(OBJSeb) $(LDFLAGS) -lcrypto -o eb
+	$(CXX) -Wall -W $(OBJSeb) $(LDFLAGS) -lcrypto -o eb
 
 server_audio: $(OBJSsa)
-	$(CC) -Wall -W $(OBJSsa) $(LDFLAGS) -lasound -o server_audio
+	$(CXX) -Wall -W $(OBJSsa) $(LDFLAGS) -lasound -o server_audio
 
 server_timers: $(OBJSst)
-	$(CC) -Wall -W $(OBJSst) $(LDFLAGS) -o server_timers
+	$(CXX) -Wall -W $(OBJSst) $(LDFLAGS) -o server_timers
 
 server_v4l: $(OBJSsv)
-	$(CC) -Wall -W $(OBJSsv) $(LDFLAGS) -o server_v4l
+	$(CXX) -Wall -W $(OBJSsv) $(LDFLAGS) -o server_v4l
 
 server_stream: $(OBJSss)
-	$(CC) -Wall -W $(OBJSss) $(LDFLAGS) -o server_stream
+	$(CXX) -Wall -W $(OBJSss) $(LDFLAGS) -o server_stream
 
 server_egd: $(OBJSse)
-	$(CC) -Wall -W $(OBJSse) $(LDFLAGS) -o server_egd
+	$(CXX) -Wall -W $(OBJSse) $(LDFLAGS) -o server_egd
 
 client_egd: $(OBJScle)
-	$(CC) -Wall -W $(OBJScle) $(LDFLAGS) -o client_egd
+	$(CXX) -Wall -W $(OBJScle) $(LDFLAGS) -o client_egd
 
 client_linux_kernel: $(OBJSclk)
-	$(CC) -Wall -W $(OBJSclk) $(LDFLAGS) -o client_linux_kernel
+	$(CXX) -Wall -W $(OBJSclk) $(LDFLAGS) -o client_linux_kernel
 
 test_egd_speed: $(OBJSte)
-	$(CC) -Wall -W $(OBJSte) $(LDFLAGS) -o test_egd_speed
+	$(CXX) -Wall -W $(OBJSte) $(LDFLAGS) -o test_egd_speed
 
 install: eb server_audio server_timers server_v4l server_stream server_egd client_linux_kernel client_egd test_egd_speed
 	mkdir -p /usr/local/entropybroker/bin
