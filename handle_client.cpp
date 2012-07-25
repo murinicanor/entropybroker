@@ -23,6 +23,7 @@
 #include "handle_pool.h"
 #include "utils.h"
 #include "signals.h"
+#include "auth.h"
 
 extern const char *pid_file;
 
