@@ -18,12 +18,14 @@
 
 const char *server_type = "server_audio v" VERSION;
 const char *pid_file = PID_DIR "/server_audio.pid";
+char *password = NULL;
 
 #include "error.h"
 #include "utils.h"
 #include "log.h"
 #include "protocol.h"
 #include "server_utils.h"
+#include "auth.h"
 
 #define DEFAULT_SAMPLE_RATE			11025
 #define DEFAULT_CLICK_READ			(1 * DEFAULT_SAMPLE_RATE)
@@ -99,7 +101,8 @@ void help(void)
 	printf("-l file   log to file 'file'\n");
 	printf("-s        log to syslog\n");
 	printf("-n        do not fork\n");
-	printf("-p file   write pid to file\n");
+	printf("-P file   write pid to file\n");
+	printf("-X file   read password from file\n");
 }
 
 void main_loop(char *host, int port, char *bytes_file, char show_bps)
@@ -128,7 +131,7 @@ void main_loop(char *host, int port, char *bytes_file, char show_bps)
 
 		if (host)
 		{
-			if (reconnect_server_socket(host, port, &socket_fd, server_type, 1) == -1)
+			if (reconnect_server_socket(host, port, password, &socket_fd, server_type, 1) == -1)
 				continue;
 
 			disable_nagle(socket_fd);
@@ -300,11 +303,15 @@ int main(int argc, char *argv[])
 
 	fprintf(stderr, "%s, (C) 2009-2012 by folkert@vanheusden.com\n", server_type);
 
-	while((c = getopt(argc, argv, "p:So:i:d:l:sn")) != -1)
+	while((c = getopt(argc, argv, "X:P:So:i:d:l:sn")) != -1)
 	{
 		switch(c)
 		{
-			case 'p':
+			case 'X':
+				password = get_password_from_file(optarg);
+				break;
+
+			case 'P':
 				pid_file = optarg;
 				break;
 
@@ -342,6 +349,9 @@ int main(int argc, char *argv[])
 				return 1;
 		}
 	}
+
+	if (!password)
+		error_exit("no password set");
 
 	if (!host && !bytes_file)
 		error_exit("no host to connect to given");

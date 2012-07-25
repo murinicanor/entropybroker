@@ -6,6 +6,7 @@
 #include <string.h>
 
 const char *server_type = "server_test v" VERSION;
+char *password = NULL;
 
 #include "error.h"
 #include "utils.h"
@@ -101,7 +102,7 @@ int main(int argc, char *argv[])
 
 		if (!bytes_file)
 		{
-			if (reconnect_server_socket(host, port, &socket_fd, server_type, 1) == -1)
+			if (reconnect_server_socket(host, port, password, &socket_fd, server_type, 1) == -1)
 				continue;
 
 			disable_nagle(socket_fd);

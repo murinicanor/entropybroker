@@ -11,12 +11,14 @@
 
 const char *server_type = "server_stream v" VERSION;
 const char *pid_file = PID_DIR "/server_stream.pid";
+char *password = NULL;
 
 #include "error.h"
 #include "utils.h"
 #include "log.h"
 #include "protocol.h"
 #include "server_utils.h"
+#include "auth.h"
 
 void sig_handler(int sig)
 {
@@ -231,6 +233,7 @@ void help(void)
         printf("-s        log to syslog\n");
         printf("-n        do not fork\n");
 	printf("-P file   write pid to file\n");
+	printf("-X file   read password from file\n");
 }
 
 int main(int argc, char *argv[])
@@ -250,10 +253,14 @@ int main(int argc, char *argv[])
 
 	fprintf(stderr, "%s, (C) 2009-2012 by folkert@vanheusden.com\n", server_type);
 
-	while((c = getopt(argc, argv, "P:o:p:i:d:l:sn")) != -1)
+	while((c = getopt(argc, argv, "X:P:o:p:i:d:l:sn")) != -1)
 	{
 		switch(c)
 		{
+			case 'X':
+				password = get_password_from_file(optarg);
+				break;
+
 			case 'P':
 				pid_file = optarg;
 				break;
@@ -293,6 +300,9 @@ int main(int argc, char *argv[])
 		}
 	}
 
+	if (!password)
+		error_exit("no password set");
+
 	if (!host && !bytes_file)
 		error_exit("no host to connect to given");
 
@@ -328,7 +338,7 @@ int main(int argc, char *argv[])
 
 		if (!bytes_file)
 		{
-			if (reconnect_server_socket(host, port, &socket_fd, server_type, 1) == -1)
+			if (reconnect_server_socket(host, port, password, &socket_fd, server_type, 1) == -1)
 				continue;
 
 			disable_nagle(socket_fd);

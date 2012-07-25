@@ -14,6 +14,7 @@
 #include "log.h"
 #include "handle_pool.h"
 #include "signals.h"
+#include "auth.h"
 
 const char *pid_file = PID_DIR "/eb.pid";
 
@@ -36,7 +37,7 @@ void help(void)
         printf("-s        log to syslog\n");
 	printf("-S        statistics-file to log to\n");
         printf("-n        do not fork\n");
-	printf("-p file   write pid to file\n");
+	printf("-P file   write pid to file\n");
 }
 
 int main(int argc, char *argv[])
@@ -59,11 +60,11 @@ int main(int argc, char *argv[])
 	eb_output_fips140 -> set_user((char *)"output");
 	eb_output_scc     -> set_user((char *)"output");
 
-	while((c = getopt(argc, argv, "p:c:S:l:sn")) != -1)
+	while((c = getopt(argc, argv, "P:c:S:l:sn")) != -1)
 	{
 		switch(c)
 		{
-			case 'p':
+			case 'P':
 				pid_file = optarg;
 				break;
 

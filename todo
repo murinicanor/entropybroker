@@ -1,2 +1,3 @@
 - client: in classes
 - /var/run/pidfile
+- regular srand in eb

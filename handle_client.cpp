@@ -649,7 +649,7 @@ void main_loop(pool **pools, int n_pools, config_t *config, fips140 *eb_output_f
 				{
 					int dummy;
 
-					dolog(LOG_INFO, "main|new client: %s:%d", inet_ntoa(client_addr.sin_addr), client_addr.sin_port);
+					dolog(LOG_INFO, "main|new client: %s:%d (fd: %d)$", inet_ntoa(client_addr.sin_addr), client_addr.sin_port, new_socket_fd);
 
 					if (config -> disable_nagle)
 						disable_nagle(new_socket_fd);
@@ -657,32 +657,47 @@ void main_loop(pool **pools, int n_pools, config_t *config, fips140 *eb_output_f
 					if (config -> enable_keepalive)
 						enable_tcp_keepalive(new_socket_fd);
 
-					n_clients++;
-
-					clients = (client_t *)realloc(clients, n_clients * sizeof(client_t));
-					if (!clients)
-						error_exit("memory allocation error");
-
-					memset(&clients[n_clients - 1], 0x00, sizeof(client_t));
-					clients[n_clients - 1].socket_fd = new_socket_fd;
-					dummy = sizeof(clients[n_clients - 1].host);
-					snprintf(clients[n_clients - 1].host, dummy, "%s:%d", inet_ntoa(client_addr.sin_addr), client_addr.sin_port);
-					clients[n_clients - 1].pfips140 = new fips140();
-					clients[n_clients - 1].pscc = new scc();
-					clients[n_clients - 1].last_message = now;
-					clients[n_clients - 1].connected_since = now;
-					clients[n_clients - 1].last_put_message = now;
-					clients[n_clients - 1].pfips140 -> set_user(clients[n_clients - 1].host);
-					clients[n_clients - 1].pscc     -> set_user(clients[n_clients - 1].host);
-					clients[n_clients - 1].pscc -> set_threshold(config -> scc_threshold);
-
-					if (lookup_client_settings(&client_addr, &clients[n_clients - 1], config) == -1)
+					bool ok = true;
+					if (config -> auth_password)
 					{
-						dolog(LOG_INFO, "main|client %s not found, terminating connection", clients[n_clients - 1].host);
+						if (auth_eb(new_socket_fd, config -> auth_password, config -> communication_timeout) != 0)
+							ok = false;
+					}
 
-						n_clients--;
-
+					if (!ok)
 						close(new_socket_fd);
+					else
+					{
+						n_clients++;
+
+						clients = (client_t *)realloc(clients, n_clients * sizeof(client_t));
+						if (!clients)
+							error_exit("memory allocation error");
+
+						memset(&clients[n_clients - 1], 0x00, sizeof(client_t));
+						clients[n_clients - 1].socket_fd = new_socket_fd;
+						dummy = sizeof(clients[n_clients - 1].host);
+						snprintf(clients[n_clients - 1].host, dummy, "%s:%d", inet_ntoa(client_addr.sin_addr), client_addr.sin_port);
+						clients[n_clients - 1].pfips140 = new fips140();
+						clients[n_clients - 1].pscc = new scc();
+						clients[n_clients - 1].last_message = now;
+						clients[n_clients - 1].connected_since = now;
+						clients[n_clients - 1].last_put_message = now;
+						clients[n_clients - 1].pfips140 -> set_user(clients[n_clients - 1].host);
+						clients[n_clients - 1].pscc     -> set_user(clients[n_clients - 1].host);
+						clients[n_clients - 1].pscc -> set_threshold(config -> scc_threshold);
+
+						if (lookup_client_settings(&client_addr, &clients[n_clients - 1], config) == -1)
+						{
+							dolog(LOG_INFO, "main|client %s not found, terminating connection", clients[n_clients - 1].host);
+
+							delete clients[n_clients - 1].pfips140;
+							delete clients[n_clients - 1].pscc;
+
+							n_clients--;
+
+							close(new_socket_fd);
+						}
 					}
 				}
 			}

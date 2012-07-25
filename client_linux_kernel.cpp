@@ -15,9 +15,11 @@
 #include "log.h"
 #include "math.h"
 #include "protocol.h"
+#include "auth.h"
 
 #define DEFAULT_COMM_TO 15
 const char *pid_file = PID_DIR "/client_linux_kernel.pid";
+char *password = NULL;
 
 void sig_handler(int sig)
 {
@@ -83,7 +85,8 @@ void help(void)
 	printf("-l file   log to file 'file'\n");
 	printf("-s        log to syslog\n");
 	printf("-n        do not fork\n");
-	printf("-p file   write pid to file\n");
+	printf("-P file   write pid to file\n");
+	printf("-X file   read password from file\n");
 }
 
 int main(int argc, char *argv[])
@@ -99,11 +102,15 @@ int main(int argc, char *argv[])
 
 	printf("client_linux_kernel v" VERSION ", (C) 2009-2012 by folkert@vanheusden.com\n");
 
-	while((c = getopt(argc, argv, "p:i:l:sn")) != -1)
+	while((c = getopt(argc, argv, "X:P:i:l:sn")) != -1)
 	{
 		switch(c)
 		{
-			case 'p':
+			case 'X':
+				password = get_password_from_file(optarg);
+				break;
+
+			case 'P':
 				pid_file = optarg;
 				break;
 
@@ -129,6 +136,9 @@ int main(int argc, char *argv[])
 				return 1;
 		}
 	}
+
+	if (!password)
+		error_exit("no password set");
 
 	if (!host)
 		error_exit("no host to connect to selected");
@@ -161,7 +171,7 @@ int main(int argc, char *argv[])
 		fd_set write_fd;
 		fd_set read_fd;
 
-		if (reconnect_server_socket(host, port, &socket_fd, argv[0], 0) == -1) // FIXME set client-type
+		if (reconnect_server_socket(host, port, password, &socket_fd, argv[0], 0) == -1) // FIXME set client-type
 			continue;
 
 		disable_nagle(socket_fd);

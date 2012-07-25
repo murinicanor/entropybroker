@@ -7,12 +7,14 @@
 
 const char *server_type = "server_timers v" VERSION;
 const char *pid_file = PID_DIR "/server_timers.pid";
+char *password = NULL;
 
 #include "error.h"
 #include "utils.h"
 #include "log.h"
 #include "protocol.h"
 #include "server_utils.h"
+#include "auth.h"
 
 void sig_handler(int sig)
 {
@@ -29,7 +31,8 @@ void help(void)
 	printf("-l file   log to file 'file'\n");
 	printf("-s        log to syslog\n");
 	printf("-n        do not fork\n");
-	printf("-p file   write pid to file\n");
+	printf("-P file   write pid to file\n");
+	printf("-X file   read password from file\n");
 }
 
 double gen_entropy_data(void)
@@ -65,11 +68,15 @@ int main(int argc, char *argv[])
 
 	fprintf(stderr, "%s, (C) 2009-2012 by folkert@vanheusden.com\n", server_type);
 
-	while((c = getopt(argc, argv, "p:So:i:l:sn")) != -1)
+	while((c = getopt(argc, argv, "X:P:So:i:l:sn")) != -1)
 	{
 		switch(c)
 		{
-			case 'p':
+			case 'X':
+				password = get_password_from_file(optarg);
+				break;
+
+			case 'P':
 				pid_file = optarg;
 				break;
 
@@ -104,6 +111,9 @@ int main(int argc, char *argv[])
 		}
 	}
 
+	if (!password)
+		error_exit("no password set");
+
 	if (!host && !bytes_file && show_bps == 0)
 		error_exit("no host to connect to/file to write to given");
 
@@ -130,7 +140,7 @@ int main(int argc, char *argv[])
 
 		if (host != NULL)
 		{
-			if (reconnect_server_socket(host, port, &socket_fd, server_type, 1) == -1)
+			if (reconnect_server_socket(host, port, password, &socket_fd, server_type, 1) == -1)
 				continue;
 
 			disable_nagle(socket_fd);

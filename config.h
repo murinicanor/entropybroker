@@ -31,6 +31,8 @@ typedef struct
 	char allow_event_entropy_addition;
 	char add_entropy_even_if_all_full;
 	char allow_prng;
+
+	char *auth_password;
 } config_t;
 
 void load_config(const char *config, config_t *pconfig);

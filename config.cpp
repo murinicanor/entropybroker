@@ -57,6 +57,8 @@ void load_config(const char *config, config_t *pconfig)
 	pconfig -> add_entropy_even_if_all_full = 0;
 	pconfig -> allow_prng = 0;
 
+	pconfig -> auth_password = NULL;
+
         for(;;)
         {
 		double parvald;
@@ -92,6 +94,8 @@ void load_config(const char *config, config_t *pconfig)
 			pconfig -> number_of_pools = parval;
 		else if (strcmp(cmd, "listen_adapter") == 0)
 			pconfig -> listen_adapter = strdup(par);
+		else if (strcmp(cmd, "password") == 0)
+			pconfig -> auth_password = strdup(par);
 		else if (strcmp(cmd, "listen_port") == 0)
 			pconfig -> listen_port = parval;
 		else if (strcmp(cmd, "listen_queue_size") == 0)

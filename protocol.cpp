@@ -6,10 +6,20 @@
 #include "error.h"
 #include "log.h"
 #include "utils.h"
+#include "auth.h"
 
 #define DEFAULT_COMM_TO 15
 
-int reconnect_server_socket(char *host, int port, int *socket_fd, const char *type, char is_server)
+void error_sleep()
+{
+	long int sleep_micro_seconds = myrand(4000000) + 1;
+
+	dolog(LOG_WARNING, "Failed connecting, sleeping for %f seconds", (double)sleep_micro_seconds / 1000000.0);
+
+	usleep((long)sleep_micro_seconds);
+}
+
+int reconnect_server_socket(char *host, int port, char *password, int *socket_fd, const char *type, char is_server)
 {
 	char connect_msg = 0;
 
@@ -24,12 +34,13 @@ int reconnect_server_socket(char *host, int port, int *socket_fd, const char *ty
 	{
 		*socket_fd = connect_to(host, port);
 		if (*socket_fd == -1)
+			error_sleep();
+		else if (auth_client_server(*socket_fd, password, 10) != 0)
 		{
-			long int sleep_micro_seconds = myrand(4000000) + 1;
+			error_sleep();
 
-			dolog(LOG_WARNING, "Failed connecting, sleeping for %f seconds", (double)sleep_micro_seconds / 1000000.0);
-
-			usleep((long)sleep_micro_seconds);
+			close(*socket_fd);
+			*socket_fd = -1;
 		}
 	}
 
