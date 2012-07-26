@@ -28,6 +28,7 @@ On the server, invoke 'eb' (/usr/local/entropybroker/bin/eb).
 On systems with a spare sound-card, start server_audio.
 On systems with a spare tv-card/webcam, start server_v4l.
 On systems that are mostly idle, start server_timers. Check http://vanheusden.com/te/#bps to see some expected bitrates.
+On systems with an random generator connected to e.g. a serial port, or with a rng in the motherboard chipset, use server_stream to feed its data to eb.
 On systems with an EntropyKey (http://www.entropykey.co.uk/) or EGD, start server_egd.
 server_egd requires a read-interval and how many bytes to read in
 that interval. You can test with test_egd_speed how many bytes your
