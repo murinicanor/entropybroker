@@ -10,9 +10,9 @@
 
 #define DEFAULT_COMM_TO 15
 
-void error_sleep()
+void error_sleep(int count)
 {
-	long int sleep_micro_seconds = myrand(4000000) + 1;
+	long int sleep_micro_seconds = myrand(count * 1000000) + 1;
 
 	dolog(LOG_WARNING, "Failed connecting, sleeping for %f seconds", (double)sleep_micro_seconds / 1000000.0);
 
@@ -28,19 +28,24 @@ int reconnect_server_socket(char *host, int port, char *password, int *socket_fd
 	{
 		dolog(LOG_INFO, "Connecting to %s:%d", host, port);
 		connect_msg = 1;
-	}
 
-	while(*socket_fd == -1)
-	{
-		*socket_fd = connect_to(host, port);
-		if (*socket_fd == -1)
-			error_sleep();
-		else if (auth_client_server(*socket_fd, password, 10) != 0)
+		int count = 1;
+		for(;;)
 		{
-			error_sleep();
+			*socket_fd = connect_to(host, port);
+			if (*socket_fd != -1)
+			{
+				if (auth_client_server(*socket_fd, password, 10) == 0)
+					break;
 
-			close(*socket_fd);
-			*socket_fd = -1;
+				close(*socket_fd);
+				*socket_fd = -1;
+			}
+
+			error_sleep(count);
+
+			if (count < 16)
+				count++;
 		}
 	}
 
