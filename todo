@@ -1,3 +1,4 @@
 - client: in classes
 - regular srand in eb, also seed with /dev/urandom?
 - server_kernel?
+- when full: still add but don't inc count

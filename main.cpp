@@ -3,6 +3,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 #include "error.h"
 #include "pool.h"
@@ -28,6 +31,41 @@ void dump_pools(pool **pools, int n_pools)
 		pools[index] -> dump(fh);
 
 	fclose(fh);
+}
+
+void seed(pool **pools, int n_pools)
+{
+	int n = 0, dummy;
+
+	n += add_event(pools, n_pools, get_ts_ns(), NULL, 0); 
+
+	dummy = getpid();
+	n += add_event(pools, n_pools, get_ts_ns(), (unsigned char *)&dummy, sizeof(dummy));
+
+	unsigned char buffer[16];
+	int fd = open("/dev/urandom", O_RDONLY);
+	if (fd == -1)
+		dolog(LOG_DEBUG, "Cannot open /dev/urandom");
+	else
+	{
+		READ(fd, (char *)buffer, sizeof buffer);
+		close(fd);
+
+		n += add_event(pools, n_pools, get_ts_ns(), buffer, sizeof(buffer));
+	}
+
+	dolog(LOG_DEBUG, "added %d bits of startup-event-entropy to pool", n);
+
+	unsigned char *buffer2 = NULL;
+	long int dummy_2;
+	fips140 *pf = new fips140();
+	scc *ps = new scc();
+	get_bits_from_pools(sizeof(dummy_2) * 8, pools, n_pools, &buffer2, 1, 1, pf, 1, ps);
+	delete ps;
+	delete pf;
+	memcpy(&dummy_2, buffer2, sizeof dummy_2);
+	srand48(dummy_2);
+	free(buffer2);
 }
 
 void help(void)
@@ -133,14 +171,12 @@ int main(int argc, char *argv[])
 		if (daemon(-1, -1) == -1)
 			error_exit("fork failed");
 	}
-// FIXME srand48()
-// FIXME get_bits_from_pools(int n_bits_requested, pool **pools, int n_pools, unsigned char **buffer, char allow_prng, char ignore_rngtest_fips140, fips140 *pfips, char ignore_rngtest_scc, scc *pscc)
 
 	write_pid(pid_file);
 
 	set_signal_handlers();
 
-	dolog(LOG_DEBUG, "added %d bits of startup-event-entropy to pool", add_event(pools, n_pools, get_ts(), NULL, 0));
+	seed(pools, n_pools);
 
 	main_loop(pools, n_pools, &config, eb_output_fips140, eb_output_scc);
 
