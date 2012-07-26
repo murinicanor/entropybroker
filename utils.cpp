@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <sys/time.h>
 #include <stdio.h>
+#include <time.h>
 #include <sys/select.h>
 #include <netinet/tcp.h>
 
@@ -20,14 +21,20 @@
 
 #define incopy(a)       *((struct in_addr *)a)
 
-double get_ts(void)
+long double get_ts_ns()
 {
-	struct timeval ts;
+	struct timespec ts;
 
-	if (gettimeofday(&ts, NULL) == -1)
-		error_exit("gettimeofday failed");
+	if (clock_gettime(CLOCK_REALTIME, &ts) == -1)
+		error_exit("clock_gettime() failed");
 
-	return (((double)ts.tv_sec) + ((double)ts.tv_usec)/1000000.0);
+	// start time is removed to allow more bits 'behind the dot'
+	return (long double)(ts.tv_sec) + (long double)(ts.tv_nsec) / 1000000000.0;
+}
+
+double get_ts()
+{
+	return (double)get_ts_ns();
 }
 
 int READ(int fd, char *whereto, size_t len)
@@ -328,19 +335,38 @@ void enable_tcp_keepalive(int fd)
 		error_exit("problem setting KEEPALIVE");
 }
 
-int myrand(int max)
+void check_rand_state()
 {
-	static int n_retrieved = MAX_LRAND48_GETS;
+	static int n_random_retrieved = 0;
 
-	if (--n_retrieved < 0)
+	if (--n_random_retrieved < 0)
 	{
 		unsigned short seed16v[3];
 
 		kernel_rng_read_non_blocking((unsigned char *)seed16v, sizeof(seed16v));
 		seed48(seed16v);
 
-		n_retrieved = MAX_LRAND48_GETS;
+		n_random_retrieved = MAX_LRAND48_GETS;
 	}
+}
+
+double mydrand()
+{
+	check_rand_state();
+
+	return drand48();
+}
+
+int myrand()
+{
+	check_rand_state();
+
+	return lrand48();
+}
+
+int myrand(int max)
+{
+	check_rand_state();
 
 	return (int)(drand48() * (double)max);
 }

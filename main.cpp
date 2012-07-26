@@ -42,30 +42,7 @@ void seed(pool **pools, int n_pools)
 	dummy = getpid();
 	n += add_event(pools, n_pools, get_ts_ns(), (unsigned char *)&dummy, sizeof(dummy));
 
-	unsigned char buffer[16];
-	int fd = open("/dev/urandom", O_RDONLY);
-	if (fd == -1)
-		dolog(LOG_DEBUG, "Cannot open /dev/urandom");
-	else
-	{
-		READ(fd, (char *)buffer, sizeof buffer);
-		close(fd);
-
-		n += add_event(pools, n_pools, get_ts_ns(), buffer, sizeof(buffer));
-	}
-
 	dolog(LOG_DEBUG, "added %d bits of startup-event-entropy to pool", n);
-
-	unsigned char *buffer2 = NULL;
-	long int dummy_2;
-	fips140 *pf = new fips140();
-	scc *ps = new scc();
-	get_bits_from_pools(sizeof(dummy_2) * 8, pools, n_pools, &buffer2, 1, 1, pf, 1, ps);
-	delete ps;
-	delete pf;
-	memcpy(&dummy_2, buffer2, sizeof dummy_2);
-	srand48(dummy_2);
-	free(buffer2);
 }
 
 void help(void)

@@ -12,7 +12,7 @@
 
 int auth_eb(int fd, char *password, int to)
 {
-	long int rnd = lrand48();
+	long int rnd = myrand();
 	char rnd_str[128];
 	unsigned char rnd_str_size = snprintf(rnd_str, sizeof rnd_str, "%ld", rnd);
 

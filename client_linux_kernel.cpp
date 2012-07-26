@@ -243,7 +243,7 @@ int main(int argc, char *argv[])
 			dolog(LOG_DEBUG, "received reply: %s", reply);
 			if (reply[0] == '9' && reply[1] == '0' && reply[2] == '0' && (reply[3] == '0' || reply[3] == '2'))
 			{
-				double seconds = (double)atoi(&reply[4]) + (double)myrand(1000000)/1000000.0;
+				double seconds = (double)atoi(&reply[4]) + mydrand();
 
 				dolog(LOG_WARNING, "server has no data/quota, sleeping for %f seconds", seconds);
 
