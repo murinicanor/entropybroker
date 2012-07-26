@@ -77,6 +77,9 @@ void load_config(const char *config, config_t *pconfig)
                 lf = strchr(read_buffer, '\n');
                 if (lf) *lf = 0x00;
 
+		if (strlen(cmd) == 0)
+			continue;
+
                 is = strchr(read_buffer, '=');
                 if (!is)
                         error_exit("invalid line at line %d: '=' missing", linenr);
