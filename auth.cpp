@@ -3,7 +3,10 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <stdlib.h>
+#include <stdio.h>
 
+#include "error.h"
 #include "utils.h"
 #include "log.h"
 
@@ -11,12 +14,12 @@ int auth_eb(int fd, char *password, int to)
 {
 	long int rnd = lrand48();
 	char rnd_str[128];
-	unsigned char rnd_str_size = snprintf(rnd_str, sizeof rnd_str, "%d", rnd);
+	unsigned char rnd_str_size = snprintf(rnd_str, sizeof rnd_str, "%ld", rnd);
 
 	if (rnd_str_size == 0)
 		error_exit("INTERNAL ERROR: random string is 0 characters!");
 
-	if (WRITE_TO(fd, &rnd_str_size, 1, to) == -1)
+	if (WRITE_TO(fd, (char *)&rnd_str_size, 1, to) == -1)
 	{
 		dolog(LOG_INFO, "Connection for fd %d closed (1)");
 		return -1;
@@ -30,10 +33,10 @@ int auth_eb(int fd, char *password, int to)
 	char hash_cmp_str[256], hash_cmp[SHA_DIGEST_LENGTH];
 	snprintf(hash_cmp_str, sizeof hash_cmp_str, "%s %s", rnd_str, password);
 
-        SHA1(hash_cmp_str, strlen(hash_cmp_str), hash_cmp);
+        SHA1((const unsigned char *)hash_cmp_str, strlen(hash_cmp_str), (unsigned char *)hash_cmp);
 
 	char hash_in[SHA_DIGEST_LENGTH];
-	if (READ(fd, hash_in, SHA_DIGEST_LENGTH, to) == -1)
+	if (READ_TO(fd, hash_in, SHA_DIGEST_LENGTH, to) == -1)
 	{
 		dolog(LOG_INFO, "Connection for fd %d closed (3)");
 		return -1;
@@ -81,7 +84,7 @@ int auth_client_server(int fd, char *password, int to)
 	char rnd_str[128];
 	unsigned char rnd_str_size;
 
-	if (READ_TO(fd, &rnd_str_size, 1, to) == -1)
+	if (READ_TO(fd, (char *)&rnd_str_size, 1, to) == -1)
 	{
 		dolog(LOG_INFO, "Connection for fd %d closed (1)");
 		return -1;
@@ -99,10 +102,10 @@ int auth_client_server(int fd, char *password, int to)
 	char hash_cmp_str[256], hash_cmp[SHA_DIGEST_LENGTH];
 	snprintf(hash_cmp_str, sizeof hash_cmp_str, "%s %s", rnd_str, password);
 
-        SHA1(hash_cmp_str, strlen(hash_cmp_str), hash_cmp);
+        SHA1((const unsigned char *)hash_cmp_str, strlen(hash_cmp_str), (unsigned char *)hash_cmp);
 
 	char hash_in[SHA_DIGEST_LENGTH];
-	if (WRITE(fd, hash_in, SHA_DIGEST_LENGTH, to) == -1)
+	if (WRITE(fd, hash_in, SHA_DIGEST_LENGTH) == -1)
 	{
 		dolog(LOG_INFO, "Connection for fd %d closed (3)");
 		return -1;

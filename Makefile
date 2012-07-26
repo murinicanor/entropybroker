@@ -22,17 +22,17 @@ PID=$(VAR)/run
 CXX=g++
 DEBUG= -g #-D_DEBUG #-fprofile-arcs -ftest-coverage # -pg -g
 CXXFLAGS+=-O3 -DVERSION=\"${VERSION}\" $(DEBUG) -Wall -DCONFIG=\"${ETC}/entropybroker.conf\" -DCACHE=\"${VAR}/pools.dat\" -DPID_DIR=\"${PID}\"
-LDFLAGS+=$(DEBUG)
+LDFLAGS+=$(DEBUG) -lcrypto
 
-OBJSeb=handle_client.o config.o error.o fips140.o handle_pool.o kernel_prng_rw.o log.o main.o math.o pool.o scc.o signals.o utils.o
-OBJSsa=server_audio.o error.o utils.o kernel_prng_rw.o log.o protocol.o server_utils.o
-OBJSst=server_timers.o log.o utils.o error.o kernel_prng_rw.o protocol.o server_utils.o
-OBJSsv=server_v4l.o error.o log.o protocol.o kernel_prng_rw.o utils.o server_utils.o
-OBJSss=server_stream.o error.o log.o protocol.o kernel_prng_rw.o utils.o server_utils.o
-OBJSse=server_egd.o error.o log.o kernel_prng_rw.o protocol.o utils.o server_utils.o
-OBJSclk=client_linux_kernel.o error.o kernel_prng_io.o kernel_prng_rw.o log.o math.o protocol.o utils.o
-OBJScle=client_egd.o error.o log.o kernel_prng_rw.o math.o protocol.o utils.o
-OBJSte=test_egd_speed.o utils.o kernel_prng_rw.o error.o
+OBJSeb=handle_client.o config.o error.o fips140.o handle_pool.o kernel_prng_rw.o log.o main.o math.o pool.o scc.o signals.o utils.o auth.o
+OBJSsa=server_audio.o error.o utils.o kernel_prng_rw.o log.o protocol.o server_utils.o auth.o
+OBJSst=server_timers.o log.o utils.o error.o kernel_prng_rw.o protocol.o server_utils.o auth.o
+OBJSsv=server_v4l.o error.o log.o protocol.o kernel_prng_rw.o utils.o server_utils.o auth.o
+OBJSss=server_stream.o error.o log.o protocol.o kernel_prng_rw.o utils.o server_utils.o auth.o
+OBJSse=server_egd.o error.o log.o kernel_prng_rw.o protocol.o utils.o server_utils.o auth.o
+OBJSclk=client_linux_kernel.o error.o kernel_prng_io.o kernel_prng_rw.o log.o math.o protocol.o utils.o auth.o
+OBJScle=client_egd.o error.o log.o kernel_prng_rw.o math.o protocol.o utils.o auth.o
+OBJSte=test_egd_speed.o utils.o kernel_prng_rw.o log.o error.o auth.o
 
 all: eb server_audio server_timers server_v4l server_stream client_linux_kernel server_egd client_egd test_egd_speed
 
@@ -40,7 +40,7 @@ check:
 	cppcheck -v --enable=all --std=c++11 --inconclusive . 2> err.txt
 
 eb: $(OBJSeb)
-	$(CXX) -Wall -W $(OBJSeb) $(LDFLAGS) -lcrypto -o eb
+	$(CXX) -Wall -W $(OBJSeb) $(LDFLAGS) -o eb
 
 server_audio: $(OBJSsa)
 	$(CXX) -Wall -W $(OBJSsa) $(LDFLAGS) -lasound -o server_audio
