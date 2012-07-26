@@ -55,7 +55,7 @@ int send_denied_quota(int fd, statistics_t *stats, config_t *config)
 int send_denied_full(client_t *client, pool **pools, int n_pools, statistics_t *stats, config_t *config)
 {
 	char buffer[4+4+1];
-	int seconds = config -> default_sleep_time_when_pools_fool;
+	int seconds = config -> default_sleep_time_when_pools_full;
 
 	stats -> n_times_full++;
 
@@ -63,7 +63,7 @@ int send_denied_full(client_t *client, pool **pools, int n_pools, statistics_t *
 	{
 		// determine how many seconds it'll take before the current pool is empty
 		int n_bits_in_pool = get_bit_sum(pools, n_pools);
-		seconds = min(config -> default_max_sleep_when_pool_fool, max(1, (n_bits_in_pool * 0.75) / max(1, stats -> bps)));
+		seconds = min(config -> default_max_sleep_when_pool_full, max(1, (n_bits_in_pool * 0.75) / max(1, stats -> bps)));
 	}
 
 	sprintf(buffer, "9001%04d", seconds);

@@ -17,8 +17,8 @@ typedef struct
 
 	int communication_timeout;
 	int communication_session_timeout;
-	int default_sleep_time_when_pools_fool;
-	int default_max_sleep_when_pool_fool;
+	int default_sleep_time_when_pools_full;
+	int default_max_sleep_when_pool_full;
 	int default_sleep_when_pools_empty;
 	int default_max_sleep_when_pools_empty;
 	int when_pools_full_allow_submit_interval;
