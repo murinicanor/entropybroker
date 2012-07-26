@@ -451,7 +451,7 @@ void main_loop(pool **pools, int n_pools, config_t *config, fips140 *eb_output_f
 	int n_clients = 0;
 	double last_counters_reset = get_ts();
 	double last_statistics_emit = get_ts();
-	double last_ping = get_ts();
+	double last_ping = 0.0;
 	double last_kp_filled = get_ts();
 	event_state_t event_state;
 	int listen_socket_fd = start_listen(config -> listen_adapter, config -> listen_port, config -> listen_queue_size);
