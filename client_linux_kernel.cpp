@@ -166,7 +166,6 @@ int main(int argc, char *argv[])
 	for(;;)
 	{
 		int rc;
-		unsigned char *buffer;
 		char recv_msg[8 + 1], reply[8 + 1];
 		fd_set write_fd;
 		fd_set read_fd;
@@ -258,28 +257,34 @@ int main(int argc, char *argv[])
 
 			dolog(LOG_INFO, "server is offering %d bits (%d bytes)", will_get_n_bits, will_get_n_bytes);
 
-			buffer = (unsigned char *)malloc(will_get_n_bytes);
-			if (!buffer)
+			unsigned char *buffer_in = (unsigned char *)malloc(will_get_n_bytes);
+			if (!buffer_in)
+				error_exit("out of memory allocating %d bytes", will_get_n_bytes);
+			unsigned char *buffer_out = (unsigned char *)malloc(will_get_n_bytes);
+			if (!buffer_out)
 				error_exit("out of memory allocating %d bytes", will_get_n_bytes);
 
-			if (READ_TO(socket_fd, (char *)buffer, will_get_n_bytes, DEFAULT_COMM_TO) != will_get_n_bytes)
+			if (READ_TO(socket_fd, (char *)buffer_in, will_get_n_bytes, DEFAULT_COMM_TO) != will_get_n_bytes)
 			{
 				dolog(LOG_INFO, "read error from %s:%d", host, port);
-				free(buffer);
+				free(buffer_in);
+				free(buffer_out);
 				close(socket_fd);
 				socket_fd = -1;
 				continue;
 			}
 
+			decrypt(buffer_in, buffer_out, will_get_n_bytes);
+
 			dolog(LOG_DEBUG, "data received");
 
 			if (use_as_is)
-				rc = kernel_rng_add_entropy(buffer, will_get_n_bytes, will_get_n_bytes * 8);
+				rc = kernel_rng_add_entropy(buffer_out, will_get_n_bytes, will_get_n_bytes * 8);
 			else
 			{
-				int information_n_bits = determine_number_of_bits_of_data(buffer, will_get_n_bytes);
+				int information_n_bits = determine_number_of_bits_of_data(buffer_out, will_get_n_bytes);
 
-				rc = kernel_rng_add_entropy(buffer, will_get_n_bytes, information_n_bits);
+				rc = kernel_rng_add_entropy(buffer_out, will_get_n_bytes, information_n_bits);
 
 				dolog(LOG_DEBUG, "%d bits from server contains %d bits of information, new entropy count: %d", will_get_n_bits, information_n_bits, kernel_rng_get_entropy_count());
 			}
@@ -287,7 +292,8 @@ int main(int argc, char *argv[])
 			if (rc == -1)
 				error_exit("error submiting entropy data to kernel");
 
-			free(buffer);
+			free(buffer_out);
+			free(buffer_in);
 		}
 	}
 

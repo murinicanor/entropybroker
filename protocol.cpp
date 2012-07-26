@@ -2,6 +2,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <stdlib.h>
+#include <openssl/blowfish.h>
 
 #include "error.h"
 #include "log.h"
@@ -10,6 +11,9 @@
 
 #define DEFAULT_COMM_TO 15
 
+unsigned char ivec[8] = { 0 };
+BF_KEY key;
+
 void error_sleep(int count)
 {
 	long int sleep_micro_seconds = myrand(count * 1000000) + 1;
@@ -17,6 +21,15 @@ void error_sleep(int count)
 	dolog(LOG_WARNING, "Failed connecting, sleeping for %f seconds", (double)sleep_micro_seconds / 1000000.0);
 
 	usleep((long)sleep_micro_seconds);
+}
+
+void set_password(char *password)
+{
+	int len = strlen(password);
+
+	memcpy(ivec, password, min(len, 8));
+
+	BF_set_key(&key, len, (unsigned char *)password);
 }
 
 int reconnect_server_socket(char *host, int port, char *password, int *socket_fd, const char *type, char is_server)
@@ -78,7 +91,7 @@ int reconnect_server_socket(char *host, int port, char *password, int *socket_fd
 	return 0;
 }
 
-int message_transmit_entropy_data(int socket_fd, unsigned char *bytes, int n_bytes)
+int message_transmit_entropy_data(int socket_fd, unsigned char *bytes_in, int n_bytes)
 {
 	int value;
 	char reply[8 + 1];
@@ -126,11 +139,22 @@ int message_transmit_entropy_data(int socket_fd, unsigned char *bytes, int n_byt
 
 		dolog(LOG_DEBUG, "Transmitting %d bytes", cur_n_bytes);
 
-		if (WRITE_TO(socket_fd, (char *)bytes, cur_n_bytes, DEFAULT_COMM_TO) != cur_n_bytes)
+		// encrypt data. keep original data; will be used as ivec for next round
+		unsigned char *bytes_out = (unsigned char *)malloc(cur_n_bytes);
+		if (!bytes_out)
+			error_exit("out of memory");
+		int num = 0;
+		BF_cfb64_encrypt(bytes_in, bytes_out, cur_n_bytes, &key, ivec, &num, BF_ENCRYPT);
+		memcpy(ivec, bytes_in, min(8, cur_n_bytes));
+
+		if (WRITE_TO(socket_fd, (char *)bytes_out, cur_n_bytes, DEFAULT_COMM_TO) != cur_n_bytes)
 		{
 			dolog(LOG_INFO, "error transmitting data");
+			free(bytes_out);
 			return -1;
 		}
+
+		free(bytes_out);
 	}
 	else if (strcmp(reply, "9001") == 0)            // NACK
 	{
@@ -145,4 +169,11 @@ int message_transmit_entropy_data(int socket_fd, unsigned char *bytes, int n_byt
 	}
 
 	return 0;
+}
+
+void decrypt(unsigned char *buffer_in, unsigned char *buffer_out, int n_bytes)
+{
+	int num = 0;
+	BF_cfb64_encrypt(buffer_in, buffer_out, n_bytes, &key, ivec, &num, BF_DECRYPT);
+	memcpy(ivec, buffer_out, min(8, n_bytes));
 }

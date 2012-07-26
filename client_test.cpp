@@ -100,8 +100,11 @@ int main(int argc, char *argv[])
 
 		dolog(LOG_INFO, "server is offering %d bits (%d bytes)", will_get_n_bits, will_get_n_bytes);
 
-		buffer = (unsigned char *)malloc(will_get_n_bytes);
-		if (!buffer)
+		buffer_in = (unsigned char *)malloc(will_get_n_bytes);
+		if (!buffer_in)
+			error_exit("out of memory allocating %d bytes", will_get_n_bytes);
+		buffer_out = (unsigned char *)malloc(will_get_n_bytes);
+		if (!buffer_out)
 			error_exit("out of memory allocating %d bytes", will_get_n_bytes);
 
 		if (READ(socket_fd, (char *)buffer, will_get_n_bytes) != will_get_n_bytes)
@@ -109,10 +112,15 @@ int main(int argc, char *argv[])
 			dolog(LOG_INFO, "read error from %s:%d", host, port);
 			close(socket_fd);
 			socket_fd = -1;
+			free(buffer_out);
+			free(buffer_in);
 			continue;
 		}
 
-		free(buffer);
+		decrypt(buffer_in, buffer_out, will_get_n_bytes);
+
+		free(buffer_out);
+		free(buffer_in);
 	}
 
 	return 0;

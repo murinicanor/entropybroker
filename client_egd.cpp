@@ -98,31 +98,29 @@ void handle_client(int fd, char *host, int port)
 	if (will_get_n_bytes > 0)
 	{
 		unsigned char msg;
-		char *buffer = (char *)malloc(will_get_n_bytes);
-		if (!buffer)
+		unsigned char *buffer_in = (unsigned char *)malloc(will_get_n_bytes);
+		if (!buffer_in)
+			error_exit("out of memory allocating %d bytes", will_get_n_bytes);
+		unsigned char *buffer_out = (unsigned char *)malloc(will_get_n_bytes);
+		if (!buffer_out)
 			error_exit("out of memory allocating %d bytes", will_get_n_bytes);
 
-		if (READ_TO(socket_fd, buffer, will_get_n_bytes, DEFAULT_COMM_TO) != will_get_n_bytes)
-		{
+		if (READ_TO(socket_fd, (char *)buffer_in, will_get_n_bytes, DEFAULT_COMM_TO) != will_get_n_bytes)
 			dolog(LOG_INFO, "read error from %s:%d", host, port);
-			return;
-		}
-
-		// SEND TO EGD CLIENT FIXME
-		msg = min(255, will_get_n_bytes);
-		if (WRITE(fd, (char *)&msg, 1) != 1)
+		else
 		{
-			dolog(LOG_INFO, "short write on egd client (# bytes)");
-			return;
+			decrypt(buffer_in, buffer_out, will_get_n_bytes);
+
+			// SEND TO EGD CLIENT FIXME
+			msg = min(255, will_get_n_bytes);
+			if (WRITE(fd, (char *)&msg, 1) != 1)
+				dolog(LOG_INFO, "short write on egd client (# bytes)");
+			else if (WRITE(fd, (char *)buffer_out, msg) != msg)
+				dolog(LOG_INFO, "short write on egd client (data)");
 		}
 
-		if (WRITE(fd, buffer, msg) != msg)
-		{
-			dolog(LOG_INFO, "short write on egd client (data)");
-			return;
-		}
-
-		free(buffer);
+		free(buffer_out);
+		free(buffer_in);
 	}
 	else
 	{

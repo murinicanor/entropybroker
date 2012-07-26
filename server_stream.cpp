@@ -302,6 +302,7 @@ int main(int argc, char *argv[])
 
 	if (!password)
 		error_exit("no password set");
+	set_password(password);
 
 	if (!host && !bytes_file)
 		error_exit("no host to connect to given");

@@ -12,6 +12,7 @@
 #include <unistd.h>
 #include <sys/time.h>
 #include <sys/resource.h>
+#include <openssl/blowfish.h>
 
 #include "error.h"
 #include "log.h"
@@ -75,9 +76,8 @@ int send_denied_full(client_t *client, pool **pools, int n_pools, statistics_t *
 	return 0;
 }
 
-int do_client_get(pool **pools, int n_pools, client_t *client, statistics_t *stats, config_t *config, fips140 *eb_output_fips140, scc *eb_output_scc)
+int do_client_get(pool **pools, int n_pools, client_t *client, statistics_t *stats, config_t *config, fips140 *eb_output_fips140, scc *eb_output_scc, BF_KEY *key)
 {
-	unsigned char *buffer, *ent_buffer;
 	int cur_n_bits, cur_n_bytes;
 	int transmit_size;
 	char n_bits[4 + 1];
@@ -114,17 +114,26 @@ int do_client_get(pool **pools, int n_pools, client_t *client, statistics_t *sta
 
 	dolog(LOG_DEBUG, "get|%s memory allocated, retrieving bits", client -> host);
 
-	cur_n_bits = get_bits_from_pools(cur_n_bits, pools, n_pools, &ent_buffer, client -> allow_prng, client -> ignore_rngtest_fips140, eb_output_fips140, client -> ignore_rngtest_scc, eb_output_scc);
+	unsigned char *ent_buffer_in = NULL;
+	cur_n_bits = get_bits_from_pools(cur_n_bits, pools, n_pools, &ent_buffer_in, client -> allow_prng, client -> ignore_rngtest_fips140, eb_output_fips140, client -> ignore_rngtest_scc, eb_output_scc);
 	if (cur_n_bits == 0)
 	{
 		dolog(LOG_WARNING, "get|%s no bits in pools", client -> host);
-		free(ent_buffer);
 		return send_denied_empty(client -> socket_fd, stats, config);
 	}
 	if (cur_n_bits < 0)
 		error_exit("internal error: %d < 0", cur_n_bits);
 	cur_n_bytes = (cur_n_bits + 7) / 8;
 	dolog(LOG_DEBUG, "get|%s got %d bits from pool", client -> host, cur_n_bits);
+
+	unsigned char *ent_buffer = (unsigned char *)malloc(cur_n_bytes);
+	if (!ent_buffer)
+		error_exit("error allocating %d bytes of memory", cur_n_bytes);
+
+	// encrypt data. keep original data; will be used as ivec for next round
+	int num = 0;
+	BF_cfb64_encrypt(ent_buffer_in, ent_buffer, cur_n_bytes, key, client -> ivec, &num, BF_ENCRYPT);
+	memcpy(client -> ivec, ent_buffer_in, min(8, cur_n_bytes));
 
 	// update statistics for accounting
 	client -> bits_sent += cur_n_bits;
@@ -133,31 +142,31 @@ int do_client_get(pool **pools, int n_pools, client_t *client, statistics_t *sta
 	stats -> total_sent_requests++;
 
 	transmit_size = 4 + 4 + cur_n_bytes;
-	buffer = (unsigned char *)malloc(transmit_size);
-	if (!buffer)
+	unsigned char *output_buffer = (unsigned char *)malloc(transmit_size);
+	if (!output_buffer)
 		error_exit("error allocating %d bytes of memory", cur_n_bytes);
-	sprintf((char *)buffer, "0002%04d", cur_n_bits);
+	sprintf((char *)output_buffer, "0002%04d", cur_n_bits);
 
-	dolog(LOG_DEBUG, "get|%s transmit size: %d, msg: %s", client -> host, transmit_size, buffer);
+	dolog(LOG_DEBUG, "get|%s transmit size: %d, msg: %s", client -> host, transmit_size, output_buffer);
 
-	memcpy(&buffer[8], ent_buffer, cur_n_bytes);
+	memcpy(&output_buffer[8], ent_buffer, cur_n_bytes);
 	free(ent_buffer);
+	free(ent_buffer_in);
 
-	if (WRITE_TO(client -> socket_fd, (char *)buffer, transmit_size, config -> communication_timeout) != transmit_size)
+	if (WRITE_TO(client -> socket_fd, (char *)output_buffer, transmit_size, config -> communication_timeout) != transmit_size)
 	{
 		dolog(LOG_INFO, "%s error while sending to client", client -> host);
-		free(buffer);
+		free(output_buffer);
 		return -1;
 	}
 
-	free(buffer);
+	free(output_buffer);
 
 	return 0;
 }
 
-int do_client_put(pool **pools, int n_pools, client_t *client, statistics_t *stats, config_t *config)
+int do_client_put(pool **pools, int n_pools, client_t *client, statistics_t *stats, config_t *config, BF_KEY *key)
 {
-	unsigned char *buffer = NULL;
 	char msg[4+4+1];
 	int cur_n_bits, cur_n_bytes;
 	int n_bits_added;
@@ -207,26 +216,34 @@ int do_client_put(pool **pools, int n_pools, client_t *client, statistics_t *sta
 	if (WRITE_TO(client -> socket_fd, msg, 8, config -> communication_timeout) != 8)
 	{
 		dolog(LOG_INFO, "put|%s short write while sending ack", client -> host);
-		free(buffer);
 		return -1;
 	}
 
 	cur_n_bytes = (cur_n_bits + 7) / 8;
 
-	buffer = (unsigned char *)malloc(cur_n_bytes);
-	if (!buffer)
+	unsigned char *buffer_in = (unsigned char *)malloc(cur_n_bytes);
+	if (!buffer_in)
+		error_exit("%s error allocating %d bytes of memory", client -> host, cur_n_bytes);
+	unsigned char *buffer_out = (unsigned char *)malloc(cur_n_bytes);
+	if (!buffer_out)
 		error_exit("%s error allocating %d bytes of memory", client -> host, cur_n_bytes);
 
-	if (READ_TO(client -> socket_fd, (char *)buffer, cur_n_bytes, config -> communication_timeout) != cur_n_bytes)
+	if (READ_TO(client -> socket_fd, (char *)buffer_in, cur_n_bytes, config -> communication_timeout) != cur_n_bytes)
 	{
 		dolog(LOG_INFO, "put|%s short read while retrieving entropy data", client -> host);
-		free(buffer);
+		free(buffer_out);
+		free(buffer_in);
 		return -1;
 	}
 
+	// encrypt data. keep original data; will be used as ivec for next round
+	int num = 0;
+	BF_cfb64_encrypt(buffer_in, buffer_out, cur_n_bytes, key, client -> ivec, &num, BF_DECRYPT);
+	memcpy(client -> ivec, buffer_in, min(cur_n_bytes, 8));
+
 	client -> last_put_message = now;
 
-	n_bits_added = add_bits_to_pools(pools, n_pools, buffer, cur_n_bytes, client -> ignore_rngtest_fips140, client -> pfips140, client -> ignore_rngtest_scc, client -> pscc);
+	n_bits_added = add_bits_to_pools(pools, n_pools, buffer_out, cur_n_bytes, client -> ignore_rngtest_fips140, client -> pfips140, client -> ignore_rngtest_scc, client -> pscc);
 	if (n_bits_added == -1)
 		dolog(LOG_CRIT, "put|%s error while adding data to pools", client -> host);
 	else
@@ -236,7 +253,8 @@ int do_client_put(pool **pools, int n_pools, client_t *client, statistics_t *sta
 	stats -> total_recv += n_bits_added;
 	stats -> total_recv_requests++;
 
-	free(buffer);
+	free(buffer_out);
+	free(buffer_in);
 
 	return 0;
 }
@@ -371,7 +389,7 @@ int do_client_kernelpoolfilled_request(client_t *client, config_t *config)
 	return 0;
 }
 
-int do_client(pool **pools, int n_pools, client_t *client, statistics_t *stats, config_t *config, fips140 *eb_output_fips140, scc *eb_output_scc)
+int do_client(pool **pools, int n_pools, client_t *client, statistics_t *stats, config_t *config, fips140 *eb_output_fips140, scc *eb_output_scc, BF_KEY *key)
 {
 	char cmd[4 + 1];
 	cmd[4] = 0x00;
@@ -385,11 +403,11 @@ int do_client(pool **pools, int n_pools, client_t *client, statistics_t *stats, 
 
 	if (strcmp(cmd, "0001") == 0)		// GET bits
 	{
-		return do_client_get(pools, n_pools, client, stats, config, eb_output_fips140, eb_output_scc);
+		return do_client_get(pools, n_pools, client, stats, config, eb_output_fips140, eb_output_scc, key);
 	}
 	else if (strcmp(cmd, "0002") == 0)	// PUT bits
 	{
-		return do_client_put(pools, n_pools, client, stats, config);
+		return do_client_put(pools, n_pools, client, stats, config, key);
 	}
 	else if (strcmp(cmd, "0003") == 0)	// server type
 	{
@@ -462,6 +480,9 @@ void main_loop(pool **pools, int n_pools, config_t *config, fips140 *eb_output_f
 	memset(&stats, 0x00, sizeof(stats));
 
 	dolog(LOG_INFO, "main|main-loop started");
+
+	BF_KEY key;
+	BF_set_key(&key, strlen(config -> auth_password), (unsigned char *)config -> auth_password);
 
 	for(;;)
 	{
@@ -632,7 +653,7 @@ void main_loop(pool **pools, int n_pools, config_t *config, fips140 *eb_output_f
 				{
 					clients[loop].last_message = now;
 
-					if (do_client(pools, n_pools, &clients[loop], &stats, config, eb_output_fips140, eb_output_scc) == -1)
+					if (do_client(pools, n_pools, &clients[loop], &stats, config, eb_output_fips140, eb_output_scc, &key) == -1)
 					{
 						dolog(LOG_INFO, "main|connection closed, removing client %s from list", clients[loop].host);
 						dolog(LOG_DEBUG, "main|%s: %s, scc: %s", clients[loop].host, clients[loop].pfips140 -> stats(), clients[loop].pscc -> stats());
@@ -689,6 +710,7 @@ void main_loop(pool **pools, int n_pools, config_t *config, fips140 *eb_output_f
 						clients[n_clients - 1].pfips140 -> set_user(clients[n_clients - 1].host);
 						clients[n_clients - 1].pscc     -> set_user(clients[n_clients - 1].host);
 						clients[n_clients - 1].pscc -> set_threshold(config -> scc_threshold);
+						memcpy(clients[n_clients - 1].ivec, config -> auth_password, min(strlen(config -> auth_password), 8));
 
 						if (lookup_client_settings(&client_addr, &clients[n_clients - 1], config) == -1)
 						{
