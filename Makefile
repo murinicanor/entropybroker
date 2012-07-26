@@ -77,7 +77,7 @@ install: entropy_broker eb_server_audio eb_server_timers eb_server_v4l eb_server
 	cp eb_client_linux_kernel $(BIN)
 	cp eb_client_egd $(BIN)
 	cp eb_test_egd_speed $(BIN)
-	cp eb_entropybroker.conf $(ETC)
+	cp entropybroker.conf $(ETC)
 
 clean:
 	rm -f $(OBJSeb) $(OBJSsa) $(OBJSst) $(OBJSsv) $(OBJSss)$(OBJSse) $(OBJSclk) $(OBJSte) entropy_broker core *.da *.gcov *.bb* *.o eb_server_audio eb_server_timers eb_server_v4l eb_server_stream eb_server_egd eb_client_linux_kernel eb_client_egd eb_test_egd_speed
