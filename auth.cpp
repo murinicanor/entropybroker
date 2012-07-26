@@ -32,6 +32,7 @@ int auth_eb(int fd, char *password, int to)
 
 	char hash_cmp_str[256], hash_cmp[SHA_DIGEST_LENGTH];
 	snprintf(hash_cmp_str, sizeof hash_cmp_str, "%s %s", rnd_str, password);
+printf("hash string: |%s|\n", hash_cmp_str);
 
         SHA1((const unsigned char *)hash_cmp_str, strlen(hash_cmp_str), (unsigned char *)hash_cmp);
 
@@ -44,9 +45,11 @@ int auth_eb(int fd, char *password, int to)
 
 	if (memcmp(hash_cmp, hash_in, SHA_DIGEST_LENGTH) == 0)
 	{
-		dolog(LOG_INFO, "Connection for fd %d: authentication failed");
+		dolog(LOG_INFO, "Connection for fd %d: authentication ok");
 		return 0;
 	}
+
+	dolog(LOG_INFO, "Connection for fd %d: authentication failed!");
 
 	return -1;
 }
@@ -91,21 +94,22 @@ int auth_client_server(int fd, char *password, int to)
 	}
 	if (rnd_str_size == 0)
 		error_exit("INTERNAL ERROR: random string is 0 characters!");
-	if (rnd_str_size > sizeof rnd_str)
+	if (rnd_str_size >= sizeof rnd_str)
 		error_exit("INTERNAL ERROR: random string too long!");
 	if (READ_TO(fd, rnd_str, rnd_str_size, to) == -1)
 	{
 		dolog(LOG_INFO, "Connection for fd %d closed (2)");
 		return -1;
 	}
+	rnd_str[rnd_str_size] = 0x00;
 
 	char hash_cmp_str[256], hash_cmp[SHA_DIGEST_LENGTH];
 	snprintf(hash_cmp_str, sizeof hash_cmp_str, "%s %s", rnd_str, password);
+printf("hash string: |%s|\n", hash_cmp_str);
 
         SHA1((const unsigned char *)hash_cmp_str, strlen(hash_cmp_str), (unsigned char *)hash_cmp);
 
-	char hash_in[SHA_DIGEST_LENGTH];
-	if (WRITE(fd, hash_in, SHA_DIGEST_LENGTH) == -1)
+	if (WRITE(fd, hash_cmp, SHA_DIGEST_LENGTH) == -1)
 	{
 		dolog(LOG_INFO, "Connection for fd %d closed (3)");
 		return -1;

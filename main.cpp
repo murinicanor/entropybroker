@@ -133,6 +133,8 @@ int main(int argc, char *argv[])
 		if (daemon(-1, -1) == -1)
 			error_exit("fork failed");
 	}
+srand48()
+get_bits_from_pools(int n_bits_requested, pool **pools, int n_pools, unsigned char **buffer, char allow_prng, char ignore_rngtest_fips140, fips140 *pfips, char ignore_rngtest_scc, scc *pscc)
 
 	write_pid(pid_file);
 
