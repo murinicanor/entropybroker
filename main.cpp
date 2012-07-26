@@ -157,9 +157,12 @@ int main(int argc, char *argv[])
 
 	main_loop(pools, n_pools, &config, eb_output_fips140, eb_output_scc);
 
+	printf("Dumping pool contents to cache-file\n");
 	dump_pools(pools, n_pools);
 
 	unlink(pid_file);
+
+	printf("Finished\n");
 
 	return 0;
 }
