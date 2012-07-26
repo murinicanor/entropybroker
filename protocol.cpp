@@ -61,6 +61,7 @@ int reconnect_server_socket(char *host, int port, char *password, int *socket_fd
 				count++;
 		}
 	}
+	set_password(password);
 
 	if (connect_msg)
 	{
