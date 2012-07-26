@@ -32,7 +32,6 @@ int auth_eb(int fd, char *password, int to)
 
 	char hash_cmp_str[256], hash_cmp[SHA_DIGEST_LENGTH];
 	snprintf(hash_cmp_str, sizeof hash_cmp_str, "%s %s", rnd_str, password);
-printf("hash string: |%s|\n", hash_cmp_str);
 
         SHA1((const unsigned char *)hash_cmp_str, strlen(hash_cmp_str), (unsigned char *)hash_cmp);
 
@@ -72,6 +71,9 @@ char * get_password_from_file(char *filename)
 
 	if (fgets(password, sizeof password, fh) == NULL)
 		error_exit("Failed to read from %s", filename);
+	char *lf = strchr(password, '\n');
+	if (lf)
+		*lf = 0x00;
 
 	fclose(fh);
 
@@ -105,7 +107,6 @@ int auth_client_server(int fd, char *password, int to)
 
 	char hash_cmp_str[256], hash_cmp[SHA_DIGEST_LENGTH];
 	snprintf(hash_cmp_str, sizeof hash_cmp_str, "%s %s", rnd_str, password);
-printf("hash string: |%s|\n", hash_cmp_str);
 
         SHA1((const unsigned char *)hash_cmp_str, strlen(hash_cmp_str), (unsigned char *)hash_cmp);
 
