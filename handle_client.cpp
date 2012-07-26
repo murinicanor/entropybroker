@@ -493,7 +493,7 @@ void main_loop(pool **pools, int n_pools, config_t *config, fips140 *eb_output_f
 			max_fd = max(max_fd, clients[loop].socket_fd);
 
 			if (config -> communication_session_timeout > 0)
-				time_left = min(time_left, max(0,(clients[loop].last_message + (double)config -> communication_session_timeout) - now));
+				time_left = min(time_left, max(0, (clients[loop].last_message + (double)config -> communication_session_timeout) - now));
 		}
 
 		FD_SET(listen_socket_fd, &rfds);
@@ -585,7 +585,7 @@ void main_loop(pool **pools, int n_pools, config_t *config, fips140 *eb_output_f
 		{
 			for(loop=n_clients - 1; loop>=0; loop--)
 			{
-				if (!clients[loop].is_server && do_client_send_ping_request(&clients[loop], config) == -1)
+				if (do_client_send_ping_request(&clients[loop], config) == -1)
 				{
 					stats.disconnects++;
 
