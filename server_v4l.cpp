@@ -120,7 +120,7 @@ void untake_picture(int fd, struct v4l2_buffer *buf)
 
 void help(void)
 {
-	printf("-i host   eb-host to connect to\n");
+	printf("-i host   entropy_broker-host to connect to\n");
 	printf("-d x   device to use\n");
 	printf("-o file   file to write entropy data to (mututal exclusive with -d)\n");
 	printf("-f x   skip x frames before processing images (in case the device\n");

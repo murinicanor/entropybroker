@@ -81,7 +81,7 @@ int proces_server_msg(int socket_fd)
 
 void help(void)
 {
-	printf("-i host   eb-host to connect to\n");
+	printf("-i host   entropy_broker-host to connect to\n");
 	printf("-l file   log to file 'file'\n");
 	printf("-s        log to syslog\n");
 	printf("-n        do not fork\n");
@@ -100,7 +100,7 @@ int main(int argc, char *argv[])
 	char do_not_fork = 0, log_console = 0, log_syslog = 0;
 	char *log_logfile = NULL;
 
-	printf("client_linux_kernel v" VERSION ", (C) 2009-2012 by folkert@vanheusden.com\n");
+	printf("eb_client_linux_kernel v" VERSION ", (C) 2009-2012 by folkert@vanheusden.com\n");
 
 	while((c = getopt(argc, argv, "X:P:i:l:sn")) != -1)
 	{

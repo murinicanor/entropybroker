@@ -55,7 +55,7 @@ int open_unixdomain_socket(char *path)
 
 void help(void)
 {
-        printf("-i host   eb-host to connect to\n");
+        printf("-i host   entropy_broker-host to connect to\n");
 	printf("-d path   unix domain socket to read from\n");
 	printf("-o file   file to write entropy data to (mututal exclusive with -i)\n");
 	printf("-a x      bytes per interval to read from egd\n");
@@ -85,7 +85,7 @@ int main(int argc, char *argv[])
 	int verbose = 0;
 	char server_type[128];
 
-	fprintf(stderr, "server_egb v" VERSION ", (C) 2009-2012 by folkert@vanheusden.com\n");
+	fprintf(stderr, "eb_server_egb v" VERSION ", (C) 2009-2012 by folkert@vanheusden.com\n");
 
 	while((c = getopt(argc, argv, "X:P:a:b:o:i:d:l:snv")) != -1)
 	{

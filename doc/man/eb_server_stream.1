@@ -1,0 +1,19 @@
+.TH EB_SERVER_STREAM "1" "July 2012" "eb_server_stream" "User Commands"
+.SH NAME
+eb_server_stream \- gather entropy 
+.SH DESCRIPTION
+.TP
+\fB\-i\fR host   eb\-host to connect to
+.TP
+\fB\-d\fR dev    device to retrieve from
+.TP
+\fB\-o\fR file   file to write entropy data to (mututal exclusive with \fB\-d\fR)
+.TP
+\fB\-p\fR pars   if the device is a serial device, then with \fB\-p\fR
+		you can set its parameters: bps,bits
+.PP
+\fB\-l\fR file   log to file 'file'
+.TP
+\fB\-s\fR        log to syslog
+.TP
+\fB\-n\fR        do not fork

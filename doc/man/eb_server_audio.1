@@ -1,0 +1,16 @@
+.TH EB_SERVER_AUDIO "1" "July 2012" "eb_server_audio" "User Commands"
+.SH NAME
+eb_server_audio \- gather entropy on systems with a spare sound-card
+.SH DESCRIPTION
+.TP
+\fB\-i\fR host   eb\-host to connect to
+.TP
+\fB\-d\fR dev    audio\-device, default hw:1
+.TP
+\fB\-o\fR file   file to write entropy data to (mututal exclusive with \fB\-d\fR)
+.TP
+\fB\-l\fR file   log to file 'file'
+.TP
+\fB\-s\fR        log to syslog
+.TP
+\fB\-n\fR        do not fork

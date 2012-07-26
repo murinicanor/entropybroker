@@ -159,7 +159,7 @@ int open_unixdomain_socket(char *path, int nListen)
 
 void help(void)
 {
-	printf("-i host   eb-host to connect to\n");
+	printf("-i host   entropy_broker-host to connect to\n");
 	printf("-d file   unix domain socket\n");
 	printf("-l file   log to file 'file'\n");
 	printf("-s        log to syslog\n");
@@ -178,7 +178,7 @@ int main(int argc, char *argv[])
 	char *uds = NULL;
 	int listen_fd, nListen = 5;
 
-	printf("client_egd v" VERSION ", (C) 2009-2012 by folkert@vanheusden.com\n");
+	printf("eb_client_egd v" VERSION ", (C) 2009-2012 by folkert@vanheusden.com\n");
 
 	while((c = getopt(argc, argv, "X:P:d:i:l:sn")) != -1)
 	{

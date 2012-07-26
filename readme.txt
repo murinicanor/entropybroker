@@ -1,19 +1,19 @@
 How it works
 ------------
-The 'eb' process is the central process of it all. It collects all
-entropy data, mixes it within its pool(s), measures the amount of
-randomness in that data en then serves it to clients.
-server_* processes, which can run in other systems than the eb-
-process, collect the random-data and transmit that to the central
-eb-process.
+The 'entropy_broker' process is the central process of it all. It
+collects all entropy data, mixes it within its pool(s), measures
+the amount of randomness in that data en then serves it to clients.
+server_* processes, which can run in other systems than the
+entropy_broker-process, collect the random-data and transmit that
+to the central entropy_broker-process.
 client_* processes, which also can run everywhere, get random-data
-from the central eb-process and feed that to for example the local
-linux-kernel (/dev/random so to say) or to processes that read
-from a egb-compatible unix-domain socket.
-If that eb-process is on a different system than the server_- or
-client_- processes, then you're advised to let that communication
-proceed over a network seperate from production-lan, unless no-
-one can intercept the communication.
+from the central entropy_broker-process and feed that to for
+example the local linux-kernel (/dev/random so to say) or to
+processes that read from a egb-compatible unix-domain socket.
+If that entropy_broker-process is on a different system than the
+server_- or client_- processes, then you're advised to let that
+communication proceed over a network seperate from production-
+lan, unless no-one can intercept the communication.
 
 Building
 --------
@@ -23,13 +23,20 @@ You need the OpenSSL development libraries as wel as the asound2
 development libraries (asound2 is only required if you're
 compiling server_audio).
 
-On the server, invoke 'eb' (/usr/local/entropybroker/bin/eb).
+*** PLEASE NOTE: since 1.0, 'eb' was renamed to 'entropy_broker' ***
+*** also the other daemons were renamed ***
+
+On the server, invoke 'entropy_broker' (/usr/local/entropybroker/bin/entropy_broker).
 
 On systems with a spare sound-card, start server_audio.
 On systems with a spare tv-card/webcam, start server_v4l.
-On systems that are mostly idle, start server_timers. Check http://vanheusden.com/te/#bps to see some expected bitrates.
-On systems with an random generator connected to e.g. a serial port, or with a rng in the motherboard chipset, use server_stream to feed its data to eb.
-On systems with an EntropyKey (http://www.entropykey.co.uk/) or EGD, start server_egd.
+On systems that are mostly idle, start server_timers. Check
+http://vanheusden.com/te/#bps to see some expected bitrates.
+On systems with an random generator connected to e.g. a serial
+port, or with a rng in the motherboard chipset, use server_stream
+to feed its data to entropy_broker.
+On systems with an EntropyKey (http://www.entropykey.co.uk/) or
+EGD, start server_egd.
 server_egd requires a read-interval and how many bytes to read in
 that interval. You can test with test_egd_speed how many bytes your
 EGD service can produce in an interval.
@@ -38,7 +45,7 @@ On the clients, start client_linux_kernel (as root user)
 or if you do not want the entropy data be send to /dev/random but
 exported as a EGD server, start client_egd. Yes, the name may be
 confusing but it is a client of the entropybroker-server. E.g.
-client_egd -d /tmp/egd.sock -i eb-server.test.com
+client_egd -d /tmp/egd.sock -i entropy_broker-server.test.com
 Now egd-clients can use the /tmp/egd.sock unix domain socket. This
 should work with at least OpenSSL: then, start client_egd with
 one of the following parameters:
@@ -66,12 +73,12 @@ processes have the following command-line switches for that:
 
 Please invoke these commands first with -h to see a list of
 options. You probably need to use '-i' to select the server
-on which 'eb' runs. Also adding '-s' is usefull as it'll make
-the servers/clients/eb log to syslog.
+on which 'entropy_broker' runs. Also adding '-s' is usefull as it'll make
+the servers/clients/entropy_broker log to syslog.
 
 It uses port 55225 (TCP) for communication.
 
-Send a HUP signal to the eb-daemon to let it log the current
+Send a HUP signal to the entropy_broker-daemon to let it log the current
 state. E.g. recv/sent requests, etc.
 
 

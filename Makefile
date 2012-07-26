@@ -34,56 +34,57 @@ OBJSclk=client_linux_kernel.o error.o kernel_prng_io.o kernel_prng_rw.o log.o ma
 OBJScle=client_egd.o error.o log.o kernel_prng_rw.o math.o protocol.o utils.o auth.o
 OBJSte=test_egd_speed.o utils.o kernel_prng_rw.o log.o error.o auth.o
 
-all: eb server_audio server_timers server_v4l server_stream client_linux_kernel server_egd client_egd test_egd_speed
+all: entropy_broker eb_server_audio eb_server_timers eb_server_v4l eb_server_stream eb_client_linux_kernel eb_server_egd eb_client_egd eb_test_egd_speed
 
 check:
 	cppcheck -v --enable=all --std=c++11 --inconclusive . 2> err.txt
 
-eb: $(OBJSeb)
-	$(CXX) -Wall -W $(OBJSeb) $(LDFLAGS) -o eb
+entropy_broker: $(OBJSeb)
+	$(CXX) -Wall -W $(OBJSeb) $(LDFLAGS) -o entropy_broker
 
-server_audio: $(OBJSsa)
-	$(CXX) -Wall -W $(OBJSsa) $(LDFLAGS) -lasound -o server_audio
+eb_server_audio: $(OBJSsa)
+	$(CXX) -Wall -W $(OBJSsa) $(LDFLAGS) -lasound -o eb_server_audio
 
-server_timers: $(OBJSst)
-	$(CXX) -Wall -W $(OBJSst) $(LDFLAGS) -o server_timers
+eb_server_timers: $(OBJSst)
+	$(CXX) -Wall -W $(OBJSst) $(LDFLAGS) -o eb_server_timers
 
-server_v4l: $(OBJSsv)
-	$(CXX) -Wall -W $(OBJSsv) $(LDFLAGS) -o server_v4l
+eb_server_v4l: $(OBJSsv)
+	$(CXX) -Wall -W $(OBJSsv) $(LDFLAGS) -o eb_server_v4l
 
-server_stream: $(OBJSss)
-	$(CXX) -Wall -W $(OBJSss) $(LDFLAGS) -o server_stream
+eb_server_stream: $(OBJSss)
+	$(CXX) -Wall -W $(OBJSss) $(LDFLAGS) -o eb_server_stream
 
-server_egd: $(OBJSse)
-	$(CXX) -Wall -W $(OBJSse) $(LDFLAGS) -o server_egd
+eb_server_egd: $(OBJSse)
+	$(CXX) -Wall -W $(OBJSse) $(LDFLAGS) -o eb_server_egd
 
-client_egd: $(OBJScle)
-	$(CXX) -Wall -W $(OBJScle) $(LDFLAGS) -o client_egd
+eb_client_egd: $(OBJScle)
+	$(CXX) -Wall -W $(OBJScle) $(LDFLAGS) -o eb_client_egd
 
-client_linux_kernel: $(OBJSclk)
-	$(CXX) -Wall -W $(OBJSclk) $(LDFLAGS) -o client_linux_kernel
+eb_client_linux_kernel: $(OBJSclk)
+	$(CXX) -Wall -W $(OBJSclk) $(LDFLAGS) -o eb_client_linux_kernel
 
-test_egd_speed: $(OBJSte)
-	$(CXX) -Wall -W $(OBJSte) $(LDFLAGS) -o test_egd_speed
+eb_test_egd_speed: $(OBJSte)
+	$(CXX) -Wall -W $(OBJSte) $(LDFLAGS) -o eb_test_egd_speed
 
-install: eb server_audio server_timers server_v4l server_stream server_egd client_linux_kernel client_egd test_egd_speed
+install: entropy_broker eb_server_audio eb_server_timers eb_server_v4l eb_server_stream eb_server_egd eb_client_linux_kernel eb_client_egd eb_test_egd_speed
 	mkdir -p $(BIN) $(ETC) $(VAR) $(PID)
-	cp eb $(BIN)
-	cp server_audio $(BIN)
-	cp server_timers $(BIN)
-	cp server_v4l $(BIN)
-	cp server_stream $(BIN)
-	cp server_egd $(BIN)
-	cp client_linux_kernel $(BIN)
-	cp client_egd $(BIN)
-	cp test_egd_speed $(BIN)
-	cp entropybroker.conf $(ETC)
+	cp entropy_broker $(BIN)
+	cp eb_server_audio $(BIN)
+	cp eb_server_timers $(BIN)
+	cp eb_server_v4l $(BIN)
+	cp eb_server_stream $(BIN)
+	cp eb_server_egd $(BIN)
+	cp eb_client_linux_kernel $(BIN)
+	cp eb_client_egd $(BIN)
+	cp eb_test_egd_speed $(BIN)
+	cp eb_entropybroker.conf $(ETC)
 
 clean:
-	rm -f $(OBJSeb) $(OBJSsa) $(OBJSst) $(OBJSsv) $(OBJSss)$(OBJSse) $(OBJSclk) $(OBJSte) eb core *.da *.gcov *.bb* *.o server_audio server_timers server_v4l server_stream server_egd client_linux_kernel client_egd test_egd_speed
+	rm -f $(OBJSeb) $(OBJSsa) $(OBJSst) $(OBJSsv) $(OBJSss)$(OBJSse) $(OBJSclk) $(OBJSte) entropy_broker core *.da *.gcov *.bb* *.o eb_server_audio eb_server_timers eb_server_v4l eb_server_stream eb_server_egd eb_client_linux_kernel eb_client_egd eb_test_egd_speed
 
 package: clean
 	mkdir eb-$(VERSION)
 	cp *.cpp *.h entropybroker.conf Makefile Changes readme.txt license.* eb-$(VERSION)
+	cp -a doc eb-$(VERSION)
 	tar czf eb-$(VERSION).tgz eb-$(VERSION)
 	rm -rf eb-$(VERSION)

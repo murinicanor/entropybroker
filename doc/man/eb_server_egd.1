@@ -1,0 +1,20 @@
+.TH EB_SERVER_EGD "1" "July 2012" "eb_server_egd" "User Commands"
+.SH NAME
+eb_server_egd \- gather entropy on systems with an EntropyKey or EGD
+.SH DESCRIPTION
+.TP
+\fB\-i\fR host   eb\-host to connect to
+.TP
+\fB\-d\fR path   unix domain socket to read from
+.TP
+\fB\-o\fR file   file to write entropy data to (mututal exclusive with \fB\-i\fR)
+.TP
+\fB\-a\fR x      bytes per interval to read from egd
+.TP
+\fB\-b\fR x      interval for reading data
+.TP
+\fB\-l\fR file   log to file 'file'
+.TP
+\fB\-s\fR        log to syslog
+.TP
+\fB\-n\fR        do not fork

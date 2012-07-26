@@ -19,7 +19,7 @@
 #include "signals.h"
 #include "auth.h"
 
-const char *pid_file = PID_DIR "/eb.pid";
+const char *pid_file = PID_DIR "/entropy_broker.pid";
 
 void dump_pools(pool **pools, int n_pools)
 {
@@ -70,7 +70,7 @@ int main(int argc, char *argv[])
 
 	memset(&config, 0x00, sizeof(config));
 
-	printf("eb v " VERSION ", (C) 2009-2012 by folkert@vanheusden.com\n");
+	printf("entropy_broker v " VERSION ", (C) 2009-2012 by folkert@vanheusden.com\n");
 
 	eb_output_fips140 -> set_user((char *)"output");
 	eb_output_scc     -> set_user((char *)"output");

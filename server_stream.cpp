@@ -224,7 +224,7 @@ void set_serial_parameters(int fd, char *pars_in)
 
 void help(void)
 {
-        printf("-i host   eb-host to connect to\n");
+        printf("-i host   entropy_broker-host to connect to\n");
 	printf("-d dev    device to retrieve from\n");
 	printf("-o file   file to write entropy data to (mututal exclusive with -d)\n");
 	printf("-p pars   if the device is a serial device, then with -p\n");

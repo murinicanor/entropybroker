@@ -24,7 +24,7 @@ void sig_handler(int sig)
 
 void help(void)
 {
-        printf("-i host   eb-host to connect to\n");
+        printf("-i host   entropy_broker-host to connect to\n");
 	printf("-o file   file to write entropy data to\n");
         printf("-l file   log to file 'file'\n");
         printf("-s        log to syslog\n");

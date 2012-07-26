@@ -16,8 +16,8 @@
 #include <errno.h>
 #include <alsa/asoundlib.h>
 
-const char *server_type = "server_audio v" VERSION;
-const char *pid_file = PID_DIR "/server_audio.pid";
+const char *server_type = "eb_server_audio v" VERSION;
+const char *pid_file = PID_DIR "/eb_server_audio.pid";
 char *password = NULL;
 
 #include "error.h"
@@ -94,7 +94,7 @@ int setparams(snd_pcm_t *chandle, int sample_rate, snd_pcm_format_t *format)
 
 void help(void)
 {
-	printf("-i host   eb-host to connect to\n");
+	printf("-i host   entropy_broker-host to connect to\n");
 	printf("-d dev    audio-device, default %s\n", cdevice);
 	printf("-o file   file to write entropy data to (mututal exclusive with -d)\n");
 	printf("-S        show bps (mutual exclusive with -n)\n");
