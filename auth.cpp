@@ -58,7 +58,7 @@ char * get_password_from_file(char *filename)
 	if (stat(filename, &ss) == -1)
 		error_exit("stat(%s) failed", filename);
 
-	if (ss.st_mode != 00400 && ss.st_mode != 00600)
+	if (ss.st_mode & (S_IRWXG | S_IRWXO))
 		error_exit("file %s must only readable by its owner", filename);
 
 	FILE *fh = fopen(filename, "rb");

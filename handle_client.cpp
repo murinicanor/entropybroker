@@ -658,12 +658,7 @@ void main_loop(pool **pools, int n_pools, config_t *config, fips140 *eb_output_f
 					if (config -> enable_keepalive)
 						enable_tcp_keepalive(new_socket_fd);
 
-					bool ok = true;
-					if (config -> auth_password)
-					{
-						if (auth_eb(new_socket_fd, config -> auth_password, config -> communication_timeout) != 0)
-							ok = false;
-					}
+					bool ok = auth_eb(new_socket_fd, config -> auth_password, config -> communication_timeout) == 0;
 
 					if (!ok)
 						close(new_socket_fd);
