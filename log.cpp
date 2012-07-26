@@ -1,5 +1,7 @@
 #include <stdarg.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <errno.h>
 #include <syslog.h>
 #include <string.h>
 #include <time.h>
@@ -31,7 +33,11 @@ void dolog(int level, const char *format, ...)
         {
                 FILE *fh = fopen(log_file, "a+");
                 if (!fh)
-			error_exit("error accessing file %s", log_file);
+		{
+			syslog(LOG_CRIT, "error accessing logfile %s: %m", log_file);
+			fprintf(stderr, "error accessing logfile %s: %s", log_file, strerror(errno));
+			exit(1);
+		}
 
                 fprintf(fh, "%s]%d| %s\n", timestr, level, buffer);
 

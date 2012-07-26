@@ -7,6 +7,8 @@
 #include <signal.h>
 #include <syslog.h>
 
+#include "log.h"
+
 void error_exit(const char *format, ...)
 {
 	char buffer[4096];
@@ -16,8 +18,8 @@ void error_exit(const char *format, ...)
 	vsnprintf(buffer, sizeof(buffer), format, ap);
 	va_end(ap);
 
-	fprintf(stderr, "FATAL|%s: errno=%d (if applicable) -> %s\n", buffer, errno, strerror(errno));
-	syslog(LOG_ERR, "FATAL|%s: %m", buffer);
+	dolog(LOG_EMERG, "FATAL|%s\n", buffer);
+	dolog(LOG_EMERG, "errno at that time: %d (%s)", errno, strerror(errno));
 
 	exit(EXIT_FAILURE);
 }
