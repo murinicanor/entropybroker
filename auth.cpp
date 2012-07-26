@@ -21,12 +21,12 @@ int auth_eb(int fd, char *password, int to)
 
 	if (WRITE_TO(fd, (char *)&rnd_str_size, 1, to) == -1)
 	{
-		dolog(LOG_INFO, "Connection for fd %d closed (1)");
+		dolog(LOG_INFO, "Connection for fd %d closed (1)", fd);
 		return -1;
 	}
 	if (WRITE_TO(fd, rnd_str, rnd_str_size, to) == -1)
 	{
-		dolog(LOG_INFO, "Connection for fd %d closed (2)");
+		dolog(LOG_INFO, "Connection for fd %d closed (2)", fd);
 		return -1;
 	}
 
@@ -38,17 +38,17 @@ int auth_eb(int fd, char *password, int to)
 	char hash_in[SHA_DIGEST_LENGTH];
 	if (READ_TO(fd, hash_in, SHA_DIGEST_LENGTH, to) == -1)
 	{
-		dolog(LOG_INFO, "Connection for fd %d closed (3)");
+		dolog(LOG_INFO, "Connection for fd %d closed (3)", fd);
 		return -1;
 	}
 
 	if (memcmp(hash_cmp, hash_in, SHA_DIGEST_LENGTH) == 0)
 	{
-		dolog(LOG_INFO, "Connection for fd %d: authentication ok");
+		dolog(LOG_INFO, "Connection for fd %d: authentication ok", fd);
 		return 0;
 	}
 
-	dolog(LOG_INFO, "Connection for fd %d: authentication failed!");
+	dolog(LOG_INFO, "Connection for fd %d: authentication failed!", fd);
 
 	return -1;
 }
@@ -91,7 +91,7 @@ int auth_client_server(int fd, char *password, int to)
 
 	if (READ_TO(fd, (char *)&rnd_str_size, 1, to) == -1)
 	{
-		dolog(LOG_INFO, "Connection for fd %d closed (1)");
+		dolog(LOG_INFO, "Connection for fd %d closed (1)", fd);
 		return -1;
 	}
 	if (rnd_str_size == 0)
@@ -100,7 +100,7 @@ int auth_client_server(int fd, char *password, int to)
 		error_exit("INTERNAL ERROR: random string too long!");
 	if (READ_TO(fd, rnd_str, rnd_str_size, to) == -1)
 	{
-		dolog(LOG_INFO, "Connection for fd %d closed (2)");
+		dolog(LOG_INFO, "Connection for fd %d closed (2)", fd);
 		return -1;
 	}
 	rnd_str[rnd_str_size] = 0x00;
@@ -112,7 +112,7 @@ int auth_client_server(int fd, char *password, int to)
 
 	if (WRITE(fd, hash_cmp, SHA_DIGEST_LENGTH) == -1)
 	{
-		dolog(LOG_INFO, "Connection for fd %d closed (3)");
+		dolog(LOG_INFO, "Connection for fd %d closed (3)", fd);
 		return -1;
 	}
 

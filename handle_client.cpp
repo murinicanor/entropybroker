@@ -650,7 +650,7 @@ void main_loop(pool **pools, int n_pools, config_t *config, fips140 *eb_output_f
 				{
 					int dummy;
 
-					dolog(LOG_INFO, "main|new client: %s:%d (fd: %d)$", inet_ntoa(client_addr.sin_addr), client_addr.sin_port, new_socket_fd);
+					dolog(LOG_INFO, "main|new client: %s:%d (fd: %d)", inet_ntoa(client_addr.sin_addr), client_addr.sin_port, new_socket_fd);
 
 					if (config -> disable_nagle)
 						disable_nagle(new_socket_fd);
@@ -661,7 +661,10 @@ void main_loop(pool **pools, int n_pools, config_t *config, fips140 *eb_output_f
 					bool ok = auth_eb(new_socket_fd, config -> auth_password, config -> communication_timeout) == 0;
 
 					if (!ok)
+					{
 						close(new_socket_fd);
+						dolog(LOG_WARNING, "main|client: %s:%d (fd: %d) authentication failed", inet_ntoa(client_addr.sin_addr), client_addr.sin_port, new_socket_fd);
+					}
 					else
 					{
 						n_clients++;
