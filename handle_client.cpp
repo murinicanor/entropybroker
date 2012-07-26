@@ -451,7 +451,7 @@ void main_loop(pool **pools, int n_pools, config_t *config, fips140 *eb_output_f
 	int n_clients = 0;
 	double last_counters_reset = get_ts();
 	double last_statistics_emit = get_ts();
-	double last_ping = 0.0;
+	double last_ping = get_ts() - double(config -> ping_interval) + 10.0;
 	double last_kp_filled = get_ts();
 	event_state_t event_state;
 	int listen_socket_fd = start_listen(config -> listen_adapter, config -> listen_port, config -> listen_queue_size);
@@ -485,7 +485,6 @@ void main_loop(pool **pools, int n_pools, config_t *config, fips140 *eb_output_f
 		time_left = min(time_left, dummy1_time);
 		dummy1_time = max(0, (last_ping + config -> ping_interval) - now);
 		time_left = min(time_left, dummy1_time);
-fprintf(stderr, "%f %f\n", dummy1_time, time_left);
 		dummy1_time = max(0, (last_kp_filled  + config -> kernelpool_filled_interval) - now);
 		time_left = min(time_left, dummy1_time);
 
@@ -586,7 +585,6 @@ fprintf(stderr, "%f %f\n", dummy1_time, time_left);
 			last_statistics_emit = now;
 		}
 
-printf("-> %d %f\n", config -> ping_interval, (last_ping + (double)config -> ping_interval) - now);
 		if (config -> ping_interval != 0 && ((last_ping + (double)config -> ping_interval) - now) <= 0)
 		{
 			for(loop=n_clients - 1; loop>=0; loop--)
