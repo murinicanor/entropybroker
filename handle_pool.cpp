@@ -195,7 +195,7 @@ int get_bit_sum(pool **pools, int n_pools)
 	return bit_count;
 }
 
-int add_event(pool **pools, int n_pools, double event, unsigned char *event_data, int n_event_data)
+int add_event(pool **pools, int n_pools, long double event, unsigned char *event_data, int n_event_data)
 {
 	int index;
 
