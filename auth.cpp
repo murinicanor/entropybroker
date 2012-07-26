@@ -41,7 +41,6 @@ int auth_eb(int fd, char *password, int to)
 		dolog(LOG_INFO, "Connection for fd %d closed (3)", fd);
 		return -1;
 	}
-printf("%d %s\n", SHA_DIGEST_LENGTH, hash_cmp_str);
 
 	if (memcmp(hash_cmp, hash_in, SHA_DIGEST_LENGTH) == 0)
 	{
@@ -108,7 +107,6 @@ int auth_client_server(int fd, char *password, int to)
 
 	char hash_cmp_str[256], hash_cmp[SHA_DIGEST_LENGTH];
 	snprintf(hash_cmp_str, sizeof hash_cmp_str, "%s %s", rnd_str, password);
-printf("%d %s\n", SHA_DIGEST_LENGTH, hash_cmp_str);
 
         SHA1((const unsigned char *)hash_cmp_str, strlen(hash_cmp_str), (unsigned char *)hash_cmp);
 
