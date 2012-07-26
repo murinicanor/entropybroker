@@ -485,7 +485,7 @@ void main_loop(pool **pools, int n_pools, config_t *config, fips140 *eb_output_f
 		time_left = min(time_left, dummy1_time);
 		dummy1_time = max(0, (last_ping + config -> ping_interval) - now);
 		time_left = min(time_left, dummy1_time);
-fprintf(stderr, "%f %f", dummy1_time, time_left);
+fprintf(stderr, "%f %f\n", dummy1_time, time_left);
 		dummy1_time = max(0, (last_kp_filled  + config -> kernelpool_filled_interval) - now);
 		time_left = min(time_left, dummy1_time);
 
@@ -523,6 +523,9 @@ fprintf(stderr, "%f %f", dummy1_time, time_left);
 
 			if (errno == EBADF || errno == ENOMEM || errno == EINVAL)
 				error_exit("pselect() failed");
+
+			if (errno == EINTR)
+				continue;
 		}
 		now = get_ts();
 
@@ -583,6 +586,7 @@ fprintf(stderr, "%f %f", dummy1_time, time_left);
 			last_statistics_emit = now;
 		}
 
+printf("-> %d %f\n", config -> ping_interval, (last_ping + (double)config -> ping_interval) - now);
 		if (config -> ping_interval != 0 && ((last_ping + (double)config -> ping_interval) - now) <= 0)
 		{
 			for(loop=n_clients - 1; loop>=0; loop--)
