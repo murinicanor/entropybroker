@@ -130,7 +130,7 @@ int main(int argc, char *argv[])
 	FILE *fh = fopen(CACHE, "rb");
 	if (!fh)
 	{
-		fprintf(stderr, "No cache-file found, continuing...\n");
+		dolog(LOG_INFO, "No cache-file found, continuing...\n");
 
 		for(int loop=0; loop<n_pools; loop++)
 			pools[loop] = new pool();

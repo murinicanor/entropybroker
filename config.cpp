@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <libgen.h>
 
 #include "error.h"
 #include "config.h"
@@ -19,6 +20,8 @@ char config_yes_no(char *what)
 
 void load_config(const char *config, config_t *pconfig)
 {
+	char *dummy = strdup(config);
+	char *cur_dir = dirname(dummy);
         int linenr = 0;
         FILE *fh = fopen(config, "r");
         if (!fh)
@@ -99,7 +102,16 @@ void load_config(const char *config, config_t *pconfig)
 		else if (strcmp(cmd, "listen_adapter") == 0)
 			pconfig -> listen_adapter = strdup(par);
 		else if (strcmp(cmd, "password") == 0)
-			pconfig -> auth_password = get_password_from_file(par);
+		{
+			char *p_file = (char *)malloc(strlen(cur_dir) + strlen(par) + 1 + 1);
+			if (par[0] == '/')
+				strcpy(p_file, par);
+			else
+				sprintf(p_file, "%s/%s", cur_dir, par);
+			printf("Load password from %s\n", p_file);
+			pconfig -> auth_password = get_password_from_file(p_file);
+			free(p_file);
+		}
 		else if (strcmp(cmd, "listen_port") == 0)
 			pconfig -> listen_port = parval;
 		else if (strcmp(cmd, "listen_queue_size") == 0)
@@ -153,4 +165,6 @@ void load_config(const char *config, config_t *pconfig)
 	dolog(LOG_DEBUG, "read %d configuration file lines", linenr);
 
 	fclose(fh);
+
+	free(dummy);
 }
