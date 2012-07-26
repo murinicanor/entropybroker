@@ -1,3 +1,3 @@
 - client: in classes
 - server_kernel?
-- eb: read password from file
+- eb: read password from file: set dir to dir of conf
