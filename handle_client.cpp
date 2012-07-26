@@ -470,7 +470,7 @@ void main_loop(pool **pools, int n_pools, config_t *config, fips140 *eb_output_f
 		double now = get_ts();
 		struct timespec tv;
 		int max_fd = 0;
-		double time_left, dummy1_time, dummy2_time;
+		double time_left = 300.0, dummy1_time;
 		char force_stats = 0;
 		sigset_t sig_set;
 
@@ -480,10 +480,12 @@ void main_loop(pool **pools, int n_pools, config_t *config, fips140 *eb_output_f
 		FD_ZERO(&rfds);
 
 		dummy1_time = max(0, (last_statistics_emit + config -> statistics_interval) - now);
-		dummy2_time = max(0, (last_counters_reset + config -> reset_counters_interval) - now);
-		time_left = min(dummy1_time, dummy2_time);
-		dummy1_time = max(0, (last_ping  + config -> ping_interval) - now);
 		time_left = min(time_left, dummy1_time);
+		dummy1_time = max(0, (last_counters_reset + config -> reset_counters_interval) - now);
+		time_left = min(time_left, dummy1_time);
+		dummy1_time = max(0, (last_ping + config -> ping_interval) - now);
+		time_left = min(time_left, dummy1_time);
+printf("%f %f", dummy_1_time, time_left);
 		dummy1_time = max(0, (last_kp_filled  + config -> kernelpool_filled_interval) - now);
 		time_left = min(time_left, dummy1_time);
 
