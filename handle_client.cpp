@@ -485,7 +485,7 @@ void main_loop(pool **pools, int n_pools, config_t *config, fips140 *eb_output_f
 		time_left = min(time_left, dummy1_time);
 		dummy1_time = max(0, (last_ping + config -> ping_interval) - now);
 		time_left = min(time_left, dummy1_time);
-printf("%f %f", dummy_1_time, time_left);
+fprintf(stderr, "%f %f", dummy1_time, time_left);
 		dummy1_time = max(0, (last_kp_filled  + config -> kernelpool_filled_interval) - now);
 		time_left = min(time_left, dummy1_time);
 
