@@ -5,6 +5,7 @@
 #include "error.h"
 #include "config.h"
 #include "log.h"
+#include "auth.h"
 
 char config_yes_no(char *what)
 {
@@ -98,7 +99,7 @@ void load_config(const char *config, config_t *pconfig)
 		else if (strcmp(cmd, "listen_adapter") == 0)
 			pconfig -> listen_adapter = strdup(par);
 		else if (strcmp(cmd, "password") == 0)
-			pconfig -> auth_password = strdup(par);
+			pconfig -> auth_password = get_password_from_file(par);
 		else if (strcmp(cmd, "listen_port") == 0)
 			pconfig -> listen_port = parval;
 		else if (strcmp(cmd, "listen_queue_size") == 0)
