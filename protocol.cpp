@@ -60,8 +60,9 @@ int reconnect_server_socket(char *host, int port, char *password, int *socket_fd
 			if (count < 16)
 				count++;
 		}
+
+		set_password(password);
 	}
-	set_password(password);
 
 	if (connect_msg)
 	{
