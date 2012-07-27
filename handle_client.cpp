@@ -13,6 +13,8 @@
 #include <sys/time.h>
 #include <sys/resource.h>
 #include <openssl/blowfish.h>
+#include <vector>
+#include <string>
 
 #include "error.h"
 #include "log.h"
@@ -20,8 +22,8 @@
 #include "fips140.h"
 #include "config.h"
 #include "scc.h"
+#include "pools.h"
 #include "handle_client.h"
-#include "handle_pool.h"
 #include "utils.h"
 #include "signals.h"
 #include "auth.h"
@@ -53,7 +55,7 @@ int send_denied_quota(int fd, statistics_t *stats, config_t *config)
 	return WRITE_TO(fd, buffer, 8, config -> communication_timeout) == 8 ? 0 : -1;
 }
 
-int send_denied_full(client_t *client, pool **pools, int n_pools, statistics_t *stats, config_t *config)
+int send_denied_full(client_t *client, pools *ppools, statistics_t *stats, config_t *config)
 {
 	char buffer[4+4+1];
 	int seconds = config -> default_sleep_time_when_pools_full;
@@ -63,7 +65,7 @@ int send_denied_full(client_t *client, pool **pools, int n_pools, statistics_t *
 	if (stats -> bps != 0)
 	{
 		// determine how many seconds it'll take before the current pool is empty
-		int n_bits_in_pool = get_bit_sum(pools, n_pools);
+		int n_bits_in_pool = ppools -> get_bit_sum();
 		seconds = min(config -> default_max_sleep_when_pool_full, max(1, (n_bits_in_pool * 0.75) / max(1, stats -> bps)));
 	}
 
@@ -76,7 +78,7 @@ int send_denied_full(client_t *client, pool **pools, int n_pools, statistics_t *
 	return 0;
 }
 
-int do_client_get(pool **pools, int n_pools, client_t *client, statistics_t *stats, config_t *config, fips140 *eb_output_fips140, scc *eb_output_scc, BF_KEY *key)
+int do_client_get(pools *ppools, client_t *client, statistics_t *stats, config_t *config, fips140 *eb_output_fips140, scc *eb_output_scc, BF_KEY *key)
 {
 	int cur_n_bits, cur_n_bytes;
 	int transmit_size;
@@ -115,7 +117,7 @@ int do_client_get(pool **pools, int n_pools, client_t *client, statistics_t *sta
 	dolog(LOG_DEBUG, "get|%s memory allocated, retrieving bits", client -> host);
 
 	unsigned char *ent_buffer_in = NULL;
-	cur_n_bits = get_bits_from_pools(cur_n_bits, pools, n_pools, &ent_buffer_in, client -> allow_prng, client -> ignore_rngtest_fips140, eb_output_fips140, client -> ignore_rngtest_scc, eb_output_scc);
+	cur_n_bits = ppools -> get_bits_from_pools(cur_n_bits, &ent_buffer_in, client -> allow_prng, client -> ignore_rngtest_fips140, eb_output_fips140, client -> ignore_rngtest_scc, eb_output_scc);
 	if (cur_n_bits == 0)
 	{
 		dolog(LOG_WARNING, "get|%s no bits in pools", client -> host);
@@ -165,7 +167,7 @@ int do_client_get(pool **pools, int n_pools, client_t *client, statistics_t *sta
 	return 0;
 }
 
-int do_client_put(pool **pools, int n_pools, client_t *client, statistics_t *stats, config_t *config, BF_KEY *key)
+int do_client_put(pools *ppools, client_t *client, statistics_t *stats, config_t *config, BF_KEY *key)
 {
 	char msg[4+4+1];
 	int cur_n_bits, cur_n_bytes;
@@ -173,7 +175,7 @@ int do_client_put(pool **pools, int n_pools, client_t *client, statistics_t *sta
 	char n_bits[4 + 1];
 	double now = get_ts();
 
-	if (all_pools_full(pools, n_pools))
+	if (ppools -> all_pools_full())
 	{
 		double last_submit_ago = now - client -> last_put_message;
 		char full_allow_interval_submit = last_submit_ago >= config -> when_pools_full_allow_submit_interval;
@@ -185,7 +187,7 @@ int do_client_put(pool **pools, int n_pools, client_t *client, statistics_t *sta
 			if (READ_TO(client -> socket_fd, dummy_buffer, 4, config -> communication_timeout) != 4)	// flush number of bits
 				return -1;
 
-			return send_denied_full(client, pools, n_pools, stats, config);
+			return send_denied_full(client, ppools, stats, config);
 		}
 
 		if (full_allow_interval_submit)
@@ -243,7 +245,7 @@ int do_client_put(pool **pools, int n_pools, client_t *client, statistics_t *sta
 
 	client -> last_put_message = now;
 
-	n_bits_added = add_bits_to_pools(pools, n_pools, buffer_out, cur_n_bytes, client -> ignore_rngtest_fips140, client -> pfips140, client -> ignore_rngtest_scc, client -> pscc);
+	n_bits_added = ppools -> add_bits_to_pools(buffer_out, cur_n_bytes, client -> ignore_rngtest_fips140, client -> pfips140, client -> ignore_rngtest_scc, client -> pscc);
 	if (n_bits_added == -1)
 		dolog(LOG_CRIT, "put|%s error while adding data to pools", client -> host);
 	else
@@ -259,7 +261,7 @@ int do_client_put(pool **pools, int n_pools, client_t *client, statistics_t *sta
 	return 0;
 }
 
-int do_client_server_type(pool **pools, int n_pools, client_t *client, config_t *config)
+int do_client_server_type(pools *ppools, client_t *client, config_t *config)
 {
 	char *buffer;
 	int n_bytes;
@@ -389,7 +391,7 @@ int do_client_kernelpoolfilled_request(client_t *client, config_t *config)
 	return 0;
 }
 
-int do_client(pool **pools, int n_pools, client_t *client, statistics_t *stats, config_t *config, fips140 *eb_output_fips140, scc *eb_output_scc, BF_KEY *key)
+int do_client(pools *ppools, client_t *client, statistics_t *stats, config_t *config, fips140 *eb_output_fips140, scc *eb_output_scc, BF_KEY *key)
 {
 	char cmd[4 + 1];
 	cmd[4] = 0x00;
@@ -403,16 +405,16 @@ int do_client(pool **pools, int n_pools, client_t *client, statistics_t *stats, 
 
 	if (strcmp(cmd, "0001") == 0)		// GET bits
 	{
-		return do_client_get(pools, n_pools, client, stats, config, eb_output_fips140, eb_output_scc, key);
+		return do_client_get(ppools, client, stats, config, eb_output_fips140, eb_output_scc, key);
 	}
 	else if (strcmp(cmd, "0002") == 0)	// PUT bits
 	{
-		return do_client_put(pools, n_pools, client, stats, config, key);
+		return do_client_put(ppools, client, stats, config, key);
 	}
 	else if (strcmp(cmd, "0003") == 0)	// server type
 	{
 		client -> is_server = 1;
-		return do_client_server_type(pools, n_pools, client, config);
+		return do_client_server_type(ppools, client, config);
 	}
 	else if (strcmp(cmd, "0005") == 0)	// ping reply (to 0004)
 	{
@@ -421,7 +423,7 @@ int do_client(pool **pools, int n_pools, client_t *client, statistics_t *stats, 
 	else if (strcmp(cmd, "0006") == 0)	// client type
 	{
 		client -> is_server = 0;
-		return do_client_server_type(pools, n_pools, client, config);
+		return do_client_server_type(ppools, client, config);
 	}
 	else if (strcmp(cmd, "0008") == 0)	// # bits in kernel reply (to 0007)
 	{
@@ -433,7 +435,7 @@ int do_client(pool **pools, int n_pools, client_t *client, statistics_t *stats, 
 		return -1;
 	}
 
-	dolog(LOG_DEBUG, "client|finished %s command for %s, pool bits: %d, client sent/recv: %d/%d", cmd, client -> host, get_bit_sum(pools, n_pools), client -> bits_sent, client -> bits_recv);
+	dolog(LOG_DEBUG, "client|finished %s command for %s, pool bits: %d, client sent/recv: %d/%d", cmd, client -> host, ppools -> get_bit_sum(), client -> bits_sent, client -> bits_recv);
 
 	return 0;
 }
@@ -463,7 +465,7 @@ void forget_client(client_t *clients, int *n_clients, int nr)
 	(*n_clients)--;
 }
 
-void main_loop(pool **pools, int n_pools, config_t *config, fips140 *eb_output_fips140, scc *eb_output_scc)
+void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc *eb_output_scc)
 {
 	client_t *clients = NULL;
 	int n_clients = 0;
@@ -551,13 +553,13 @@ void main_loop(pool **pools, int n_pools, config_t *config, fips140 *eb_output_f
 
 		if (config -> allow_event_entropy_addition)
 		{
-			int event_bits = add_event(pools, n_pools, now, (unsigned char *)&rfds, sizeof(rfds));
+			int event_bits = ppools -> add_event(now, (unsigned char *)&rfds, sizeof(rfds));
 			dolog(LOG_DEBUG, "main|added %d bits of event-entropy to pool", event_bits);
 		}
 
 		if (((last_counters_reset + (double)config -> reset_counters_interval) - now) <= 0 || force_stats)
 		{
-			int total_n_bits = get_bit_sum(pools, n_pools);
+			int total_n_bits = ppools -> get_bit_sum();
 			double runtime = now - start_ts;
 
 			if (!force_stats)
@@ -585,7 +587,7 @@ void main_loop(pool **pools, int n_pools, config_t *config, fips140 *eb_output_f
 			{
 				double proc_usage;
 				struct rusage usage;
-				int total_n_bits = get_bit_sum(pools, n_pools);
+				int total_n_bits = ppools -> get_bit_sum();
 				FILE *fh = fopen(config -> stats_file, "a+");
 				if (!fh)
 					error_exit("cannot access file %s", config -> stats_file);
@@ -653,7 +655,7 @@ void main_loop(pool **pools, int n_pools, config_t *config, fips140 *eb_output_f
 				{
 					clients[loop].last_message = now;
 
-					if (do_client(pools, n_pools, &clients[loop], &stats, config, eb_output_fips140, eb_output_scc, &key) == -1)
+					if (do_client(ppools, &clients[loop], &stats, config, eb_output_fips140, eb_output_scc, &key) == -1)
 					{
 						dolog(LOG_INFO, "main|connection closed, removing client %s from list", clients[loop].host);
 						dolog(LOG_DEBUG, "main|%s: %s, scc: %s", clients[loop].host, clients[loop].pfips140 -> stats(), clients[loop].pscc -> stats());
@@ -673,8 +675,6 @@ void main_loop(pool **pools, int n_pools, config_t *config, fips140 *eb_output_f
 
 				if (new_socket_fd != -1)
 				{
-					int dummy;
-
 					dolog(LOG_INFO, "main|new client: %s:%d (fd: %d)", inet_ntoa(client_addr.sin_addr), client_addr.sin_port, new_socket_fd);
 
 					if (config -> disable_nagle)
@@ -700,7 +700,7 @@ void main_loop(pool **pools, int n_pools, config_t *config, fips140 *eb_output_f
 
 						memset(&clients[n_clients - 1], 0x00, sizeof(client_t));
 						clients[n_clients - 1].socket_fd = new_socket_fd;
-						dummy = sizeof(clients[n_clients - 1].host);
+						int dummy = sizeof(clients[n_clients - 1].host);
 						snprintf(clients[n_clients - 1].host, dummy, "%s:%d", inet_ntoa(client_addr.sin_addr), client_addr.sin_port);
 						clients[n_clients - 1].pfips140 = new fips140();
 						clients[n_clients - 1].pscc = new scc();

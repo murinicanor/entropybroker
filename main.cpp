@@ -6,41 +6,31 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <vector>
+#include <string>
 
 #include "error.h"
 #include "pool.h"
 #include "fips140.h"
 #include "scc.h"
 #include "config.h"
+#include "pools.h"
 #include "handle_client.h"
 #include "utils.h"
 #include "log.h"
-#include "handle_pool.h"
 #include "signals.h"
 #include "auth.h"
 
 const char *pid_file = PID_DIR "/entropy_broker.pid";
 
-void dump_pools(pool **pools, int n_pools)
-{
-	FILE *fh = fopen(CACHE, "wb");
-	if (!fh)
-		error_exit("Failed to create %s", CACHE);
-
-	for(int index=0; index<n_pools; index++)
-		pools[index] -> dump(fh);
-
-	fclose(fh);
-}
-
-void seed(pool **pools, int n_pools)
+void seed(pools *ppools)
 {
 	int n = 0, dummy;
 
-	n += add_event(pools, n_pools, get_ts_ns(), NULL, 0); 
+	n += ppools -> add_event(get_ts_ns(), NULL, 0); 
 
 	dummy = getpid();
-	n += add_event(pools, n_pools, get_ts_ns(), (unsigned char *)&dummy, sizeof(dummy));
+	n += ppools -> add_event(get_ts_ns(), (unsigned char *)&dummy, sizeof(dummy));
 
 	dolog(LOG_DEBUG, "added %d bits of startup-event-entropy to pool", n);
 }
@@ -57,8 +47,6 @@ void help(void)
 
 int main(int argc, char *argv[])
 {
-	pool **pools;
-	int n_pools = 0;
 	int c;
 	char do_not_fork = 0, log_console = 0, log_syslog = 0;
 	char *log_logfile = NULL;
@@ -124,24 +112,7 @@ int main(int argc, char *argv[])
 
 	eb_output_scc -> set_threshold(config.scc_threshold);
 
-	n_pools = config.number_of_pools;
-
-	pools = (pool **)malloc(sizeof(pool *) * n_pools);
-	FILE *fh = fopen(CACHE, "rb");
-	if (!fh)
-	{
-		dolog(LOG_INFO, "No cache-file found, continuing...\n");
-
-		for(int loop=0; loop<n_pools; loop++)
-			pools[loop] = new pool();
-	}
-	else
-	{
-		for(int loop=0; loop<n_pools; loop++)
-			pools[loop] = new pool(loop + 1, fh);
-
-		fclose(fh);
-	}
+	pools *ppools = new pools(config.number_of_pools, std::string(CACHE));
 
 	if (!do_not_fork)
 	{
@@ -153,12 +124,12 @@ int main(int argc, char *argv[])
 
 	set_signal_handlers();
 
-	seed(pools, n_pools);
+	seed(ppools);
 
-	main_loop(pools, n_pools, &config, eb_output_fips140, eb_output_scc);
+	main_loop(ppools, &config, eb_output_fips140, eb_output_scc);
 
 	printf("Dumping pool contents to cache-file\n");
-	dump_pools(pools, n_pools);
+	delete ppools;
 
 	unlink(pid_file);
 

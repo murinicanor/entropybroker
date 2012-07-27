@@ -28,4 +28,4 @@ typedef struct
 	int disconnects, timeouts;
 } statistics_t;
 
-void main_loop(pool **pools, int n_pools, config_t *config, fips140 *eb_output_fips140, scc *eb_output_scc);
+void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc *eb_output_scc);
