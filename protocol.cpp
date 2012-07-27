@@ -96,8 +96,8 @@ int reconnect_server_socket(char *host, int port, char *password, int *socket_fd
 int message_transmit_entropy_data(int socket_fd, unsigned char *bytes_in, int n_bytes)
 {
 	int value;
-	char reply[8 + 1];
-	char header[8 + 1];
+	char reply[8 + 1] = { 0 };
+	char header[8 + 1] = { 0 };
 
 	dolog(LOG_DEBUG, "request to send %d bytes", n_bytes);
 

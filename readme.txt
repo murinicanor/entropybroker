@@ -15,6 +15,7 @@ server_- or client_- processes, then you're advised to let that
 communication proceed over a network seperate from production-
 lan, unless no-one can intercept the communication.
 
+
 Building
 --------
 	make install
@@ -26,6 +27,9 @@ compiling server_audio).
 *** PLEASE NOTE: since 1.0, 'eb' was renamed to 'entropy_broker' ***
 *** also the other daemons were renamed ***
 
+
+Usage
+-----
 On the server, invoke 'entropy_broker' (/usr/local/entropybroker/bin/entropy_broker).
 
 On systems with a spare sound-card, start server_audio.
