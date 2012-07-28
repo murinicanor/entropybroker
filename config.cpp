@@ -28,7 +28,8 @@ void load_config(const char *config, config_t *pconfig)
                 error_exit("error opening configuration file '%s'", config);
 
 	/* set defaults */
-	pconfig -> number_of_pools = 14;
+	pconfig -> max_number_of_mem_pools = 14;
+	pconfig -> max_number_of_disk_pools = 128;
 
 	pconfig -> listen_adapter    = (char *)"0.0.0.0";
 	pconfig -> listen_port       = 55225;
@@ -97,8 +98,10 @@ void load_config(const char *config, config_t *pconfig)
 		is--;
 		while(*is == ' ') { *is = 0x00 ; is--; }
 
-		if (strcmp(cmd, "number_of_pools") == 0)
-			pconfig -> number_of_pools = parval;
+		if (strcmp(cmd, "max_number_of_mem_pools") == 0)
+			pconfig -> max_number_of_mem_pools = parval;
+		else if (strcmp(cmd, "max_number_of_disk_pools") == 0)
+			pconfig -> max_number_of_disk_pools = parval;
 		else if (strcmp(cmd, "listen_adapter") == 0)
 			pconfig -> listen_adapter = strdup(par);
 		else if (strcmp(cmd, "password") == 0)

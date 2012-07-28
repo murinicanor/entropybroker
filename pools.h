@@ -2,10 +2,17 @@ class pools
 {
 private:
 	std::vector<pool *> pool_vector;
+	std::vector<std::string> cache_list;
 	std::string cache_dir;
+	unsigned int max_n_mem_pools;
+	unsigned int max_n_disk_pools;
+
+	void load_cachefiles_list();
+	void load_caches(unsigned int load_n_bits);
+	void store_caches(unsigned int keep_n);
 
 public:
-	pools(int max_n_in, std::string cache_in);
+	pools(std::string cache_dir_in, unsigned int max_n_mem_pools, unsigned int max_n_disk_pools);
 	~pools();
 
 	int select_pool_with_enough_bits_available(int n_bits_to_read);

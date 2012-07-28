@@ -112,7 +112,7 @@ int main(int argc, char *argv[])
 
 	eb_output_scc -> set_threshold(config.scc_threshold);
 
-	pools *ppools = new pools(config.number_of_pools, std::string(CACHE_DIR));
+	pools *ppools = new pools(std::string(CACHE_DIR), config.max_number_of_mem_pools, config.max_number_of_disk_pools);
 
 	if (!do_not_fork)
 	{
