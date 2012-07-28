@@ -67,7 +67,7 @@ int proces_server_msg(int socket_fd)
 
 		dolog(LOG_DEBUG, "Got a kernel entropy count request (with parameter %s), sending reply (%s)", msg_par, xmit_buffer);
 
-		if (WRITE(socket_fd, xmit_buffer, strlen(xmit_buffer)) != strlen(xmit_buffer))
+		if (WRITE(socket_fd, xmit_buffer, strlen(xmit_buffer)) != (int)strlen(xmit_buffer))
 			return -1;
 	}
 	else

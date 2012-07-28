@@ -2,7 +2,7 @@ class pools
 {
 private:
 	std::vector<pool *> pool_vector;
-	std::string cache;
+	std::string cache_dir;
 
 public:
 	pools(int max_n_in, std::string cache_in);

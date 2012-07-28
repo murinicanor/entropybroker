@@ -21,7 +21,7 @@ PID=$(VAR)/run
 
 CXX=g++
 DEBUG= -g #-D_DEBUG #-fprofile-arcs -ftest-coverage # -pg -g
-CXXFLAGS+=-O3 -DVERSION=\"${VERSION}\" $(DEBUG) -Wall -DCONFIG=\"${ETC}/entropybroker.conf\" -DCACHE=\"${VAR}/pools.dat\" -DPID_DIR=\"${PID}\"
+CXXFLAGS+=-O3 -DVERSION=\"${VERSION}\" $(DEBUG) -Wall -DCONFIG=\"${ETC}/entropybroker.conf\" -DCACHE_DIR=\"${VAR}\" -DPID_DIR=\"${PID}\"
 LDFLAGS+=$(DEBUG) -lcrypto -lrt
 
 OBJSeb=pools.o handle_client.o config.o error.o fips140.o kernel_prng_rw.o log.o main.o math.o pool.o scc.o signals.o utils.o auth.o

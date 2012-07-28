@@ -53,7 +53,7 @@ double gen_entropy_data(void)
 int main(int argc, char *argv[])
 {
 	unsigned char bytes[1249];
-	unsigned char byte;
+	unsigned char byte = 0;
 	int bits = 0, index = 0;
 	char *host = NULL;
 	int port = 55225;

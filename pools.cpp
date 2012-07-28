@@ -13,11 +13,12 @@
 #include "scc.h"
 #include "pools.h"
 
-pools::pools(int max_n_pools_in, std::string cache_in)
+pools::pools(int max_n_pools_in, std::string cache_dir_in)
 {
-	cache = cache_in;
+	cache_dir = cache_dir_in;
 
-	FILE *fh = fopen(CACHE, "rb");
+	std::string global_dump_file = cache_dir + "/pools.dat";
+	FILE *fh = fopen(global_dump_file.c_str(), "rb");
 	if (!fh)
 	{
 		dolog(LOG_INFO, "No cache-file found, continuing...\n");
@@ -36,13 +37,15 @@ pools::pools(int max_n_pools_in, std::string cache_in)
 
 pools::~pools()
 {
-	FILE *fh = fopen(cache.c_str(), "wb");
+	std::string global_dump_file = cache_dir + "/pools.dat";
+	FILE *fh = fopen(global_dump_file.c_str(), "wb");
 	if (!fh)
-		error_exit("Failed to create %s", cache.c_str());
+		error_exit("Failed to create %s", global_dump_file.c_str());
 
 	for(unsigned int index=0; index<pool_vector.size(); index++)
 	{
 		pool_vector.at(index) -> dump(fh);
+
 		delete pool_vector.at(index);
 	}
 
@@ -84,6 +87,7 @@ int pools::get_bits_from_pools(int n_bits_requested, unsigned char **buffer, cha
 		error_exit("transmit_bits_to_client memory allocation failure");
 
 	// FIXME if get_bit_sum() < n_bits_requested: load pools from disk
+	// if get_bit_sum() < (POOL_SIZE * min_n_avail_pools): load pools from thisk
 
 	for(unsigned int loop=0; loop<pool_vector.size(); loop++)
 	{
@@ -180,10 +184,7 @@ int pools::add_bits_to_pools(unsigned char *data, int n_bytes, char ignore_rngte
 	int n_bits_added = 0;
 
 	if ((index = find_non_full_pool()) == -1)
-	{
-// FIXME store a number of pools on disk
 		index = myrand(pool_vector.size());
-	}
 
 	while(n_bytes > 0)
 	{
@@ -217,6 +218,12 @@ int pools::add_bits_to_pools(unsigned char *data, int n_bytes, char ignore_rngte
 				index = myrand(pool_vector.size());
 		}
 	}
+
+	// int n_pools = get_bit_sum() / POOL_SIZE;
+	// if (n_pools > max_full_threshold)
+		// emit_pools(n_pools - min_full_threshold);
+
+	// min_full_threshold must be bigger than retrieve_from_disk_threshold
 
 	return n_bits_added;
 }

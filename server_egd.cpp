@@ -80,7 +80,7 @@ int main(int argc, char *argv[])
 	char *device = NULL;
 	char *bytes_file = NULL;
 	int read_interval = 5;
-	int read_bytes_per_interval = 16;
+	unsigned int read_bytes_per_interval = 16;
 	int index = 0;
 	int verbose = 0;
 	char server_type[128];
