@@ -30,6 +30,7 @@ void load_config(const char *config, config_t *pconfig)
 	/* set defaults */
 	pconfig -> max_number_of_mem_pools = 14;
 	pconfig -> max_number_of_disk_pools = 128;
+	pconfig -> min_store_on_disk_n = 5;
 
 	pconfig -> listen_adapter    = (char *)"0.0.0.0";
 	pconfig -> listen_port       = 55225;
@@ -102,6 +103,8 @@ void load_config(const char *config, config_t *pconfig)
 			pconfig -> max_number_of_mem_pools = parval;
 		else if (strcmp(cmd, "max_number_of_disk_pools") == 0)
 			pconfig -> max_number_of_disk_pools = parval;
+		else if (strcmp(cmd, "min_store_on_disk_n") == 0)
+			pconfig -> min_store_on_disk_n = parval;
 		else if (strcmp(cmd, "listen_adapter") == 0)
 			pconfig -> listen_adapter = strdup(par);
 		else if (strcmp(cmd, "password") == 0)

@@ -19,13 +19,18 @@
 #include "scc.h"
 #include "pools.h"
 
-pools::pools(std::string cache_dir_in, unsigned int max_n_mem_pools_in, unsigned int max_n_disk_pools_in) : cache_dir(cache_dir_in), max_n_mem_pools(max_n_mem_pools_in), max_n_disk_pools(max_n_disk_pools_in)
+pools::pools(std::string cache_dir_in, unsigned int max_n_mem_pools_in, unsigned int max_n_disk_pools_in, unsigned int min_store_on_disk_n_in) : cache_dir(cache_dir_in), max_n_mem_pools(max_n_mem_pools_in), max_n_disk_pools(max_n_disk_pools_in), min_store_on_disk_n(min_store_on_disk_n_in), disk_limit_reached_notified(false)
 {
+	if (min_store_on_disk_n >= max_n_mem_pools)
+		error_exit("min_store_on_disk_n must be less than max_number_of_mem_pools");
+	if (min_store_on_disk_n < 1)
+		error_exit("min_store_on_disk_n must be > 0");
+
 	if (max_n_mem_pools < 3)
 		error_exit("maximum number of memory pools must be at least 3");
 
-	if (max_n_disk_pools < 2)
-		error_exit("maximum number of disk pools must be at least 2");
+	if (max_n_disk_pools < 1)
+		error_exit("maximum number of disk pools must be at least 1");
 
 	load_cachefiles_list();
 }
@@ -38,9 +43,18 @@ pools::~pools()
 void pools::store_caches(unsigned int keep_n)
 {
 	if (cache_list.size() >= max_n_disk_pools)
-		dolog(LOG_DEBUG, "Maximum number of disk pools reached: not creating a new one");
+	{
+		if (!disk_limit_reached_notified)
+		{
+			dolog(LOG_DEBUG, "Maximum number of disk pools reached: not creating a new one");
+			disk_limit_reached_notified = true;
+		}
+	}
 	else
 	{
+		disk_limit_reached_notified = false;
+		dolog(LOG_DEBUG, "Storing %d pools on disk (%d)", pool_vector.size() - keep_n, cache_list.size() + 1);
+
 		long double now = get_ts_ns();
 		char buffer[128];
 		snprintf(buffer, sizeof buffer, "%Lf", now);
@@ -66,6 +80,8 @@ void pools::store_caches(unsigned int keep_n)
 
 void pools::load_caches(unsigned int load_n_bits)
 {
+	dolog(LOG_DEBUG, "Loading %d bits from pools", load_n_bits);
+
 	unsigned int bits_loaded = 0;
 
 	unsigned int files_loaded = 0;
@@ -114,35 +130,11 @@ void pools::load_cachefiles_list()
 		if (ss.st_mode & S_IFDIR)
 			continue;
 
-
 		dolog(LOG_DEBUG, "Added %s to cache list", file_name.c_str());
 		cache_list.push_back(file_name);
 	}
 
 	closedir(dirp);
-}
-
-int pools::select_pool_with_enough_bits_available(int n_bits_to_read)
-{
-	int max_n_bits = -1, max_n_bits_index = -1;
-
-	for(unsigned int loop=0; loop<pool_vector.size(); loop++)
-	{
-		int cur_n_bits = pool_vector.at(loop) -> get_n_bits_in_pool();
-
-		if (cur_n_bits >= n_bits_to_read)
-		{
-			return loop;
-		}
-
-		if (cur_n_bits >= max_n_bits)
-		{
-			max_n_bits = cur_n_bits;
-			max_n_bits_index = loop;
-		}
-	}
-
-	return max_n_bits_index;
 }
 
 int pools::get_bits_from_pools(int n_bits_requested, unsigned char **buffer, char allow_prng, char ignore_rngtest_fips140, fips140 *pfips, char ignore_rngtest_scc, scc *pscc)
@@ -250,31 +242,43 @@ int pools::find_non_full_pool()
 	return -1;
 }
 
+int pools::select_pool_to_add_to()
+{
+	int index = find_non_full_pool();
+
+	if (index == -1 || pool_vector.at(index) -> is_full())
+	{
+		if (pool_vector.size() >= max_n_mem_pools)
+			store_caches(max(0, pool_vector.size() - min_store_on_disk_n));
+
+		// see if the number of in-memory pools is reduced after the call to store_caches
+		// it might have not stored any on disk if the limit on the number of files has been reached
+		if (pool_vector.size() < max_n_mem_pools)
+		{
+			dolog(LOG_DEBUG, "Adding empty pool to queue (%d)", pool_vector.size() + 1);
+			pool_vector.push_back(new pool());
+		}
+
+		index = find_non_full_pool();
+		if (index == -1)
+		{
+			// this can happen if 1. the number of in-memory-pools limit has been reached and
+			// 2. the number of on-disk-pools limit has been reached
+			index = myrand(pool_vector.size());
+		}
+	}
+
+	return index;
+}
+
 int pools::add_bits_to_pools(unsigned char *data, int n_bytes, char ignore_rngtest_fips140, fips140 *pfips, char ignore_rngtest_scc, scc *pscc)
 {
 	int n_bits_added = 0;
-	int index = find_non_full_pool();
+	int index = -1;
 
 	while(n_bytes > 0)
 	{
-		if (index == -1 || pool_vector.at(index) -> is_full())
-		{
-			if (pool_vector.size() >= max_n_mem_pools)
-				store_caches(pool_vector.size() - 2); // FIXME: make this '2' configurable, see also '3'-check in constructor
-
-			// see if the number of in-memory pools is reduced after the call to store_caches
-			// it might have not stored any on disk if the limit on the number of files has been reached
-			if (pool_vector.size() < max_n_mem_pools)
-				pool_vector.push_back(new pool());
-
-			index = find_non_full_pool();
-			if (index == -1)
-			{
-				// this can happen if 1. the number of in-memory-pools limit has been reached and
-				// 2. the number of on-disk-pools limit has been reached
-				index = myrand(pool_vector.size());
-			}
-		}
+		index = select_pool_to_add_to();
 
 		int rngtest_loop, rc_fips140 = 0, rc_scc = 0;
 		int n_bytes_to_add = min(8, n_bytes);
@@ -318,10 +322,7 @@ int pools::get_bit_sum()
 
 int pools::add_event(long double event, unsigned char *event_data, int n_event_data)
 {
-	unsigned int index;
-
-	if ((index = find_non_full_pool()) == -1)
-		index = myrand(pool_vector.size());
+	unsigned int index = select_pool_to_add_to();
 
 	return pool_vector.at(index) -> add_event(event, event_data, n_event_data);
 }

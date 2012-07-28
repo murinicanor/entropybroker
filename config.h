@@ -2,6 +2,7 @@ typedef struct
 {
 	unsigned int max_number_of_mem_pools;
 	unsigned int max_number_of_disk_pools;
+	unsigned int min_store_on_disk_n;
 
 	char *listen_adapter;
 	int listen_port;
