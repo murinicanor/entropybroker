@@ -53,7 +53,7 @@ void pools::store_caches(unsigned int keep_n)
 	else
 	{
 		disk_limit_reached_notified = false;
-		dolog(LOG_DEBUG, "Storing %d pools on disk (%d)", pool_vector.size() - keep_n, cache_list.size() + 1);
+		dolog(LOG_DEBUG, "Storing %d pools on disk (new number of files: %d)", pool_vector.size() - keep_n, cache_list.size() + 1);
 
 		long double now = get_ts_ns();
 		char buffer[128];
@@ -283,7 +283,7 @@ int pools::select_pool_to_add_to()
 		// it might have not stored any on disk if the limit on the number of files has been reached
 		if (pool_vector.size() < max_n_mem_pools)
 		{
-			dolog(LOG_DEBUG, "Adding empty pool to queue (%d)", pool_vector.size() + 1);
+			dolog(LOG_DEBUG, "Adding empty pool to queue (new number of pools: %d)", pool_vector.size() + 1);
 			pool_vector.push_back(new pool());
 		}
 
