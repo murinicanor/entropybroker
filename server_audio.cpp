@@ -275,9 +275,12 @@ void main_loop(char *host, int port, char *bytes_file, char show_bps)
 
 						if ((now_ts - cur_start_ts) >= 1.0)
 						{
-							int diff_t = now_ts - start_ts;
-							cur_start_ts = now_ts;
+							int diff_t = now_ts - cur_start_ts;
+
 							printf("Total number of bytes: %ld, avg/s: %f\n", total_byte_cnt, (double)total_byte_cnt / diff_t);
+
+							total_byte_cnt = 0;
+							cur_start_ts = now_ts;
 						}
 					}
 				}

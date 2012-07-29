@@ -62,6 +62,7 @@ void help(void)
 	printf("-b x      interval for reading data\n");
         printf("-l file   log to file 'file'\n");
         printf("-s        log to syslog\n");
+	printf("-S        show bps (mutual exclusive with -n)\n");
         printf("-n        do not fork\n");
 	printf("-P file   write pid to file\n");
 	printf("-X file   read password from file\n");
@@ -84,13 +85,18 @@ int main(int argc, char *argv[])
 	int index = 0;
 	int verbose = 0;
 	char server_type[128];
+	bool show_bps = false;
 
 	fprintf(stderr, "eb_server_egb v" VERSION ", (C) 2009-2012 by folkert@vanheusden.com\n");
 
-	while((c = getopt(argc, argv, "X:P:a:b:o:i:d:l:snv")) != -1)
+	while((c = getopt(argc, argv, "SX:P:a:b:o:i:d:l:snv")) != -1)
 	{
 		switch(c)
 		{
+			case 'S':
+				show_bps = true;
+				break;
+
 			case 'X':
 				password = get_password_from_file(optarg);
 				break;
@@ -176,6 +182,8 @@ int main(int argc, char *argv[])
 	signal(SIGINT , sig_handler);
 	signal(SIGQUIT, sig_handler);
 
+	double cur_start_ts = get_ts();
+	long int total_byte_cnt = 0;
 	for(;;)
 	{
 		unsigned char request[2], reply[1];
@@ -221,6 +229,23 @@ int main(int argc, char *argv[])
 			}
 
 			index = 0;
+		}
+
+		if (show_bps)
+		{
+			double now_ts = get_ts();
+
+			total_byte_cnt += bytes_to_read;
+
+			if ((now_ts - cur_start_ts) >= 1.0)
+			{
+				int diff_t = now_ts - cur_start_ts;
+
+				printf("Total number of bytes: %ld, avg/s: %f\n", total_byte_cnt, (double)total_byte_cnt / diff_t);
+
+				cur_start_ts = now_ts;
+				total_byte_cnt = 0;
+			}
 		}
 
 		if (index == 0 || bytes_to_read == 0)

@@ -63,8 +63,6 @@ int main(int argc, char *argv[])
 	char *log_logfile = NULL;
 	char *bytes_file = NULL;
 	char show_bps = 0;
-	double start_ts, cur_start_ts;
-	long int total_byte_cnt = 0;
 
 	fprintf(stderr, "%s, (C) 2009-2012 by folkert@vanheusden.com\n", server_type);
 
@@ -133,8 +131,8 @@ int main(int argc, char *argv[])
 	signal(SIGINT , sig_handler);
 	signal(SIGQUIT, sig_handler);
 
-	start_ts = get_ts();
-	cur_start_ts = start_ts;
+	long int total_byte_cnt = 0;
+	double cur_start_ts = get_ts();
 	for(;;)
 	{
 		double t1, t2;
@@ -191,9 +189,12 @@ int main(int argc, char *argv[])
 
 				if ((now_ts - cur_start_ts) >= 1.0)
 				{
-					int diff_t = now_ts - start_ts;
-					cur_start_ts = now_ts;
+					int diff_t = now_ts - cur_start_ts;
+
 					printf("Total number of bytes: %ld, avg/s: %f\n", total_byte_cnt, (double)total_byte_cnt / diff_t);
+
+					cur_start_ts = now_ts;
+					total_byte_cnt = 0;
 				}
 			}
 		}
