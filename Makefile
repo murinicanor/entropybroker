@@ -84,7 +84,7 @@ install: entropy_broker eb_server_audio eb_server_timers eb_server_v4l eb_server
 clean:
 	rm -f $(OBJSeb) $(OBJSsa) $(OBJSst) $(OBJSsv) $(OBJSss)$(OBJSse) $(OBJSclk) $(OBJSte) entropy_broker core *.da *.gcov *.bb* *.o eb_server_audio eb_server_timers eb_server_v4l eb_server_stream eb_server_egd eb_client_linux_kernel eb_client_egd eb_test_egd_speed
 
-package: clean
+package:
 	mkdir eb-$(VERSION)
 	cp *.cpp *.h entropybroker.conf Makefile Changes password.txt readme.txt license.* eb-$(VERSION)
 	cp -a doc eb-$(VERSION)
