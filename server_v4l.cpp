@@ -304,9 +304,6 @@ int main(int argc, char *argv[])
 				{
 					unbiased[nunbiased++] = byte;
 
-					if (nunbiased == 1249)
-						break;
-
 					nbits = 0;
 				}
 			}
@@ -315,7 +312,7 @@ int main(int argc, char *argv[])
 		free(img2);
 		free(img1);
 
-		dolog(LOG_DEBUG, "got %d bytes of entropy%s", nunbiased, loop<io_buffer_len?" (more available)":"");
+		dolog(LOG_DEBUG, "got %d bytes of entropy", nunbiased);
 
 		if (nunbiased > 0)
 		{
@@ -325,11 +322,24 @@ int main(int argc, char *argv[])
 			}
 			else
 			{
-				if (message_transmit_entropy_data(socket_fd, unbiased, nunbiased) == -1)
+				unsigned char *tempp = unbiased;
+				int count = nunbiased;
+				while(count > 0)
 				{
-					dolog(LOG_INFO, "connection closed");
-					close(socket_fd);
-					socket_fd = -1;
+					int n_to_do = min(count, 1249);
+
+					if (message_transmit_entropy_data(socket_fd, tempp, n_to_do) == -1)
+					{
+						dolog(LOG_INFO, "connection closed");
+
+						close(socket_fd);
+						socket_fd = -1;
+
+						break;
+					}
+
+					tempp += n_to_do;
+					count -= n_to_do;
 				}
 			}
 		}
