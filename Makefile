@@ -17,11 +17,12 @@ PREFIX=/usr/local/entropybroker
 BIN=$(PREFIX)/bin
 ETC=$(PREFIX)/etc
 VAR=$(PREFIX)/var
+CACHE=$(VAR)/cache
 PID=$(VAR)/run
 
 CXX=g++
 DEBUG= -g #-D_DEBUG #-fprofile-arcs -ftest-coverage # -pg -g
-CXXFLAGS+=-O3 -DVERSION=\"${VERSION}\" $(DEBUG) -Wall -DCONFIG=\"${ETC}/entropybroker.conf\" -DCACHE_DIR=\"${VAR}\" -DPID_DIR=\"${PID}\"
+CXXFLAGS+=-O3 -DVERSION=\"${VERSION}\" $(DEBUG) -Wall -DCONFIG=\"${ETC}/entropybroker.conf\" -DCACHE_DIR=\"${CACHE}\" -DPID_DIR=\"${PID}\"
 LDFLAGS+=$(DEBUG) -lcrypto -lrt
 
 OBJSeb=pools.o handle_client.o config.o error.o fips140.o kernel_prng_rw.o log.o main.o math.o pool.o scc.o signals.o utils.o auth.o
@@ -71,7 +72,7 @@ eb_server_linux_kernel: $(OBJSsk)
 	$(CXX) -Wall -W $(OBJSsk) $(LDFLAGS) -o eb_server_linux_kernel
 
 install: entropy_broker eb_server_audio eb_server_timers eb_server_v4l eb_server_stream eb_server_egd eb_client_linux_kernel eb_client_egd eb_test_egd_speed eb_server_linux_kernel
-	mkdir -p $(BIN) $(ETC) $(VAR) $(PID)
+	mkdir -p $(BIN) $(ETC) $(VAR) $(PID) $(CACHE)
 	cp entropy_broker $(BIN)
 	cp eb_server_audio $(BIN)
 	cp eb_server_timers $(BIN)
