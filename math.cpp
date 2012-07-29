@@ -1,9 +1,30 @@
 #include <string.h>
 #include <math.h>
+#include <stdlib.h>
 
+#include "error.h"
 #include "utils.h"
+#include "zlib.h"
+#include "math.h"
 
-int determine_number_of_bits_of_data(unsigned char *data, unsigned int n_bytes)
+bit_count_estimator::bit_count_estimator(bit_count_estimator_type_t type_in)
+{
+	type = type_in;
+}
+
+int bit_count_estimator::get_bit_count(unsigned char *data, unsigned int n_bytes)
+{
+	if (type == BCE_SHANNON)
+		return determine_number_of_bits_of_data_shannon(data, n_bytes);
+	else if (type == BCE_COMPRESSION)
+		return determine_number_of_bits_of_data_compression(data, n_bytes);
+
+	error_exit("Bit count estimator: unknown mode");
+
+	return -1;
+}
+
+int bit_count_estimator::determine_number_of_bits_of_data_shannon(unsigned char *data, unsigned int n_bytes)
 {
 	int cnts[256];
 	double ent = 0.0, nbytesd = double(n_bytes);
@@ -32,4 +53,19 @@ int determine_number_of_bits_of_data(unsigned char *data, unsigned int n_bytes)
 	ent = min(nbytesd * 8.0, ent);
 
 	return ent;
+}
+
+int bit_count_estimator::determine_number_of_bits_of_data_compression(unsigned char *data, unsigned int n_bytes)
+{
+	uLongf destLen = n_bytes * 2;
+	unsigned char *dest = (unsigned char *)malloc(destLen);
+
+	if (Z_OK != compress2(dest, &destLen, data, n_bytes, 9))
+		error_exit("Failed invoking zlib");
+
+	free(dest);
+
+	double factor = double(destLen) / double(n_bytes);
+
+	return int(factor * double(n_bytes) * 8.0);
 }

@@ -4,6 +4,7 @@
 #include <libgen.h>
 
 #include "error.h"
+#include "math.h"
 #include "config.h"
 #include "log.h"
 #include "auth.h"
@@ -31,6 +32,8 @@ void load_config(const char *config, config_t *pconfig)
 	pconfig -> max_number_of_mem_pools = 14;
 	pconfig -> max_number_of_disk_pools = 128;
 	pconfig -> min_store_on_disk_n = 5;
+
+	pconfig -> bitcount_estimator = BCE_SHANNON;
 
 	pconfig -> listen_adapter    = (char *)"0.0.0.0";
 	pconfig -> listen_port       = 55225;
@@ -117,6 +120,15 @@ void load_config(const char *config, config_t *pconfig)
 			printf("Load password from %s\n", p_file);
 			pconfig -> auth_password = get_password_from_file(p_file);
 			free(p_file);
+		}
+		else if (strcmp(cmd, "bitcount_estimator") == 0)
+		{
+			if (strcmp(par, "shannon") == 0)
+				pconfig -> bitcount_estimator = BCE_SHANNON;
+			else if (strcmp(par, "compression") == 0)
+				pconfig -> bitcount_estimator = BCE_COMPRESSION;
+			else
+				error_exit("bitcount_estimator of type '%s' is not known", par);
 		}
 		else if (strcmp(cmd, "listen_port") == 0)
 			pconfig -> listen_port = parval;

@@ -20,12 +20,15 @@ Building
 --------
 	make install
 Files will be installed in  /usr/local/entropybroker .
-You need the OpenSSL development libraries as wel as the asound2
-development libraries (asound2 is only required if you're
+You need the OpenSSL development libraries, zlib as wel as the
+asound2 development libraries (asound2 is only required if you're
 compiling server_audio).
 
 *** PLEASE NOTE: since 1.0, 'eb' was renamed to 'entropy_broker' ***
 *** also the other daemons were renamed ***
+*** ALSO: the network protocol has changed so it is no longer ***
+*** compatible with older versions ***
+*** LAST NOTE: the configuration file changed, see example ***
 
 
 Usage

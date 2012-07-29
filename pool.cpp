@@ -25,14 +25,14 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#include "math.h"
 #include "pool.h"
 #include "error.h"
 #include "kernel_prng_rw.h"
-#include "math.h"
 #include "log.h"
 #include "utils.h"
 
-pool::pool()
+pool::pool(bit_count_estimator *bce_in) : bce(bce_in)
 {
 	memset(&state, 0x00, sizeof(state));
 
@@ -45,7 +45,7 @@ pool::pool()
 		error_exit("failed reading entropy data from kernel RNG");
 }
 
-pool::pool(int pool_nr, FILE *fh)
+pool::pool(int pool_nr, FILE *fh, bit_count_estimator *bce_in) : bce(bce_in)
 {
 	unsigned char val_buffer[4];
 
@@ -118,7 +118,7 @@ int pool::add_entropy_data(unsigned char *entropy_data, int n_bytes)
 
 	update_ivec();
 
-	n_added = determine_number_of_bits_of_data(entropy_data, n_bytes);
+	n_added = bce -> get_bit_count(entropy_data, n_bytes);
 
 	bits_in_pool += n_added;
 	if (bits_in_pool > POOL_SIZE)

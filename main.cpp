@@ -10,6 +10,7 @@
 #include <string>
 
 #include "error.h"
+#include "math.h"
 #include "pool.h"
 #include "fips140.h"
 #include "scc.h"
@@ -112,7 +113,9 @@ int main(int argc, char *argv[])
 
 	eb_output_scc -> set_threshold(config.scc_threshold);
 
-	pools *ppools = new pools(std::string(CACHE_DIR), config.max_number_of_mem_pools, config.max_number_of_disk_pools, config.min_store_on_disk_n);
+	bit_count_estimator *bce = new bit_count_estimator(config.bitcount_estimator);
+
+	pools *ppools = new pools(std::string(CACHE_DIR), config.max_number_of_mem_pools, config.max_number_of_disk_pools, config.min_store_on_disk_n, bce);
 
 	if (!do_not_fork)
 	{

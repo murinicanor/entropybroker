@@ -95,7 +95,6 @@ int main(int argc, char *argv[])
 	int port = 55225;
 	int socket_fd = -1, dev_random_fd = open(DEV_RANDOM, O_RDWR);
 	int max_bits_in_kernel_rng = kernel_rng_get_max_entropy_count();
-	char use_as_is = 0;
 	int c;
 	char do_not_fork = 0, log_console = 0, log_syslog = 0;
 	char *log_logfile = NULL;
@@ -278,19 +277,11 @@ int main(int argc, char *argv[])
 
 			dolog(LOG_DEBUG, "data received");
 
-			if (use_as_is)
-				rc = kernel_rng_add_entropy(buffer_out, will_get_n_bytes, will_get_n_bytes * 8);
-			else
-			{
-				int information_n_bits = determine_number_of_bits_of_data(buffer_out, will_get_n_bytes);
-
-				rc = kernel_rng_add_entropy(buffer_out, will_get_n_bytes, information_n_bits);
-
-				dolog(LOG_DEBUG, "%d bits from server contains %d bits of information, new entropy count: %d", will_get_n_bits, information_n_bits, kernel_rng_get_entropy_count());
-			}
-
+			rc = kernel_rng_add_entropy(buffer_out, will_get_n_bytes, will_get_n_bits);
 			if (rc == -1)
 				error_exit("error submiting entropy data to kernel");
+
+			dolog(LOG_DEBUG, "%d bits from server, new entropy count: %d", will_get_n_bits, kernel_rng_get_entropy_count());
 
 			free(buffer_out);
 			free(buffer_in);

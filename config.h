@@ -15,6 +15,8 @@ typedef struct
 	int ping_interval;
 	int kernelpool_filled_interval;
 
+	bit_count_estimator_type_t bitcount_estimator;
+
 	char *stats_file;
 
 	int communication_timeout;

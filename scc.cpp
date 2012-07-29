@@ -4,6 +4,7 @@
 #include <stdio.h>
 
 #include "error.h"
+#include "math.h"
 #include "log.h"
 #include "pool.h"
 #include "scc.h"

@@ -30,7 +30,7 @@ OBJSst=server_timers.o log.o utils.o error.o kernel_prng_rw.o protocol.o server_
 OBJSsv=server_v4l.o error.o log.o protocol.o kernel_prng_rw.o utils.o server_utils.o auth.o
 OBJSss=server_stream.o error.o log.o protocol.o kernel_prng_rw.o utils.o server_utils.o auth.o
 OBJSse=server_egd.o error.o log.o kernel_prng_rw.o protocol.o utils.o server_utils.o auth.o
-OBJSclk=client_linux_kernel.o error.o kernel_prng_io.o kernel_prng_rw.o log.o math.o protocol.o utils.o auth.o
+OBJSclk=client_linux_kernel.o error.o kernel_prng_io.o kernel_prng_rw.o log.o protocol.o utils.o auth.o
 OBJScle=client_egd.o error.o log.o kernel_prng_rw.o math.o protocol.o utils.o auth.o
 OBJSte=test_egd_speed.o utils.o kernel_prng_rw.o log.o error.o auth.o
 OBJSsk=server_linux_kernel.o utils.o kernel_prng_rw.o kernel_prng_io.o log.o error.o protocol.o server_utils.o auth.o
@@ -41,7 +41,7 @@ check:
 	cppcheck -v --enable=all --std=c++11 --inconclusive . 2> err.txt
 
 entropy_broker: $(OBJSeb)
-	$(CXX) -Wall -W $(OBJSeb) $(LDFLAGS) -o entropy_broker
+	$(CXX) -Wall -W $(OBJSeb) $(LDFLAGS) -lz -o entropy_broker
 
 eb_server_audio: $(OBJSsa)
 	$(CXX) -Wall -W $(OBJSsa) $(LDFLAGS) -lasound -o eb_server_audio

@@ -18,6 +18,7 @@
 
 #include "error.h"
 #include "log.h"
+#include "math.h"
 #include "pool.h"
 #include "fips140.h"
 #include "config.h"

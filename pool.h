@@ -14,12 +14,13 @@ private:
 	unsigned char ivec[8];
 	int bits_in_pool;
 	event_state_t state;
+	bit_count_estimator *bce;
 
 	void update_ivec(void);
 
 public:
-	pool();
-	pool(int pool_nr, FILE *fh);
+	pool(bit_count_estimator *bce);
+	pool(int pool_nr, FILE *fh, bit_count_estimator *bce);
 	~pool();
 	void dump(FILE *fh);
 
