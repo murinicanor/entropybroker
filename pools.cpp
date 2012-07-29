@@ -329,7 +329,7 @@ int pools::add_bits_to_pools(unsigned char *data, int n_bytes, char ignore_rngte
 			rc_scc = pfips -> is_ok();
 		if (rc_fips140 == true && rc_scc == true)
 		{
-			n_bits_added += pool_vector.at(index) -> add_entropy_data(buffer);
+			n_bits_added += pool_vector.at(index) -> add_entropy_data(buffer, n_bytes_to_add);
 		}
 
 		n_bytes -= n_bytes_to_add;

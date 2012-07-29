@@ -110,7 +110,7 @@ void pool::update_ivec(void)
 	}
 }
 
-int pool::add_entropy_data(unsigned char entropy_data[56])
+int pool::add_entropy_data(unsigned char *entropy_data, int n_bytes)
 {
 	unsigned char temp_buffer[POOL_SIZE / 8];
 	BF_KEY key;
@@ -118,13 +118,13 @@ int pool::add_entropy_data(unsigned char entropy_data[56])
 
 	update_ivec();
 
-	n_added = determine_number_of_bits_of_data(entropy_data, 56);
+	n_added = determine_number_of_bits_of_data(entropy_data, n_bytes);
 
 	bits_in_pool += n_added;
 	if (bits_in_pool > POOL_SIZE)
 		bits_in_pool = POOL_SIZE;
 
-	BF_set_key(&key, 56, entropy_data);
+	BF_set_key(&key, n_bytes, entropy_data);
 	BF_cbc_encrypt(entropy_pool, temp_buffer, (POOL_SIZE / 8), &key, ivec, BF_ENCRYPT);
 	memcpy(entropy_pool, temp_buffer, (POOL_SIZE / 8));
 

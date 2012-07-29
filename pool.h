@@ -24,7 +24,7 @@ public:
 	void dump(FILE *fh);
 
 	/* -1 if not full, 0 if full */
-	int add_entropy_data(unsigned char entropy_data[8]);
+	int add_entropy_data(unsigned char *entropy_data, int n_bytes);
 	/* returns number of bytes returned, set prng_ok to also return data when pool empty */
 	int get_entropy_data(unsigned char *entropy_data, int n_bytes_requested, char prng_ok);
 	int get_get_size(void);
