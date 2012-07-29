@@ -23,7 +23,7 @@ PID=$(VAR)/run
 CXX=g++
 DEBUG= -g #-D_DEBUG #-fprofile-arcs -ftest-coverage # -pg -g
 CXXFLAGS+=-O3 -DVERSION=\"${VERSION}\" $(DEBUG) -Wall -DCONFIG=\"${ETC}/entropybroker.conf\" -DCACHE_DIR=\"${CACHE}\" -DPID_DIR=\"${PID}\"
-LDFLAGS+=$(DEBUG) -lcrypto -lrt
+LDFLAGS+=$(DEBUG) -lcrypto -lrt -lz
 
 OBJSeb=pools.o handle_client.o config.o error.o fips140.o kernel_prng_rw.o log.o main.o math.o pool.o scc.o signals.o utils.o auth.o
 OBJSsa=server_audio.o error.o utils.o kernel_prng_rw.o log.o protocol.o server_utils.o auth.o
@@ -42,7 +42,7 @@ check:
 	cppcheck -v --enable=all --std=c++11 --inconclusive . 2> err.txt
 
 entropy_broker: $(OBJSeb)
-	$(CXX) -Wall -W $(OBJSeb) $(LDFLAGS) -lz -o entropy_broker
+	$(CXX) -Wall -W $(OBJSeb) $(LDFLAGS) -o entropy_broker
 
 eb_server_audio: $(OBJSsa)
 	$(CXX) -Wall -W $(OBJSsa) $(LDFLAGS) -lasound -o eb_server_audio
