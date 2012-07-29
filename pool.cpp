@@ -183,7 +183,7 @@ int pool::get_pool_size(void)
 	return POOL_SIZE;
 }
 
-int pool::is_full(void)
+bool pool::is_full(void)
 {
 	return bits_in_pool == POOL_SIZE;
 }

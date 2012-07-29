@@ -107,6 +107,28 @@ void pools::load_caches(unsigned int load_n_bits)
 	}
 }
 
+// FIXME add a consolidate pools?
+void pools::flush_empty_pools()
+{
+	unsigned int deleted = 0;
+	for(unsigned int index=0; index<pool_vector.size();)
+	{
+		if (pool_vector.at(index) -> get_n_bits_in_pool() == 0)
+		{
+			delete pool_vector.at(index);
+			pool_vector.erase(pool_vector.begin() + index);
+
+			deleted++;
+		}
+		else
+		{
+			index++;
+		}
+	}
+
+	dolog(LOG_DEBUG, "Deleted %d empty pools", deleted);
+}
+
 void pools::load_cachefiles_list()
 {
 	DIR *dirp = opendir(cache_dir.c_str());
@@ -151,7 +173,10 @@ int pools::get_bits_from_pools(int n_bits_requested, unsigned char **buffer, cha
 	// load bits from disk if needed
 	int bits_needed_to_load = n_bits_requested - get_bit_sum();
 	if (bits_needed_to_load > 0)
+	{
+		flush_empty_pools();
 		load_caches(bits_needed_to_load);
+	}
 
 	for(unsigned int loop=0; loop<pool_vector.size(); loop++)
 	{

@@ -14,6 +14,7 @@ private:
 	void store_caches(unsigned int keep_n);
 	int select_pool_to_add_to();
 	int find_non_full_pool();
+	void flush_empty_pools();
 
 public:
 	pools(std::string cache_dir, unsigned int max_n_mem_pools, unsigned int max_n_disk_pools, unsigned int min_store_on_disk_n);
