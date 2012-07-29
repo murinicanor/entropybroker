@@ -15,6 +15,7 @@ char *password = NULL;
 #include "protocol.h"
 #include "server_utils.h"
 #include "auth.h"
+#include "kernel_prng_io.h"
 #include "kernel_prng_rw.h"
 
 void sig_handler(int sig)
@@ -128,6 +129,8 @@ int main(int argc, char *argv[])
 			disable_nagle(socket_fd);
 			enable_tcp_keepalive(socket_fd);
 		}
+
+		dolog(LOG_DEBUG, "Bits available: %d", kernel_rng_get_entropy_count());
 
 		unsigned char bytes[1249];
 		if (kernel_rng_read_blocking(bytes, sizeof bytes) == -1)
