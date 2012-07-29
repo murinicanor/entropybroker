@@ -110,23 +110,33 @@ void pool::update_ivec(void)
 	}
 }
 
-int pool::add_entropy_data(unsigned char *entropy_data, int n_bytes)
+int pool::add_entropy_data(unsigned char *entropy_data, int n_bytes_in)
 {
 	unsigned char temp_buffer[POOL_SIZE / 8];
-	BF_KEY key;
-	int n_added;
+	int n_added = bce -> get_bit_count(entropy_data, n_bytes_in);
 
-	update_ivec();
+	while(n_bytes_in > 0)
+	{
+		BF_KEY key;
 
-	n_added = bce -> get_bit_count(entropy_data, n_bytes);
+		update_ivec();
+
+		// when adding data to the pool, we encrypt the pool using blowfish with
+		// the entropy-data as the encryption-key. blowfish allows keysizes with
+		// a maximum of 448 bits which is 56 bytes
+		int cur_to_add = min(n_bytes_in, 56);
+
+		BF_set_key(&key, cur_to_add, entropy_data);
+		BF_cbc_encrypt(entropy_pool, temp_buffer, (POOL_SIZE / 8), &key, ivec, BF_ENCRYPT);
+		memcpy(entropy_pool, temp_buffer, (POOL_SIZE / 8));
+
+		entropy_data += cur_to_add;
+		n_bytes_in -= cur_to_add;
+	}
 
 	bits_in_pool += n_added;
 	if (bits_in_pool > POOL_SIZE)
 		bits_in_pool = POOL_SIZE;
-
-	BF_set_key(&key, n_bytes, entropy_data);
-	BF_cbc_encrypt(entropy_pool, temp_buffer, (POOL_SIZE / 8), &key, ivec, BF_ENCRYPT);
-	memcpy(entropy_pool, temp_buffer, (POOL_SIZE / 8));
 
 	return n_added;
 }
@@ -188,6 +198,11 @@ int pool::get_pool_size(void)
 bool pool::is_full(void)
 {
 	return bits_in_pool == POOL_SIZE;
+}
+
+bool pool::is_almost_full(void)
+{
+	return (POOL_SIZE - bits_in_pool) < 32;
 }
 
 /* taken from random driver from linux-kernel */

@@ -21,7 +21,7 @@ int bit_count_estimator::get_bit_count(unsigned char *data, unsigned int n_bytes
 #ifdef _DEBUG
 	int sh = determine_number_of_bits_of_data_shannon(data, n_bytes);
 	int compr = determine_number_of_bits_of_data_compression(data, n_bytes);
-	dolog(LOG_DEBUG, "in: %d, shannon: %d, compression: %d", n_bytes, sh, compr);
+	dolog(LOG_DEBUG, "in: %d, shannon: %d, compression: %d", n_bytes * 8, sh, compr);
 
 	if (type == BCE_SHANNON)
 		return sh;

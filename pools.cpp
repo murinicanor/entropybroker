@@ -264,7 +264,7 @@ int pools::find_non_full_pool()
 {
 	for(unsigned int loop=0; loop<pool_vector.size(); loop++)
 	{
-		if (!pool_vector.at(loop) -> is_full())
+		if (!pool_vector.at(loop) -> is_almost_full())
 			return loop;
 	}
 
@@ -275,7 +275,7 @@ int pools::select_pool_to_add_to()
 {
 	int index = find_non_full_pool();
 
-	if (index == -1 || pool_vector.at(index) -> is_full())
+	if (index == -1 || pool_vector.at(index) -> is_almost_full())
 	{
 		if (pool_vector.size() >= max_n_mem_pools)
 			store_caches(max(0, pool_vector.size() - min_store_on_disk_n));
@@ -305,22 +305,23 @@ int pools::add_bits_to_pools(unsigned char *data, int n_bytes, char ignore_rngte
 	int n_bits_added = 0;
 	int index = -1;
 
-	unsigned char buffer[56];
 	while(n_bytes > 0)
 	{
 		index = select_pool_to_add_to();
 
-		// when adding data to the pool, we encrypt the pool using blowfish with
-		// the entropy-data as the encryption-key. blowfish allows keysizes with
-		// a maximum of 448 bits which is 56 bytes
-		unsigned int n_bytes_to_add = min(56, n_bytes);
+		int space_available = POOL_SIZE - pool_vector.at(index) -> get_n_bits_in_pool();
+		// in that case we're already mixing in so we can change all data anyway
+		// this only happens when all pools are full
+		if (space_available <= 0)
+			space_available = POOL_SIZE;
 
-		memcpy(buffer, data, n_bytes_to_add);
+		dolog(LOG_DEBUG, "Adding %d bits to pool %d", space_available, index);
+		unsigned int n_bytes_to_add = (space_available + 7) / 8;
 
 		for(unsigned int rngtest_loop=0; rngtest_loop<n_bytes_to_add; rngtest_loop++)
 		{
-			pfips -> add(buffer[rngtest_loop]);
-			pscc -> add(buffer[rngtest_loop]);
+			pfips -> add(data[rngtest_loop]);
+			pscc -> add(data[rngtest_loop]);
 		}
 
 		bool rc_fips140 = true, rc_scc = true;
@@ -330,7 +331,7 @@ int pools::add_bits_to_pools(unsigned char *data, int n_bytes, char ignore_rngte
 			rc_scc = pfips -> is_ok();
 		if (rc_fips140 == true && rc_scc == true)
 		{
-			n_bits_added += pool_vector.at(index) -> add_entropy_data(buffer, n_bytes_to_add);
+			n_bits_added += pool_vector.at(index) -> add_entropy_data(data, n_bytes_to_add);
 		}
 
 		n_bytes -= n_bytes_to_add;
@@ -363,7 +364,7 @@ bool pools::all_pools_full()
 {
 	for(unsigned int loop=0; loop<pool_vector.size(); loop++)
 	{
-		if (!pool_vector.at(loop) -> is_full())
+		if (!pool_vector.at(loop) -> is_almost_full())
 			return false;
 	}
 
