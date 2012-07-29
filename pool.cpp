@@ -146,7 +146,7 @@ int pool::get_n_bits_in_pool(void)
 	return bits_in_pool;
 }
 
-int pool::get_entropy_data(unsigned char *entropy_data, int n_bytes_requested, char prng_ok)
+int pool::get_entropy_data(unsigned char *entropy_data, int n_bytes_requested, bool prng_ok)
 {
 	unsigned char temp_buffer[POOL_SIZE / 8];
 	BF_KEY key;
@@ -190,6 +190,11 @@ int pool::get_get_size()
 	return SHA512_DIGEST_LENGTH / 2;
 }
 
+int pool::get_get_size_in_bits()
+{
+	return get_get_size() * 8;
+}
+
 int pool::get_pool_size(void)
 {
 	return POOL_SIZE;
@@ -202,7 +207,7 @@ bool pool::is_full(void)
 
 bool pool::is_almost_full(void)
 {
-	return (POOL_SIZE - bits_in_pool) < 32;
+	return (POOL_SIZE - bits_in_pool) < get_get_size_in_bits();
 }
 
 /* taken from random driver from linux-kernel */

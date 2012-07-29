@@ -108,7 +108,6 @@ void pools::load_caches(unsigned int load_n_bits)
 	}
 }
 
-// FIXME add a consolidate pools?
 void pools::flush_empty_pools()
 {
 	unsigned int deleted = 0;
@@ -127,7 +126,42 @@ void pools::flush_empty_pools()
 		}
 	}
 
-	dolog(LOG_DEBUG, "Deleted %d empty pools", deleted);
+	if (deleted)
+		dolog(LOG_DEBUG, "Deleted %d empty pools", deleted);
+}
+
+void pools::merge_pools()
+{
+	if (pool_vector.size() == 0)
+		return;
+
+	int n_merged = 0;
+	unsigned char buffer[POOL_SIZE / 8];
+	for(unsigned int i1=0; i1<(pool_vector.size() - 1); i1++)
+	{
+		if (pool_vector.at(i1) -> is_full())
+			continue;
+
+		int i1_size = pool_vector.at(i1) -> get_n_bits_in_pool();
+
+		for(unsigned int i2=(i1 + 1); i2 < pool_vector.size(); i2++)
+		{
+			int i2_size = pool_vector.at(i2) -> get_n_bits_in_pool();
+			if (i1_size + i2_size > POOL_SIZE)
+				continue;
+
+			int bytes = (i2_size + 7) / 8;
+			pool_vector.at(i2) -> get_entropy_data(buffer, bytes, false);
+			pool_vector.erase(pool_vector.begin() + i2);
+
+			pool_vector.at(i1) -> add_entropy_data(buffer, bytes);
+
+			n_merged++;
+		}
+	}
+
+	if (n_merged)
+		dolog(LOG_INFO, "%d merged", n_merged);
 }
 
 void pools::load_cachefiles_list()
@@ -176,6 +210,8 @@ int pools::get_bits_from_pools(int n_bits_requested, unsigned char **buffer, cha
 	if (bits_needed_to_load > 0)
 	{
 		flush_empty_pools();
+		merge_pools();
+
 		load_caches(bits_needed_to_load);
 	}
 
@@ -277,6 +313,9 @@ int pools::select_pool_to_add_to()
 
 	if (index == -1 || pool_vector.at(index) -> is_almost_full())
 	{
+		flush_empty_pools();
+		merge_pools();
+
 		if (pool_vector.size() >= max_n_mem_pools)
 			store_caches(max(0, pool_vector.size() - min_store_on_disk_n));
 
@@ -312,7 +351,7 @@ int pools::add_bits_to_pools(unsigned char *data, int n_bytes, char ignore_rngte
 		int space_available = POOL_SIZE - pool_vector.at(index) -> get_n_bits_in_pool();
 		// in that case we're already mixing in so we can change all data anyway
 		// this only happens when all pools are full
-		if (space_available <= 0)
+		if (space_available <= pool_vector.at(index) -> get_get_size_in_bits())
 			space_available = POOL_SIZE;
 
 		dolog(LOG_DEBUG, "Adding %d bits to pool %d", space_available, index);

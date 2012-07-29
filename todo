@@ -1,7 +1,5 @@
 - client: in classes
-- server_kernel?
 - retrieve from other eb instance (eb_proxy)
-- consolidate pools
 - keep stats of disk-get & put to advise user of ideal number of memory pools
 - acls (ip)
 - user-accounts in protocol?

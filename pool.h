@@ -27,8 +27,9 @@ public:
 	/* -1 if not full, 0 if full */
 	int add_entropy_data(unsigned char *entropy_data, int n_bytes);
 	/* returns number of bytes returned, set prng_ok to also return data when pool empty */
-	int get_entropy_data(unsigned char *entropy_data, int n_bytes_requested, char prng_ok);
+	int get_entropy_data(unsigned char *entropy_data, int n_bytes_requested, bool prng_ok);
 	int get_get_size(void);
+	int get_get_size_in_bits(void);
 	int get_n_bits_in_pool(void);
 	int get_pool_size(void);
 	bool is_full(void);
