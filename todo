@@ -1,3 +1,4 @@
 - client: in classes
 - server_kernel?
-- eb: read password from file: set dir to dir of conf
+- retrieve from other eb instance
+- consolidate pools

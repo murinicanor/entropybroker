@@ -178,40 +178,44 @@ int pools::get_bits_from_pools(int n_bits_requested, unsigned char **buffer, cha
 		load_caches(bits_needed_to_load);
 	}
 
-	for(unsigned int loop=0; loop<pool_vector.size(); loop++)
+	// search from the end as those pools will have the least number of bits
+	// (unless pools from disk were retrieved, then the first pool might have less
+	// bits - it will then have less bits than the pool block size)
+	for(int loop=pool_vector.size() - 1; loop >= 0; loop--)
 	{
+		// this gets the minimum number of bits one can retrieve from a
+		// pool in one request
 		int pool_block_size = pool_vector.at(loop) -> get_get_size();
 
 		while(pool_vector.at(loop) -> get_n_bits_in_pool() > pool_block_size)
 		{
-			int rngtest_loop, rc_fips140 = 0, rc_scc = 0;
 			int cur_n_to_get_bits = min(n_to_do_bits, pool_block_size);
 			int cur_n_to_get_bytes = (cur_n_to_get_bits + 7) / 8;
-			int got_n_bytes, got_n_bits;
 
-			got_n_bytes = pool_vector.at(loop) -> get_entropy_data(cur_p, cur_n_to_get_bytes, 0);
-			got_n_bits = got_n_bytes * 8;
+			unsigned int got_n_bytes = pool_vector.at(loop) -> get_entropy_data(cur_p, cur_n_to_get_bytes, 0);
+			unsigned int got_n_bits = got_n_bytes * 8;
 
-			for(rngtest_loop=0; rngtest_loop<got_n_bytes; rngtest_loop++)
+			for(unsigned int rngtest_loop=0; rngtest_loop<got_n_bytes; rngtest_loop++)
 			{
 				pfips -> add(cur_p[rngtest_loop]);
 				pscc -> add(cur_p[rngtest_loop]);
 			}
 
+			bool rc_fips140 = true, rc_scc = true;
 			if (!ignore_rngtest_fips140)
 				rc_fips140 = pfips -> is_ok();
 			if (!ignore_rngtest_scc)
 				rc_scc = pfips -> is_ok();
-			if (rc_fips140 == 0 && rc_scc == 0)
+			if (rc_fips140 == true && rc_scc == true)
 			{
 				cur_p += got_n_bytes;
 				n_to_do_bits -= got_n_bits;
 				n_bits_retrieved += got_n_bits;
 			}
 
-			if (n_to_do_bits < 0)
-				error_exit("overflow3");
-			if (n_to_do_bits == 0)
+			// can be less due to the pool block size (more bits might
+			// get returned than what was requested)
+			if (n_to_do_bits <= 0)
 				return n_bits_retrieved;
 		}
 	}
@@ -222,25 +226,24 @@ int pools::get_bits_from_pools(int n_bits_requested, unsigned char **buffer, cha
 
 		while(n_to_do_bits > 0)
 		{
-			int rngtest_loop, rc_fips140 = 0, rc_scc = 0;
 			int cur_n_to_get_bits = min(pool_vector.at(index) -> get_pool_size(), n_to_do_bits);
 			int cur_n_to_get_bytes = (cur_n_to_get_bits + 7) / 8;
-			int got_n_bits, got_n_bytes;
 
-			got_n_bytes = pool_vector.at(index) -> get_entropy_data(cur_p, cur_n_to_get_bytes, 1);
-			got_n_bits = got_n_bytes * 8;
+			unsigned int got_n_bytes = pool_vector.at(index) -> get_entropy_data(cur_p, cur_n_to_get_bytes, 1);
+			unsigned int got_n_bits = got_n_bytes * 8;
 
-			for(rngtest_loop=0; rngtest_loop<got_n_bytes; rngtest_loop++)
+			for(unsigned int rngtest_loop=0; rngtest_loop<got_n_bytes; rngtest_loop++)
 			{
 				pfips -> add(cur_p[rngtest_loop]);
 				pscc -> add(cur_p[rngtest_loop]);
 			}
 
+			bool rc_fips140 = true, rc_scc = true;
 			if (!ignore_rngtest_fips140)
 				rc_fips140 = pfips -> is_ok();
 			if (!ignore_rngtest_scc)
 				rc_scc = pfips -> is_ok();
-			if (rc_fips140 == 0 && rc_scc == 0)
+			if (rc_fips140 == true && rc_scc == true)
 			{
 				cur_p += got_n_bytes;
 				n_to_do_bits -= got_n_bits;
@@ -305,23 +308,23 @@ int pools::add_bits_to_pools(unsigned char *data, int n_bytes, char ignore_rngte
 	{
 		index = select_pool_to_add_to();
 
-		int rngtest_loop, rc_fips140 = 0, rc_scc = 0;
-		int n_bytes_to_add = min(8, n_bytes);
+		unsigned int n_bytes_to_add = min(8, n_bytes);
 		unsigned char buffer[8];
 
 		memcpy(buffer, data, n_bytes_to_add);
 
-		for(rngtest_loop=0; rngtest_loop<n_bytes_to_add; rngtest_loop++)
+		for(unsigned int rngtest_loop=0; rngtest_loop<n_bytes_to_add; rngtest_loop++)
 		{
 			pfips -> add(buffer[rngtest_loop]);
 			pscc -> add(buffer[rngtest_loop]);
 		}
 
+		bool rc_fips140 = true, rc_scc = true;
 		if (!ignore_rngtest_fips140)
 			rc_fips140 = pfips -> is_ok();
 		if (!ignore_rngtest_scc)
 			rc_scc = pfips -> is_ok();
-		if (rc_fips140 == 0 && rc_scc == 0)
+		if (rc_fips140 == true && rc_scc == true)
 		{
 			n_bits_added += pool_vector.at(index) -> add_entropy_data(buffer);
 		}

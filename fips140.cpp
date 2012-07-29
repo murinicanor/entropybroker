@@ -123,7 +123,7 @@ void fips140::add(unsigned char newval)
 	fips140_pokerbuf[newval >> 4]++;
 }
 
-char fips140::fips140_shorttest(void)
+bool fips140::fips140_shorttest(void)
 {
 	int loop;
 	int total=0;
@@ -134,7 +134,7 @@ char fips140::fips140_shorttest(void)
 	 */
 	if (fips140_nbits != 20000)
 	{
-		return 0;
+		return true;
 	}
 
 	/* monobit test */
@@ -143,7 +143,7 @@ char fips140::fips140_shorttest(void)
 	{
 		dolog(LOG_CRIT, "fips140|%s: monobit test failed! [%d]", user, fips140_n1);
 		stats_t.monobit++;
-		return -1;
+		return false;
 	}
 
 	/* poker test */
@@ -161,11 +161,11 @@ char fips140::fips140_shorttest(void)
 	{
 		dolog(LOG_CRIT, "fips140|%s: poker test failed! [%f]", user, X);
 		stats_t.poker++;
-		return -1;
+		return false;
 	}
 
 	/* well, as far as we could see here, all is fine */
-	return 0;
+	return true;
 }
 
 #define fips140_checkinterval(index, min, max)						\
@@ -174,7 +174,7 @@ char fips140::fips140_shorttest(void)
 	 ? 0 : 1)
 
 /* warning; this one also invokes the short test(!) */
-char fips140::fips140_longtest(void)
+bool fips140::fips140_longtest(void)
 {
 	int byteindex;
 	int lastbit=0;
@@ -188,7 +188,7 @@ char fips140::fips140_longtest(void)
 	 */
 	if (fips140_shorttest() == 0)
 	{
-		return -1;
+		return false;
 	}
 
 	/* go trough all 20.000 bits */
@@ -224,7 +224,7 @@ char fips140::fips140_longtest(void)
 					{
 						dolog(LOG_CRIT, "fips140|%s: long-run failed! [%d]", user, runlength);
 						stats_t.longrun++;
-						return -1;
+						return false;
 					}
 				}
 				else
@@ -280,14 +280,14 @@ char fips140::fips140_longtest(void)
 	{
 		dolog(LOG_CRIT, "fips140|%s: runs-test failed!", user);
 		stats_t.runs++;
-		return -1;
+		return false;
 	}
 
 	/* this is a fine set of random values */
-	return 0;
+	return true;
 }
 
-int fips140::is_ok(void)
+bool fips140::is_ok(void)
 {
 	if (fips140_nnewbits >= 2495)
 	{

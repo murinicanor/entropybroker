@@ -91,12 +91,12 @@ double scc::get_cur_scc()
 	return scc_val;
 }
 
-int scc::is_ok(void)
+bool scc::is_ok(void)
 {
 	double cur_scc = fabs(get_cur_scc());
-	int rc = (cur_scc >= threshold) ? -1 : 0;
+	bool rc = cur_scc < threshold;
 
-	if (rc == -1)
+	if (rc == false)
 		dolog(LOG_WARNING, "SCC %f above threshold %f", cur_scc, threshold);
 
 	return rc;

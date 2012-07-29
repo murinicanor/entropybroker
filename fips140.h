@@ -30,8 +30,8 @@ class fips140
 	int fips_version;
 	char *user;
 
-	char fips140_shorttest(void);
-	char fips140_longtest(void);
+	bool fips140_shorttest(void);
+	bool fips140_longtest(void);
 
 public:
 	fips140();
@@ -41,6 +41,6 @@ public:
 	void set_user(char *puser);
 
 	void add(unsigned char newval);
-	int is_ok(void);
+	bool is_ok(void);
 	char *stats(void);
 };

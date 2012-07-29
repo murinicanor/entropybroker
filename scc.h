@@ -16,6 +16,6 @@ public:
 	void set_threshold(double t);
 
 	void add(unsigned char byte);
-	int is_ok(void);
+	bool is_ok(void);
 	char *stats(void);
 };
