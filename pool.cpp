@@ -110,7 +110,7 @@ void pool::update_ivec(void)
 	}
 }
 
-int pool::add_entropy_data(unsigned char entropy_data[8])
+int pool::add_entropy_data(unsigned char entropy_data[56])
 {
 	unsigned char temp_buffer[POOL_SIZE / 8];
 	BF_KEY key;
@@ -118,13 +118,13 @@ int pool::add_entropy_data(unsigned char entropy_data[8])
 
 	update_ivec();
 
-	n_added = determine_number_of_bits_of_data(entropy_data, 8);
+	n_added = determine_number_of_bits_of_data(entropy_data, 56);
 
 	bits_in_pool += n_added;
 	if (bits_in_pool > POOL_SIZE)
 		bits_in_pool = POOL_SIZE;
 
-	BF_set_key(&key, 8, entropy_data);
+	BF_set_key(&key, 56, entropy_data);
 	BF_cbc_encrypt(entropy_pool, temp_buffer, (POOL_SIZE / 8), &key, ivec, BF_ENCRYPT);
 	memcpy(entropy_pool, temp_buffer, (POOL_SIZE / 8));
 
@@ -140,6 +140,8 @@ int pool::get_entropy_data(unsigned char *entropy_data, int n_bytes_requested, c
 {
 	unsigned char temp_buffer[POOL_SIZE / 8];
 	BF_KEY key;
+	// make sure the hash length is equal or less than 448 bits which is the maximum
+	// blowfish key size
 	int n_given, half_sha512_hash_len = SHA512_DIGEST_LENGTH / 2;;
 	unsigned char hash[SHA512_DIGEST_LENGTH];
 

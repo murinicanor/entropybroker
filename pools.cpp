@@ -308,8 +308,11 @@ int pools::add_bits_to_pools(unsigned char *data, int n_bytes, char ignore_rngte
 	{
 		index = select_pool_to_add_to();
 
-		unsigned int n_bytes_to_add = min(8, n_bytes);
-		unsigned char buffer[8];
+		// when adding data to the pool, we encrypt the pool using blowfish with
+		// the entropy-data as the encryption-key. blowfish allows keysizes with
+		// a maximum of 448 bits which is 56 bytes
+		unsigned int n_bytes_to_add = min(56, n_bytes);
+		unsigned char buffer[56];
 
 		memcpy(buffer, data, n_bytes_to_add);
 
