@@ -2,3 +2,4 @@
 - server_kernel?
 - retrieve from other eb instance
 - consolidate pools
+- keep stats of disk-get & put to advise user of ideal number of memory pools
