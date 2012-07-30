@@ -4,3 +4,6 @@
 - acls (ip)
 - user-accounts in protocol?
 - server_proc die iets start (+herstart), data compressed(?) en dan submit naar eb
+- clients: iets dat ze een signal (msg) krijgen als ze weer data kunnen krijgen
+  als leeg: dan client aan een lijst toevoegen
+  als dan een server data toevoegd, lijst aflopen en msg sturen en dan lijst wissen
