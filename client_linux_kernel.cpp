@@ -28,9 +28,11 @@ void sig_handler(int sig)
 	exit(0);
 }
 
-int proces_server_msg(int socket_fd)
+int process_server_msg(int socket_fd, bool *data_available)
 {
 	char msg_cmd[4+1], msg_par[4+1];
+
+	*data_available = false;
 
 	if (READ(socket_fd, msg_cmd, 4) != 4)
 	{
@@ -69,6 +71,12 @@ int proces_server_msg(int socket_fd)
 
 		if (WRITE(socket_fd, xmit_buffer, strlen(xmit_buffer)) != (int)strlen(xmit_buffer))
 			return -1;
+	}
+	else if (strcmp(msg_cmd, "0009") == 0)	/* got data */
+	{
+		*data_available = true;
+
+		dolog(LOG_DEBUG, "Broker signals data available");
 	}
 	else
 	{
@@ -162,6 +170,7 @@ int main(int argc, char *argv[])
 	if (dev_random_fd == -1)
 		error_exit("failed to open %s", DEV_RANDOM);
 
+	bool want_data = false;
 	for(;;)
 	{
 		int rc;
@@ -195,16 +204,20 @@ int main(int argc, char *argv[])
 
 		if (FD_ISSET(socket_fd, &read_fd))
 		{
-			if (proces_server_msg(socket_fd) == -1)
+			if (process_server_msg(socket_fd, &data_available) == -1)
 			{
 				close(socket_fd);
 				socket_fd = -1;
-				continue;
+
+				if (!data_available || !want_data)
+					continue;
 			}
 		}
 
-		if (FD_ISSET(dev_random_fd, &write_fd))
+		if (FD_ISSET(dev_random_fd, &write_fd) || (data_available && want_data))
 		{
+			want_data = false;
+
 			/* find out how many bits to add */
 			int n_bits_in_kernel_rng = kernel_rng_get_entropy_count();
 			int n_bits_to_get = max_bits_in_kernel_rng - n_bits_in_kernel_rng;
@@ -241,14 +254,8 @@ int main(int argc, char *argv[])
 			dolog(LOG_DEBUG, "received reply: %s", reply);
 			if (reply[0] == '9' && reply[1] == '0' && reply[2] == '0' && (reply[3] == '0' || reply[3] == '2'))
 			{
-				double seconds = (double)atoi(&reply[4]) + mydrand();
-
-				dolog(LOG_WARNING, "server has no data/quota, sleeping for %f seconds", seconds);
-
-				usleep(seconds * 1000000.0);
-
-				dolog(LOG_DEBUG, "wokeup with %d bits in kernel rng", kernel_rng_get_entropy_count());
-
+				dolog(LOG_WARNING, "server has no data/quota");
+				want_data = true;
 				continue;
 			}
 			int will_get_n_bits = atoi(&reply[4]);

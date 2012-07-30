@@ -84,7 +84,7 @@ int send_got_data(int fd, pools *ppools, config_t *config)
 	char buffer[4+4+1];
 
 	// data is an estimate; it can be different anyway as other clients may come first
-	snprintf(buffer, sizeof(buffer), "9004%04d", min(9999, ppools -> get_bit_sum()));
+	snprintf(buffer, sizeof(buffer), "0009%04d", min(9999, ppools -> get_bit_sum()));
 
 	return WRITE_TO(fd, buffer, 8, config -> communication_timeout) == 8 ? 0 : -1;
 }
