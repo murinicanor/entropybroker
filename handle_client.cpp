@@ -696,7 +696,7 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 					}
 				}
 
-printf("NBWB %d %d\n", no_bits, new_bits);
+				// printf("NBWB %d %d\n", no_bits, new_bits);
 			}
 
 			if (new_bits && no_bits)
