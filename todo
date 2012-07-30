@@ -4,7 +4,5 @@
 - acls (ip)
 - user-accounts in protocol?
 - server_proc die iets start (+herstart), data compressed(?) en dan submit naar eb
-- als eb een 'no data' stuurt: vlaggetje (in eb) zetten dat er geen data was. dan bij de eerst volgende server-submit alle clients een 'er is data'-bericht sturen
-= clients: in potocol.cpp een dingetje dat op een breicht wacht en daarbij ping/007 al processed en ook reconnect doet? of gaat dat mis bij bovenstaande? en/of misschien ook zo nu en dan een ping? dit dingetje met een time-out zodat je ook af en toe een ping kunt sturen
-- protocol: get_data(...): loopje dat een get stuurt en bij een deny wacht op dat nieuwe 'er is wel data'-bericht. bij een disconnect opnieuw een get request sturen(!)
 - client_egd/file: handle 0009
+= clients: in potocol.cpp een dingetje dat op een breicht wacht en daarbij ping/007 al processed en ook reconnect doet? of gaat dat mis bij bovenstaande? en/of misschien ook zo nu en dan een ping? dit dingetje met een time-out zodat je ook af en toe een ping kunt sturen

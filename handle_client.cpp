@@ -133,7 +133,7 @@ int do_client_get(pools *ppools, client_t *client, statistics_t *stats, config_t
 	cur_n_bits = ppools -> get_bits_from_pools(cur_n_bits, &ent_buffer_in, client -> allow_prng, client -> ignore_rngtest_fips140, eb_output_fips140, client -> ignore_rngtest_scc, eb_output_scc);
 	if (cur_n_bits == 0)
 	{
-		dolog(LOG_WARNING, "get|%s no bits in pools", client -> host);
+		dolog(LOG_WARNING, "get|%s no bits in pools, sending deny", client -> host);
 		*no_bits = true;
 		return send_denied_empty(client -> socket_fd, stats, config);
 	}
@@ -674,7 +674,7 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 				{
 					clients[loop].last_message = now;
 
-					bool cur_no_bits = false, cur_new_bits = true;
+					bool cur_no_bits = false, cur_new_bits = false;
 					if (do_client(ppools, &clients[loop], &stats, config, eb_output_fips140, eb_output_scc, &key, &cur_no_bits, &cur_new_bits) == -1)
 					{
 						dolog(LOG_INFO, "main|connection closed, removing client %s from list", clients[loop].host);
@@ -690,15 +690,19 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 						no_bits = true;
 						new_bits = false;
 					}
-					else if (new_bits)
+					else if (cur_new_bits)
 					{
 						new_bits = true;
 					}
 				}
+
+printf("NBWB %d %d\n", no_bits, new_bits);
 			}
 
 			if (new_bits && no_bits)
 			{
+				dolog(LOG_DEBUG, "New bits: alerting clients");
+
 				no_bits = new_bits = false;
 
 				// notify client of new data
