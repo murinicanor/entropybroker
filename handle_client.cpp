@@ -278,7 +278,7 @@ int do_client_put(pools *ppools, client_t *client, statistics_t *stats, config_t
 	return 0;
 }
 
-int do_client_server_type(pools *ppools, client_t *client, config_t *config)
+int do_client_server_type(client_t *client, config_t *config)
 {
 	char *buffer;
 	int n_bytes;
@@ -434,7 +434,7 @@ int do_client(pools *ppools, client_t *client, statistics_t *stats, config_t *co
 	else if (strcmp(cmd, "0003") == 0)	// server type
 	{
 		client -> is_server = 1;
-		return do_client_server_type(ppools, client, config);
+		return do_client_server_type(client, config);
 	}
 	else if (strcmp(cmd, "0005") == 0)	// ping reply (to 0004)
 	{
@@ -443,7 +443,7 @@ int do_client(pools *ppools, client_t *client, statistics_t *stats, config_t *co
 	else if (strcmp(cmd, "0006") == 0)	// client type
 	{
 		client -> is_server = 0;
-		return do_client_server_type(ppools, client, config);
+		return do_client_server_type(client, config);
 	}
 	else if (strcmp(cmd, "0008") == 0)	// # bits in kernel reply (to 0007)
 	{

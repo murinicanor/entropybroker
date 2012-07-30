@@ -86,7 +86,7 @@ void pools::load_caches(unsigned int load_n_bits)
 	unsigned int bits_loaded = 0;
 
 	unsigned int files_loaded = 0;
-	while(cache_list.size() > 0 && bits_loaded < load_n_bits)
+	while(!cache_list.empty() && bits_loaded < load_n_bits)
 	{
 		dolog(LOG_DEBUG, "Load bits from %s", cache_list.at(0).c_str());
 		FILE *fh = fopen(cache_list.at(0).c_str(), "r");
@@ -132,7 +132,7 @@ void pools::flush_empty_pools()
 
 void pools::merge_pools()
 {
-	if (pool_vector.size() == 0)
+	if (pool_vector.empty())
 		return;
 
 	int n_merged = 0;
@@ -317,7 +317,7 @@ int pools::select_pool_to_add_to()
 		merge_pools();
 
 		if (pool_vector.size() >= max_n_mem_pools)
-			store_caches(max(0, pool_vector.size() - min_store_on_disk_n));
+			store_caches(max(0, int(pool_vector.size()) - int(min_store_on_disk_n)));
 
 		// see if the number of in-memory pools is reduced after the call to store_caches
 		// it might have not stored any on disk if the limit on the number of files has been reached
