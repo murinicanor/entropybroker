@@ -79,6 +79,16 @@ int send_denied_full(client_t *client, pools *ppools, statistics_t *stats, confi
 	return 0;
 }
 
+int send_got_data(int fd, pools *ppools, config_t *config)
+{
+	char buffer[4+4+1];
+
+	// data is an estimate; it can be different anyway as other clients may come first
+	snprintf(buffer, sizeof(buffer), "9004%04d", min(9999, ppools -> get_bit_sum()));
+
+	return WRITE_TO(fd, buffer, 8, config -> communication_timeout) == 8 ? 0 : -1;
+}
+
 int do_client_get(pools *ppools, client_t *client, statistics_t *stats, config_t *config, fips140 *eb_output_fips140, scc *eb_output_scc, BF_KEY *key, bool *no_bits)
 {
 	int cur_n_bits, cur_n_bytes;
@@ -111,7 +121,7 @@ int do_client_get(pools *ppools, client_t *client, statistics_t *stats, config_t
 	cur_n_bits = min(cur_n_bits, client -> max_bits_per_interval - client -> bits_sent);
 	dolog(LOG_DEBUG, "get|%s is allowed to now receive %d bits", client -> host, cur_n_bits);
 	if (cur_n_bits == 0)
-		return send_denied_quota(client -> socket_fd, stats, config); // FIXME: send_denied_quota
+		return send_denied_quota(client -> socket_fd, stats, config);
 	if (cur_n_bits < 0)
 		error_exit("cur_n_bits < 0");
 
@@ -691,9 +701,18 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 			{
 				no_bits = new_bits = false;
 
+				// notify client of new data
 				for(loop=n_clients - 1; loop>=0; loop--)
 				{
-					// FIXME notify client
+					if (send_got_data(clients[loop].socket_fd, ppools, config) == -1)
+					{
+						dolog(LOG_INFO, "main|connection closed, removing client %s from list", clients[loop].host);
+						dolog(LOG_DEBUG, "main|%s: %s, scc: %s", clients[loop].host, clients[loop].pfips140 -> stats(), clients[loop].pscc -> stats());
+
+						stats.disconnects++;
+
+						forget_client(clients, &n_clients, loop);
+					}
 				}
 			}
 
