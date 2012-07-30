@@ -41,7 +41,8 @@ int open_unixdomain_socket(char *path)
 
 void help(void)
 {
-	printf("-d file   unix domain socket to read from\n");
+	printf("-d file  unix domain socket to read from\n");
+	printf("-i x     how long to read\n");
 }
 
 int main(int argc, char *argv[])
@@ -52,7 +53,7 @@ int main(int argc, char *argv[])
 	double start;
 	int interval = 5;
 
-	while((c = getopt(argc, argv, "d:i:")) != -1)
+	while((c = getopt(argc, argv, "hd:i:")) != -1)
 	{
 		switch(c)
 		{
@@ -63,6 +64,10 @@ int main(int argc, char *argv[])
 			case 'i':
 				interval = atoi(optarg);
 				break;
+
+			case 'h':
+				help();
+				return 0;
 
 			default:
 				error_exit("unknown parameter");

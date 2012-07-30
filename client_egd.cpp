@@ -19,6 +19,7 @@
 #include "math.h"
 #include "protocol.h"
 #include "auth.h"
+#include "kernel_prng_io.h"
 
 #define DEFAULT_COMM_TO 15
 const char *pid_file = PID_DIR "/client_egd.pid";
@@ -34,8 +35,7 @@ void sig_handler(int sig)
 void handle_client(int fd, char *host, int port)
 {
 	int socket_fd = -1;
-	int will_get_n_bits, will_get_n_bytes;
-	char recv_msg[8 + 1], reply[8 + 1];
+	char get_msg[8 + 1], reply[8 + 1];
 	unsigned char egd_msg[2];
 	int n_bits_to_get;
 
@@ -58,46 +58,122 @@ void handle_client(int fd, char *host, int port)
 
 	dolog(LOG_INFO, "will get %d bits", n_bits_to_get);
 
-	snprintf(recv_msg, sizeof(recv_msg), "0001%04d", n_bits_to_get);
+	snprintf(get_msg, sizeof(get_msg), "0001%04d", n_bits_to_get);
 
-	if (reconnect_server_socket(host, port, password, &socket_fd, "client_egd " VERSION, 0) == -1)
+	bool send_request = true;
+	for(;;)
 	{
-		dolog(LOG_CRIT, "cannot connect to %s:%d", host, port);
-		return;
-	}
-	dolog(LOG_DEBUG, "socket fd: %d", socket_fd);
+		if (socket_fd == -1)
+		{
+			dolog(LOG_INFO, "(re-)connecting to %s:%d", host, port);
 
-	if (WRITE_TO(socket_fd, recv_msg, 8, DEFAULT_COMM_TO) != 8)
-	{
-		dolog(LOG_INFO, "write error to %s:%d", host, port);
-		return;
-	}
+			if (reconnect_server_socket(host, port, password, &socket_fd, "client_egd " VERSION, 0) == -1)
+			{
+				dolog(LOG_CRIT, "cannot connect to %s:%d", host, port);
+				send_request = true;
+				continue;
+			}
 
-	dolog(LOG_DEBUG, "request sent");
+			dolog(LOG_INFO, "Connected, fd: %d", socket_fd);
+		}
 
-	if (READ_TO(socket_fd, reply, 8, DEFAULT_COMM_TO) != 8)
-	{
-		dolog(LOG_INFO, "read error from %s:%d", host, port);
-		return;
-	}
-	reply[8] = 0x00;
-	dolog(LOG_DEBUG, "received reply: %s", reply);
-	if (reply[0] == '9' && reply[1] == '0' && reply[2] == '0' && (reply[3] == '0' || reply[3] == '2'))
-	{
-		dolog(LOG_WARNING, "server has no data/quota");
-		will_get_n_bits = 0;
-	}
-	else
-	{
-		will_get_n_bits = atoi(&reply[4]);
-	}
-	will_get_n_bytes = (will_get_n_bits + 7) / 8;
+		if (send_request)
+		{
+			dolog(LOG_DEBUG, "Request for %d bits", n_bits_to_get);
 
-	dolog(LOG_INFO, "server is offering %d bits (%d bytes)", will_get_n_bits, will_get_n_bytes);
+			if (WRITE_TO(socket_fd, get_msg, 8, DEFAULT_COMM_TO) != 8)
+			{
+				dolog(LOG_INFO, "write error to %s:%d", host, port);
+				close(socket_fd);
+				socket_fd = -1;
+				send_request = true;
+				continue;
+			}
+		}
 
-	if (will_get_n_bytes > 0)
-	{
-		unsigned char msg;
+		dolog(LOG_DEBUG, "request sent");
+
+		int rc = -1;
+		if (send_request)
+			rc = READ_TO(socket_fd, reply, 8, DEFAULT_COMM_TO);
+		else
+			rc = READ(socket_fd, reply, 8);
+		if (rc != 8)
+		{
+			dolog(LOG_INFO, "read error from %s:%d", host, port);
+			close(socket_fd);
+			socket_fd = -1;
+			send_request = true;
+			continue;
+		}
+		reply[8] = 0x00;
+
+		dolog(LOG_DEBUG, "received reply: %s", reply);
+
+		if (memcmp(reply, "9000", 4) == 0 || memcmp(reply, "9002", 4) == 0)
+		{
+			dolog(LOG_WARNING, "server has no data/quota");
+
+			send_request = false;
+			continue;
+		}
+		else if (memcmp(reply, "0004", 4) == 0)       /* ping request */
+		{
+			static int pingnr = 0;
+			char xmit_buffer[8 + 1];
+
+			snprintf(xmit_buffer, sizeof(xmit_buffer), "0005%04d", pingnr++);
+
+			dolog(LOG_DEBUG, "PING");
+
+			if (WRITE_TO(socket_fd, xmit_buffer, 8, DEFAULT_COMM_TO) != 8)
+			{
+				close(socket_fd);
+				socket_fd = -1;
+			}
+
+			send_request = true;
+			continue;
+		}
+		else if (memcmp(reply, "0007", 4) == 0)  /* kernel entropy count */
+		{
+			char xmit_buffer[128], val_buffer[128];
+
+			snprintf(val_buffer, sizeof(val_buffer), "%d", kernel_rng_get_entropy_count());
+			snprintf(xmit_buffer, sizeof(xmit_buffer), "0008%04d%s", (int)strlen(val_buffer), val_buffer);
+
+			dolog(LOG_DEBUG, "Send kernel entropy count");
+
+			if (WRITE_TO(socket_fd, xmit_buffer, strlen(xmit_buffer), DEFAULT_COMM_TO) != (int)strlen(xmit_buffer))
+			{
+				close(socket_fd);
+				socket_fd = -1;
+			}
+
+			send_request = true;
+			continue;
+		}
+		else if (memcmp(reply, "0009", 4) == 0)
+		{
+			// broker has data!
+			dolog(LOG_INFO, "Broker informs about data");
+
+			send_request = true;
+			continue;
+		}
+
+		int will_get_n_bits = atoi(&reply[4]);
+		int will_get_n_bytes = (will_get_n_bits + 7) / 8;
+
+		dolog(LOG_INFO, "server is offering %d bits (%d bytes)", will_get_n_bits, will_get_n_bytes);
+
+		if (will_get_n_bytes == 0)
+		{
+			dolog(LOG_CRIT, "Broker is offering 0 bits?! Please report this to folkert@vanheusden.com");
+			send_request = true;
+			continue;
+		}
+
 		unsigned char *buffer_in = (unsigned char *)malloc(will_get_n_bytes);
 		if (!buffer_in)
 			error_exit("out of memory allocating %d bytes", will_get_n_bytes);
@@ -106,13 +182,24 @@ void handle_client(int fd, char *host, int port)
 			error_exit("out of memory allocating %d bytes", will_get_n_bytes);
 
 		if (READ_TO(socket_fd, (char *)buffer_in, will_get_n_bytes, DEFAULT_COMM_TO) != will_get_n_bytes)
-			dolog(LOG_INFO, "read error from %s:%d", host, port);
+		{
+			dolog(LOG_INFO, "Read error from %s:%d", host, port);
+
+			free(buffer_out);
+			free(buffer_in);
+
+			close(socket_fd);
+			socket_fd = -1;
+
+			send_request = true;
+			continue;
+		}
 		else
 		{
 			decrypt(buffer_in, buffer_out, will_get_n_bytes);
 
 			// SEND TO EGD CLIENT FIXME
-			msg = min(255, will_get_n_bytes);
+			unsigned char msg = min(255, will_get_n_bytes);
 			if (WRITE(fd, (char *)&msg, 1) != 1)
 				dolog(LOG_INFO, "short write on egd client (# bytes)");
 			else if (WRITE(fd, (char *)buffer_out, msg) != msg)
@@ -121,10 +208,8 @@ void handle_client(int fd, char *host, int port)
 
 		free(buffer_out);
 		free(buffer_in);
-	}
-	else
-	{
-		// SEND 0 BYTES TO EGD CLIENT FIXME
+
+		break;
 	}
 
 	close(socket_fd);
@@ -261,7 +346,8 @@ int main(int argc, char *argv[])
 			{
 				handle_client(fd, host, port);
 
-				exit(0);
+				if (!do_not_fork)
+					exit(0);
 			}
 			else if (pid == -1)
 				error_exit("failed to fork");
