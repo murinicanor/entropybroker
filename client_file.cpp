@@ -83,7 +83,7 @@ int main(int argc, char *argv[])
 
 	while(count > 0)
 	{
-		char recv_msg[8 + 1], reply[8 + 1];
+		char recv_msg[8 + 1] = { 0 }, reply[8 + 1];
 
 		if (reconnect_server_socket(host, port, password, &socket_fd, argv[0], 0) == -1)
 			continue;
@@ -112,7 +112,25 @@ int main(int argc, char *argv[])
 			socket_fd = -1;
 			continue;
 		}
-		if (memcmp(reply, "9000", 4) == 0)
+		if (memcmp(reply, "0004", 4) == 0)	/* ping request */
+		{
+			static int pingnr = 0;
+			char rreply[8 + 1];
+
+			snprintf(rreply, sizeof(rreply), "0005%04d", pingnr++);
+
+			dolog(LOG_DEBUG, "Got a ping request (with parameter %s), sending reply (%s)", &reply[4], rreply);
+
+			if (WRITE(socket_fd, rreply, 8) != 8)
+			{
+				dolog(LOG_INFO, "write error to %s:%d", host, port);
+				close(socket_fd);
+				socket_fd = -1;
+			}
+
+			continue;
+		}
+		else if (memcmp(reply, "9000", 4) == 0)
 		{
 			dolog(LOG_WARNING, "server has no data");
 			double seconds = (double)atoi(&reply[4]) + mydrand();
