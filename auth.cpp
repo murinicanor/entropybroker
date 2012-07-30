@@ -9,12 +9,21 @@
 #include "error.h"
 #include "utils.h"
 #include "log.h"
+#include "protocol.h"
 
 int auth_eb(int fd, char *password, int to)
 {
 	long int rnd = myrand();
 	char rnd_str[128];
 	unsigned char rnd_str_size = snprintf(rnd_str, sizeof rnd_str, "%ld", rnd);
+
+	char prot_ver[4+1];
+	snprintf(prot_ver, 4, "%d", PROTOCOL_VERSION);
+	if (WRITE_TO(fd, prot_ver, 4, to) == -1)
+	{
+		dolog(LOG_INFO, "Connection for fd %d closed (0)", fd);
+		return -1;
+	}
 
 	if (rnd_str_size == 0)
 		error_exit("INTERNAL ERROR: random string is 0 characters!");
@@ -88,6 +97,17 @@ int auth_client_server(int fd, char *password, int to)
 {
 	char rnd_str[128];
 	unsigned char rnd_str_size;
+	char prot_ver[4 + 1];
+
+	if (READ_TO(fd, prot_ver, 4, to) == -1)
+	{
+		dolog(LOG_INFO, "Connection for fd %d closed (0)", fd);
+		return -1;
+	}
+	prot_ver[4] = 0x00;
+	int eb_ver = atoi(prot_ver);
+	if (eb_ver != PROTOCOL_VERSION)
+		error_exit("Broker server has unsupported protocol version %d! (expecting %d)", eb_ver, PROTOCOL_VERSION);
 
 	if (READ_TO(fd, (char *)&rnd_str_size, 1, to) == -1)
 	{
