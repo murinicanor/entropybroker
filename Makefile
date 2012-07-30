@@ -35,7 +35,7 @@ OBJSclk=client_linux_kernel.o error.o kernel_prng_io.o kernel_prng_rw.o log.o pr
 OBJScle=client_egd.o error.o log.o kernel_prng_rw.o math.o protocol.o utils.o auth.o
 OBJSte=test_egd_speed.o utils.o kernel_prng_rw.o log.o error.o auth.o
 OBJSsk=server_linux_kernel.o utils.o kernel_prng_rw.o kernel_prng_io.o log.o error.o protocol.o server_utils.o auth.o
-OBJScf=client_file.o error.o log.o kernel_prng_rw.o math.o protocol.o utils.o auth.o
+OBJScf=client_file.o error.o log.o kernel_prng_io.o kernel_prng_rw.o math.o protocol.o utils.o auth.o
 
 all: entropy_broker eb_server_audio eb_server_timers eb_server_v4l eb_server_stream eb_client_linux_kernel eb_server_egd eb_client_egd eb_test_egd_speed eb_server_linux_kernel eb_client_file
 

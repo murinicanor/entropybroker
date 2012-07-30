@@ -15,6 +15,7 @@
 #include "math.h"
 #include "protocol.h"
 #include "auth.h"
+#include "kernel_prng_io.h"
 
 void sig_handler(int sig)
 {
@@ -122,6 +123,24 @@ int main(int argc, char *argv[])
 			dolog(LOG_DEBUG, "Got a ping request (with parameter %s), sending reply (%s)", &reply[4], rreply);
 
 			if (WRITE(socket_fd, rreply, 8) != 8)
+			{
+				dolog(LOG_INFO, "write error to %s:%d", host, port);
+				close(socket_fd);
+				socket_fd = -1;
+			}
+
+			continue;
+		}
+		else if (memcmp(reply, "0007", 4) == 0)	/* kernel entropy count */
+		{
+			char xmit_buffer[128], val_buffer[128];
+
+			snprintf(val_buffer, sizeof(val_buffer), "%d", kernel_rng_get_entropy_count());
+			snprintf(xmit_buffer, sizeof(xmit_buffer), "0008%04d%s", (int)strlen(val_buffer), val_buffer);
+
+			dolog(LOG_DEBUG, "Got a kernel entropy count request (with parameter %s), sending reply (%s)", reply, xmit_buffer);
+
+			if (WRITE(socket_fd, xmit_buffer, strlen(xmit_buffer)) != (int)strlen(xmit_buffer))
 			{
 				dolog(LOG_INFO, "write error to %s:%d", host, port);
 				close(socket_fd);
