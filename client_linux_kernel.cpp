@@ -34,14 +34,14 @@ int process_server_msg(int socket_fd, bool *data_available)
 
 	*data_available = false;
 
-	if (READ(socket_fd, msg_cmd, 4) != 4)
+	if (READ_TO(socket_fd, msg_cmd, 4, DEFAULT_COMM_TO) != 4)
 	{
 		dolog(LOG_INFO, "short read on socket");
 		return -1;
 	}
 	msg_cmd[4] = 0x00;
 
-	if (READ(socket_fd, msg_par, 4) != 4)
+	if (READ_TO(socket_fd, msg_par, 4, DEFAULT_COMM_TO) != 4)
 	{
 		dolog(LOG_INFO, "short read on socket");
 		return -1;
@@ -57,7 +57,7 @@ int process_server_msg(int socket_fd, bool *data_available)
 
 		dolog(LOG_DEBUG, "Got a ping request (with parameter %s), sending reply (%s)", msg_par, xmit_buffer);
 
-		if (WRITE(socket_fd, xmit_buffer, 8) != 8)
+		if (WRITE_TO(socket_fd, xmit_buffer, 8, DEFAULT_COMM_TO) != 8)
 			return -1;
 	}
 	else if (strcmp(msg_cmd, "0007") == 0)	/* kernel entropy count */
@@ -69,7 +69,7 @@ int process_server_msg(int socket_fd, bool *data_available)
 
 		dolog(LOG_DEBUG, "Got a kernel entropy count request (with parameter %s), sending reply (%s)", msg_par, xmit_buffer);
 
-		if (WRITE(socket_fd, xmit_buffer, strlen(xmit_buffer)) != (int)strlen(xmit_buffer))
+		if (WRITE_TO(socket_fd, xmit_buffer, strlen(xmit_buffer), DEFAULT_COMM_TO) != (int)strlen(xmit_buffer))
 			return -1;
 	}
 	else if (strcmp(msg_cmd, "0009") == 0)	/* got data */
@@ -170,13 +170,17 @@ int main(int argc, char *argv[])
 	if (dev_random_fd == -1)
 		error_exit("failed to open %s", DEV_RANDOM);
 
-	bool want_data = false;
+	bool want_data = false, data_available = false;
 	for(;;)
 	{
 		int rc;
 		char recv_msg[8 + 1], reply[8 + 1];
 		fd_set write_fd;
 		fd_set read_fd;
+
+		FD_ZERO(&write_fd);
+		if (!want_data || socket_fd == -1)
+			FD_SET(dev_random_fd, &write_fd);
 
 		if (reconnect_server_socket(host, port, password, &socket_fd, argv[0], 0) == -1) // FIXME set client-type
 			continue;
@@ -186,9 +190,7 @@ int main(int argc, char *argv[])
 
 		// wait for /dev/random te become writable which means the entropy-
 		// level dropped below a certain threshold
-		FD_ZERO(&write_fd);
 		FD_ZERO(&read_fd);
-		FD_SET(dev_random_fd, &write_fd);
 		FD_SET(socket_fd, &read_fd);
 
 		dolog(LOG_DEBUG, "wait for low-event");
