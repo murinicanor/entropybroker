@@ -14,6 +14,7 @@
 #include "utils.h"
 #include "math.h"
 #include "protocol.h"
+#include "auth.h"
 
 void sig_handler(int sig)
 {
@@ -35,11 +36,16 @@ int main(int argc, char *argv[])
 	int socket_fd = -1;
 	int c, count = -1;
 	char *file = NULL;
+	char *password = NULL;
 
-	while((c = getopt(argc, argv, "i:o:c:")) != -1)
+	while((c = getopt(argc, argv, "X:i:o:c:")) != -1)
 	{
 		switch(c)
 		{
+			case 'X':
+				password = get_password_from_file(optarg);
+				break;
+
 			case 'i':
 				host = optarg;
 				break;
@@ -63,6 +69,8 @@ int main(int argc, char *argv[])
 		error_exit("No outputfile selected");
 	if (count < 1)
 		error_exit("No byte-count or invalid byte-count (<1) selected");
+	if (!password)
+		error_exit("No password selected");
 
 	FILE *fh = fopen(file, "wb");
 	if (!fh)
@@ -76,30 +84,9 @@ int main(int argc, char *argv[])
 	while(count > 0)
 	{
 		char recv_msg[8 + 1], reply[8 + 1];
-                char connect_msg = 0;
 
-		// connect to server
-                if (socket_fd == -1)
-                {
-                        dolog(LOG_INFO, "Connecting to %s:%d", host, port);
-                        connect_msg = 1;
-                }
-
-                while(socket_fd == -1)
-                {
-                        socket_fd = connect_to(host, port);
-                        if (socket_fd == -1)
-                        {
-                                long int sleep_micro_seconds = myrand(4000000) + 1;
-
-                                dolog(LOG_WARNING, "Failed connecting, sleeping for %f seconds", (double)sleep_micro_seconds / 1000000.0);
-
-                                usleep((long)sleep_micro_seconds);
-                        }
-                }
-
-                if (connect_msg)
-                        dolog(LOG_INFO, "Connected");
+		if (reconnect_server_socket(host, port, password, &socket_fd, argv[0], 0) == -1)
+			continue;
 
 		disable_nagle(socket_fd);
 		enable_tcp_keepalive(socket_fd);
@@ -125,10 +112,11 @@ int main(int argc, char *argv[])
 			socket_fd = -1;
 			continue;
 		}
-		reply[8] = 0x00;
-		if (strcmp(reply, "90000000") == 0)
+		if (memcmp(reply, "9000", 4) == 0)
 		{
 			dolog(LOG_WARNING, "server has no data");
+			double seconds = (double)atoi(&reply[4]) + mydrand();
+			usleep(seconds * 1000000.0);
 			continue;
 		}
 		if (!(reply[0] == '0' && reply[1] == '0' && reply[2] == '0' && reply[3] == '2'))
