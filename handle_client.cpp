@@ -704,7 +704,7 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 				// notify client of new data
 				for(loop=n_clients - 1; loop>=0; loop--)
 				{
-					if (send_got_data(clients[loop].socket_fd, ppools, config) == -1)
+					if (!clients[loop].is_server && send_got_data(clients[loop].socket_fd, ppools, config) == -1)
 					{
 						dolog(LOG_INFO, "main|connection closed, removing client %s from list", clients[loop].host);
 						dolog(LOG_DEBUG, "main|%s: %s, scc: %s", clients[loop].host, clients[loop].pfips140 -> stats(), clients[loop].pscc -> stats());
