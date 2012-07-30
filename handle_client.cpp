@@ -79,12 +79,14 @@ int send_denied_full(client_t *client, pools *ppools, statistics_t *stats, confi
 	return 0;
 }
 
-int do_client_get(pools *ppools, client_t *client, statistics_t *stats, config_t *config, fips140 *eb_output_fips140, scc *eb_output_scc, BF_KEY *key)
+int do_client_get(pools *ppools, client_t *client, statistics_t *stats, config_t *config, fips140 *eb_output_fips140, scc *eb_output_scc, BF_KEY *key, bool *no_bits)
 {
 	int cur_n_bits, cur_n_bytes;
 	int transmit_size;
 	char n_bits[4 + 1];
 	n_bits[4] = 0x00;
+
+	*no_bits = false;
 
 	if (READ_TO(client -> socket_fd, n_bits, 4, config -> communication_timeout) != 4)
 	{
@@ -122,6 +124,7 @@ int do_client_get(pools *ppools, client_t *client, statistics_t *stats, config_t
 	if (cur_n_bits == 0)
 	{
 		dolog(LOG_WARNING, "get|%s no bits in pools", client -> host);
+		*no_bits = true;
 		return send_denied_empty(client -> socket_fd, stats, config);
 	}
 	if (cur_n_bits < 0)
@@ -168,13 +171,15 @@ int do_client_get(pools *ppools, client_t *client, statistics_t *stats, config_t
 	return 0;
 }
 
-int do_client_put(pools *ppools, client_t *client, statistics_t *stats, config_t *config, BF_KEY *key)
+int do_client_put(pools *ppools, client_t *client, statistics_t *stats, config_t *config, BF_KEY *key, bool *new_bits)
 {
 	char msg[4+4+1];
 	int cur_n_bits, cur_n_bytes;
 	int n_bits_added;
 	char n_bits[4 + 1];
 	double now = get_ts();
+
+	*new_bits = false;
 
 	if (ppools -> all_pools_full())
 	{
@@ -255,6 +260,7 @@ int do_client_put(pools *ppools, client_t *client, statistics_t *stats, config_t
 	client -> bits_recv += n_bits_added;
 	stats -> total_recv += n_bits_added;
 	stats -> total_recv_requests++;
+	*new_bits = true;
 
 	free(buffer_out);
 	free(buffer_in);
@@ -392,7 +398,7 @@ int do_client_kernelpoolfilled_request(client_t *client, config_t *config)
 	return 0;
 }
 
-int do_client(pools *ppools, client_t *client, statistics_t *stats, config_t *config, fips140 *eb_output_fips140, scc *eb_output_scc, BF_KEY *key)
+int do_client(pools *ppools, client_t *client, statistics_t *stats, config_t *config, fips140 *eb_output_fips140, scc *eb_output_scc, BF_KEY *key, bool *no_bits, bool *new_bits)
 {
 	char cmd[4 + 1];
 	cmd[4] = 0x00;
@@ -406,11 +412,11 @@ int do_client(pools *ppools, client_t *client, statistics_t *stats, config_t *co
 
 	if (strcmp(cmd, "0001") == 0)		// GET bits
 	{
-		return do_client_get(ppools, client, stats, config, eb_output_fips140, eb_output_scc, key);
+		return do_client_get(ppools, client, stats, config, eb_output_fips140, eb_output_scc, key, no_bits);
 	}
 	else if (strcmp(cmd, "0002") == 0)	// PUT bits
 	{
-		return do_client_put(ppools, client, stats, config, key);
+		return do_client_put(ppools, client, stats, config, key, new_bits);
 	}
 	else if (strcmp(cmd, "0003") == 0)	// server type
 	{
@@ -487,6 +493,7 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 	BF_KEY key;
 	BF_set_key(&key, strlen(config -> auth_password), (unsigned char *)config -> auth_password);
 
+	bool no_bits = false, new_bits = false;
 	for(;;)
 	{
 		int loop, rc;
@@ -648,6 +655,7 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 						clients[loop].bits_sent, clients[loop].bits_recv, (long int)(now - clients[loop].last_message), (long int)(now - clients[loop].connected_since));
 		}
 
+		new_bits = false;
 		if (rc > 0)
 		{
 			for(loop=n_clients - 1; loop>=0; loop--)
@@ -656,7 +664,8 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 				{
 					clients[loop].last_message = now;
 
-					if (do_client(ppools, &clients[loop], &stats, config, eb_output_fips140, eb_output_scc, &key) == -1)
+					bool cur_no_bits = false, cur_new_bits = true;
+					if (do_client(ppools, &clients[loop], &stats, config, eb_output_fips140, eb_output_scc, &key, &cur_no_bits, &cur_new_bits) == -1)
 					{
 						dolog(LOG_INFO, "main|connection closed, removing client %s from list", clients[loop].host);
 						dolog(LOG_DEBUG, "main|%s: %s, scc: %s", clients[loop].host, clients[loop].pfips140 -> stats(), clients[loop].pscc -> stats());
@@ -665,6 +674,26 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 
 						forget_client(clients, &n_clients, loop);
 					}
+
+					if (cur_no_bits)
+					{
+						no_bits = true;
+						new_bits = false;
+					}
+					else if (new_bits)
+					{
+						new_bits = true;
+					}
+				}
+			}
+
+			if (new_bits && no_bits)
+			{
+				no_bits = new_bits = false;
+
+				for(loop=n_clients - 1; loop>=0; loop--)
+				{
+					// FIXME notify client
 				}
 			}
 
