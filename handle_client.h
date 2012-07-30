@@ -10,6 +10,7 @@ typedef struct
 	double last_message, last_put_message;
 	double connected_since;
 	unsigned char ivec[8];
+	bool data_avail_signaled;
 
 	fips140 *pfips140;
 	scc *pscc;

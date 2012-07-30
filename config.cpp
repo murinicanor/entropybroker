@@ -117,7 +117,7 @@ void load_config(const char *config, config_t *pconfig)
 				strcpy(p_file, par);
 			else
 				sprintf(p_file, "%s/%s", cur_dir, par);
-			printf("Load password from %s\n", p_file);
+			dolog(LOG_INFO, "Load password from %s", p_file);
 			pconfig -> auth_password = get_password_from_file(p_file);
 			free(p_file);
 		}

@@ -457,17 +457,6 @@ int do_client(pools *ppools, client_t *client, statistics_t *stats, config_t *co
 	return 0;
 }
 
-int lookup_client_settings(struct sockaddr_in *client_addr, client_t *client, config_t *config)
-{
-	// FIXME
-	client -> max_bits_per_interval = config -> default_max_bits_per_interval;
-	client -> ignore_rngtest_fips140 = config -> ignore_rngtest_fips140;
-	client -> ignore_rngtest_scc = config -> ignore_rngtest_scc;
-	client -> allow_prng = config -> allow_prng;
-
-	return 0;
-}
-
 void forget_client(client_t *clients, int *n_clients, int nr)
 {
 	int n_to_move;
@@ -480,6 +469,140 @@ void forget_client(client_t *clients, int *n_clients, int nr)
 	if (n_to_move > 0)
 		memmove(&clients[nr], &clients[nr + 1], sizeof(client_t) * n_to_move);
 	(*n_clients)--;
+}
+
+void notify_clients_data_available(client_t *clients, int *n_clients, statistics_t *stats, pools *ppools, config_t *config)
+{
+	for(int loop=*n_clients - 1; loop>=0; loop--)
+	{
+		if (clients[loop].is_server)
+			continue;
+
+		if (clients[loop].data_avail_signaled)
+			continue;
+
+		clients[loop].data_avail_signaled = true;
+		if (send_got_data(clients[loop].socket_fd, ppools, config) == -1)
+		{
+			dolog(LOG_INFO, "main|connection closed, removing client %s from list", clients[loop].host);
+			dolog(LOG_DEBUG, "main|%s: %s, scc: %s", clients[loop].host, clients[loop].pfips140 -> stats(), clients[loop].pscc -> stats());
+
+			stats -> disconnects++;
+
+			forget_client(clients, n_clients, loop);
+		}
+	}
+}
+
+void process_timed_out_cs(config_t *config, client_t *clients, int *n_clients, statistics_t *stats)
+{
+	if (config -> communication_session_timeout > 0)
+	{
+		double now = get_ts();
+
+		for(int loop=*n_clients - 1; loop>=0; loop--)
+		{
+			double time_left_in_session = (clients[loop].last_message + (double)config -> communication_session_timeout) - now;
+
+			if (time_left_in_session <= 0.0)
+			{
+				dolog(LOG_INFO, "main|connection timeout, removing client %s from list", clients[loop].host);
+				dolog(LOG_DEBUG, "%s: %s", clients[loop].host, clients[loop].pfips140 -> stats());
+
+				stats -> timeouts++;
+
+				forget_client(clients, n_clients, loop);
+			}
+		}
+	}
+}
+
+int lookup_client_settings(struct sockaddr_in *client_addr, client_t *client, config_t *config)
+{
+	// FIXME
+	client -> max_bits_per_interval = config -> default_max_bits_per_interval;
+	client -> ignore_rngtest_fips140 = config -> ignore_rngtest_fips140;
+	client -> ignore_rngtest_scc = config -> ignore_rngtest_scc;
+	client -> allow_prng = config -> allow_prng;
+
+	return 0;
+}
+
+void register_new_client(int listen_socket_fd, client_t **clients, int *n_clients, config_t *config)
+{
+	struct sockaddr_in client_addr;
+	socklen_t client_addr_len = sizeof(client_addr);
+	int new_socket_fd = accept(listen_socket_fd, (struct sockaddr *)&client_addr, &client_addr_len);
+
+	if (new_socket_fd != -1)
+	{
+		dolog(LOG_INFO, "main|new client: %s:%d (fd: %d)", inet_ntoa(client_addr.sin_addr), client_addr.sin_port, new_socket_fd);
+
+		if (config -> disable_nagle)
+			disable_nagle(new_socket_fd);
+
+		if (config -> enable_keepalive)
+			enable_tcp_keepalive(new_socket_fd);
+
+		bool ok = auth_eb(new_socket_fd, config -> auth_password, config -> communication_timeout) == 0;
+
+		if (!ok)
+		{
+			close(new_socket_fd);
+			dolog(LOG_WARNING, "main|client: %s:%d (fd: %d) authentication failed", inet_ntoa(client_addr.sin_addr), client_addr.sin_port, new_socket_fd);
+		}
+		else
+		{
+			(*n_clients)++;
+
+			*clients = (client_t *)realloc(*clients, *n_clients * sizeof(client_t));
+			if (!*clients)
+				error_exit("memory allocation error");
+
+			int nr = *n_clients - 1;
+			client_t *p = &(*clients)[nr];
+
+			memset(p, 0x00, sizeof(client_t));
+			p -> socket_fd = new_socket_fd;
+			int dummy = sizeof(p -> host);
+			snprintf(p -> host, dummy, "%s:%d", inet_ntoa(client_addr.sin_addr), client_addr.sin_port);
+			p -> pfips140 = new fips140();
+			p -> pscc = new scc();
+			double now = get_ts();
+			p -> last_message = now;
+			p -> connected_since = now;
+			p -> last_put_message = now;
+			p -> pfips140 -> set_user(p -> host);
+			p -> pscc     -> set_user(p -> host);
+			p -> pscc -> set_threshold(config -> scc_threshold);
+			memcpy(p -> ivec, config -> auth_password, min(strlen(config -> auth_password), 8));
+
+			if (lookup_client_settings(&client_addr, p, config) == -1)
+			{
+				dolog(LOG_INFO, "main|client %s not found, terminating connection", p -> host);
+
+				delete p -> pfips140;
+				delete p -> pscc;
+
+				(*n_clients)--;
+
+				close(new_socket_fd);
+			}
+		}
+	}
+}
+
+void send_pings(client_t *clients, int *n_clients, config_t *config, statistics_t *stats)
+{
+	for(int loop=*n_clients - 1; loop>=0; loop--)
+	{
+		if (do_client_send_ping_request(&clients[loop], config) == -1)
+		{
+			stats -> disconnects++;
+
+			forget_client(clients, n_clients, loop);
+		}
+	}
 }
 
 void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc *eb_output_scc)
@@ -628,15 +751,7 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 
 		if (config -> ping_interval != 0 && ((last_ping + (double)config -> ping_interval) - now) <= 0)
 		{
-			for(loop=n_clients - 1; loop>=0; loop--)
-			{
-				if (do_client_send_ping_request(&clients[loop], config) == -1)
-				{
-					stats.disconnects++;
-
-					forget_client(clients, &n_clients, loop);
-				}
-			}
+			send_pings(clients, &n_clients, config, &stats);
 
 			last_ping = now;
 		}
@@ -673,6 +788,7 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 				if (FD_ISSET(clients[loop].socket_fd, &rfds))
 				{
 					clients[loop].last_message = now;
+					clients[loop].data_avail_signaled = false;
 
 					bool cur_no_bits = false, cur_new_bits = false;
 					if (do_client(ppools, &clients[loop], &stats, config, eb_output_fips140, eb_output_scc, &key, &cur_no_bits, &cur_new_bits) == -1)
@@ -705,100 +821,17 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 
 				no_bits = new_bits = false;
 
-				// notify client of new data
-				for(loop=n_clients - 1; loop>=0; loop--)
-				{
-					if (!clients[loop].is_server && send_got_data(clients[loop].socket_fd, ppools, config) == -1)
-					{
-						dolog(LOG_INFO, "main|connection closed, removing client %s from list", clients[loop].host);
-						dolog(LOG_DEBUG, "main|%s: %s, scc: %s", clients[loop].host, clients[loop].pfips140 -> stats(), clients[loop].pscc -> stats());
-
-						stats.disconnects++;
-
-						forget_client(clients, &n_clients, loop);
-					}
-				}
+				notify_clients_data_available(clients, &n_clients, &stats, ppools, config);
 			}
 
 			if (FD_ISSET(listen_socket_fd, &rfds))
 			{
-				struct sockaddr_in client_addr;
-				socklen_t client_addr_len = sizeof(client_addr);
-				int new_socket_fd = accept(listen_socket_fd, (struct sockaddr *)&client_addr, &client_addr_len);
-
-				if (new_socket_fd != -1)
-				{
-					dolog(LOG_INFO, "main|new client: %s:%d (fd: %d)", inet_ntoa(client_addr.sin_addr), client_addr.sin_port, new_socket_fd);
-
-					if (config -> disable_nagle)
-						disable_nagle(new_socket_fd);
-
-					if (config -> enable_keepalive)
-						enable_tcp_keepalive(new_socket_fd);
-
-					bool ok = auth_eb(new_socket_fd, config -> auth_password, config -> communication_timeout) == 0;
-
-					if (!ok)
-					{
-						close(new_socket_fd);
-						dolog(LOG_WARNING, "main|client: %s:%d (fd: %d) authentication failed", inet_ntoa(client_addr.sin_addr), client_addr.sin_port, new_socket_fd);
-					}
-					else
-					{
-						n_clients++;
-
-						clients = (client_t *)realloc(clients, n_clients * sizeof(client_t));
-						if (!clients)
-							error_exit("memory allocation error");
-
-						memset(&clients[n_clients - 1], 0x00, sizeof(client_t));
-						clients[n_clients - 1].socket_fd = new_socket_fd;
-						int dummy = sizeof(clients[n_clients - 1].host);
-						snprintf(clients[n_clients - 1].host, dummy, "%s:%d", inet_ntoa(client_addr.sin_addr), client_addr.sin_port);
-						clients[n_clients - 1].pfips140 = new fips140();
-						clients[n_clients - 1].pscc = new scc();
-						clients[n_clients - 1].last_message = now;
-						clients[n_clients - 1].connected_since = now;
-						clients[n_clients - 1].last_put_message = now;
-						clients[n_clients - 1].pfips140 -> set_user(clients[n_clients - 1].host);
-						clients[n_clients - 1].pscc     -> set_user(clients[n_clients - 1].host);
-						clients[n_clients - 1].pscc -> set_threshold(config -> scc_threshold);
-						memcpy(clients[n_clients - 1].ivec, config -> auth_password, min(strlen(config -> auth_password), 8));
-
-						if (lookup_client_settings(&client_addr, &clients[n_clients - 1], config) == -1)
-						{
-							dolog(LOG_INFO, "main|client %s not found, terminating connection", clients[n_clients - 1].host);
-
-							delete clients[n_clients - 1].pfips140;
-							delete clients[n_clients - 1].pscc;
-
-							n_clients--;
-
-							close(new_socket_fd);
-						}
-					}
-				}
+				register_new_client(listen_socket_fd, &clients, &n_clients, config);
 			}
 		}
 
 		/* session time-outs */
-		if (config -> communication_session_timeout > 0)
-		{
-			for(loop=n_clients - 1; loop>=0; loop--)
-			{
-				double time_left_in_session = (clients[loop].last_message + (double)config -> communication_session_timeout) - now;
-
-				if (time_left_in_session <= 0.0)
-				{
-					dolog(LOG_INFO, "main|connection timeout, removing client %s from list", clients[loop].host);
-					dolog(LOG_DEBUG, "%s: %s", clients[loop].host, clients[loop].pfips140 -> stats());
-
-					stats.timeouts++;
-
-					forget_client(clients, &n_clients, loop);
-				}
-			}
-		}
+		process_timed_out_cs(config, clients, &n_clients, &stats);
 	}
 
 	dolog(LOG_WARNING, "main|end of main loop");
