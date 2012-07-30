@@ -193,5 +193,7 @@ int main(int argc, char *argv[])
 
 	fclose(fh);
 
+	dolog(LOG_INFO, "Finished");
+
 	return 0;
 }
