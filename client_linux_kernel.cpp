@@ -173,14 +173,21 @@ int main(int argc, char *argv[])
 	bool want_data = false, data_available = false;
 	for(;;)
 	{
-		int rc;
-		char recv_msg[8 + 1], reply[8 + 1];
-		fd_set write_fd;
 		fd_set read_fd;
-
+		FD_ZERO(&read_fd);
+		fd_set write_fd;
 		FD_ZERO(&write_fd);
-		if (!want_data || socket_fd == -1)
+
+		bool re_request = false;
+		if (socket_fd == -1)
+			re_request = true;
+
+		if (!want_data && !re_request)
+		{
+			// wait for /dev/random te become writable which means the entropy-
+			// level dropped below a certain threshold
 			FD_SET(dev_random_fd, &write_fd);
+		}
 
 		if (reconnect_server_socket(host, port, password, &socket_fd, argv[0], 0) == -1) // FIXME set client-type
 			continue;
@@ -188,13 +195,11 @@ int main(int argc, char *argv[])
 		disable_nagle(socket_fd);
 		enable_tcp_keepalive(socket_fd);
 
-		// wait for /dev/random te become writable which means the entropy-
-		// level dropped below a certain threshold
-		FD_ZERO(&read_fd);
-		FD_SET(socket_fd, &read_fd);
+		if (!re_request)
+			FD_SET(socket_fd, &read_fd);
 
 		dolog(LOG_DEBUG, "wait for low-event");
-		for(;;)
+		for(;!re_request;)
 		{
 			int rc = select(max(socket_fd, dev_random_fd) + 1, &read_fd, &write_fd, NULL, NULL); /* wait for krng */
 			dolog(LOG_DEBUG, "select returned with %d", rc);
@@ -216,9 +221,11 @@ int main(int argc, char *argv[])
 			}
 		}
 
-		if (FD_ISSET(dev_random_fd, &write_fd) || (data_available && want_data))
+		if (FD_ISSET(dev_random_fd, &write_fd) || (data_available && want_data) || re_request)
 		{
-			want_data = false;
+			data_available = want_data = false;
+
+			char recv_msg[8 + 1], reply[8 + 1];
 
 			/* find out how many bits to add */
 			int n_bits_in_kernel_rng = kernel_rng_get_entropy_count();
@@ -286,7 +293,7 @@ int main(int argc, char *argv[])
 
 			dolog(LOG_DEBUG, "data received");
 
-			rc = kernel_rng_add_entropy(buffer_out, will_get_n_bytes, will_get_n_bits);
+			int rc = kernel_rng_add_entropy(buffer_out, will_get_n_bytes, will_get_n_bits);
 			if (rc == -1)
 				error_exit("error submiting entropy data to kernel");
 
