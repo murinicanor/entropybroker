@@ -13,12 +13,19 @@
 #include "log.h"
 #include "utils.h"
 #include "math.h"
+#include "protocol.h"
 
 void sig_handler(int sig)
 {
 	fprintf(stderr, "Exit due to signal %d\n", sig);
-	unlink(pid_file);
 	exit(0);
+}
+
+void help()
+{
+        printf("-i host   entropy_broker-host to connect to\n");
+        printf("-c x      number of bytes to retrieve\n");
+        printf("-o file   file to write to\n");
 }
 
 int main(int argc, char *argv[])
@@ -26,19 +33,49 @@ int main(int argc, char *argv[])
 	char *host = (char *)"localhost";
 	int port = 55225;
 	int socket_fd = -1;
+	int c, count = -1;
+	char *file = NULL;
+
+	while((c = getopt(argc, argv, "i:o:c:")) != -1)
+	{
+		switch(c)
+		{
+			case 'i':
+				host = optarg;
+				break;
+
+			case 'o':
+				file = optarg;
+				break;
+
+			case 'c':
+				count = atoi(optarg);
+				break;
+
+			case 'h':
+			default:
+				help();
+				return 0;
+		}
+	}
+
+	if (!file)
+		error_exit("No outputfile selected");
+	if (count < 1)
+		error_exit("No byte-count or invalid byte-count (<1) selected");
+
+	FILE *fh = fopen(file, "wb");
+	if (!fh)
+		error_exit("Cannot create file %s", file);
 
 	signal(SIGPIPE, SIG_IGN);
 	signal(SIGTERM, sig_handler);
 	signal(SIGINT , sig_handler);
 	signal(SIGQUIT, sig_handler);
 
-	for(;;)
+	while(count > 0)
 	{
-		unsigned char *buffer;
-		int will_get_n_bits, will_get_n_bytes;
 		char recv_msg[8 + 1], reply[8 + 1];
-		int n_bits_to_get;
-                fd_set write_fd;
                 char connect_msg = 0;
 
 		// connect to server
@@ -67,7 +104,8 @@ int main(int argc, char *argv[])
 		disable_nagle(socket_fd);
 		enable_tcp_keepalive(socket_fd);
 
-		n_bits_to_get = myrand(9992) + 1;
+		int n_bytes_to_get = min(1249, count);
+		int n_bits_to_get = n_bytes_to_get * 8;
 		dolog(LOG_INFO, "will get %d bits", n_bits_to_get);
 
 		snprintf(recv_msg, sizeof(recv_msg), "0001%04d", n_bits_to_get);
@@ -95,19 +133,19 @@ int main(int argc, char *argv[])
 		}
 		if (!(reply[0] == '0' && reply[1] == '0' && reply[2] == '0' && reply[3] == '2'))
 			error_exit("invalid msg: %s", reply);
-		will_get_n_bits = atoi(&reply[4]);
-		will_get_n_bytes = (will_get_n_bits + 7) / 8;
+		int will_get_n_bits = atoi(&reply[4]);
+		int will_get_n_bytes = (will_get_n_bits + 7) / 8;
 
 		dolog(LOG_INFO, "server is offering %d bits (%d bytes)", will_get_n_bits, will_get_n_bytes);
 
-		buffer_in = (unsigned char *)malloc(will_get_n_bytes);
+		unsigned char *buffer_in = (unsigned char *)malloc(will_get_n_bytes);
 		if (!buffer_in)
 			error_exit("out of memory allocating %d bytes", will_get_n_bytes);
-		buffer_out = (unsigned char *)malloc(will_get_n_bytes);
+		unsigned char *buffer_out = (unsigned char *)malloc(will_get_n_bytes);
 		if (!buffer_out)
 			error_exit("out of memory allocating %d bytes", will_get_n_bytes);
 
-		if (READ(socket_fd, (char *)buffer, will_get_n_bytes) != will_get_n_bytes)
+		if (READ(socket_fd, (char *)buffer_in, will_get_n_bytes) != will_get_n_bytes)
 		{
 			dolog(LOG_INFO, "read error from %s:%d", host, port);
 			close(socket_fd);
@@ -119,9 +157,16 @@ int main(int argc, char *argv[])
 
 		decrypt(buffer_in, buffer_out, will_get_n_bytes);
 
+		if (fwrite(buffer_out, 1, will_get_n_bytes, fh) != (size_t)will_get_n_bytes)
+			error_exit("File write error");
+
 		free(buffer_out);
 		free(buffer_in);
+
+		count -= will_get_n_bytes;
 	}
+
+	fclose(fh);
 
 	return 0;
 }

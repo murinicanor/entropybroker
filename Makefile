@@ -35,8 +35,9 @@ OBJSclk=client_linux_kernel.o error.o kernel_prng_io.o kernel_prng_rw.o log.o pr
 OBJScle=client_egd.o error.o log.o kernel_prng_rw.o math.o protocol.o utils.o auth.o
 OBJSte=test_egd_speed.o utils.o kernel_prng_rw.o log.o error.o auth.o
 OBJSsk=server_linux_kernel.o utils.o kernel_prng_rw.o kernel_prng_io.o log.o error.o protocol.o server_utils.o auth.o
+OBJScf=client_file.o error.o log.o kernel_prng_rw.o math.o protocol.o utils.o auth.o
 
-all: entropy_broker eb_server_audio eb_server_timers eb_server_v4l eb_server_stream eb_client_linux_kernel eb_server_egd eb_client_egd eb_test_egd_speed eb_server_linux_kernel
+all: entropy_broker eb_server_audio eb_server_timers eb_server_v4l eb_server_stream eb_client_linux_kernel eb_server_egd eb_client_egd eb_test_egd_speed eb_server_linux_kernel eb_client_file
 
 check:
 	cppcheck -v --enable=all --std=c++11 --inconclusive . 2> err.txt
@@ -71,7 +72,10 @@ eb_test_egd_speed: $(OBJSte)
 eb_server_linux_kernel: $(OBJSsk)
 	$(CXX) -Wall -W $(OBJSsk) $(LDFLAGS) -o eb_server_linux_kernel
 
-install: entropy_broker eb_server_audio eb_server_timers eb_server_v4l eb_server_stream eb_server_egd eb_client_linux_kernel eb_client_egd eb_test_egd_speed eb_server_linux_kernel
+eb_client_file: $(OBJScf)
+	$(CXX) -Wall -W $(OBJScf) $(LDFLAGS) -o eb_client_file
+
+install: entropy_broker eb_server_audio eb_server_timers eb_server_v4l eb_server_stream eb_server_egd eb_client_linux_kernel eb_client_egd eb_test_egd_speed eb_server_linux_kernel eb_client_file
 	mkdir -p $(BIN) $(ETC) $(VAR) $(PID) $(CACHE)
 	cp entropy_broker $(BIN)
 	cp eb_server_audio $(BIN)
@@ -83,12 +87,13 @@ install: entropy_broker eb_server_audio eb_server_timers eb_server_v4l eb_server
 	cp eb_client_egd $(BIN)
 	cp eb_test_egd_speed $(BIN)
 	cp eb_server_linux_kernel $(BIN)
+	cp eb_client_file $(BIN)
 	cp entropybroker.conf $(ETC)
 	cp password.txt $(ETC)
 	chmod 600 $(ETC)/password.txt
 
 clean:
-	rm -f $(OBJSeb) $(OBJSsa) $(OBJSst) $(OBJSsv) $(OBJSss)$(OBJSse) $(OBJSclk) $(OBJSte) $(OBJSsk) entropy_broker core *.da *.gcov *.bb* *.o eb_server_audio eb_server_timers eb_server_v4l eb_server_stream eb_server_egd eb_client_linux_kernel eb_client_egd eb_test_egd_speed server_linux_kernel
+	rm -f $(OBJSeb) $(OBJSsa) $(OBJSst) $(OBJSsv) $(OBJSss)$(OBJSse) $(OBJSclk) $(OBJSte) $(OBJSsk) $(OBJScf) entropy_broker core *.da *.gcov *.bb* *.o eb_server_audio eb_server_timers eb_server_v4l eb_server_stream eb_server_egd eb_client_linux_kernel eb_client_egd eb_test_egd_speed eb_server_linux_kernel eb_client_file
 
 package:
 	mkdir eb-$(VERSION)
