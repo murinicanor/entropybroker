@@ -4,3 +4,4 @@
 - acls (ip)
 - user-accounts in protocol?
 - server_proc die iets start (+herstart), data compressed(?) en dan submit naar eb
+- client_to_file/stdout (om bijv. diehard er op los te kunnen laten)
