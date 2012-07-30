@@ -115,6 +115,17 @@ on which 'entropy_broker' runs. Also adding '-s' is usefull as
 it'll make the servers/clients/entropy_broker log to syslog.
 
 
-License: GPL2
+Tips
+====
+When your system has enough entropy, you can decide to let all
+OpenSSL applications use the kernel entropy driver. For that,
+in /etc/ssl/openssl.cnf change the line with RANDFILE in it
+to:
+	RANDFILE = /dev/urandom
+
+
+License
+=======
+GPL2
 
 --- folkert@vanheusden.com / folkert.mobiel@gmail.com
