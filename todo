@@ -8,3 +8,4 @@
   als leeg: dan client aan een lijst toevoegen
   als dan een server data toevoegd, lijst aflopen en msg sturen en dan lijst wissen
   clients: in potocol.cpp een dingetje dat op een breicht wacht en daarbij ping/007 al processed en ook reconnect doet? of gaat dat mis bij bovenstaande? en/of misschien ook zo nu en dan een ping? dit dingetje met een time-out zodat je ook af en toe een ping kunt sturen
+- auth.cpp: eerst een 4-byte protocol version sturen (eb) en checken (server/client)
