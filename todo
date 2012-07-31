@@ -5,3 +5,7 @@
 - user-accounts in protocol?
 - server_proc die iets start (+herstart), data compressed(?) en dan submit naar eb
 - multithreading
+  in client_t: pthread_t id van de thread, dan in de main een pthread_join: met pthread_equal() kijken welke client dat is en die dan uit de lijst joepsen
+  na een accept() door lijst itereren en een pthread_tryjoin_np doen op iedere thread?
+  thread: int pthread_setcancelstate(int state, int *oldstate) / PTHREAD_CANCEL_DISABLE/ENBALE rond calls naar de pool(s) ivm mutexen
+- http://en.wikipedia.org/wiki/Secure_Remote_Password_protocol
