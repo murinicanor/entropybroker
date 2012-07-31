@@ -1,6 +1,7 @@
 #define PROTOCOL_VERSION 2
 #define TCP_SILENT_FAIL_TEST_INTERVAL 120
 
+void make_msg(char *where_to, int code, int value);
 int reconnect_server_socket(char *host, int port, char *password, int *socket_fd, const char *type, char is_server);
 void set_password(char *password);
 int sleep_interruptable(int socket_fd, int how_long);

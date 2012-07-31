@@ -28,6 +28,7 @@
 #include "utils.h"
 #include "signals.h"
 #include "auth.h"
+#include "protocol.h"
 
 extern const char *pid_file;
 
@@ -40,7 +41,7 @@ int send_denied_empty(int fd, statistics_t *stats, config_t *config)
 
 	// FIXME seconds = ... depending on stats
 
-	snprintf(buffer, sizeof(buffer), "9000%04d", seconds);
+	make_msg(buffer, 9000, seconds);
 
 	return WRITE_TO(fd, buffer, 8, config -> communication_timeout) == 8 ? 0 : -1;
 }
@@ -51,7 +52,7 @@ int send_denied_quota(int fd, statistics_t *stats, config_t *config)
 
 	stats -> n_times_quota++;
 
-	snprintf(buffer, sizeof(buffer), "9002%04d", config -> reset_counters_interval);
+	make_msg(buffer, 9002, config -> reset_counters_interval);
 
 	return WRITE_TO(fd, buffer, 8, config -> communication_timeout) == 8 ? 0 : -1;
 }
@@ -63,14 +64,8 @@ int send_denied_full(client_t *client, pools *ppools, statistics_t *stats, confi
 
 	stats -> n_times_full++;
 
-	if (stats -> bps != 0)
-	{
-		// determine how many seconds it'll take before the current pool is empty
-		int n_bits_in_pool = ppools -> get_bit_sum();
-		seconds = min(config -> default_max_sleep_when_pool_full, max(1, (n_bits_in_pool * 0.75) / max(1, stats -> bps)));
-	}
+	make_msg(buffer, 9001, seconds);
 
-	sprintf(buffer, "9001%04d", seconds);
 	dolog(LOG_INFO, "denied|%s all pools full, sleep of %d seconds", client -> host, seconds);
 
 	if (WRITE_TO(client -> socket_fd, buffer, 8, config -> communication_timeout) != 8)
@@ -84,7 +79,7 @@ int send_got_data(int fd, pools *ppools, config_t *config)
 	char buffer[4+4+1];
 
 	// data is an estimate; it can be different anyway as other clients may come first
-	snprintf(buffer, sizeof(buffer), "0009%04d", min(9999, ppools -> get_bit_sum()));
+	make_msg(buffer, 9, min(9999, ppools -> get_bit_sum())); // 0009
 
 	return WRITE_TO(fd, buffer, 8, config -> communication_timeout) == 8 ? 0 : -1;
 }
@@ -93,7 +88,7 @@ int send_need_data(int fd, config_t *config)
 {
 	char buffer[4+4+1];
 
-	snprintf(buffer, sizeof(buffer), "00100000");
+	make_msg(buffer, 10, 0); // 0010 0000
 
 	return WRITE_TO(fd, buffer, 8, config -> communication_timeout) == 8 ? 0 : -1;
 }
@@ -170,7 +165,7 @@ int do_client_get(pools *ppools, client_t *client, statistics_t *stats, config_t
 	unsigned char *output_buffer = (unsigned char *)malloc(transmit_size);
 	if (!output_buffer)
 		error_exit("error allocating %d bytes of memory", cur_n_bytes);
-	sprintf((char *)output_buffer, "0002%04d", cur_n_bits);
+	make_msg((char *)output_buffer, 2, cur_n_bits); // 0002
 
 	dolog(LOG_DEBUG, "get|%s transmit size: %d, msg: %s", client -> host, transmit_size, output_buffer);
 
@@ -239,7 +234,7 @@ int do_client_put(pools *ppools, client_t *client, statistics_t *stats, config_t
 		return -1;
 	}
 
-	sprintf(msg, "0001%04d", cur_n_bits);
+	make_msg(msg, 1, cur_n_bits); // 0001
 	if (WRITE_TO(client -> socket_fd, msg, 8, config -> communication_timeout) != 8)
 	{
 		dolog(LOG_INFO, "put|%s short write while sending ack", client -> host);
@@ -331,7 +326,7 @@ int do_client_send_ping_request(client_t *client, config_t *config)
 {
 	char buffer[8 + 1];
 
-	snprintf(buffer, sizeof(buffer), "0004%04d", client -> ping_nr);
+	make_msg(buffer, 4, client -> ping_nr); // 0004
 
 	if (WRITE_TO(client -> socket_fd, buffer, 8, config -> communication_timeout) != 8)
 	{
@@ -402,7 +397,7 @@ int do_client_kernelpoolfilled_request(client_t *client, config_t *config)
 {
 	char buffer[8 + 1];
 
-	snprintf(buffer, sizeof(buffer), "00070000");
+	make_msg(buffer, 7, 0); // 0007
 
 	if (WRITE_TO(client -> socket_fd, buffer, 8, config -> communication_timeout) != 8)
 	{

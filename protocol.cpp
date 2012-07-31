@@ -15,6 +15,25 @@
 unsigned char ivec[8] = { 0 };
 BF_KEY key;
 
+void make_msg(char *where_to, int code, int value)
+{
+	if (code < 0 || code > 9999)
+		error_exit("invalid code: %d", code);
+
+	if (value < 0)
+	{
+		dolog(LOG_WARNING, "value %d too small, adjusting to 0", value);
+		value = 0;
+	}
+	else if (value > 9999)
+	{
+		dolog(LOG_WARNING, "value %d too big, truncating to 9999", value);
+		value = 9999;
+	}
+
+	snprintf(where_to, 9, "%04d%04d", code, value);
+}
+
 void error_sleep(int count)
 {
 	long int sleep_micro_seconds = myrand(count * 1000000) + 1;
@@ -67,21 +86,26 @@ int reconnect_server_socket(char *host, int port, char *password, int *socket_fd
 
 	if (connect_msg)
 	{
-		int str_len;
 		char buffer[1250];
 
 		dolog(LOG_INFO, "Connected");
 
-		if (strlen(type) == 0)
+		int len = strlen(type);
+		if (len > 1240)
+			error_exit("client/server-type too large %d (%s)", len, type);
+
+		if (len == 0)
 			error_exit("client/server-type should not be 0 bytes in size");
 
 		if (is_server)
-			sprintf((char *)buffer, "0003%04d%s", (int)strlen(type), type);
+			make_msg((char *)buffer, 3, len);
 		else
-			sprintf((char *)buffer, "0006%04d%s", (int)strlen(type), type);
-		str_len = strlen(buffer);
+			make_msg((char *)buffer, 6, len);
+		strcat((char *)buffer, type);
 
-		if (WRITE_TO(*socket_fd, buffer, str_len, DEFAULT_COMM_TO) != str_len)
+		int msg_len = strlen(buffer);
+
+		if (WRITE_TO(*socket_fd, buffer, msg_len, DEFAULT_COMM_TO) != msg_len)
 		{
 			dolog(LOG_INFO, "connection closed");
 			close(*socket_fd);
@@ -117,7 +141,7 @@ int sleep_interruptable(int socket_fd, int how_long)
 	{
 		char buffer[8 + 1];
 
-		if (READ_TO(socket_fd, buffer, 8, DEFAULT_COMM_TO) != DEFAULT_COMM_TO)
+		if (READ_TO(socket_fd, buffer, 8, DEFAULT_COMM_TO) != 8)
 		{
 			dolog(LOG_INFO, "error receiving unsollicited message");
 			return -1;
@@ -156,6 +180,8 @@ int message_transmit_entropy_data(int socket_fd, unsigned char *bytes_in, int n_
 		}
 
 		// ack from server?
+	ignore_unsollicited_msg: // we jump to this label when unsollicited msgs are
+		// received during data-transmission handshake
 		if (READ_TO(socket_fd, reply, 8, DEFAULT_COMM_TO) != 8)
 		{
 			dolog(LOG_INFO, "error receiving ack/nack");
@@ -164,12 +190,6 @@ int message_transmit_entropy_data(int socket_fd, unsigned char *bytes_in, int n_
 
 		value = atoi(&reply[4]);
 		reply[4] = 0x00;
-
-		if (value <= 0)
-		{
-			dolog(LOG_CRIT, "%s value %d less then 1", reply, value);
-			return -1;
-		}
 
 		if (strcmp(reply, "0001") == 0)                 // ACK
 		{
@@ -214,7 +234,9 @@ int message_transmit_entropy_data(int socket_fd, unsigned char *bytes_in, int n_
 		}
 		else if (strcmp(reply, "0010") == 0)            // there's a need for data
 		{
-			dolog(LOG_DEBUG, "Un-expected \"need for data\" message from broker, this is harmless");
+			// this message can be received during transmission hand-
+			// shake as it might have been queued earlier
+			goto ignore_unsollicited_msg;
 		}
 		else
 		{
