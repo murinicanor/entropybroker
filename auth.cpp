@@ -45,7 +45,7 @@ int auth_eb(int fd, char *password, int to)
         SHA1((const unsigned char *)hash_cmp_str, strlen(hash_cmp_str), (unsigned char *)hash_cmp);
 
 	char hash_in[SHA_DIGEST_LENGTH];
-	if (READ_TO(fd, hash_in, SHA_DIGEST_LENGTH, to) == -1)
+	if (READ_TO(fd, hash_in, SHA_DIGEST_LENGTH, to) <= 0)
 	{
 		dolog(LOG_INFO, "Connection for fd %d closed (3)", fd);
 		return -1;
@@ -99,7 +99,7 @@ int auth_client_server(int fd, char *password, int to)
 	unsigned char rnd_str_size;
 	char prot_ver[4 + 1];
 
-	if (READ_TO(fd, prot_ver, 4, to) == -1)
+	if (READ_TO(fd, prot_ver, 4, to) <= 0)
 	{
 		dolog(LOG_INFO, "Connection for fd %d closed (0)", fd);
 		return -1;
@@ -109,7 +109,7 @@ int auth_client_server(int fd, char *password, int to)
 	if (eb_ver != PROTOCOL_VERSION)
 		error_exit("Broker server has unsupported protocol version %d! (expecting %d)", eb_ver, PROTOCOL_VERSION);
 
-	if (READ_TO(fd, (char *)&rnd_str_size, 1, to) == -1)
+	if (READ_TO(fd, (char *)&rnd_str_size, 1, to) <= 0)
 	{
 		dolog(LOG_INFO, "Connection for fd %d closed (1)", fd);
 		return -1;
@@ -118,7 +118,7 @@ int auth_client_server(int fd, char *password, int to)
 		error_exit("INTERNAL ERROR: random string is 0 characters!");
 	if (rnd_str_size >= sizeof rnd_str)
 		error_exit("INTERNAL ERROR: random string too long!");
-	if (READ_TO(fd, rnd_str, rnd_str_size, to) == -1)
+	if (READ_TO(fd, rnd_str, rnd_str_size, to) <= 0)
 	{
 		dolog(LOG_INFO, "Connection for fd %d closed (2)", fd);
 		return -1;
