@@ -635,6 +635,9 @@ void send_pings(client_t *clients, int *n_clients, config_t *config, statistics_
 {
 	for(int loop=*n_clients - 1; loop>=0; loop--)
 	{
+		if (clients[loop].is_server)
+			continue;
+
 		if (do_client_send_ping_request(&clients[loop], config) == -1)
 		{
 			stats -> disconnects++;
