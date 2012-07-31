@@ -61,8 +61,11 @@ void handle_client(int fd, char *host, int port)
 	snprintf(get_msg, sizeof(get_msg), "0001%04d", n_bits_to_get);
 
 	bool send_request = true;
+	double last_msg = 0.0;
 	for(;;)
 	{
+		double now = get_ts();
+
 		if (socket_fd == -1)
 		{
 			dolog(LOG_INFO, "(re-)connecting to %s:%d", host, port);
@@ -73,6 +76,8 @@ void handle_client(int fd, char *host, int port)
 				send_request = true;
 				continue;
 			}
+
+			last_msg = now;
 
 			dolog(LOG_INFO, "Connected, fd: %d", socket_fd);
 		}
@@ -89,16 +94,20 @@ void handle_client(int fd, char *host, int port)
 				send_request = true;
 				continue;
 			}
+
+			last_msg = now;
 		}
 
 		dolog(LOG_DEBUG, "request sent");
 
-		int rc = -1;
-		if (send_request)
-			rc = READ_TO(socket_fd, reply, 8, DEFAULT_COMM_TO);
-		else
-			rc = READ(socket_fd, reply, 8);
-		if (rc != 8)
+		double sleep = (last_msg + TCP_SILENT_FAIL_TEST_INTERVAL) - now;
+		if (sleep <= 0.0)
+			sleep = 1.0;
+
+		int rc = READ_TO(socket_fd, reply, 8, send_request ? DEFAULT_COMM_TO : sleep);
+		if (rc == 0)
+			send_request = true;
+		else if (rc != 8)
 		{
 			dolog(LOG_INFO, "read error from %s:%d", host, port);
 			close(socket_fd);
@@ -107,6 +116,8 @@ void handle_client(int fd, char *host, int port)
 			continue;
 		}
 		reply[8] = 0x00;
+
+		last_msg = now;
 
 		dolog(LOG_DEBUG, "received reply: %s", reply);
 

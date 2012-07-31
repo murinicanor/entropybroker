@@ -143,18 +143,26 @@ int main(int argc, char *argv[])
 		snprintf(get_msg, sizeof(get_msg), "0001%04d", n_bits_to_get);
 
 		bool send_request = true;
+		double last_msg = 0.0;
 		for(;;)
 		{
+			double now = get_ts();
+			if ((now - last_msg) > TCP_SILENT_FAIL_TEST_INTERVAL)
+				send_request = true;
+
 			if (socket_fd == -1)
 			{
 				dolog(LOG_INFO, "(re-)connecting to %s:%d", host, port);
 
+				send_request = true;
 				if (reconnect_server_socket(host, port, password, &socket_fd, "client_egd " VERSION, 0) == -1)
 				{
 					dolog(LOG_CRIT, "cannot connect to %s:%d", host, port);
-					send_request = true;
 					continue;
 				}
+
+				now = get_ts();
+				last_msg = now;
 
 				dolog(LOG_INFO, "Connected, fd: %d", socket_fd);
 			}
@@ -171,16 +179,20 @@ int main(int argc, char *argv[])
 					send_request = true;
 					continue;
 				}
+
+				last_msg = now;
 			}
 
 			dolog(LOG_DEBUG, "request sent");
 
-			int rc = -1;
-			if (send_request)
-				rc = READ_TO(socket_fd, reply, 8, DEFAULT_COMM_TO);
-			else
-				rc = READ(socket_fd, reply, 8);
-			if (rc != 8)
+			double sleep = (last_msg + TCP_SILENT_FAIL_TEST_INTERVAL) - now;
+			if (sleep <= 0.0)
+				sleep = 1.0;
+
+			int rc = READ_TO(socket_fd, reply, 8, send_request ? DEFAULT_COMM_TO : sleep);
+			if (rc == 0)
+				send_request = true;
+			else if (rc != 8)
 			{
 				dolog(LOG_INFO, "read error from %s:%d", host, port);
 				close(socket_fd);

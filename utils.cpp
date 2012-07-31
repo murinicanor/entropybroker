@@ -99,7 +99,7 @@ int READ_TO(int fd, char *whereto, size_t len, int to)
 		}
 		else if (rc == 0)
 		{
-			return -1;
+			return 0;
 		}
 
 		if (FD_ISSET(fd, &rfds))	// should always evaluate to true at this point

@@ -22,7 +22,7 @@ PID=$(VAR)/run
 
 CXX=g++
 DEBUG= -g #-D_DEBUG #-fprofile-arcs -ftest-coverage # -pg -g
-LINT=-Wall -W -Wconversion -Wshadow -Wwrite-strings -Wunused
+LINT=-Wshadow -Wall # -W -Wconversion -Wwrite-strings -Wunused
 CXXFLAGS+=-O3 -DVERSION=\"${VERSION}\" $(LINT) $(DEBUG) -DCONFIG=\"${ETC}/entropybroker.conf\" -DCACHE_DIR=\"${CACHE}\" -DPID_DIR=\"${PID}\"
 LDFLAGS+=$(DEBUG) -lcrypto -lrt -lz
 

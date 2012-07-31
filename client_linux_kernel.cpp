@@ -171,14 +171,23 @@ int main(int argc, char *argv[])
 		error_exit("failed to open %s", DEV_RANDOM);
 
 	bool want_data = false, data_available = false;
+	double last_msg = 0.0;
 	for(;;)
 	{
+		bool re_request = false;
+
+		// sometimes tcp sessions fail silently, this code will make
+		// this program try at least once every 2 minutes to work
+		// around such problems
+		double now = get_ts();
+		if ((now - last_msg) > TCP_SILENT_FAIL_TEST_INTERVAL)
+			re_request = true;
+
 		fd_set read_fd;
 		FD_ZERO(&read_fd);
 		fd_set write_fd;
 		FD_ZERO(&write_fd);
 
-		bool re_request = false;
 		if (socket_fd == -1)
 			re_request = true;
 
@@ -189,8 +198,11 @@ int main(int argc, char *argv[])
 			FD_SET(dev_random_fd, &write_fd);
 		}
 
+		bool attempt_connect = socket_fd == -1;
 		if (reconnect_server_socket(host, port, password, &socket_fd, argv[0], 0) == -1) // FIXME set client-type
 			continue;
+		if (attempt_connect)
+			last_msg = get_ts();
 
 		disable_nagle(socket_fd);
 		enable_tcp_keepalive(socket_fd);
@@ -208,10 +220,13 @@ int main(int argc, char *argv[])
 				error_exit("Select error: %m");
 		}
 		dolog(LOG_DEBUG, "back from low-event wait");
+		now = get_ts();
 
 		if (FD_ISSET(socket_fd, &read_fd))
 		{
-			if (process_server_msg(socket_fd, &data_available) == -1)
+			if (process_server_msg(socket_fd, &data_available) == 0)
+				last_msg = now;
+			else
 			{
 				close(socket_fd);
 				socket_fd = -1;
@@ -301,6 +316,8 @@ int main(int argc, char *argv[])
 
 			free(buffer_out);
 			free(buffer_in);
+
+			last_msg = now;
 		}
 	}
 
