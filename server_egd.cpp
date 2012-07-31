@@ -249,7 +249,15 @@ int main(int argc, char *argv[])
 		}
 
 		if (index == 0 || bytes_to_read == 0)
-			sleep(read_interval);
+		{
+			if (sleep_interruptable(socket_fd, read_interval) != 0)
+			{
+				dolog(LOG_INFO, "connection closed");
+				close(socket_fd);
+				socket_fd = -1;
+				continue;
+			}
+		}
 	}
 
 	unlink(pid_file);

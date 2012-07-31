@@ -136,7 +136,14 @@ int main(int argc, char *argv[])
 		if (kernel_rng_read_blocking(bytes, sizeof bytes) == -1)
 		{
 			dolog(LOG_WARNING, "Problem reading from kernel entropy buffer!");
-			sleep(1);
+
+			if (sleep_interruptable(socket_fd, 5) != 0)
+			{
+				dolog(LOG_INFO, "connection closed");
+				close(socket_fd);
+				socket_fd = -1;
+				continue;
+			}
 		}
 
 		if (bytes_file)
