@@ -199,7 +199,7 @@ int main(int argc, char *argv[])
 		}
 
 		bool attempt_connect = socket_fd == -1;
-		if (reconnect_server_socket(host, port, password, &socket_fd, argv[0], 0) == -1) // FIXME set client-type
+		if (reconnect_server_socket(host, port, password, &socket_fd, "client_linux_kernel " VERSION, 0) == -1) // FIXME set client-type
 			continue;
 		if (attempt_connect)
 			last_msg = get_ts();

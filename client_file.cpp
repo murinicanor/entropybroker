@@ -155,7 +155,7 @@ int main(int argc, char *argv[])
 				dolog(LOG_INFO, "(re-)connecting to %s:%d", host, port);
 
 				send_request = true;
-				if (reconnect_server_socket(host, port, password, &socket_fd, "client_egd " VERSION, 0) == -1)
+				if (reconnect_server_socket(host, port, password, &socket_fd, "client_file " VERSION, 0) == -1)
 				{
 					dolog(LOG_CRIT, "cannot connect to %s:%d", host, port);
 					continue;
