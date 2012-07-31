@@ -89,6 +89,15 @@ int send_got_data(int fd, pools *ppools, config_t *config)
 	return WRITE_TO(fd, buffer, 8, config -> communication_timeout) == 8 ? 0 : -1;
 }
 
+int send_need_data(int fd, config_t *config)
+{
+	char buffer[4+4+1];
+
+	snprintf(buffer, sizeof(buffer), "00100000");
+
+	return WRITE_TO(fd, buffer, 8, config -> communication_timeout) == 8 ? 0 : -1;
+}
+
 int do_client_get(pools *ppools, client_t *client, statistics_t *stats, config_t *config, fips140 *eb_output_fips140, scc *eb_output_scc, BF_KEY *key, bool *no_bits)
 {
 	int cur_n_bits, cur_n_bytes;
@@ -497,6 +506,25 @@ void notify_clients_data_available(client_t *clients, int *n_clients, statistics
 	}
 }
 
+void notify_servers_data_needed(client_t *clients, int *n_clients, statistics_t *stats, config_t *config)
+{
+	for(int loop=*n_clients - 1; loop>=0; loop--)
+	{
+		if (!clients[loop].is_server)
+			continue;
+
+		if (send_need_data(clients[loop].socket_fd, config) == -1)
+		{
+			dolog(LOG_INFO, "main|connection closed, removing client %s from list", clients[loop].host);
+			dolog(LOG_DEBUG, "main|%s: %s, scc: %s", clients[loop].host, clients[loop].pfips140 -> stats(), clients[loop].pscc -> stats());
+
+			stats -> disconnects++;
+
+			forget_client(clients, n_clients, loop);
+		}
+	}
+}
+
 void process_timed_out_cs(config_t *config, client_t *clients, int *n_clients, statistics_t *stats)
 {
 	if (config -> communication_session_timeout > 0)
@@ -831,13 +859,22 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 				// printf("NBWB %d %d\n", no_bits, new_bits);
 			}
 
-			if (new_bits && no_bits)
+			if (no_bits)
 			{
-				dolog(LOG_DEBUG, "New bits: alerting clients");
+				dolog(LOG_DEBUG, "Bits needed");
 
-				no_bits = new_bits = false;
+				// might need to remember if we already sent this message in case
+				// too many of these messages are send
+				notify_servers_data_needed(clients, &n_clients, &stats, config);
 
-				notify_clients_data_available(clients, &n_clients, &stats, ppools, config);
+				if (new_bits)
+				{
+					dolog(LOG_DEBUG, "New bits: alerting clients");
+
+					no_bits = new_bits = false;
+
+					notify_clients_data_available(clients, &n_clients, &stats, ppools, config);
+				}
 			}
 
 			if (FD_ISSET(listen_socket_fd, &rfds))
