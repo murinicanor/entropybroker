@@ -55,22 +55,50 @@ current state. E.g. recv/sent requests, etc.
 The main entropy broker process listens by default on port
 55225 (TCP).
 
-On systems with a spare sound-card, start server_audio.
+On systems with a spare sound-card, start server_audio. This requires a
+functioning ALSA audio sub-system. Look in /proc/asound/devices for the
+parameters. For example:
+	mauer:/usr/local/entropybroker/var/log# cat /proc/asound/devices 
+	  1:        : sequencer
+	  2: [ 0- 1]: digital audio playback
+	  3: [ 0- 0]: digital audio playback
+	  4: [ 0- 0]: digital audio capture
+	  5: [ 0- 2]: hardware dependent
+	  6: [ 0]   : control
+	  7: [ 1- 3]: digital audio playback
+	  8: [ 1- 0]: hardware dependent
+	  9: [ 1]   : control
+	 10: [ 2- 0]: digital audio capture
+	 11: [ 2]   : control
+	 33:        : timer
+In this example there are 3 audio cards (0, 1 and 2, see first column
+between [ and ]). If we want to take the audio from card 2 (see line 10)
+it would look like this:
+eb_server_audio -d hw:2,0 -s -i broker -X 
 
-On systems with a spare tv-card/webcam, start server_v4l.
+On systems with a spare tv-card/webcam, start server_v4l. E.g.:
+eb_server_v4l -i broker -d /dev/video0 -s -X password.txt
 
 On systems that are mostly idle, start server_timers. Check
 http://vanheusden.com/te/#bps to see some expected bitrates.
+eb_server_timers -i broker -s -X password.txt
 
 On systems with an random generator connected to e.g. a serial
 port, or with a rng in the motherboard chipset, use server_stream
-to feed its data to entropy_broker.
+to feed its data to entropy_broker. For example a rng in the system
+would be used like this:
+eb_server_stream -i entropy_broker -d /dev/hwrng -s -X password.txt
 
 On systems with an EntropyKey (http://www.entropykey.co.uk/) or
 EGD, start server_egd.
 server_egd requires a read-interval and how many bytes to read in
 that interval. You can test with test_egd_speed how many bytes your
-EGD service can produce in an interval.
+EGD service can produce in an interval. E.g.:
+eb_server_egd -i broker -d /tmp/egd.socket.ekey -a 1024 -b 5 -X password.txt
+This would require the following:
+	EGDUnixSocket "/tmp/egd.socket.ekey
+in the entropy-key daemons configuration (which is
+/etc/entropykey/ekeyd.conf on Debian systems).
 
 On systems with a RNG in the chipset that automatically gets send
 to the linux kernel entropy buffer, use server_linux_kernel.
@@ -80,6 +108,7 @@ can, as a last resort, using eb_server_ext_proc. This command can
 execute any command (as long as it is supported by the shell) and
 feed its output to the broker. E.g.:
 eb_server_ext_proc -i localhost -c '(find /proc -type f -print0 | xargs -0 cat ; ps auwx ; sensors -u) | gzip -9' -n -X password.txt
+
 
 client processes
 ================
