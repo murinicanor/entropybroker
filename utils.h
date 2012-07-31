@@ -15,3 +15,4 @@ double mydrand();
 int myrand();
 int myrand(int max);
 void write_pid(const char *file);
+void start_process(char *shell, char *cmd, int *fd, pid_t *pid);

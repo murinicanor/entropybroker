@@ -75,6 +75,12 @@ EGD service can produce in an interval.
 On systems with a RNG in the chipset that automatically gets send
 to the linux kernel entropy buffer, use server_linux_kernel.
 
+On systems without any hardware available for retrieving data, one
+can, as a last resort, using eb_server_ext_proc. This command can
+execute any command (as long as it is supported by the shell) and
+feed its output to the broker. E.g.:
+eb_server_ext_proc -i localhost -c '(find /proc -type f -print0 | xargs -0 cat ; ps auwx ; sensors -u) | gzip -9' -n -X password.txt
+
 client processes
 ================
 To keep the entropy buffer of the local linux kernel filled-up, start

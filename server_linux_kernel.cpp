@@ -121,15 +121,6 @@ int main(int argc, char *argv[])
 	double cur_start_ts = get_ts();
 	for(;;)
 	{
-		if (host != NULL)
-		{
-			if (reconnect_server_socket(host, port, password, &socket_fd, server_type, 1) == -1)
-				continue;
-
-			disable_nagle(socket_fd);
-			enable_tcp_keepalive(socket_fd);
-		}
-
 		dolog(LOG_DEBUG, "Bits available: %d", kernel_rng_get_entropy_count());
 
 		unsigned char bytes[1249];
@@ -152,7 +143,7 @@ int main(int argc, char *argv[])
 		}
 		if (host)
 		{
-			if (message_transmit_entropy_data(socket_fd, bytes, sizeof bytes) == -1)
+			if (message_transmit_entropy_data(host, port, &socket_fd, password, server_type, bytes, sizeof bytes) == -1)
 			{
 				dolog(LOG_INFO, "connection closed");
 

@@ -257,15 +257,6 @@ int main(int argc, char *argv[])
 	long int total_byte_cnt = 0;
 	for(;;)
 	{
-		if (!bytes_file)
-		{
-			if (reconnect_server_socket(host, port, password, &socket_fd, server_type, 1) == -1)
-				continue;
-
-			disable_nagle(socket_fd);
-			enable_tcp_keepalive(socket_fd);
-		}
-
 		img1 = (unsigned char *)malloc(io_buffer_len);
 		img2 = (unsigned char *)malloc(io_buffer_len);
 		unbiased = (unsigned char *)malloc(io_buffer_len);
@@ -336,7 +327,7 @@ int main(int argc, char *argv[])
 				{
 					int n_to_do = min(count, 1249);
 
-					if (message_transmit_entropy_data(socket_fd, tempp, n_to_do) == -1)
+					if (message_transmit_entropy_data(host, port, &socket_fd, password, server_type, tempp, n_to_do) == -1)
 					{
 						dolog(LOG_INFO, "connection closed");
 

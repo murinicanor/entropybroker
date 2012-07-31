@@ -129,15 +129,6 @@ void main_loop(char *host, int port, char *bytes_file, char show_bps)
 	{
 		char got_any = 0;
 
-		if (host)
-		{
-			if (reconnect_server_socket(host, port, password, &socket_fd, server_type, 1) == -1)
-				continue;
-
-			disable_nagle(socket_fd);
-			enable_tcp_keepalive(socket_fd);
-		}
-
 		if ((err = snd_pcm_open(&chandle, cdevice, SND_PCM_STREAM_CAPTURE, 0)) < 0)
 			error_exit("Record open error: %s", snd_strerror(err));
 
@@ -252,14 +243,11 @@ void main_loop(char *host, int port, char *bytes_file, char show_bps)
 						{
 							emit_buffer_to_file(bytes_file, bytes, bytes_out);
 						}
-						else
+						else if (message_transmit_entropy_data(host, port, &socket_fd, password, server_type, bytes, bytes_out) == -1)
 						{
-							if (message_transmit_entropy_data(socket_fd, bytes, bytes_out) == -1)
-							{
-								dolog(LOG_INFO, "connection closed");
-								close(socket_fd);
-								socket_fd = -1;
-							}
+							dolog(LOG_INFO, "connection closed");
+							close(socket_fd);
+							socket_fd = -1;
 						}
 
 						bytes_out = 0;

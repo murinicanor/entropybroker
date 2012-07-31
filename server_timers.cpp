@@ -135,20 +135,8 @@ int main(int argc, char *argv[])
 	double cur_start_ts = get_ts();
 	for(;;)
 	{
-		double t1, t2;
-
-		if (host != NULL)
-		{
-			if (reconnect_server_socket(host, port, password, &socket_fd, server_type, 1) == -1)
-				continue;
-
-			disable_nagle(socket_fd);
-			enable_tcp_keepalive(socket_fd);
-		}
-
 		// gather random data
-
-		t1 = gen_entropy_data(), t2 = gen_entropy_data();
+		double t1 = gen_entropy_data(), t2 = gen_entropy_data();
 
 		if (t1 == t2)
 			continue;
@@ -170,7 +158,7 @@ int main(int argc, char *argv[])
 				}
 				if (host)
 				{
-					if (message_transmit_entropy_data(socket_fd, bytes, index) == -1)
+					if (message_transmit_entropy_data(host, port, &socket_fd, password, server_type, bytes, index) == -1)
 					{
 						dolog(LOG_INFO, "connection closed");
 						close(socket_fd);

@@ -1,4 +1,5 @@
 #include <unistd.h>
+#include <signal.h>
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -16,6 +17,7 @@
 #include "error.h"
 #include "log.h"
 #include "kernel_prng_rw.h"
+#include "my_pty.h"
 
 #define MAX_LRAND48_GETS 250
 
@@ -380,4 +382,46 @@ void write_pid(const char *file)
 	fprintf(fh, "%d\n", getpid());
 
 	fclose(fh);
+}
+
+void close_fds()
+{
+	for(int fd=3; fd<50; fd++)
+		close(fd);
+}
+
+void start_process(char *shell, char *cmd, int *fd, pid_t *pid)
+{
+	int fd_slave;
+
+	/* allocate pseudo-tty & fork*/
+	*pid = get_pty_and_fork(fd, &fd_slave);
+	if (*pid == -1)
+		error_exit("Cannot fork and allocate pty");
+
+	/* child? */
+	if (*pid == 0)
+	{
+		setsid();
+
+		/* reset signal handler for SIGTERM */
+		signal(SIGTERM, SIG_DFL);
+
+		/* connect slave-fd to stdin/out/err */
+		close(0);
+		close(1);
+		close(2);
+		dup(fd_slave);
+		dup(fd_slave);
+		dup(fd_slave);
+		close_fds();
+
+		/* start process */
+		if (-1 == execlp(shell, shell, "-c", cmd, (void *)NULL))
+			error_exit("cannot execlp(%s -c '%s')", shell, cmd);
+
+		exit(1);
+	}
+
+	close(fd_slave);
 }

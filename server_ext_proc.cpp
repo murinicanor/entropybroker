@@ -8,9 +8,12 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <termios.h>
+#include <sys/wait.h>
 
-const char *server_type = "server_push_file v" VERSION;
-const char *pid_file = PID_DIR "/server_push_file.pid";
+#define SHELL "/bin/bash"
+
+const char *server_type = "server_ext_proc v" VERSION;
+const char *pid_file = PID_DIR "/server_ext_proc.pid";
 char *password = NULL;
 
 #include "error.h"
@@ -30,7 +33,8 @@ void sig_handler(int sig)
 void help(void)
 {
         printf("-i host   entropy_broker-host to connect to\n");
-	printf("-f file   file to read from\n");
+	printf("-c command   command to execute\n");
+	printf("-S shell  shell to use. default is " SHELL "\n");
         printf("-l file   log to file 'file'\n");
         printf("-s        log to syslog\n");
         printf("-n        do not fork\n");
@@ -40,17 +44,16 @@ void help(void)
 
 int main(int argc, char *argv[])
 {
-	unsigned char bytes[1249];
 	char *host = NULL;
 	int port = 55225;
 	int c;
 	char do_not_fork = 0, log_console = 0, log_syslog = 0;
 	char *log_logfile = NULL;
-	char *file = NULL;
+	char *cmd = NULL, *shell = (char *)SHELL;
 
 	fprintf(stderr, "%s, (C) 2009-2012 by folkert@vanheusden.com\n", server_type);
 
-	while((c = getopt(argc, argv, "X:P:o:p:i:d:l:sn")) != -1)
+	while((c = getopt(argc, argv, "c:S:X:P:o:p:i:d:l:sn")) != -1)
 	{
 		switch(c)
 		{
@@ -62,8 +65,12 @@ int main(int argc, char *argv[])
 				pid_file = optarg;
 				break;
 
-			case 'f':
-				file = optarg;
+			case 'c':
+				cmd = optarg;
+				break;
+
+			case 'S':
+				shell = optarg;
 				break;
 
 			case 'i':
@@ -96,14 +103,10 @@ int main(int argc, char *argv[])
 	if (!host)
 		error_exit("no host to connect to given");
 
-	if (!file)
-		error_exit("no file to read from selected");
+	if (!cmd)
+		error_exit("no command to execute");
 
 	set_logging_parameters(log_console, log_logfile, log_syslog);
-
-	FILE *fh = fopen(file, "rb");
-	if (!fh)
-		error_exit("Failed to open file %s", file);
 
 	if (!do_not_fork)
 	{
@@ -121,33 +124,61 @@ int main(int argc, char *argv[])
 	bool data = false;
 	int socket_fd = -1;
 	int got_bytes = -1;
-	for(;!feof(fh);)
+	pid_t child_pid;
+	int child_fd = -1;
+	char buffer[65536];
+	for(;;)
 	{
+		if (child_fd == -1)
+		{
+			dolog(LOG_DEBUG, "Starting %s", cmd);
+			start_process(shell, cmd, &child_fd, &child_pid);
+		}
+
 		// gather random data
 		if (!data)
 		{
-			got_bytes = fread(bytes, 1, sizeof bytes, fh);
+			got_bytes = read(child_fd, buffer, sizeof buffer);
 			if (got_bytes <= 0)
-				break;
+			{
+				dolog(LOG_DEBUG, "Process stopped");
+
+				close(child_fd);
+				child_fd = -1;
+
+				int status = 0;
+				wait(&status);
+
+				continue;
+			}
 
 			data = true;
 		}
 
 		if (data)
 		{
-			if (message_transmit_entropy_data(host, port, &socket_fd, password, server_type, bytes, got_bytes) == -1)
+			unsigned char *p = (unsigned char *)buffer;
+			while(got_bytes > 0)
 			{
-				dolog(LOG_INFO, "connection closed");
-				close(socket_fd);
-				socket_fd = -1;
-				continue;
+				int cur_count = min(got_bytes, 1249);
+
+				if (message_transmit_entropy_data(host, port, &socket_fd, password, server_type, p, cur_count) == -1)
+				{
+					dolog(LOG_INFO, "connection closed");
+
+					close(socket_fd);
+					socket_fd = -1;
+
+					break;
+				}
+
+				p += cur_count;
+				got_bytes -= cur_count;
 			}
 
 			data = false;
 		}
 	}
-
-	fclose(fh);
 
 	unlink(pid_file);
 

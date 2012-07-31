@@ -189,15 +189,6 @@ int main(int argc, char *argv[])
 		unsigned char request[2], reply[1];
 		int bytes_to_read = min(255, min(sizeof(bytes) - index, read_bytes_per_interval));
 
-		if (!bytes_file)
-		{
-			if (reconnect_server_socket(host, port, password, &socket_fd, server_type, 1) == -1)
-				continue;
-
-			disable_nagle(socket_fd);
-			enable_tcp_keepalive(socket_fd);
-		}
-
 		// gather random data from EGD
 		request[0] = 1;
 		request[1] = bytes_to_read;
@@ -220,7 +211,7 @@ int main(int argc, char *argv[])
 			}
 			else
 			{
-				if (message_transmit_entropy_data(socket_fd, bytes, index) == -1)
+				if (message_transmit_entropy_data(host, port, &socket_fd, password, server_type, bytes, index) == -1)
 				{
 					dolog(LOG_INFO, "connection closed");
 					close(socket_fd);

@@ -55,64 +55,71 @@ void set_password(char *password)
 int reconnect_server_socket(char *host, int port, char *password, int *socket_fd, const char *type, char is_server)
 {
 	char connect_msg = 0;
+	int count = 1;
 
-	// connect to server
-	if (*socket_fd == -1)
+	for(;;)
 	{
-		dolog(LOG_INFO, "Connecting to %s:%d", host, port);
-		connect_msg = 1;
-
-		int count = 1;
-		for(;;)
+		// connect to server
+		if (*socket_fd == -1)
 		{
-			*socket_fd = connect_to(host, port);
-			if (*socket_fd != -1)
-			{
-				if (auth_client_server(*socket_fd, password, 10) == 0)
-					break;
+			dolog(LOG_INFO, "Connecting to %s:%d", host, port);
+			connect_msg = 1;
 
-				close(*socket_fd);
-				*socket_fd = -1;
+			for(;;)
+			{
+				*socket_fd = connect_to(host, port);
+				if (*socket_fd != -1)
+				{
+					if (auth_client_server(*socket_fd, password, 10) == 0)
+						break;
+
+					close(*socket_fd);
+					*socket_fd = -1;
+				}
+
+				error_sleep(count);
+
+				if (count < 16)
+					count++;
 			}
 
-			error_sleep(count);
-
-			if (count < 16)
-				count++;
+			set_password(password);
 		}
 
-		set_password(password);
-	}
-
-	if (connect_msg)
-	{
-		char buffer[1250];
-
-		dolog(LOG_INFO, "Connected");
-
-		int len = strlen(type);
-		if (len > 1240)
-			error_exit("client/server-type too large %d (%s)", len, type);
-
-		if (len == 0)
-			error_exit("client/server-type should not be 0 bytes in size");
-
-		if (is_server)
-			make_msg((char *)buffer, 3, len);
-		else
-			make_msg((char *)buffer, 6, len);
-		strcat((char *)buffer, type);
-
-		int msg_len = strlen(buffer);
-
-		if (WRITE_TO(*socket_fd, buffer, msg_len, DEFAULT_COMM_TO) != msg_len)
+		if (connect_msg)
 		{
-			dolog(LOG_INFO, "connection closed");
-			close(*socket_fd);
-			*socket_fd = -1;
+			char buffer[1250];
 
-			return -1;
+			dolog(LOG_INFO, "Connected");
+
+			int len = strlen(type);
+			if (len > 1240)
+				error_exit("client/server-type too large %d (%s)", len, type);
+
+			if (len == 0)
+				error_exit("client/server-type should not be 0 bytes in size");
+
+			if (is_server)
+				make_msg((char *)buffer, 3, len);
+			else
+				make_msg((char *)buffer, 6, len);
+			strcat((char *)buffer, type);
+
+			int msg_len = strlen(buffer);
+
+			if (WRITE_TO(*socket_fd, buffer, msg_len, DEFAULT_COMM_TO) != msg_len)
+			{
+				dolog(LOG_INFO, "connection closed");
+				close(*socket_fd);
+				*socket_fd = -1;
+
+				error_sleep(count);
+
+				continue;
+			}
 		}
+
+		break;
 	}
 
 	return 0;
@@ -157,13 +164,22 @@ int sleep_interruptable(int socket_fd, int how_long)
 	return 0;
 }
 
-int message_transmit_entropy_data(int socket_fd, unsigned char *bytes_in, int n_bytes)
+int message_transmit_entropy_data(char *host, int port, int *socket_fd, char *password, const char *server_type, unsigned char *bytes_in, int n_bytes)
 {
+	if (n_bytes > 1249)
+		error_exit("message_transmit_entropy_data: too many bytes %d", n_bytes);
+
 	for(;;)
 	{
 		int value;
 		char reply[8 + 1] = { 0 };
 		char header[8 + 1] = { 0 };
+
+                if (reconnect_server_socket(host, port, password, socket_fd, server_type, 1) == -1)
+                        continue;
+
+                disable_nagle(*socket_fd);
+                enable_tcp_keepalive(*socket_fd);
 
 		dolog(LOG_DEBUG, "request to send %d bytes", n_bytes);
 
@@ -173,7 +189,7 @@ int message_transmit_entropy_data(int socket_fd, unsigned char *bytes_in, int n_
 		snprintf(header, sizeof(header), "0002%04d", n_bytes * 8);
 
 		// header
-		if (WRITE_TO(socket_fd, (char *)header, 8, DEFAULT_COMM_TO) != 8)
+		if (WRITE_TO(*socket_fd, (char *)header, 8, DEFAULT_COMM_TO) != 8)
 		{
 			dolog(LOG_INFO, "error transmitting header");
 			return -1;
@@ -182,7 +198,7 @@ int message_transmit_entropy_data(int socket_fd, unsigned char *bytes_in, int n_
 		// ack from server?
 	ignore_unsollicited_msg: // we jump to this label when unsollicited msgs are
 		// received during data-transmission handshake
-		if (READ_TO(socket_fd, reply, 8, DEFAULT_COMM_TO) != 8)
+		if (READ_TO(*socket_fd, reply, 8, DEFAULT_COMM_TO) != 8)
 		{
 			dolog(LOG_INFO, "error receiving ack/nack");
 			return -1;
@@ -211,7 +227,7 @@ int message_transmit_entropy_data(int socket_fd, unsigned char *bytes_in, int n_
 			BF_cfb64_encrypt(bytes_in, bytes_out, cur_n_bytes, &key, ivec, &num, BF_ENCRYPT);
 			memcpy(ivec, bytes_in, min(8, cur_n_bytes));
 
-			if (WRITE_TO(socket_fd, (char *)bytes_out, cur_n_bytes, DEFAULT_COMM_TO) != cur_n_bytes)
+			if (WRITE_TO(*socket_fd, (char *)bytes_out, cur_n_bytes, DEFAULT_COMM_TO) != cur_n_bytes)
 			{
 				dolog(LOG_INFO, "error transmitting data");
 				free(bytes_out);
@@ -230,7 +246,7 @@ int message_transmit_entropy_data(int socket_fd, unsigned char *bytes_in, int n_
 			// to pass or a 0010 to come in. in reality we just
 			// sleep until the first message comes in and then
 			// continue; it'll only be 0010 anyway
-			sleep_interruptable(socket_fd, value);
+			sleep_interruptable(*socket_fd, value);
 		}
 		else if (strcmp(reply, "0010") == 0)            // there's a need for data
 		{

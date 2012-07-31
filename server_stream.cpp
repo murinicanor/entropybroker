@@ -345,15 +345,6 @@ int main(int argc, char *argv[])
 	{
 		char byte;
 
-		if (!bytes_file)
-		{
-			if (reconnect_server_socket(host, port, password, &socket_fd, server_type, 1) == -1)
-				continue;
-
-			disable_nagle(socket_fd);
-			enable_tcp_keepalive(socket_fd);
-		}
-
 		// gather random data
 		if  (READ(read_fd, &byte, 1) != 1)
 			error_exit("error reading from input");
@@ -368,7 +359,7 @@ int main(int argc, char *argv[])
 			}
 			else
 			{
-				if (message_transmit_entropy_data(socket_fd, bytes, index) == -1)
+				if (message_transmit_entropy_data(host, port, &socket_fd, password, server_type, bytes, index) == -1)
 				{
 					dolog(LOG_INFO, "connection closed");
 					close(socket_fd);
