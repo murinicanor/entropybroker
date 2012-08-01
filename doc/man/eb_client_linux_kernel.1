@@ -3,6 +3,7 @@
 eb_client_linux_kernel \- send entropy data to /dev/random
 .SH DESCRIPTION
 eb_client_linux_kernel v1.0, (C) 2009-2012 by folkert@vanheusden.com
+To keep the entropy buffer of the local linux kernel filled-up, start client_linux_kernel as a root user. If you want the kernel buffers to be filled much earlier (the default is when it only has 128 bits left), then write a new value to: "/proc/sys/kernel/random/write_wakeup_threshold". E.g. 512.
 .TP
 \fB\-i\fR host   eb\-host to connect to
 .TP
