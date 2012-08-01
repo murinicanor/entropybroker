@@ -355,12 +355,17 @@ int pools::add_bits_to_pools(unsigned char *data, int n_bytes, char ignore_rngte
 			space_available = POOL_SIZE;
 
 		dolog(LOG_DEBUG, "Adding %d bits to pool %d", space_available, index);
-		unsigned int n_bytes_to_add = (space_available + 7) / 8;
+		unsigned int n_bytes_to_add = min(n_bytes, (space_available + 7) / 8);
 
-		for(unsigned int rngtest_loop=0; rngtest_loop<n_bytes_to_add; rngtest_loop++)
+		if (!ignore_rngtest_fips140 || !ignore_rngtest_scc)
 		{
-			pfips -> add(data[rngtest_loop]);
-			pscc -> add(data[rngtest_loop]);
+			for(unsigned int rngtest_loop=0; rngtest_loop<n_bytes_to_add; rngtest_loop++)
+			{
+				if (pfips)
+					pfips -> add(data[rngtest_loop]);
+				if (pscc)
+					pscc -> add(data[rngtest_loop]);
+			}
 		}
 
 		bool rc_fips140 = true, rc_scc = true;
