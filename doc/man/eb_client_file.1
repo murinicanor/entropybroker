@@ -1,12 +1,14 @@
 .TH EB_CLIENT_EGD "1" "July 2012" "eb_client_egd" "User Commands"
 .SH NAME
-eb_client_egd \- export entropy data as egd server
+eb_client_file \- export entropy data to a file
 .SH DESCRIPTION
-eb_client_egd v1.0, (C) 2009-2012 by folkert@vanheusden.com
+eb_client_file v1.0, (C) 2009-2012 by folkert@vanheusden.com
 .TP
 \fB\-i\fR host   eb\-host to connect to
 .TP
-\fB\-d\fR file   UNIX-domain socket to listen on
+\fB\-f\fR file   file to write to
+.TP
+\fB\-c\fR count  number of bytes to write
 .TP
 \fB\-l\fR file   log to file 'file'
 .TP

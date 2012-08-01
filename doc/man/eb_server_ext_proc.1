@@ -1,0 +1,21 @@
+.TH EB_SERVER_AUDIO "1" "July 2012" "eb_server_ext_proc" "User Commands"
+.SH NAME
+eb_server_ext_proc \- gather entropy on systems with a spare sound-card
+.SH DESCRIPTION
+eb_server_ext_proc v1.0, (C) 2009-2012 by folkert@vanheusden.com
+.TP
+\fB\-i\fR host   eb\-host to connect to
+.TP
+\fB\-c\fR cmd    command to execute - its output will be fed to the broker
+.TP
+\fB\-s\fR shell  shell to use to execute the command given with -c
+.TP
+\fB\-l\fR file   log to file 'file'
+.TP
+\fB\-s\fR        log to syslog
+.TP
+\fB\-n\fR        do not fork
+.TP
+\fB\-P\fR file   file to write the PID to
+.TP
+\fB\-X\fR file   file to read the password from

@@ -2,13 +2,11 @@
 .SH NAME
 eb_server_v4l \- gather entropy from unused video card
 .SH DESCRIPTION
-eb_server_v4l v0.9.1, (C) 2009-2012 by folkert@vanheusden.com
+eb_server_v4l v1.0, (C) 2009-2012 by folkert@vanheusden.com
 .TP
 \fB\-i\fR host   eb\-host to connect to
 .TP
 \fB\-d\fR device device to use
-.TP
-\fB\-o\fR file   file to write entropy data to (mutual exclusive with \-d)
 .TP
 \fB\-l\fR file   log to file 'file'
 .TP
@@ -18,4 +16,7 @@ eb_server_v4l v0.9.1, (C) 2009-2012 by folkert@vanheusden.com
 .TP
 \fB\-f\fR x      skip x frames before processing images (in case the device
                  needs a few frames to settle)
-
+.TP
+\fB\-P\fR file   file to write the PID to
+.TP
+\fB\-X\fR file   file to read the password from

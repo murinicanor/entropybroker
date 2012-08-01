@@ -2,12 +2,11 @@
 .SH NAME
 eb_server_stream \- gather entropy 
 .SH DESCRIPTION
+eb_server_stream v1.0, (C) 2009-2012 by folkert@vanheusden.com
 .TP
 \fB\-i\fR host   eb\-host to connect to
 .TP
-\fB\-d\fR dev    device to retrieve from
-.TP
-\fB\-o\fR file   file to write entropy data to (mututal exclusive with \fB\-d\fR)
+\fB\-d\fR dev    device to retrieve from (serial port, hw rng device node, etc.)
 .TP
 \fB\-p\fR pars   if the device is a serial device, then with \fB\-p\fR
 		you can set its parameters: bps,bits
@@ -17,3 +16,7 @@ eb_server_stream \- gather entropy
 \fB\-s\fR        log to syslog
 .TP
 \fB\-n\fR        do not fork
+.TP
+\fB\-P\fR file   file to write the PID to
+.TP
+\fB\-X\fR file   file to read the password from

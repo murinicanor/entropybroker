@@ -2,14 +2,16 @@
 .SH NAME
 eb_client_linux_kernel \- send entropy data to /dev/random
 .SH DESCRIPTION
-eb_client_linux_kernel v0.9.1, (C) 2009-2012 by folkert@vanheusden.com
+eb_client_linux_kernel v1.0, (C) 2009-2012 by folkert@vanheusden.com
 .TP
 \fB\-i\fR host   eb\-host to connect to
-.TP
-\fB\-d\fR file   unix domain socket
 .TP
 \fB\-l\fR file   log to file 'file'
 .TP
 \fB\-s\fR        log to syslog
 .TP
 \fB\-n\fR        do not fork
+.TP
+\fB\-P\fR file   file to write the PID to
+.TP
+\fB\-X\fR file   file to read the password from
