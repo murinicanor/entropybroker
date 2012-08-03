@@ -56,7 +56,7 @@ int main(int argc, char *argv[])
 
 	printf("eb_client_file v" VERSION ", (C) 2009-2012 by folkert@vanheusden.com\n");
 
-	while((c = getopt(argc, argv, "c:f:X:P:i:l:sn")) != -1)
+	while((c = getopt(argc, argv, "hc:f:X:P:i:l:sn")) != -1)
 	{
 		switch(c)
 		{
@@ -92,6 +92,10 @@ int main(int argc, char *argv[])
 				do_not_fork = 1;
 				log_console = 1;
 				break;
+
+			case 'h':
+				help();
+				return 0;
 
 			default:
 				help();

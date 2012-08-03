@@ -255,7 +255,7 @@ int main(int argc, char *argv[])
 
 	fprintf(stderr, "%s, (C) 2009-2012 by folkert@vanheusden.com\n", server_type);
 
-	while((c = getopt(argc, argv, "SX:P:o:p:i:d:l:sn")) != -1)
+	while((c = getopt(argc, argv, "hSX:P:o:p:i:d:l:sn")) != -1)
 	{
 		switch(c)
 		{
@@ -299,6 +299,10 @@ int main(int argc, char *argv[])
 				do_not_fork = 1;
 				log_console = 1;
 				break;
+
+			case 'h':
+				help();
+				return 0;
 
 			default:
 				help();
