@@ -9,6 +9,4 @@
   thread: int pthread_setcancelstate(int state, int *oldstate) / PTHREAD_CANCEL_DISABLE/ENBALE rond calls naar de pool(s) ivm mutexen
 - http://en.wikipedia.org/wiki/Secure_Remote_Password_protocol
 
-- usb-entropyd & scsi-ping-entropyd
-
-- monitoring: display een plaatje van x/y paren die constant evolved dus intern als long long int opslaan en dan normalizen bij plotten
+- scsi-ping-entropyd

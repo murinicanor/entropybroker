@@ -20,9 +20,10 @@ Building
 --------
 	make install
 Files will be installed in  /usr/local/entropybroker 
-You need the OpenSSL development libraries, zlib as wel as the
-asound2 development libraries (asound2 is only required if you're
-compiling server_audio).
+You need the OpenSSL development libraries, zlib, asound2 and
+libusb-1.0-0-dev. 
+asound2 is for eb_server_audio
+libusb-1.0-0-dev is for eb_server_usb
 
 *** PLEASE NOTE: since 1.0, 'eb' was renamed to 'entropy_broker' ***
 *** also the other daemons were renamed ***
@@ -45,6 +46,9 @@ which the entropy-broker and/or servers/clients run.
 The client/server processes don't have a configuration file. For
 them, you need to use '-X', e.g.:
 	server_v4l -X my-password.txt
+Passwords should not be longer than 56 characters. If a binary
+password is used, note that it is cut-off at the first LF (\n)
+found.
 
 
 server processes
@@ -103,11 +107,19 @@ in the entropy-key daemons configuration (which is
 On systems with a RNG in the chipset that automatically gets send
 to the linux kernel entropy buffer, use server_linux_kernel.
 
+On systems with one or more USB devices attached (can be simple as
+a keyboard or a mouse) you can use server_usb. This needs to run
+with root access.
+
 On systems without any hardware available for retrieving data, one
 can, as a last resort, using eb_server_ext_proc. This command can
 execute any command (as long as it is supported by the shell) and
 feed its output to the broker. E.g.:
 eb_server_ext_proc -i localhost -c '(find /proc -type f -print0 | xargs -0 cat ; ps auwx ; sensors -u) | gzip -9' -n -X password.txt
+
+The server daemons that obtain data from hardware sources use
+von neumann software whitening.
+See: http://en.wikipedia.org/wiki/Hardware_random_number_generator#Software_whitening
 
 
 client processes
@@ -122,10 +134,8 @@ E.g.:
 
 To server entropy data like as if it was an EGD-server, start
 client_egd. E.g.:
-	client_egd -d /tmp/egd.sock -i entropy_broker-server.test.com
-        eb_client_egd -d /tmp/egd.sock -i entropy_broker-server.test.com
+	eb_client_egd -d /tmp/egd.sock -i entropy_broker-server.test.com
 You may need to delete the socket before starting eb_client_egd.
-
 Now egd-clients can use the /tmp/egd.sock unix domain socket. This
 should work with at least OpenSSL: start client_egd with one of the
 following parameters: -d /var/run/egd-pool or -d /dev/egd-pool or
@@ -160,6 +170,37 @@ OpenSSL applications use the kernel entropy driver. For that,
 in /etc/ssl/openssl.cnf change the line with RANDFILE in it
 to:
 	RANDFILE = /dev/urandom
+
+
+Evaluation Entropy Broker
+=========================
+Use client_file to write a couple of bytes to a file.
+Then with dieharder:
+	http://www.phy.duke.edu/~rgb/General/dieharder.php
+and also with ent:
+	http://www.fourmilab.ch/random/
+you can do some analysis of the randomness of the data.
+
+You can also convert that binary file to a text-file containing
+values so that you can analyze it using e.g. confft.
+Convert it using:
+	./bin_to_values.pl my_bin_file.dat > my_text_file.txt
+confft can be retrieved from:
+	http://www.vanheusden.com/confft/
+You can also directly plot the fft using the do_fft.sh script:
+	./do_fft.sh test.dat test.png
+This requires gnuplot and confft.
+
+An other option is to do a pixel-plot of some data (the more
+the better). Here, for each pixel 2 bytes are taken and then
+used as an x and y coordinate. That pixel is then increased
+by one. If the result looks like noise, then all is fine.
+Patterns are an indication that something is wrong.
+To build that binary, invoke:
+	make plot
+This requires libpng-dev.
+To invoke:
+	plot input_data.dat result.png
 
 
 License

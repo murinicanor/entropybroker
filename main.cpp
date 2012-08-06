@@ -11,6 +11,7 @@
 
 #include "error.h"
 #include "math.h"
+#include "ivec.h"
 #include "pool.h"
 #include "fips140.h"
 #include "scc.h"

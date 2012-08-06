@@ -151,7 +151,7 @@ int main(int argc, char *argv[])
 
 	fprintf(stderr, "%s, (C) 2009-2012 by folkert@vanheusden.com\n", server_type);
 
-	while((c = getopt(argc, argv, "SX:P:f:o:i:d:l:sn")) != -1)
+	while((c = getopt(argc, argv, "hSX:P:f:o:i:d:l:sn")) != -1)
 	{
 		switch(c)
 		{

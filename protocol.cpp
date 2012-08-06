@@ -248,6 +248,13 @@ int message_transmit_entropy_data(char *host, int port, int *socket_fd, char *pa
 			// continue; it'll only be 0010 anyway
 			sleep_interruptable(*socket_fd, value);
 		}
+		else if (strcmp(reply, "9003") == 0)            // ACK but full
+		{
+			// only usefull for eb_proxy
+			dolog(LOG_DEBUG, "pool full, sleeping %d seconds", value);
+			// same comments as for 9001 apply
+			sleep_interruptable(*socket_fd, value);
+		}
 		else if (strcmp(reply, "0010") == 0)            // there's a need for data
 		{
 			// this message can be received during transmission hand-

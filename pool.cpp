@@ -26,6 +26,7 @@
 #include <stdio.h>
 
 #include "math.h"
+#include "ivec.h"
 #include "pool.h"
 #include "error.h"
 #include "kernel_prng_rw.h"
@@ -41,8 +42,7 @@ pool::pool(bit_count_estimator *bce_in) : bce(bce_in)
 	if (kernel_rng_read_non_blocking(entropy_pool, sizeof(entropy_pool)) == -1)
 		error_exit("failed reading entropy data from kernel RNG");
 
-	if (kernel_rng_read_non_blocking(ivec, sizeof(ivec)) == -1)
-		error_exit("failed reading entropy data from kernel RNG");
+	iv = new ivec(bce);
 }
 
 pool::pool(int pool_nr, FILE *fh, bit_count_estimator *bce_in) : bce(bce_in)
@@ -58,8 +58,7 @@ pool::pool(int pool_nr, FILE *fh, bit_count_estimator *bce_in) : bce(bce_in)
 		if (fread(entropy_pool, 1, POOL_SIZE / 8, fh) != POOL_SIZE / 8)
 			error_exit("Dump is corrupt (1)");
 
-		if (fread(ivec, 1, 8, fh) != 8)
-			error_exit("Dump is corrupt (2)");
+		iv = new ivec(fh, bce);
 
 		dolog(LOG_DEBUG, "Pool %d: loaded %d bits from cache", pool_nr, bits_in_pool);
 	}
@@ -69,65 +68,58 @@ pool::pool(int pool_nr, FILE *fh, bit_count_estimator *bce_in) : bce(bce_in)
 
 pool::~pool()
 {
-	if (kernel_rng_write_non_blocking(entropy_pool, sizeof(entropy_pool)) == -1)
-		error_exit("failed writing entropy data to kernel RNG");
-
 	memset(entropy_pool, 0x00, sizeof(entropy_pool));
+
+	delete iv;
 }
 
 void pool::dump(FILE *fh)
 {
-	unsigned char val_buffer[4];
-
-	val_buffer[0] = (bits_in_pool >> 24) & 255;
-	val_buffer[1] = (bits_in_pool >> 16) & 255;
-	val_buffer[2] = (bits_in_pool >>  8) & 255;
-	val_buffer[3] = (bits_in_pool      ) & 255;
-
-	if (fwrite(val_buffer, 1, 4, fh) != 4)
-		error_exit("Cannot write to dump (1)");
-
-	if (fwrite(entropy_pool, 1, POOL_SIZE / 8, fh) != POOL_SIZE / 8)
-		error_exit("Cannot write to dump (2)");
-
-	if (fwrite(ivec, 1, 8, fh) != 8)
-		error_exit("Cannot write to dump (3)");
-}
-
-void pool::update_ivec(void)
-{
-	int loop;
-	char bit = ivec[7] & 128;
-
-	for(loop=0; loop<8; loop++)
+	if (bits_in_pool > 0)
 	{
-		char new_bit = ivec[loop] & 128;
+		unsigned char val_buffer[4];
 
-		ivec[loop] <<= 1;
-		ivec[loop] |= bit ? 1 : 0;
+		val_buffer[0] = (bits_in_pool >> 24) & 255;
+		val_buffer[1] = (bits_in_pool >> 16) & 255;
+		val_buffer[2] = (bits_in_pool >>  8) & 255;
+		val_buffer[3] = (bits_in_pool      ) & 255;
 
-		bit = new_bit;
+		if (fwrite(val_buffer, 1, 4, fh) != 4)
+			error_exit("Cannot write to dump (1)");
+
+		if (fwrite(entropy_pool, 1, POOL_SIZE / 8, fh) != POOL_SIZE / 8)
+			error_exit("Cannot write to dump (2)");
+
+		iv -> dump(fh);
 	}
 }
 
 int pool::add_entropy_data(unsigned char *entropy_data, int n_bytes_in)
 {
+	if (is_full() && n_bytes_in >= 32)
+	{
+		iv -> seed(entropy_data, 8);
+
+		entropy_data += 8;
+		n_bytes_in -=8;
+	}
+
 	unsigned char temp_buffer[POOL_SIZE / 8];
 	int n_added = bce -> get_bit_count(entropy_data, n_bytes_in);
 
 	while(n_bytes_in > 0)
 	{
-		BF_KEY key;
-
-		update_ivec();
+		unsigned char cur_ivec[8];
+		iv -> get(cur_ivec);
 
 		// when adding data to the pool, we encrypt the pool using blowfish with
 		// the entropy-data as the encryption-key. blowfish allows keysizes with
 		// a maximum of 448 bits which is 56 bytes
 		int cur_to_add = min(n_bytes_in, 56);
 
+		BF_KEY key;
 		BF_set_key(&key, cur_to_add, entropy_data);
-		BF_cbc_encrypt(entropy_pool, temp_buffer, (POOL_SIZE / 8), &key, ivec, BF_ENCRYPT);
+		BF_cbc_encrypt(entropy_pool, temp_buffer, (POOL_SIZE / 8), &key, cur_ivec, BF_ENCRYPT);
 		memcpy(entropy_pool, temp_buffer, (POOL_SIZE / 8));
 
 		entropy_data += cur_to_add;
@@ -155,7 +147,8 @@ int pool::get_entropy_data(unsigned char *entropy_data, int n_bytes_requested, b
 	int n_given, half_sha512_hash_len = SHA512_DIGEST_LENGTH / 2;;
 	unsigned char hash[SHA512_DIGEST_LENGTH];
 
-	update_ivec();
+	unsigned char cur_ivec[8];
+	iv -> get(cur_ivec);
 
 	n_given = n_bytes_requested;
 	if (!prng_ok)
@@ -178,7 +171,7 @@ int pool::get_entropy_data(unsigned char *entropy_data, int n_bytes_requested, b
 			bits_in_pool = 0;
 
 		BF_set_key(&key, sizeof(hash), hash);
-		BF_cbc_encrypt(entropy_pool, temp_buffer, (POOL_SIZE / 8), &key, ivec, BF_DECRYPT);
+		BF_cbc_encrypt(entropy_pool, temp_buffer, (POOL_SIZE / 8), &key, cur_ivec, BF_DECRYPT);
 		memcpy(entropy_pool, temp_buffer, (POOL_SIZE / 8));
 	}
 
@@ -218,8 +211,6 @@ int pool::add_event(double ts, unsigned char *event_data, int n_event_data)
 	int n_bits_added;
 	double delta, delta2, delta3;
 
-	update_ivec();
-
 	delta = ts - state.last_time;
 	state.last_time = ts;
 
@@ -249,14 +240,19 @@ int pool::add_event(double ts, unsigned char *event_data, int n_event_data)
 	if (bits_in_pool > POOL_SIZE)
 		bits_in_pool = POOL_SIZE;
 
+	unsigned char cur_ivec[8];
+	iv -> get(cur_ivec);
+
 	BF_set_key(&key, sizeof(ts), (const unsigned char *)&ts);
-	BF_cbc_encrypt(entropy_pool, temp_buffer, (POOL_SIZE / 8), &key, ivec, BF_ENCRYPT);
+	BF_cbc_encrypt(entropy_pool, temp_buffer, (POOL_SIZE / 8), &key, cur_ivec, BF_ENCRYPT);
 	memcpy(entropy_pool, temp_buffer, (POOL_SIZE / 8));
 
 	if (event_data)
 	{
+		iv -> get(cur_ivec);
+
 		BF_set_key(&key, n_event_data, event_data);
-		BF_cbc_encrypt(entropy_pool, temp_buffer, (POOL_SIZE / 8), &key, ivec, BF_ENCRYPT);
+		BF_cbc_encrypt(entropy_pool, temp_buffer, (POOL_SIZE / 8), &key, cur_ivec, BF_ENCRYPT);
 		memcpy(entropy_pool, temp_buffer, (POOL_SIZE / 8));
 	}
 

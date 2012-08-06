@@ -14,6 +14,7 @@
 #include "error.h"
 #include "log.h"
 #include "math.h"
+#include "ivec.h"
 #include "pool.h"
 #include "utils.h"
 #include "fips140.h"
@@ -60,7 +61,7 @@ void pools::store_caches(unsigned int keep_n)
 		char buffer[128];
 		snprintf(buffer, sizeof buffer, "%Lf", now);
 
-		std::string new_cache_file = cache_dir + "/" + std::string(buffer) + ".dat";
+		std::string new_cache_file = cache_dir + "/" + std::string(buffer) + ".pool";
 		FILE *fh = fopen(new_cache_file.c_str(), "wb");
 		if (!fh)
 			error_exit("Failed to create file %s", new_cache_file.c_str());
@@ -187,8 +188,11 @@ void pools::load_cachefiles_list()
 		if (ss.st_mode & S_IFDIR)
 			continue;
 
-		dolog(LOG_DEBUG, "Added %s to cache list", file_name.c_str());
-		cache_list.push_back(file_name);
+		if (file_name.substr(file_name.size() - 5, 5) == ".pool")
+		{
+			dolog(LOG_DEBUG, "Added %s to cache list", file_name.c_str());
+			cache_list.push_back(file_name);
+		}
 	}
 
 	closedir(dirp);

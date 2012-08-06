@@ -11,12 +11,10 @@ class pool
 {
 private:
 	unsigned char entropy_pool[POOL_SIZE / 8];
-	unsigned char ivec[8];
 	int bits_in_pool;
 	event_state_t state;
 	bit_count_estimator *bce;
-
-	void update_ivec(void);
+	ivec *iv;
 
 public:
 	pool(bit_count_estimator *bce);

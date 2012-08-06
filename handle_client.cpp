@@ -19,6 +19,7 @@
 #include "error.h"
 #include "log.h"
 #include "math.h"
+#include "ivec.h"
 #include "pool.h"
 #include "fips140.h"
 #include "config.h"
@@ -67,6 +68,20 @@ int send_denied_full(client_t *client, pools *ppools, statistics_t *stats, confi
 	make_msg(buffer, 9001, seconds);
 
 	dolog(LOG_INFO, "denied|%s all pools full, sleep of %d seconds", client -> host, seconds);
+
+	if (WRITE_TO(client -> socket_fd, buffer, 8, config -> communication_timeout) != 8)
+		return -1;
+
+	return 0;
+}
+
+int send_accepted_while_full(client_t *client, config_t *config)
+{
+	char buffer[4+4+1];
+
+	make_msg(buffer, 9003, config -> default_sleep_time_when_pools_full);
+
+	dolog(LOG_INFO, "meta|%s all pools full", client -> host);
 
 	if (WRITE_TO(client -> socket_fd, buffer, 8, config -> communication_timeout) != 8)
 		return -1;
@@ -192,6 +207,7 @@ int do_client_put(pools *ppools, client_t *client, statistics_t *stats, config_t
 	int n_bits_added;
 	char n_bits[4 + 1];
 	double now = get_ts();
+	bool warn_all_full = false;
 
 	*new_bits = false;
 
@@ -212,6 +228,8 @@ int do_client_put(pools *ppools, client_t *client, statistics_t *stats, config_t
 
 		if (full_allow_interval_submit)
 			dolog(LOG_DEBUG, "put|%s(%s) allow submit when full, after %f seconds", client -> host, client -> type, last_submit_ago);
+
+		warn_all_full = true;
 	}
 
 	n_bits[4] = 0x00;
@@ -278,6 +296,9 @@ int do_client_put(pools *ppools, client_t *client, statistics_t *stats, config_t
 
 	free(buffer_out);
 	free(buffer_in);
+
+	if (warn_all_full)
+		return send_accepted_while_full(client, config);
 
 	return 0;
 }

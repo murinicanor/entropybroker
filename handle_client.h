@@ -9,7 +9,7 @@ typedef struct
 	char ignore_rngtest_fips140, ignore_rngtest_scc;
 	double last_message, last_put_message;
 	double connected_since;
-	unsigned char ivec[8];
+	unsigned char ivec[8]; // used for data encryption
 	bool data_avail_signaled;
 
 	fips140 *pfips140;

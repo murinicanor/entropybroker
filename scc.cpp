@@ -6,6 +6,7 @@
 #include "error.h"
 #include "math.h"
 #include "log.h"
+#include "ivec.h"
 #include "pool.h"
 #include "scc.h"
 
