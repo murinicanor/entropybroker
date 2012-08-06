@@ -43,9 +43,10 @@ to entropybroker.conf like this:
 Then 'my-password.txt' should contain the password you want to
 use. Also the file should only be readable by the user under
 which the entropy-broker and/or servers/clients run.
+E.g. use chmod 600 my-password.txt
 The client/server processes don't have a configuration file. For
 them, you need to use '-X', e.g.:
-	server_v4l -X my-password.txt
+	eb_server_v4l -X my-password.txt
 Passwords should not be longer than 56 characters. If a binary
 password is used, note that it is cut-off at the first LF (\n)
 found.
