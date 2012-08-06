@@ -258,10 +258,10 @@ int do_client_put(pools *ppools, client_t *client, statistics_t *stats, config_t
 		return -1;
 	}
 
-	// encrypt data. keep original data; will be used as ivec for next round
+	// decrypt data. decrypted data will be used as ivec for next round
 	int num = 0;
 	BF_cfb64_encrypt(buffer_in, buffer_out, cur_n_bytes, key, client -> ivec, &num, BF_DECRYPT);
-	memcpy(client -> ivec, buffer_in, min(cur_n_bytes, 8));
+	memcpy(client -> ivec, buffer_out, min(cur_n_bytes, 8));
 
 	client -> last_put_message = now;
 

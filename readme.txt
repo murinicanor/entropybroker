@@ -123,6 +123,9 @@ E.g.:
 To server entropy data like as if it was an EGD-server, start
 client_egd. E.g.:
 	client_egd -d /tmp/egd.sock -i entropy_broker-server.test.com
+        eb_client_egd -d /tmp/egd.sock -i entropy_broker-server.test.com
+You may need to delete the socket before starting eb_client_egd.
+
 Now egd-clients can use the /tmp/egd.sock unix domain socket. This
 should work with at least OpenSSL: start client_egd with one of the
 following parameters: -d /var/run/egd-pool or -d /dev/egd-pool or

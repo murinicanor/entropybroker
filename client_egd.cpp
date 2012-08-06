@@ -23,7 +23,7 @@
 
 #define DEFAULT_COMM_TO 15
 const char *pid_file = PID_DIR "/client_egd.pid";
-char *password = NULL;
+const char *client_type = "client_egd " VERSION;
 
 void sig_handler(int sig)
 {
@@ -32,22 +32,25 @@ void sig_handler(int sig)
 	exit(0);
 }
 
-void handle_client(int fd, char *host, int port)
+void egd_get__failure(int fd)
 {
-	int socket_fd = -1;
-	char get_msg[8 + 1], reply[8 + 1];
-	unsigned char egd_msg[2];
-	int n_bits_to_get;
+	unsigned char none = 0;
 
-	if (READ(fd, (char *)egd_msg, 2) != 2)
+	if (WRITE(fd, (char *)&none, 1) != 1)
+		dolog(LOG_INFO, "short write on egd client (# bytes)");
+}
+
+void egd_get(int fd, char *host, int port, bool blocking, char *password)
+{
+	unsigned char dummy;
+
+	if (READ(fd, (char *)&dummy, 1) != 1)
 	{
 		dolog(LOG_INFO, "short read on EGD client");
 		return;
 	}
 
-	// HANDLE OTHER MESSAGES AS WELL FIXME
-
-	n_bits_to_get = egd_msg[1] * 8;
+	int n_bits_to_get = dummy * 8;
 	if (n_bits_to_get <= 0)
 	{
 		dolog(LOG_CRIT, "number of bits to get <= 0: %d", n_bits_to_get);
@@ -58,8 +61,10 @@ void handle_client(int fd, char *host, int port)
 
 	dolog(LOG_INFO, "will get %d bits", n_bits_to_get);
 
+	char get_msg[8 + 1];
 	snprintf(get_msg, sizeof(get_msg), "0001%04d", n_bits_to_get);
 
+	int socket_fd = -1;
 	bool send_request = true;
 	double last_msg = 0.0;
 	for(;;)
@@ -70,7 +75,7 @@ void handle_client(int fd, char *host, int port)
 		{
 			dolog(LOG_INFO, "(re-)connecting to %s:%d", host, port);
 
-			if (reconnect_server_socket(host, port, password, &socket_fd, "client_egd " VERSION, 0) == -1)
+			if (reconnect_server_socket(host, port, password, &socket_fd, client_type, 0) == -1)
 			{
 				dolog(LOG_CRIT, "cannot connect to %s:%d", host, port);
 				send_request = true;
@@ -80,6 +85,12 @@ void handle_client(int fd, char *host, int port)
 			last_msg = now;
 
 			dolog(LOG_INFO, "Connected, fd: %d", socket_fd);
+		}
+
+		if (socket_fd == -1 && !blocking)
+		{
+			egd_get__failure(fd);
+			return;
 		}
 
 		if (send_request)
@@ -104,6 +115,7 @@ void handle_client(int fd, char *host, int port)
 		if (sleep <= 0.0)
 			sleep = 1.0;
 
+		char reply[8 + 1];
 		int rc = READ_TO(socket_fd, reply, 8, send_request ? DEFAULT_COMM_TO : sleep);
 		if (rc == 0)
 			send_request = true;
@@ -126,6 +138,13 @@ void handle_client(int fd, char *host, int port)
 			dolog(LOG_WARNING, "server has no data/quota");
 
 			send_request = false;
+
+			if (!blocking)
+			{
+				egd_get__failure(fd);
+				return;
+			}
+
 			continue;
 		}
 		else if (memcmp(reply, "0004", 4) == 0)       /* ping request */
@@ -211,7 +230,7 @@ void handle_client(int fd, char *host, int port)
 
 			// SEND TO EGD CLIENT FIXME
 			unsigned char msg = min(255, will_get_n_bytes);
-			if (WRITE(fd, (char *)&msg, 1) != 1)
+			if (!blocking && WRITE(fd, (char *)&msg, 1) != 1)
 				dolog(LOG_INFO, "short write on egd client (# bytes)");
 			else if (WRITE(fd, (char *)buffer_out, msg) != msg)
 				dolog(LOG_INFO, "short write on egd client (data)");
@@ -224,6 +243,62 @@ void handle_client(int fd, char *host, int port)
 	}
 
 	close(socket_fd);
+}
+
+void egd_entropy_count(int fd)
+{
+	unsigned int count = 9999;
+	unsigned char reply[] = { (count >> 24) & 255, (count >> 16) & 255, (count >> 8) & 255, count & 255 };
+
+	if (WRITE(fd, (char *)reply, 4) != 4)
+		dolog(LOG_INFO, "short write on egd client");
+}
+
+void egd_put(int fd, char *host, int port, char *password)
+{
+	unsigned char cmd[3];
+	if (READ(fd, (char *)cmd, 3) != 3)
+	{
+		dolog(LOG_INFO, "EGD_put short read (1)");
+		return;
+	}
+
+	int bit_cnt = (cmd[0] << 8) + cmd[1];
+	dolog(LOG_INFO, "EGD client puts %d bits of entropy", bit_cnt);
+
+	unsigned char byte_cnt = cmd[2];
+
+	char buffer[256];
+	if (READ(fd, buffer, byte_cnt) != byte_cnt)
+	{
+		dolog(LOG_INFO, "EGD_put short read (2)");
+		return;
+	}
+
+	int socket_fd = -1;
+	(void)message_transmit_entropy_data(host, port, &socket_fd, password, client_type, (unsigned char *)buffer, byte_cnt);
+
+	close(socket_fd);
+}
+
+void handle_client(int fd, char *host, int port, char *password)
+{
+	unsigned char egd_msg;
+
+	if (READ(fd, (char *)&egd_msg, 1) != 1)
+	{
+		dolog(LOG_INFO, "short read on EGD client");
+		return;
+	}
+
+	if (egd_msg == 0)	// get entropy count
+		egd_entropy_count(fd);
+	else if (egd_msg == 1)	// get data, non blocking
+		egd_get(fd, host, port, false, password);
+	else if (egd_msg == 2)	// get data, blocking
+		egd_get(fd, host, port, true, password);
+	else if (egd_msg == 3)	// put data
+		egd_put(fd, host, port, password);
 }
 
 int open_unixdomain_socket(char *path, int nListen)
@@ -271,6 +346,7 @@ int main(int argc, char *argv[])
 	char *log_logfile = NULL;
 	char *uds = NULL;
 	int listen_fd, nListen = 5;
+	char *password = NULL;
 
 	printf("eb_client_egd v" VERSION ", (C) 2009-2012 by folkert@vanheusden.com\n");
 
@@ -355,7 +431,7 @@ int main(int argc, char *argv[])
 
 			if (pid == 0)
 			{
-				handle_client(fd, host, port);
+				handle_client(fd, host, port, password);
 
 				if (!do_not_fork)
 					exit(0);
