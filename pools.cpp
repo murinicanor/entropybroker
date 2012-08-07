@@ -73,7 +73,7 @@ void pools::store_caches(unsigned int keep_n)
 				pool_vector.at(0) -> dump(fh);
 
 			delete pool_vector.at(0);
-			pool_vector.erase(pool_vector.begin());
+			pool_vector.erase(pool_vector.begin() + 0);
 		}
 
 		fclose(fh);
