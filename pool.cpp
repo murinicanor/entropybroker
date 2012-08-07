@@ -49,6 +49,8 @@ pool::pool(int pool_nr, FILE *fh, bit_count_estimator *bce_in) : bce(bce_in)
 {
 	unsigned char val_buffer[4];
 
+	iv = NULL;
+
 	if (fread(val_buffer, 1, 4, fh) <= 0)
 		bits_in_pool = 0;
 	else
@@ -170,7 +172,7 @@ int pool::get_entropy_data(unsigned char *entropy_data, int n_bytes_requested, b
 		if (bits_in_pool < 0)
 			bits_in_pool = 0;
 
-		BF_set_key(&key, sizeof(hash), hash);
+		BF_set_key(&key, half_sha512_hash_len, hash);
 		BF_cbc_encrypt(entropy_pool, temp_buffer, (POOL_SIZE / 8), &key, cur_ivec, BF_DECRYPT);
 		memcpy(entropy_pool, temp_buffer, (POOL_SIZE / 8));
 	}
