@@ -8,6 +8,7 @@
 #include <fcntl.h>
 #include <vector>
 #include <string>
+#include <openssl/blowfish.h>
 
 #include "error.h"
 #include "math.h"
@@ -117,6 +118,8 @@ int main(int argc, char *argv[])
 	bit_count_estimator *bce = new bit_count_estimator(config.bitcount_estimator);
 
 	pools *ppools = new pools(std::string(CACHE_DIR), config.max_number_of_mem_pools, config.max_number_of_disk_pools, config.min_store_on_disk_n, bce);
+
+	dolog(LOG_DEBUG, "Blowfish options: %s", BF_options());
 
 	if (!do_not_fork)
 	{

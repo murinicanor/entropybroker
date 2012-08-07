@@ -804,28 +804,30 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 		tv.tv_nsec = (time_left - (double)tv.tv_sec) * 1000000000.0;
 
 		rc = pselect(max_fd + 1, &rfds, NULL, NULL, &tv, &sig_set);
+
+		if (is_SIGHUP())
+		{
+			dolog(LOG_DEBUG, "Got SIGHUP");
+			reset_SIGHUP();
+			force_stats = 1;
+		}
+
+		if (is_SIGEXIT())
+		{
+			dolog(LOG_INFO, "Program stopping due to either SIGTERM, SIGQUIT or SIGINT");
+			unlink(pid_file);
+			break;
+		}
+
 		if (rc == -1)
 		{
-			if (is_SIGHUP())
-			{
-				dolog(LOG_DEBUG, "Got SIGHUP");
-				reset_SIGHUP();
-				force_stats = 1;
-			}
-
-			if (is_SIGEXIT())
-			{
-				dolog(LOG_INFO, "Program stopping due to either SIGTERM, SIGQUIT or SIGINT");
-				unlink(pid_file);
-				break;
-			}
-
 			if (errno == EBADF || errno == ENOMEM || errno == EINVAL)
 				error_exit("pselect() failed");
 
 			if (errno == EINTR)
 				continue;
 		}
+
 		now = get_ts();
 
 		if (config -> allow_event_entropy_addition)
