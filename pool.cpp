@@ -101,9 +101,11 @@ int pool::add_entropy_data(unsigned char *entropy_data, int n_bytes_in)
 	if (n_bytes_in < 4) // minimum blowfish key size
 	{
 		iv -> seed(entropy_data, n_bytes_in);
-		n_bytes_in = 0;
+
+		return 0;
 	}
-	else if (is_full() && n_bytes_in >= 32)
+
+	if (is_full() && n_bytes_in >= 32)
 	{
 		iv -> seed(entropy_data, 8);
 
@@ -111,39 +113,34 @@ int pool::add_entropy_data(unsigned char *entropy_data, int n_bytes_in)
 		n_bytes_in -=8;
 	}
 
-	if (n_bytes_in > 0)
+	unsigned char temp_buffer[POOL_SIZE / 8];
+	int n_added = bce -> get_bit_count(entropy_data, n_bytes_in);
+
+	while(n_bytes_in > 0)
 	{
-		unsigned char temp_buffer[POOL_SIZE / 8];
-		int n_added = bce -> get_bit_count(entropy_data, n_bytes_in);
+		unsigned char cur_ivec[8];
+		iv -> get(cur_ivec);
 
-		while(n_bytes_in > 0)
-		{
-			unsigned char cur_ivec[8];
-			iv -> get(cur_ivec);
+		// when adding data to the pool, we encrypt the pool using blowfish with
+		// the entropy-data as the encryption-key. blowfish allows keysizes with
+		// a maximum of 448 bits which is 56 bytes
+		int cur_to_add = min(n_bytes_in, 56);
 
-			// when adding data to the pool, we encrypt the pool using blowfish with
-			// the entropy-data as the encryption-key. blowfish allows keysizes with
-			// a maximum of 448 bits which is 56 bytes
-			int cur_to_add = min(n_bytes_in, 56);
+		BF_KEY key;
+		BF_set_key(&key, cur_to_add, entropy_data);
+		int ivec_offset = 0;
+		BF_cfb64_encrypt(entropy_pool, temp_buffer, (POOL_SIZE / 8), &key, cur_ivec, &ivec_offset, BF_ENCRYPT);
+		memcpy(entropy_pool, temp_buffer, (POOL_SIZE / 8));
 
-			BF_KEY key;
-			BF_set_key(&key, cur_to_add, entropy_data);
-			int ivec_offset = 0;
-			BF_cfb64_encrypt(entropy_pool, temp_buffer, (POOL_SIZE / 8), &key, cur_ivec, &ivec_offset, BF_ENCRYPT);
-			memcpy(entropy_pool, temp_buffer, (POOL_SIZE / 8));
-
-			entropy_data += cur_to_add;
-			n_bytes_in -= cur_to_add;
-		}
-
-		bits_in_pool += n_added;
-		if (bits_in_pool > POOL_SIZE)
-			bits_in_pool = POOL_SIZE;
-
-		return n_added;
+		entropy_data += cur_to_add;
+		n_bytes_in -= cur_to_add;
 	}
 
-	return 0;
+	bits_in_pool += n_added;
+	if (bits_in_pool > POOL_SIZE)
+		bits_in_pool = POOL_SIZE;
+
+	return n_added;
 }
 
 int pool::get_n_bits_in_pool(void)
