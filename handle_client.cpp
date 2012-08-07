@@ -200,7 +200,7 @@ int do_client_get(pools *ppools, client_t *client, statistics_t *stats, config_t
 	return 0;
 }
 
-int do_client_put(pools *ppools, client_t *client, statistics_t *stats, config_t *config, BF_KEY *key, bool *new_bits)
+int do_client_put(pools *ppools, client_t *client, statistics_t *stats, config_t *config, BF_KEY *key, bool *new_bits, bool *is_full)
 {
 	char msg[4+4+1];
 	int cur_n_bits, cur_n_bytes;
@@ -425,7 +425,7 @@ int do_client_kernelpoolfilled_request(client_t *client, config_t *config)
 
 	if (WRITE_TO(client -> socket_fd, buffer, 8, config -> communication_timeout) != 8)
 	{
-		dolog(LOG_INFO, "kernfill|Short write while sending ping request to %s", client -> host);
+		dolog(LOG_INFO, "kernfill|Short write while sending kernel pool fill status request to %s", client -> host);
 		return -1;
 	}
 
@@ -436,7 +436,7 @@ int do_client_kernelpoolfilled_request(client_t *client, config_t *config)
 	return 0;
 }
 
-int do_client(pools *ppools, client_t *client, statistics_t *stats, config_t *config, fips140 *eb_output_fips140, scc *eb_output_scc, BF_KEY *key, bool *no_bits, bool *new_bits)
+int do_client(pools *ppools, client_t *client, statistics_t *stats, config_t *config, fips140 *eb_output_fips140, scc *eb_output_scc, BF_KEY *key, bool *no_bits, bool *new_bits, bool *is_full)
 {
 	char cmd[4 + 1];
 	cmd[4] = 0x00;
@@ -457,7 +457,7 @@ int do_client(pools *ppools, client_t *client, statistics_t *stats, config_t *co
 	}
 	else if (strcmp(cmd, "0002") == 0)	// PUT bits
 	{
-		return do_client_put(ppools, client, stats, config, key, new_bits);
+		return do_client_put(ppools, client, stats, config, key, new_bits, is_full);
 	}
 	else if (strcmp(cmd, "0003") == 0)	// server type
 	{
@@ -500,6 +500,28 @@ void forget_client(client_t *clients, int *n_clients, int nr)
 	if (n_to_move > 0)
 		memmove(&clients[nr], &clients[nr + 1], sizeof(client_t) * n_to_move);
 	(*n_clients)--;
+}
+
+void notify_servers_full(client_t *clients, int *n_clients, statistics_t *stats)
+{
+	char buffer[8 + 1];
+
+	make_msg(buffer, 9004, 0); // 9004
+
+	for(int loop=*n_clients - 1; loop>=0; loop--)
+	{
+		if (!clients[loop].is_server)
+			continue;
+
+		if (WRITE_TO(clients[loop].socket_fd, buffer, 8, config -> communication_timeout) != 8)
+		{
+			dolog(LOG_INFO, "kernfill|Short write while sending full notification request to %s", client -> host);
+
+			stats -> disconnects++;
+
+			forget_client(clients, n_clients, loop);
+		}
+	}
 }
 
 void notify_clients_data_available(client_t *clients, int *n_clients, statistics_t *stats, pools *ppools, config_t *config)
@@ -738,7 +760,7 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 	BF_KEY key;
 	BF_set_key(&key, strlen(config -> auth_password), (unsigned char *)config -> auth_password);
 
-	bool no_bits = false, new_bits = false;
+	bool no_bits = false, new_bits = false, is_full = false;
 	for(;;)
 	{
 		int loop, rc;
@@ -850,6 +872,8 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 		new_bits = false;
 		if (rc > 0)
 		{
+			bool prev_is_full = is_full;
+
 			for(loop=n_clients - 1; loop>=0; loop--)
 			{
 				if (FD_ISSET(clients[loop].socket_fd, &rfds))
@@ -857,7 +881,7 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 					clients[loop].last_message = now;
 
 					bool cur_no_bits = false, cur_new_bits = false;
-					if (do_client(ppools, &clients[loop], &stats, config, eb_output_fips140, eb_output_scc, &key, &cur_no_bits, &cur_new_bits) == -1)
+					if (do_client(ppools, &clients[loop], &stats, config, eb_output_fips140, eb_output_scc, &key, &cur_no_bits, &cur_new_bits, &is_full) == -1)
 					{
 						dolog(LOG_INFO, "main|connection closed, removing client %s from list", clients[loop].host);
 						dolog(LOG_DEBUG, "main|%s: %s, scc: %s", clients[loop].host, clients[loop].pfips140 -> stats(), clients[loop].pscc -> stats());
@@ -897,6 +921,11 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 
 					notify_clients_data_available(clients, &n_clients, &stats, ppools, config);
 				}
+			}
+
+			if (is_full == true && prev_is_full == false)
+			{
+				notify_servers_full(clients, &n_clients, &stats);
 			}
 
 			if (FD_ISSET(listen_socket_fd, &rfds))

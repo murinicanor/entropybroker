@@ -159,7 +159,7 @@ int sleep_interruptable(int socket_fd, int how_long)
 
 		if (memcmp(buffer, "0010", 4) == 0)
 			dolog(LOG_INFO, "Broker requests for data");
-		else
+		else if (memcmp(buffer, "9004", 4) != 0)
 			dolog(LOG_WARNING, "Unexpected message '%s' received from broker!", buffer);
 	}
 
@@ -266,6 +266,8 @@ int message_transmit_entropy_data(char *host, int port, int *socket_fd, char *pa
 			// shake as it might have been queued earlier
 			goto ignore_unsollicited_msg;
 		}
+		else if (strcmp(reply, "9004") == 0)            // all pools full, only for provies
+			goto ignore_unsollicited_msg;
 		else
 		{
 			dolog(LOG_CRIT, "garbage received: %s", reply);
