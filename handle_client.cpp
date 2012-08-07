@@ -213,6 +213,8 @@ int do_client_put(pools *ppools, client_t *client, statistics_t *stats, config_t
 
 	if (ppools -> all_pools_full())
 	{
+		*is_full = true;
+
 		double last_submit_ago = now - client -> last_put_message;
 		char full_allow_interval_submit = last_submit_ago >= config -> when_pools_full_allow_submit_interval;
 
@@ -502,7 +504,7 @@ void forget_client(client_t *clients, int *n_clients, int nr)
 	(*n_clients)--;
 }
 
-void notify_servers_full(client_t *clients, int *n_clients, statistics_t *stats)
+void notify_servers_full(client_t *clients, int *n_clients, statistics_t *stats, config_t *config)
 {
 	char buffer[8 + 1];
 
@@ -515,7 +517,7 @@ void notify_servers_full(client_t *clients, int *n_clients, statistics_t *stats)
 
 		if (WRITE_TO(clients[loop].socket_fd, buffer, 8, config -> communication_timeout) != 8)
 		{
-			dolog(LOG_INFO, "kernfill|Short write while sending full notification request to %s", client -> host);
+			dolog(LOG_INFO, "kernfill|Short write while sending full notification request to %s", clients[loop].host);
 
 			stats -> disconnects++;
 
@@ -760,7 +762,7 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 	BF_KEY key;
 	BF_set_key(&key, strlen(config -> auth_password), (unsigned char *)config -> auth_password);
 
-	bool no_bits = false, new_bits = false, is_full = false;
+	bool no_bits = false, new_bits = false, prev_is_full = false;
 	for(;;)
 	{
 		int loop, rc;
@@ -872,7 +874,7 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 		new_bits = false;
 		if (rc > 0)
 		{
-			bool prev_is_full = is_full;
+			bool is_full = false;
 
 			for(loop=n_clients - 1; loop>=0; loop--)
 			{
@@ -925,8 +927,9 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 
 			if (is_full == true && prev_is_full == false)
 			{
-				notify_servers_full(clients, &n_clients, &stats);
+				notify_servers_full(clients, &n_clients, &stats, config);
 			}
+			prev_is_full = is_full;
 
 			if (FD_ISSET(listen_socket_fd, &rfds))
 			{
