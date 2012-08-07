@@ -1,4 +1,4 @@
-#define PROTOCOL_VERSION 2
+#define PROTOCOL_VERSION 3
 #define TCP_SILENT_FAIL_TEST_INTERVAL 120
 
 void make_msg(char *where_to, int code, int value);
