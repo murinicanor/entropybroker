@@ -65,7 +65,7 @@ int main(int argc, char *argv[])
 	eb_output_fips140 -> set_user((char *)"output");
 	eb_output_scc     -> set_user((char *)"output");
 
-	while((c = getopt(argc, argv, "P:c:S:l:sn")) != -1)
+	while((c = getopt(argc, argv, "hP:c:S:l:sn")) != -1)
 	{
 		switch(c)
 		{

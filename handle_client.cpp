@@ -252,7 +252,10 @@ int do_client_put(pools *ppools, client_t *client, statistics_t *stats, config_t
 		return -1;
 	}
 
-	make_msg(msg, 1, cur_n_bits); // 0001
+	if (warn_all_full)
+		make_msg(msg, 9003, cur_n_bits);
+	else
+		make_msg(msg, 1, cur_n_bits); // 0001
 	if (WRITE_TO(client -> socket_fd, msg, 8, config -> communication_timeout) != 8)
 	{
 		dolog(LOG_INFO, "put|%s short write while sending ack", client -> host);
@@ -297,8 +300,8 @@ int do_client_put(pools *ppools, client_t *client, statistics_t *stats, config_t
 	free(buffer_out);
 	free(buffer_in);
 
-	if (warn_all_full)
-		return send_accepted_while_full(client, config);
+//	if (warn_all_full)
+//		return send_accepted_while_full(client, config);
 
 	return 0;
 }

@@ -15,6 +15,8 @@
 unsigned char ivec[8] = { 0 };
 BF_KEY key;
 
+static int sleep_9003 = 300;
+
 void make_msg(char *where_to, int code, int value)
 {
 	if (code < 0 || code > 9999)
@@ -207,7 +209,7 @@ int message_transmit_entropy_data(char *host, int port, int *socket_fd, char *pa
 		value = atoi(&reply[4]);
 		reply[4] = 0x00;
 
-		if (strcmp(reply, "0001") == 0)                 // ACK
+		if (strcmp(reply, "0001") == 0 || strcmp(reply, "9003") == 0)                 // ACK
 		{
 			int cur_n_bytes = (value + 7) / 8;
 
@@ -236,23 +238,26 @@ int message_transmit_entropy_data(char *host, int port, int *socket_fd, char *pa
 
 			free(bytes_out);
 
+			if (strcmp(reply, "9003") == 0)            // ACK but full
+			{
+				// only usefull for eb_proxy
+				dolog(LOG_DEBUG, "pool full, sleeping %d seconds (with ACK)", sleep_9003);
+				// same comments as for 9001 apply
+				sleep_interruptable(*socket_fd, sleep_9003);
+			}
+
 			break;
 		}
 		else if (strcmp(reply, "9001") == 0)            // NACK
 		{
 			dolog(LOG_DEBUG, "pool full, sleeping %d seconds", value);
 
+			sleep_9003 = (sleep_9003 + value * 2) / 2;
+
 			// now we should sleep and wait for either the time
 			// to pass or a 0010 to come in. in reality we just
 			// sleep until the first message comes in and then
 			// continue; it'll only be 0010 anyway
-			sleep_interruptable(*socket_fd, value);
-		}
-		else if (strcmp(reply, "9003") == 0)            // ACK but full
-		{
-			// only usefull for eb_proxy
-			dolog(LOG_DEBUG, "pool full, sleeping %d seconds", value);
-			// same comments as for 9001 apply
 			sleep_interruptable(*socket_fd, value);
 		}
 		else if (strcmp(reply, "0010") == 0)            // there's a need for data

@@ -112,7 +112,7 @@ void pools::load_caches(unsigned int load_n_bits)
 void pools::flush_empty_pools()
 {
 	unsigned int deleted = 0;
-	for(unsigned int index=0; index<pool_vector.size();)
+	for(int index=pool_vector.size() - 1; index >= 0; index--)
 	{
 		if (pool_vector.at(index) -> get_n_bits_in_pool() == 0)
 		{
@@ -120,10 +120,6 @@ void pools::flush_empty_pools()
 			pool_vector.erase(pool_vector.begin() + index);
 
 			deleted++;
-		}
-		else
-		{
-			index++;
 		}
 	}
 
@@ -138,14 +134,14 @@ void pools::merge_pools()
 
 	int n_merged = 0;
 	unsigned char buffer[POOL_SIZE / 8];
-	for(unsigned int i1=0; i1<(pool_vector.size() - 1); i1++)
+	for(int i1=(pool_vector.size() - 2); i1 >= 0; i1--)
 	{
 		if (pool_vector.at(i1) -> is_full())
 			continue;
 
 		int i1_size = pool_vector.at(i1) -> get_n_bits_in_pool();
 
-		for(unsigned int i2=(i1 + 1); i2 < pool_vector.size(); i2++)
+		for(int i2=(pool_vector.size() - 1); i2 >= (i1 + 1); i2--)
 		{
 			int i2_size = pool_vector.at(i2) -> get_n_bits_in_pool();
 			if (i1_size + i2_size > POOL_SIZE)
@@ -153,6 +149,8 @@ void pools::merge_pools()
 
 			int bytes = (i2_size + 7) / 8;
 			pool_vector.at(i2) -> get_entropy_data(buffer, bytes, false);
+
+			delete pool_vector.at(i2);
 			pool_vector.erase(pool_vector.begin() + i2);
 
 			pool_vector.at(i1) -> add_entropy_data(buffer, bytes);
