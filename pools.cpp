@@ -134,7 +134,7 @@ void pools::merge_pools()
 
 	int n_merged = 0;
 	unsigned char buffer[POOL_SIZE / 8];
-	for(int i1=(pool_vector.size() - 2); i1 >= 0; i1--)
+	for(int i1=0; i1 < (pool_vector.size() - 1); i1++)
 	{
 		if (pool_vector.at(i1) -> is_full())
 			continue;
