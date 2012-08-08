@@ -24,6 +24,7 @@
 #include <unistd.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <openssl/rand.h>
 
 #include "math.h"
 #include "ivec.h"
