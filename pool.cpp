@@ -107,7 +107,7 @@ int pool::add_entropy_data(unsigned char *entropy_data, int n_bytes_in)
 		n_bytes_in -=8;
 	}
 
-	unsigned char temp_key[56];
+	unsigned char temp_key[56] = { 0 }; // to silence valgrind
 	unsigned char temp_buffer[POOL_SIZE / 8];
 	int n_added = bce -> get_bit_count(entropy_data, n_bytes_in);
 
