@@ -105,6 +105,8 @@ void pools::load_caches(unsigned int load_n_bits)
 		if (unlink(cache_list.at(0).c_str()) == -1)
 			error_exit("Failed to delete cache-file %s", cache_list.at(0).c_str());
 
+		fclose(fh);
+
 		cache_list.erase(cache_list.begin());
 	}
 }
