@@ -49,11 +49,12 @@ all:
 	echo entropy_broker          - main daemon which distributes the entropy data
 	echo
 	echo eb_server_audio         - retrieves noise from an audio device
-	echo	requires libasound2-dev
+	echo	requires libasound2-dev, linux only
 	echo
 	echo eb_server_timers        - retrieves entropy by comparing jitter of timers
 	echo
 	echo eb_server_v4l           - retrieves noise from video4linux2 devices (webcams etc)
+	echo	linux only
 	echo
 	echo eb_server_stream        - retrieves entropy data from a serial port or a hardware rng
 	echo
@@ -67,8 +68,10 @@ all:
 	echo	requires libusb-1.0-0-dev
 	echo
 	echo eb_server_linux_kernel  - retrieves(!) entropy data from a /dev/random device
+	echo	linux only
 	echo
 	echo eb_client_linux_kernel  - sends(!) entropy data to a linux kernel
+	echo	linux only
 	echo
 	echo eb_client_file
 	echo

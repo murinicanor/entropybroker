@@ -3,32 +3,32 @@ How it works
 The 'entropy_broker' process is the central process of it all. It
 collects all entropy data, mixes it within its pool(s), measures
 the amount of randomness in that data en then serves it to clients.
+
 server_* processes, which can run in other systems than the
 entropy_broker-process, collect the random-data and transmit that
 to the central entropy_broker-process.
+
 client_* processes, which also can run everywhere, get random-data
 from the central entropy_broker-process and feed that to for
 example the local linux-kernel (/dev/random so to say) or to
 processes that read from a egb-compatible unix-domain socket.
-If that entropy_broker-process is on a different system than the
-server_- or client_- processes, then you're advised to let that
-communication proceed over a network seperate from production-
-lan, unless no-one can intercept the communication.
 
+Most daemons should run on all UNIX systems. The ones that are
+Linux-specific are markes as such.
 
 Building
 --------
 	make install
 Files will be installed in  /usr/local/entropybroker 
-You need the OpenSSL development libraries, zlib, asound2 and
-libusb-1.0-0-dev. 
+You need the OpenSSL and zlib development libraries.
 asound2 is for eb_server_audio
 libusb-1.0-0-dev is for eb_server_usb
 
 *** PLEASE NOTE: since 1.0, 'eb' was renamed to 'entropy_broker' ***
 *** also the other daemons were renamed ***
 *** ALSO: the network protocol has changed so it is no longer ***
-*** compatible with older versions ***
+*** compatible with older versions (1.1 is also incompatible ***
+*** with 1.0) ***
 *** LAST NOTE: the configuration file changed, see example ***
 
 
@@ -36,17 +36,21 @@ Usage
 -----
 Since version 1.0 all entropy-data is encrypted before it is
 transmitted over the network.
+
 Also, clients and servers need to authenticate before they can
 talk to the entropybroker. For that you need to add a line
 to entropybroker.conf like this:
 	password = my-password.txt
+
 Then 'my-password.txt' should contain the password you want to
 use. Also the file should only be readable by the user under
 which the entropy-broker and/or servers/clients run.
 E.g. use chmod 600 my-password.txt
+
 The client/server processes don't have a configuration file. For
 them, you need to use '-X', e.g.:
 	eb_server_v4l -X my-password.txt
+
 Passwords should not be longer than 56 characters. If a binary
 password is used, note that it is cut-off at the first LF (\n)
 found.
@@ -80,9 +84,11 @@ In this example there are 3 audio cards (0, 1 and 2, see first column
 between [ and ]). If we want to take the audio from card 2 (see line 10)
 it would look like this:
 eb_server_audio -d hw:2,0 -s -i broker -X 
+This program is Linux-only (due to the ALSA requirement).
 
 On systems with a spare tv-card/webcam, start server_v4l. E.g.:
 eb_server_v4l -i broker -d /dev/video0 -s -X password.txt
+This program is Linux-only (due to the video4linux2 requirement).
 
 On systems that are mostly idle, start server_timers. Check
 http://vanheusden.com/te/#bps to see some expected bitrates.
@@ -107,6 +113,7 @@ in the entropy-key daemons configuration (which is
 
 On systems with a RNG in the chipset that automatically gets send
 to the linux kernel entropy buffer, use server_linux_kernel.
+This program is Linux-only.
 
 On systems with one or more USB devices attached (can be simple as
 a keyboard or a mouse) you can use server_usb. This needs to run
@@ -132,6 +139,7 @@ is when it only has 128 bits left), then write a new value to:
 /proc/sys/kernel/random/write_wakeup_threshold
 E.g.:
 	echo 512 > /proc/sys/kernel/random/write_wakeup_threshold
+This program is Linux-only.
 
 To server entropy data like as if it was an EGD-server, start
 client_egd. E.g.:
