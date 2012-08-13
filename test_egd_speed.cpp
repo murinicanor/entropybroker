@@ -30,6 +30,8 @@ int open_unixdomain_socket(char *path)
         len = offsetof(struct sockaddr_un, sun_path) + strlen(path);
 
         fd = socket(AF_UNIX, SOCK_STREAM, 0);
+	if (fd == -1)
+		error_exit("Failed to setup socket");
 
 	if (connect(fd, (struct sockaddr *)&addr, len) == 0)
 		return fd;
@@ -86,7 +88,7 @@ int main(int argc, char *argv[])
 	do
 	{
 		int bytes_to_read, read_fd;
-		unsigned char request[2], reply[2];
+		unsigned char request[2], reply;
 
 		read_fd = open_unixdomain_socket(device);
 		if (read_fd == -1)
@@ -97,9 +99,9 @@ int main(int argc, char *argv[])
 		request[1] = 255;
 		if (WRITE(read_fd, (char *)request, sizeof(request)) != 2)
 			error_exit("Problem sending request to EGD");
-		if (READ(read_fd, (char *)reply, 1) != 1)
+		if (READ(read_fd, (char *)&reply, 1) != 1)
 			error_exit("Problem receiving reply header from EGD");
-		bytes_to_read = reply[0];
+		bytes_to_read = reply;
 		if (bytes_to_read > 0)
 		{
 			char buffer[256];

@@ -365,9 +365,9 @@ int pools::add_bits_to_pools(unsigned char *data, int n_bytes, char ignore_rngte
 		{
 			for(unsigned int rngtest_loop=0; rngtest_loop<n_bytes_to_add; rngtest_loop++)
 			{
-				if (pfips)
+				if (!ignore_rngtest_fips140)
 					pfips -> add(data[rngtest_loop]);
-				if (pscc)
+				if (!ignore_rngtest_scc)
 					pscc -> add(data[rngtest_loop]);
 			}
 		}

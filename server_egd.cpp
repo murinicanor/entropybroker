@@ -218,6 +218,7 @@ int main(int argc, char *argv[])
 				if (message_transmit_entropy_data(host, port, &socket_fd, password, server_type, bytes, index) == -1)
 				{
 					dolog(LOG_INFO, "connection closed");
+
 					close(socket_fd);
 					socket_fd = -1;
 				}
@@ -245,11 +246,13 @@ int main(int argc, char *argv[])
 
 		if (index == 0 || bytes_to_read == 0)
 		{
-			if (sleep_interruptable(socket_fd, read_interval) != 0)
+			if (socket_fd != -1 && sleep_interruptable(socket_fd, read_interval) != 0)
 			{
 				dolog(LOG_INFO, "connection closed");
+
 				close(socket_fd);
 				socket_fd = -1;
+
 				continue;
 			}
 		}

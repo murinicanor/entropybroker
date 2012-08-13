@@ -20,12 +20,13 @@ int kernel_rng_read_blocking(unsigned char *buffer, int n)
 	if (fd == -1)
 		error_exit("Failed to open %s", DEV_RANDOM);
 
-	if (READ(fd, (char *)buffer, n) != n)
-		return -1;
+	int rc = -1;
+	if (READ(fd, (char *)buffer, n) == n)
+		rc = n;
 
 	close(fd);
 
-	return n;
+	return rc;
 }
 
 int kernel_rng_read_non_blocking(unsigned char *buffer, int n)

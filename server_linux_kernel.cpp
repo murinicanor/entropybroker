@@ -128,11 +128,13 @@ int main(int argc, char *argv[])
 		{
 			dolog(LOG_WARNING, "Problem reading from kernel entropy buffer!");
 
-			if (sleep_interruptable(socket_fd, 5) != 0)
+			if (socket_fd != -1 && sleep_interruptable(socket_fd, 5) != 0)
 			{
 				dolog(LOG_INFO, "connection closed");
+
 				close(socket_fd);
 				socket_fd = -1;
+
 				continue;
 			}
 		}
@@ -141,6 +143,7 @@ int main(int argc, char *argv[])
 		{
 			emit_buffer_to_file(bytes_file, bytes, sizeof bytes);
 		}
+
 		if (host)
 		{
 			if (message_transmit_entropy_data(host, port, &socket_fd, password, server_type, bytes, sizeof bytes) == -1)
@@ -149,6 +152,8 @@ int main(int argc, char *argv[])
 
 				close(socket_fd);
 				socket_fd = -1;
+
+				continue;
 			}
 		}
 

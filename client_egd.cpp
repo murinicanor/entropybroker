@@ -315,6 +315,8 @@ int open_unixdomain_socket(char *path, int nListen)
 	len = offsetof(struct sockaddr_un, sun_path) + strlen(path);
 
 	fd = socket(AF_UNIX, SOCK_STREAM, 0);
+	if (fd == -1)
+		error_exit("socket creation failed");
 
 	if (bind(fd, (struct sockaddr *)&addr, len) == -1)
 		error_exit("bind failed");

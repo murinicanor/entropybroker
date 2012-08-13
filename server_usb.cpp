@@ -183,6 +183,8 @@ int main(int argc, char *argv[])
 	}
 
 	dolog(LOG_INFO, "Using %d devices", use_n);
+	if (use_n == 0)
+		error_exit("no devices found which can be used");
 
 	long int total_byte_cnt = 0;
 	double cur_start_ts = get_ts();
@@ -192,7 +194,7 @@ int main(int argc, char *argv[])
 		// gather random data
 		double t1 = gen_entropy_data(devhs[dev_index]), t2 = gen_entropy_data(devhs[dev_index]);
 
-		if (++dev_index == use_n)
+		if (++dev_index >= use_n)
 			dev_index = 0;
 
 		if (t1 == t2)
