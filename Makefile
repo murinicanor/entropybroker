@@ -49,12 +49,13 @@ all:
 	@echo entropy_broker          - main daemon which distributes the entropy data
 	@echo
 	@echo eb_server_audio         - retrieves noise from an audio device
-	@echo	requires libasound2-dev, linux only
+	@echo                         = requires libasound2-dev
+	@echo                         = linux only
 	@echo
 	@echo eb_server_timers        - retrieves entropy by comparing jitter of timers
 	@echo
 	@echo eb_server_v4l           - retrieves noise from video4linux2 devices \(webcams etc\)
-	@echo	linux only
+	@echo                         = linux only
 	@echo
 	@echo eb_server_stream        - retrieves entropy data from a serial port or a hardware rng
 	@echo
@@ -65,13 +66,13 @@ all:
 	@echo eb_server_ext_proc      - invoke a program/script/etc. and use its output
 	@echo
 	@echo eb_server_usb           - measure clock-jitter between system- and USB device clock
-	@echo	requires libusb-1.0-0-dev
+	@echo                         = requires libusb-1.0-0-dev
 	@echo
 	@echo eb_server_linux_kernel  - retrieves\(\!\) entropy data from a /dev/random device
-	@echo	linux only
+	@echo                         = linux only
 	@echo
 	@echo eb_client_linux_kernel  - sends\(\!\) entropy data to a linux kernel
-	@echo	linux only
+	@echo                         = linux only
 	@echo
 	@echo eb_client_file          - send entropy data to a file
 	@echo
@@ -80,13 +81,13 @@ all:
 	@echo
 	@echo eb_test_egd_speed
 	@echo
-	@echo plot                    - plot random data; patterns=bad. use with e.g. eb_client_file
-	@echo	requires libpng-dev
+	@echo plot                    - plot random data: patterns=bad. use with e.g. eb_client_file
+	@echo                         = requires libpng-dev
 	@echo
-	@echo use:
+	@echo invoke:
 	@echo	make everything
 	@echo to build all daemons
-	@echo use:
+	@echo invoke:
 	@echo	make install
 	@echo to install all daemons etc. under $(PREFIX)
 	@echo
