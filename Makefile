@@ -44,7 +44,7 @@ OBJSsu=server_usb.o utils.o kernel_prng_rw.o kernel_prng_io.o log.o error.o prot
 all:
 	echo targets:
 	echo -------
-	echo All targets (except from 'plot') require the OpenSSL libraries.
+	echo All targets \(except from 'plot'\) require the OpenSSL libraries.
 	echo
 	echo entropy_broker          - main daemon which distributes the entropy data
 	echo
@@ -53,12 +53,12 @@ all:
 	echo
 	echo eb_server_timers        - retrieves entropy by comparing jitter of timers
 	echo
-	echo eb_server_v4l           - retrieves noise from video4linux2 devices (webcams etc)
+	echo eb_server_v4l           - retrieves noise from video4linux2 devices \(webcams etc\)
 	echo	linux only
 	echo
 	echo eb_server_stream        - retrieves entropy data from a serial port or a hardware rng
 	echo
-	echo eb_server_egd           - retrieves entropy data from an EGD services (e.g. entropykey)
+	echo eb_server_egd           - retrieves entropy data from an EGD services \(e.g. entropykey\)
 	echo
 	echo eb_server_push_file     - push the contents of a file to the broker
 	echo
@@ -67,15 +67,15 @@ all:
 	echo eb_server_usb           - measure clock-jitter between system- and USB device clock
 	echo	requires libusb-1.0-0-dev
 	echo
-	echo eb_server_linux_kernel  - retrieves(!) entropy data from a /dev/random device
+	echo eb_server_linux_kernel  - retrieves\(\!\) entropy data from a /dev/random device
 	echo	linux only
 	echo
-	echo eb_client_linux_kernel  - sends(!) entropy data to a linux kernel
+	echo eb_client_linux_kernel  - sends\(\!\) entropy data to a linux kernel
 	echo	linux only
 	echo
 	echo eb_client_file          - send entropy data to a file
 	echo
-	echo eb_client_egd           - send entropy data to a EGD client (e.g. OpenSSL)
+	echo eb_client_egd           - send entropy data to a EGD client \(e.g. OpenSSL\)
 	echo
 	echo
 	echo eb_test_egd_speed
