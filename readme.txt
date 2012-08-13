@@ -93,6 +93,8 @@ This program is Linux-only (due to the video4linux2 requirement).
 On systems that are mostly idle, start server_timers. Check
 http://vanheusden.com/te/#bps to see some expected bitrates.
 eb_server_timers -i broker -s -X password.txt
+This program compares timers. Due to jitter in their frequency, noise
+can be measured.
 
 On systems with an random generator connected to e.g. a serial
 port, or with a rng in the motherboard chipset, use server_stream
@@ -118,6 +120,9 @@ This program is Linux-only.
 On systems with one or more USB devices attached (can be simple as
 a keyboard or a mouse) you can use server_usb. This needs to run
 with root access.
+This program measures the response time of a device. This program
+can be compared to server_timers as it measures the difference
+between the clock of the pc and the clock in the usb device.
 
 On systems without any hardware available for retrieving data, one
 can, as a last resort, using eb_server_ext_proc. This command can
@@ -128,6 +133,10 @@ eb_server_ext_proc -i localhost -c '(find /proc -type f -print0 | xargs -0 cat ;
 The server daemons that obtain data from hardware sources use
 von neumann software whitening.
 See: http://en.wikipedia.org/wiki/Hardware_random_number_generator#Software_whitening
+
+If you have a large amount of entropy data available in a file
+on disk, you can use server_file. Please note that you can use
+the data only once.
 
 
 client processes
