@@ -42,54 +42,54 @@ OBJSep=server_ext_proc.o utils.o kernel_prng_rw.o kernel_prng_io.o log.o error.o
 OBJSsu=server_usb.o utils.o kernel_prng_rw.o kernel_prng_io.o log.o error.o protocol.o server_utils.o auth.o my_pty.o
 
 all:
-	echo targets:
-	echo -------
-	echo All targets \(except from 'plot'\) require the OpenSSL libraries.
-	echo
-	echo entropy_broker          - main daemon which distributes the entropy data
-	echo
-	echo eb_server_audio         - retrieves noise from an audio device
-	echo	requires libasound2-dev, linux only
-	echo
-	echo eb_server_timers        - retrieves entropy by comparing jitter of timers
-	echo
-	echo eb_server_v4l           - retrieves noise from video4linux2 devices \(webcams etc\)
-	echo	linux only
-	echo
-	echo eb_server_stream        - retrieves entropy data from a serial port or a hardware rng
-	echo
-	echo eb_server_egd           - retrieves entropy data from an EGD services \(e.g. entropykey\)
-	echo
-	echo eb_server_push_file     - push the contents of a file to the broker
-	echo
-	echo eb_server_ext_proc      - invoke a program/script/etc. and use its output
-	echo
-	echo eb_server_usb           - measure clock-jitter between system- and USB device clock
-	echo	requires libusb-1.0-0-dev
-	echo
-	echo eb_server_linux_kernel  - retrieves\(\!\) entropy data from a /dev/random device
-	echo	linux only
-	echo
-	echo eb_client_linux_kernel  - sends\(\!\) entropy data to a linux kernel
-	echo	linux only
-	echo
-	echo eb_client_file          - send entropy data to a file
-	echo
-	echo eb_client_egd           - send entropy data to a EGD client \(e.g. OpenSSL\)
-	echo
-	echo
-	echo eb_test_egd_speed
-	echo
-	echo plot                    - plot random data; patterns=bad. use with e.g. eb_client_file
-	echo	requires libpng-dev
-	echo
-	echo use:
-	echo	make everything
-	echo to build all daemons
-	echo use:
-	echo	make install
-	echo to install all daemons etc. under $(PREFIX)
-	echo
+	@echo targets:
+	@echo -------
+	@echo All targets \(except from 'plot'\) require the OpenSSL libraries.
+	@echo
+	@echo entropy_broker          - main daemon which distributes the entropy data
+	@echo
+	@echo eb_server_audio         - retrieves noise from an audio device
+	@echo	requires libasound2-dev, linux only
+	@echo
+	@echo eb_server_timers        - retrieves entropy by comparing jitter of timers
+	@echo
+	@echo eb_server_v4l           - retrieves noise from video4linux2 devices \(webcams etc\)
+	@echo	linux only
+	@echo
+	@echo eb_server_stream        - retrieves entropy data from a serial port or a hardware rng
+	@echo
+	@echo eb_server_egd           - retrieves entropy data from an EGD services \(e.g. entropykey\)
+	@echo
+	@echo eb_server_push_file     - push the contents of a file to the broker
+	@echo
+	@echo eb_server_ext_proc      - invoke a program/script/etc. and use its output
+	@echo
+	@echo eb_server_usb           - measure clock-jitter between system- and USB device clock
+	@echo	requires libusb-1.0-0-dev
+	@echo
+	@echo eb_server_linux_kernel  - retrieves\(\!\) entropy data from a /dev/random device
+	@echo	linux only
+	@echo
+	@echo eb_client_linux_kernel  - sends\(\!\) entropy data to a linux kernel
+	@echo	linux only
+	@echo
+	@echo eb_client_file          - send entropy data to a file
+	@echo
+	@echo eb_client_egd           - send entropy data to a EGD client \(e.g. OpenSSL\)
+	@echo
+	@echo
+	@echo eb_test_egd_speed
+	@echo
+	@echo plot                    - plot random data; patterns=bad. use with e.g. eb_client_file
+	@echo	requires libpng-dev
+	@echo
+	@echo use:
+	@echo	make everything
+	@echo to build all daemons
+	@echo use:
+	@echo	make install
+	@echo to install all daemons etc. under $(PREFIX)
+	@echo
 
 everything: entropy_broker eb_server_audio eb_server_timers eb_server_v4l eb_server_stream eb_client_linux_kernel eb_server_egd eb_client_egd eb_test_egd_speed eb_server_linux_kernel eb_client_file eb_server_push_file eb_server_ext_proc eb_server_usb
 
