@@ -60,11 +60,11 @@ all:
 	echo
 	echo eb_server_egd           - retrieves entropy data from an EGD services (e.g. entropykey)
 	echo
-	echo eb_server_push_file
+	echo eb_server_push_file     - push the contents of a file to the broker
 	echo
-	echo eb_server_ext_proc
+	echo eb_server_ext_proc      - invoke a program/script/etc. and use its output
 	echo
-	echo eb_server_usb
+	echo eb_server_usb           - measure clock-jitter between system- and USB device clock
 	echo	requires libusb-1.0-0-dev
 	echo
 	echo eb_server_linux_kernel  - retrieves(!) entropy data from a /dev/random device
@@ -73,14 +73,14 @@ all:
 	echo eb_client_linux_kernel  - sends(!) entropy data to a linux kernel
 	echo	linux only
 	echo
-	echo eb_client_file
+	echo eb_client_file          - send entropy data to a file
 	echo
-	echo eb_client_egd
+	echo eb_client_egd           - send entropy data to a EGD client (e.g. OpenSSL)
 	echo
 	echo
 	echo eb_test_egd_speed
 	echo
-	echo plot
+	echo plot                    - plot random data; patterns=bad. use with e.g. eb_client_file
 	echo	requires libpng-dev
 	echo
 	echo use:
