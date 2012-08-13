@@ -41,55 +41,81 @@ OBJSpf=server_push_file.o utils.o kernel_prng_rw.o kernel_prng_io.o log.o error.
 OBJSep=server_ext_proc.o utils.o kernel_prng_rw.o kernel_prng_io.o log.o error.o protocol.o server_utils.o auth.o my_pty.o
 OBJSsu=server_usb.o utils.o kernel_prng_rw.o kernel_prng_io.o log.o error.o protocol.o server_utils.o auth.o my_pty.o
 
-all: entropy_broker eb_server_audio eb_server_timers eb_server_v4l eb_server_stream eb_client_linux_kernel eb_server_egd eb_client_egd eb_test_egd_speed eb_server_linux_kernel eb_client_file eb_server_push_file eb_server_ext_proc eb_server_usb
+all:
+	echo targets:
+	echo -------
+	echo all targets (apart from 'plot') require the OpenSSL libraries
+	echo
+	echo entropy_broker          - main daemon which distributes the entropy data
+	echo eb_server_audio         - retrieves noise from an audio device
+	echo eb_server_timers        - retrieves entropy by comparing jitter of timers
+	echo eb_server_v4l           - retrieves noise from video4linux2 devices (webcams etc)
+	echo eb_server_stream        - retrieves entropy data from a serial port or a hardware rng
+	echo eb_server_egd           - retrieves entropy data from an EGD services (e.g. entropykey)
+	echo eb_server_push_file
+	echo eb_server_ext_proc
+	echo eb_server_usb
+	echo eb_server_linux_kernel  - retrieves(!) entropy data from a /dev/random device
+	echo eb_client_linux_kernel  - sends(!) entropy data to a linux kernel
+	echo eb_client_file
+	echo eb_client_egd
+	echo
+	echo eb_test_egd_speed
+	echo plot
+	echo
+	echo use:
+	echo	make everything
+	echo to build all daemons
+
+everything: entropy_broker eb_server_audio eb_server_timers eb_server_v4l eb_server_stream eb_client_linux_kernel eb_server_egd eb_client_egd eb_test_egd_speed eb_server_linux_kernel eb_client_file eb_server_push_file eb_server_ext_proc eb_server_usb
 
 check:
 	cppcheck -v --enable=all --std=c++11 --inconclusive . 2> err.txt
 
 entropy_broker: $(OBJSeb)
-	$(CXX) -Wall -W $(OBJSeb) $(LDFLAGS) -o entropy_broker
+	$(CXX) $(LINT) $(OBJSeb) $(LDFLAGS) -o entropy_broker
 
 eb_server_audio: $(OBJSsa)
-	$(CXX) -Wall -W $(OBJSsa) $(LDFLAGS) -lasound -o eb_server_audio
+	$(CXX) $(LINT) $(OBJSsa) $(LDFLAGS) -lasound -o eb_server_audio
 
 eb_server_timers: $(OBJSst)
-	$(CXX) -Wall -W $(OBJSst) $(LDFLAGS) -o eb_server_timers
+	$(CXX) $(LINT) $(OBJSst) $(LDFLAGS) -o eb_server_timers
 
 eb_server_v4l: $(OBJSsv)
-	$(CXX) -Wall -W $(OBJSsv) $(LDFLAGS) -o eb_server_v4l
+	$(CXX) $(LINT) $(OBJSsv) $(LDFLAGS) -o eb_server_v4l
 
 eb_server_stream: $(OBJSss)
-	$(CXX) -Wall -W $(OBJSss) $(LDFLAGS) -o eb_server_stream
+	$(CXX) $(LINT) $(OBJSss) $(LDFLAGS) -o eb_server_stream
 
 eb_server_egd: $(OBJSse)
-	$(CXX) -Wall -W $(OBJSse) $(LDFLAGS) -o eb_server_egd
+	$(CXX) $(LINT) $(OBJSse) $(LDFLAGS) -o eb_server_egd
 
 eb_client_egd: $(OBJScle)
-	$(CXX) -Wall -W $(OBJScle) $(LDFLAGS) -o eb_client_egd
+	$(CXX) $(LINT) $(OBJScle) $(LDFLAGS) -o eb_client_egd
 
 eb_client_linux_kernel: $(OBJSclk)
-	$(CXX) -Wall -W $(OBJSclk) $(LDFLAGS) -o eb_client_linux_kernel
+	$(CXX) $(LINT) $(OBJSclk) $(LDFLAGS) -o eb_client_linux_kernel
 
 eb_test_egd_speed: $(OBJSte)
-	$(CXX) -Wall -W $(OBJSte) $(LDFLAGS) -o eb_test_egd_speed
+	$(CXX) $(LINT) $(OBJSte) $(LDFLAGS) -o eb_test_egd_speed
 
 eb_server_linux_kernel: $(OBJSsk)
-	$(CXX) -Wall -W $(OBJSsk) $(LDFLAGS) -o eb_server_linux_kernel
+	$(CXX) $(LINT) $(OBJSsk) $(LDFLAGS) -o eb_server_linux_kernel
 
 eb_client_file: $(OBJScf)
-	$(CXX) -Wall -W $(OBJScf) $(LDFLAGS) -o eb_client_file
+	$(CXX) $(LINT) $(OBJScf) $(LDFLAGS) -o eb_client_file
 
 eb_server_push_file: $(OBJSpf)
-	$(CXX) -Wall -W $(OBJSpf) $(LDFLAGS) -o eb_server_push_file
+	$(CXX) $(LINT) $(OBJSpf) $(LDFLAGS) -o eb_server_push_file
 
 eb_server_ext_proc: $(OBJSep)
-	$(CXX) -Wall -W $(OBJSep) $(LDFLAGS) -o eb_server_ext_proc
+	$(CXX) $(LINT) $(OBJSep) $(LDFLAGS) -o eb_server_ext_proc
 
 eb_server_usb: $(OBJSsu)
-	$(CXX) -Wall -W $(OBJSsu) $(LDFLAGS) -lusb-1.0 -o eb_server_usb
+	$(CXX) $(LINT) $(OBJSsu) $(LDFLAGS) -lusb-1.0 -o eb_server_usb
 
 plot: plot.o
-	$(CXX) -Wall -W plot.o $(LDFLAGS) -lpng -o plot
+	$(CXX) $(LINT) plot.o $(LDFLAGS) -lpng -o plot
 
 install: entropy_broker eb_server_audio eb_server_timers eb_server_v4l eb_server_stream eb_server_egd eb_client_linux_kernel eb_client_egd eb_test_egd_speed eb_server_linux_kernel eb_client_file eb_server_push_file eb_server_ext_proc eb_server_usb plot
 	mkdir -p $(BIN) $(ETC) $(VAR) $(PID) $(CACHE)
