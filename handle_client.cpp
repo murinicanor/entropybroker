@@ -40,8 +40,6 @@ int send_denied_empty(int fd, statistics_t *stats, config_t *config)
 
 	stats -> n_times_empty++;
 
-	// FIXME seconds = ... depending on stats
-
 	make_msg(buffer, 9000, seconds);
 
 	return WRITE_TO(fd, buffer, 8, config -> communication_timeout) == 8 ? 0 : -1;

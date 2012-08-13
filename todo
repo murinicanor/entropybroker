@@ -10,3 +10,7 @@
 - http://en.wikipedia.org/wiki/Secure_Remote_Password_protocol
 
 - scsi-ping-entropyd
+
+- client_kernel_generic
+	- get at interval
+	- amount at interval configurable

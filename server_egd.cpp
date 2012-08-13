@@ -74,7 +74,7 @@ int main(int argc, char *argv[])
 	char *host = NULL;
 	int port = 55225;
 	int socket_fd = -1;
-	int read_fd = 0; // FIXME: getopt en dan van een file
+	int read_fd = -1;
 	int c;
 	char do_not_fork = 0, log_console = 0, log_syslog = 0;
 	char *log_logfile = NULL;
@@ -169,7 +169,7 @@ int main(int argc, char *argv[])
 	if (device)
 		read_fd = open_unixdomain_socket(device);
 	if (read_fd == -1)
-		error_exit("error opening stream");
+		error_exit("error opening %s", device);
 
 	snprintf(server_type, sizeof(server_type), "server_egb v" VERSION " %s", device);
 

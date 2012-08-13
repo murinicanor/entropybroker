@@ -19,6 +19,7 @@
 
 #define DEFAULT_COMM_TO 15
 const char *pid_file = PID_DIR "/client_linux_kernel.pid";
+const char *client_type = "client_linux_kernel " VERSION;
 char *password = NULL;
 
 void sig_handler(int sig)
@@ -199,7 +200,7 @@ int main(int argc, char *argv[])
 		}
 
 		bool attempt_connect = socket_fd == -1;
-		if (reconnect_server_socket(host, port, password, &socket_fd, "client_linux_kernel " VERSION, 0) == -1) // FIXME set client-type
+		if (reconnect_server_socket(host, port, password, &socket_fd, client_type, 0) == -1)
 			continue;
 		if (attempt_connect)
 			last_msg = get_ts();

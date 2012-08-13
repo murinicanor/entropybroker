@@ -228,7 +228,6 @@ void egd_get(int fd, char *host, int port, bool blocking, char *password)
 		{
 			decrypt(buffer_in, buffer_out, will_get_n_bytes);
 
-			// SEND TO EGD CLIENT FIXME
 			unsigned char msg = min(255, will_get_n_bytes);
 			if (!blocking && WRITE(fd, (char *)&msg, 1) != 1)
 				dolog(LOG_INFO, "short write on egd client (# bytes)");

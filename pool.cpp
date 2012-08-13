@@ -167,7 +167,7 @@ int pool::get_entropy_data(unsigned char *entropy_data, int n_bytes_requested, b
 	n_given = n_bytes_requested;
 	if (!prng_ok)
 		n_given = min(n_given, bits_in_pool / 8);
-	n_given = min(n_given, half_sha512_hash_len); // FIXME: see folding below
+	n_given = min(n_given, half_sha512_hash_len);
 
 	if (n_given > 0)
 	{
