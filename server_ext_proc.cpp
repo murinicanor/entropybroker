@@ -125,6 +125,7 @@ int main(int argc, char *argv[])
 	signal(SIGTERM, sig_handler);
 	signal(SIGINT , sig_handler);
 	signal(SIGQUIT, sig_handler);
+	signal(SIGCHLD, sig_handler);
 
 	bool data = false;
 	int socket_fd = -1;
@@ -137,6 +138,7 @@ int main(int argc, char *argv[])
 		if (child_fd == -1)
 		{
 			dolog(LOG_DEBUG, "Starting %s", cmd);
+
 			start_process(shell, cmd, &child_fd, &child_pid);
 		}
 
