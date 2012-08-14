@@ -148,9 +148,15 @@ int main(int argc, char *argv[])
 		error_exit("Count must be >= 1");
 
 	(void)umask(0600);
-	lock_memory();
-
 	set_logging_parameters(log_console, log_logfile, log_syslog);
+
+	FILE *fh = fopen(file, "wb");
+	if (!fh)
+		error_exit("Failed to create file %s", file);
+
+	if (chdir("/") == -1)
+		error_exit("chdir(/) failed");
+	lock_memory();
 
 	if (!do_not_fork)
 	{
@@ -167,10 +173,6 @@ int main(int argc, char *argv[])
 	signal(SIGQUIT, sig_handler);
 
 	int socket_fd = -1;
-
-	FILE *fh = fopen(file, "wb");
-	if (!fh)
-		error_exit("Failed to create file %s", file);
 
 	while(count > 0 || count == -1)
 	{

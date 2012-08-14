@@ -195,6 +195,8 @@ All processes have the following command-line switches for that:
 -l file  log to a file
 -n       do not fork: messages will appear in your terminal
 
+Note: logfiles need an absolute path.
+
 Please invoke these commands first with -h to see a list of
 options. You probably need to use '-i' to select the server
 on which 'entropy_broker' runs. Also adding '-s' is usefull as

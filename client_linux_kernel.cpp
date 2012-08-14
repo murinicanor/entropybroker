@@ -166,6 +166,8 @@ int main(int argc, char *argv[])
 	signal(SIGINT , sig_handler);
 	signal(SIGQUIT, sig_handler);
 
+	if (chdir("/") == -1)
+		error_exit("chdir(/) failed");
 	(void)umask(0600);
 	lock_memory();
 

@@ -217,6 +217,8 @@ int main(int argc, char *argv[])
 	if (!device)
 		error_exit("Please select a video4linux video device (e.g. a webcam, tv-card, etc.)");
 
+	if (chdir("/") == -1)
+		error_exit("chdir(/) failed");
 	(void)umask(0600);
 	lock_memory();
 

@@ -330,6 +330,8 @@ int main(int argc, char *argv[])
 	if (serial)
 		set_serial_parameters(read_fd, serial);
 
+	if (chdir("/") == -1)
+		error_exit("chdir(/) failed");
 	(void)umask(0600);
 	lock_memory();
 

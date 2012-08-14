@@ -81,6 +81,8 @@ int main(int argc, char *argv[])
 	if (host != NULL && bytes_file != NULL)
 		error_exit("-o and -d are mutual exclusive");
 
+	if (chdir("/") == -1)
+		error_exit("chdir(/) failed");
 	(void)umask(0600);
 	lock_memory();
 

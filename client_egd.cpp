@@ -399,6 +399,8 @@ int main(int argc, char *argv[])
 	if (!uds)
 		error_exit("no path for the unix domain socket selected");
 
+	if (chdir("/") == -1)
+		error_exit("chdir(/) failed");
 	(void)umask(0600);
 	lock_memory();
 

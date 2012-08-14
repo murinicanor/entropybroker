@@ -137,6 +137,8 @@ int main(int argc, char *argv[])
 	if (!host && !bytes_file && !show_bps)
 		error_exit("no host to connect to/file to write to given");
 
+	if (chdir("/") == -1)
+		error_exit("chdir(/) failed");
 	(void)umask(0600);
 	lock_memory();
 
