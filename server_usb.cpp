@@ -146,7 +146,7 @@ int main(int argc, char *argv[])
 
 	if (!do_not_fork && !show_bps)
 	{
-		if (daemon(-1, -1) == -1)
+		if (daemon(0, 0) == -1)
 			error_exit("fork failed");
 	}
 
