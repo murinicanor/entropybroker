@@ -11,4 +11,4 @@
 
 - scsi-ping-entropyd
 
-- server/clients: also lock in memory?
+- check with splint / flawfinder
