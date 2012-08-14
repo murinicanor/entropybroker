@@ -85,10 +85,20 @@ between [ and ]). If we want to take the audio from card 2 (see line 10)
 it would look like this:
 eb_server_audio -d hw:2,0 -s -i broker -X 
 This program is Linux-only (due to the ALSA requirement).
+This program should work with the Johnson Noise 1* produced by the
+electronic parts of the sound-card. So it is best, maybe not obvious,
+to turn the volume as low as possible.
+1* http://en.wikipedia.org/wiki/Johnson%E2%80%93Nyquist_noise
 
 On systems with a spare tv-card/webcam, start server_v4l. E.g.:
 eb_server_v4l -i broker -d /dev/video0 -s -X password.txt
 This program is Linux-only (due to the video4linux2 requirement).
+The same note regarding Johnson Noise (see the audio driver) applies
+to this program. On the other hand: LavaRnd (http://www.lavarnd.org/)
+works by the principle that what the camera "sees" is moving in a
+random way. So either put e.g. a lava-lamp or fishtank in front of
+the camera, or tune the tuner of the tv-card to a channel with
+only noise or put a cap in front of the lense.
 
 On systems that are mostly idle, start server_timers. Check
 http://vanheusden.com/te/#bps to see some expected bitrates.
