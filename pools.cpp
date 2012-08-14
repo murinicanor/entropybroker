@@ -10,6 +10,7 @@
 #include <dirent.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <sys/file.h>
 
 #include "error.h"
 #include "log.h"
@@ -67,6 +68,9 @@ void pools::store_caches(unsigned int keep_n)
 			error_exit("Failed to create file %s", new_cache_file.c_str());
 		cache_list.push_back(new_cache_file);
 
+		if (flock(fileno(fh), LOCK_EX) == -1)
+			error_exit("flock(LOCK_EX) for %s failed", new_cache_file.c_str());
+
 		while(pool_vector.size() > keep_n)
 		{
 			if (pool_vector.at(0) -> get_n_bits_in_pool() > 0)
@@ -75,6 +79,11 @@ void pools::store_caches(unsigned int keep_n)
 			delete pool_vector.at(0);
 			pool_vector.erase(pool_vector.begin() + 0);
 		}
+
+		fflush(fh);
+
+		if (flock(fileno(fh), LOCK_UN) == -1)
+			error_exit("flock(LOCK_UN) for %s failed", new_cache_file.c_str());
 
 		fclose(fh);
 	}
@@ -94,6 +103,9 @@ void pools::load_caches(unsigned int load_n_bits)
 		if (!fh)
 			error_exit("Failed to open cache-file %s", cache_list.at(0).c_str());
 
+		if (flock(fileno(fh), LOCK_EX) == -1)
+			error_exit("flock(LOCK_EX) for %s failed", cache_list.at(0).c_str());
+
 		while(!feof(fh))
 		{
 			pool *new_pool = new pool(++files_loaded, fh, bce);
@@ -104,6 +116,11 @@ void pools::load_caches(unsigned int load_n_bits)
 
 		if (unlink(cache_list.at(0).c_str()) == -1)
 			error_exit("Failed to delete cache-file %s", cache_list.at(0).c_str());
+
+		fflush(fh);
+
+		if (flock(fileno(fh), LOCK_UN) == -1)
+			error_exit("flock(LOCK_UN) for %s failed", cache_list.at(0).c_str());
 
 		fclose(fh);
 
