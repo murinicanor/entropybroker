@@ -202,6 +202,14 @@ options. You probably need to use '-i' to select the server
 on which 'entropy_broker' runs. Also adding '-s' is usefull as
 it'll make the servers/clients/entropy_broker log to syslog.
 
+If a warning appears about mlock() failing you have to options:
+- ignore it - but if the system starts swapping, entropy
+  data may end up in swap. on the other hand: pools are stored
+  in plain on disk anyway...
+- increase the maximum amount of memory a process can lock
+  in bash this can be done with "ulimit -l n_kb" where n_kb
+  is the number of KB a process is allowed to lock
+
 
 Tips
 ====
