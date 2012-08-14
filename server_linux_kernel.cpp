@@ -103,6 +103,8 @@ int main(int argc, char *argv[])
 	if (!host && !bytes_file && show_bps == 0)
 		error_exit("no host to connect to/file to write to given");
 
+	lock_memory();
+
 	set_logging_parameters(log_console, log_logfile, log_syslog);
 
 	if (!do_not_fork && !show_bps)

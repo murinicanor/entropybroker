@@ -330,6 +330,8 @@ int main(int argc, char *argv[])
 	if (serial)
 		set_serial_parameters(read_fd, serial);
 
+	lock_memory();
+
 	if (!do_not_fork)
 	{
 		if (daemon(-1, -1) == -1)

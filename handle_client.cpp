@@ -183,19 +183,25 @@ int do_client_get(pools *ppools, client_t *client, statistics_t *stats, config_t
 	dolog(LOG_DEBUG, "get|%s transmit size: %d, msg: %s", client -> host, transmit_size, output_buffer);
 
 	memcpy(&output_buffer[8], ent_buffer, cur_n_bytes);
+
+	memset(ent_buffer, 0x00, cur_n_bytes);
 	free(ent_buffer);
+
+	memset(ent_buffer_in, 0x00, cur_n_bytes);
 	free(ent_buffer_in);
 
+	int rc = 0;
 	if (WRITE_TO(client -> socket_fd, (char *)output_buffer, transmit_size, config -> communication_timeout) != transmit_size)
 	{
 		dolog(LOG_INFO, "%s error while sending to client", client -> host);
-		free(output_buffer);
-		return -1;
+
+		rc = -1;
 	}
 
+	memset(output_buffer, 0x00, transmit_size);
 	free(output_buffer);
 
-	return 0;
+	return rc;
 }
 
 int do_client_put(pools *ppools, client_t *client, statistics_t *stats, config_t *config, BF_KEY *key, bool *new_bits, bool *is_full)
@@ -274,8 +280,12 @@ int do_client_put(pools *ppools, client_t *client, statistics_t *stats, config_t
 	if (READ_TO(client -> socket_fd, (char *)buffer_in, cur_n_bytes, config -> communication_timeout) != cur_n_bytes)
 	{
 		dolog(LOG_INFO, "put|%s short read while retrieving entropy data", client -> host);
+
 		free(buffer_out);
+
+		memset(buffer_in, 0x00, cur_n_bytes);
 		free(buffer_in);
+
 		return -1;
 	}
 
@@ -297,7 +307,10 @@ int do_client_put(pools *ppools, client_t *client, statistics_t *stats, config_t
 	stats -> total_recv_requests++;
 	*new_bits = true;
 
+	memset(buffer_out, 0x00, cur_n_bytes);
 	free(buffer_out);
+
+	memset(buffer_in, 0x00, cur_n_bytes);
 	free(buffer_in);
 
 //	if (warn_all_full)

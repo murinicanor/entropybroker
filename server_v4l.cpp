@@ -217,6 +217,8 @@ int main(int argc, char *argv[])
 	if (!device)
 		error_exit("Please select a video4linux video device (e.g. a webcam, tv-card, etc.)");
 
+	lock_memory();
+
 	set_logging_parameters(log_console, log_logfile, log_syslog);
 
 	signal(SIGHUP , SIG_IGN);

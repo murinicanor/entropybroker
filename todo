@@ -11,6 +11,4 @@
 
 - scsi-ping-entropyd
 
-- client_kernel_generic
-	- get at interval
-	- amount at interval configurable
+- server/clients: also lock in memory?

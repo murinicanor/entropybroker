@@ -147,6 +147,8 @@ int main(int argc, char *argv[])
 	if (count < 1)
 		error_exit("Count must be >= 1");
 
+	lock_memory();
+
 	set_logging_parameters(log_console, log_logfile, log_syslog);
 
 	if (!do_not_fork)

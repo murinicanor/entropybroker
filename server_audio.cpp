@@ -351,6 +351,8 @@ int main(int argc, char *argv[])
 	if (host != NULL && bytes_file != NULL)
 		error_exit("-o and -d are mutual exclusive");
 
+	lock_memory();
+
 	set_logging_parameters(log_console, log_logfile, log_syslog);
 
 	if (!do_not_fork && !show_bps)

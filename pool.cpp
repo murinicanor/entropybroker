@@ -44,18 +44,12 @@ pool::pool(bit_count_estimator *bce_in) : bce(bce_in)
 	if (kernel_rng_read_non_blocking(entropy_pool, sizeof(entropy_pool)) == -1)
 		error_exit("failed reading entropy data from kernel RNG");
 
-	if (mlock(entropy_pool, sizeof entropy_pool) == -1)
-		dolog(LOG_DEBUG, "Pool: cannot lock buffer in memory");
-
 	iv = new ivec(bce);
 }
 
 pool::pool(int pool_nr, FILE *fh, bit_count_estimator *bce_in) : bce(bce_in)
 {
 	unsigned char val_buffer[4];
-
-	if (mlock(entropy_pool, sizeof entropy_pool) == -1)
-		dolog(LOG_DEBUG, "Pool: cannot lock buffer in memory");
 
 	iv = NULL;
 
@@ -79,9 +73,6 @@ pool::pool(int pool_nr, FILE *fh, bit_count_estimator *bce_in) : bce(bce_in)
 pool::~pool()
 {
 	memset(entropy_pool, 0x00, sizeof(entropy_pool));
-
-	if (munlock(entropy_pool, sizeof entropy_pool) == -1)
-		dolog(LOG_DEBUG, "Pool: cannot unlock buffer from memory");
 
 	delete iv;
 }

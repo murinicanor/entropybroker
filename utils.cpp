@@ -13,6 +13,7 @@
 #include <time.h>
 #include <sys/select.h>
 #include <netinet/tcp.h>
+#include <sys/mman.h>
 
 #include "error.h"
 #include "log.h"
@@ -424,4 +425,12 @@ void start_process(char *shell, char *cmd, int *fd, pid_t *pid)
 	}
 
 	close(fd_slave);
+}
+
+void lock_memory()
+{
+	if (mlockall(MCL_FUTURE) == -1)
+	{
+		fprintf(stderr, "mlockall(MCL_FUTURE) failed: this might be caused by this process not having enought rights. This call normally prevents any data of this process ending up in swap which might be a theoretical security issue.\nContinuing...\n");
+	}
 }

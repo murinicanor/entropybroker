@@ -399,6 +399,8 @@ int main(int argc, char *argv[])
 	if (!uds)
 		error_exit("no path for the unix domain socket selected");
 
+	lock_memory();
+
 	set_logging_parameters(log_console, log_logfile, log_syslog);
 
 	listen_fd = open_unixdomain_socket(uds, nListen);

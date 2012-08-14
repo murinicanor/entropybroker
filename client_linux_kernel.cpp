@@ -166,6 +166,8 @@ int main(int argc, char *argv[])
 	signal(SIGINT , sig_handler);
 	signal(SIGQUIT, sig_handler);
 
+	lock_memory();
+
 	dolog(LOG_INFO, "started with %d bits in kernel rng", kernel_rng_get_entropy_count());
 
 	if (dev_random_fd == -1)

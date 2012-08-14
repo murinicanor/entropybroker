@@ -99,6 +99,8 @@ int main(int argc, char *argv[])
 	if (!file)
 		error_exit("no file to read from selected");
 
+	lock_memory();
+
 	set_logging_parameters(log_console, log_logfile, log_syslog);
 
 	FILE *fh = fopen(file, "rb");
