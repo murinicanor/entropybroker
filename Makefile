@@ -94,7 +94,7 @@ all:
 	@echo to install all daemons etc. under $(PREFIX)
 	@echo
 
-everything: entropy_broker eb_server_audio eb_server_timers eb_server_v4l eb_server_stream eb_client_linux_kernel eb_server_egd eb_client_egd eb_test_egd_speed eb_server_linux_kernel eb_client_file eb_server_push_file eb_server_ext_proc eb_server_usb
+everything: entropy_broker eb_server_audio eb_server_timers eb_server_v4l eb_server_stream eb_client_linux_kernel eb_server_egd eb_client_egd eb_test_egd_speed eb_server_linux_kernel eb_client_file eb_server_push_file eb_server_ext_proc eb_server_usb plot
 
 check:
 	cppcheck -v --enable=all --std=c++11 --inconclusive . 2> err.txt
