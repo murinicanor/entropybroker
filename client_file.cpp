@@ -147,7 +147,7 @@ int main(int argc, char *argv[])
 	if (count < 1)
 		error_exit("Count must be >= 1");
 
-	(void)umask(0600);
+	(void)umask(0122);
 	set_logging_parameters(log_console, log_logfile, log_syslog);
 
 	FILE *fh = fopen(file, "wb");
