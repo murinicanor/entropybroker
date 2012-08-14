@@ -153,6 +153,8 @@ void pools::merge_pools()
 
 	int n_merged = 0;
 	unsigned char buffer[POOL_SIZE / 8];
+	lock_mem(buffer, sizeof buffer);
+
 	for(int i1=0; i1 < (pool_vector.size() - 1); i1++)
 	{
 		if (pool_vector.at(i1) -> is_full())
@@ -177,6 +179,9 @@ void pools::merge_pools()
 			n_merged++;
 		}
 	}
+
+	memset(buffer, 0x00, sizeof buffer);
+	unlock_mem(buffer, sizeof buffer);
 
 	if (n_merged)
 		dolog(LOG_INFO, "%d merged", n_merged);
@@ -225,6 +230,8 @@ int pools::get_bits_from_pools(int n_bits_requested, unsigned char **buffer, cha
 	cur_p = *buffer = (unsigned char *)malloc(n_to_do_bytes + 1);
 	if (!cur_p)
 		error_exit("transmit_bits_to_client memory allocation failure");
+
+	lock_mem(buffer, n_to_do_bytes);
 
 	// load bits from disk if needed
 	int bits_needed_to_load = n_bits_requested - get_bit_sum();

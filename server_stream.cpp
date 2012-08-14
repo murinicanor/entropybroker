@@ -333,7 +333,7 @@ int main(int argc, char *argv[])
 	if (chdir("/") == -1)
 		error_exit("chdir(/) failed");
 	(void)umask(0177);
-	lock_memory();
+	no_core();
 
 	if (!do_not_fork)
 	{

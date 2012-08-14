@@ -39,6 +39,8 @@ pool::pool(bit_count_estimator *bce_in) : bce(bce_in)
 {
 	memset(&state, 0x00, sizeof(state));
 
+	lock_mem(entropy_pool, sizeof entropy_pool);
+
 	bits_in_pool = 0;
 
 	if (kernel_rng_read_non_blocking(entropy_pool, sizeof(entropy_pool)) == -1)
@@ -50,6 +52,8 @@ pool::pool(bit_count_estimator *bce_in) : bce(bce_in)
 pool::pool(int pool_nr, FILE *fh, bit_count_estimator *bce_in) : bce(bce_in)
 {
 	unsigned char val_buffer[4];
+
+	lock_mem(entropy_pool, sizeof entropy_pool);
 
 	iv = NULL;
 
@@ -73,6 +77,8 @@ pool::pool(int pool_nr, FILE *fh, bit_count_estimator *bce_in) : bce(bce_in)
 pool::~pool()
 {
 	memset(entropy_pool, 0x00, sizeof(entropy_pool));
+
+	unlock_mem(entropy_pool, sizeof entropy_pool);
 
 	delete iv;
 }

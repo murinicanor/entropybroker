@@ -13,4 +13,5 @@
 
 - check with splint / flawfinder
 
-- lock_memory(char *pointer, int size) die dan zelf de size onthoudt
+- server_*cpp lock_mem toevoegen
+- server/client code in protocol.cpp stoppen zoveel mogelijk

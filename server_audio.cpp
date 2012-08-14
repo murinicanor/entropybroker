@@ -123,6 +123,8 @@ void main_loop(char *host, int port, char *bytes_file, char show_bps)
 	double start_ts, cur_start_ts;
 	long int total_byte_cnt = 0;
 
+	lock_mem(bytes, sizeof bytes);
+
 	start_ts = get_ts();
 	cur_start_ts = start_ts;
 	for(;;)
@@ -139,6 +141,8 @@ void main_loop(char *host, int port, char *bytes_file, char show_bps)
 		input_buffer = (char *)malloc(input_buffer_size);
 		if (!input_buffer)
 			error_exit("problem allocating %d bytes of memory", input_buffer_size);
+
+		lock_mem(input_buffer, input_buffer_size);
 
 		/* Discard the first data read */
 		/* it often contains weird looking data - probably a click from */
@@ -278,8 +282,12 @@ void main_loop(char *host, int port, char *bytes_file, char show_bps)
 		if (!got_any)
 			dolog(LOG_WARNING, "no bits in audio-stream, please make sure the recording channel is not muted");
 
+		memset(input_buffer, 0x00, input_buffer_size);
+		unlock_mem(input_buffer, input_buffer_size);
 		free(input_buffer);
 	}
+
+	unlock_mem(bytes, sizeof bytes);
 }
 
 int main(int argc, char *argv[])
@@ -354,7 +362,7 @@ int main(int argc, char *argv[])
 	if (chdir("/") == -1)
 		error_exit("chdir(/) failed");
 	(void)umask(0177);
-	lock_memory();
+	no_core();
 
 	set_logging_parameters(log_console, log_logfile, log_syslog);
 

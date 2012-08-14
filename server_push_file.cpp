@@ -108,7 +108,7 @@ int main(int argc, char *argv[])
 
 	if (chdir("/") == -1)
 		error_exit("chdir(/) failed");
-	lock_memory();
+	no_core();
 
 	if (!do_not_fork)
 	{

@@ -428,16 +428,23 @@ void start_process(char *shell, char *cmd, int *fd, pid_t *pid)
 	close(fd_slave);
 }
 
-void lock_memory()
+void no_core()
 {
-// FIME	if (mlockall(MCL_FUTURE) == -1)
-// FIME	{
-// FIME		fprintf(stderr, "mlockall(MCL_FUTURE) failed: this might be caused by this process not having enought rights. This call normally prevents any data of this process ending up in swap which might be a theoretical security issue.\nContinuing...\n");
-// FIME	}
-
 #ifndef _DEBUG
 	struct rlimit rlim = { 0, 0 };
 	if (setrlimit(RLIMIT_CORE, &rlim) == -1)
 		error_exit("setrlimit(RLIMIT_CORE) failed");
 #endif
+}
+
+void lock_mem(void *p, int size)
+{
+	if (mlock(p, size) == -1)
+		dolog(LOG_WARNING, "mlock failed");
+}
+
+void unlock_mem(void *p, int size)
+{
+	if (munlock(p, size) == -1)
+		dolog(LOG_CRIT, "mlock failed");
 }

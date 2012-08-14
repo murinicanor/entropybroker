@@ -210,6 +210,7 @@ void egd_get(int fd, char *host, int port, bool blocking, char *password)
 		unsigned char *buffer_out = (unsigned char *)malloc(will_get_n_bytes);
 		if (!buffer_out)
 			error_exit("out of memory allocating %d bytes", will_get_n_bytes);
+		lock_mem(buffer_out, will_get_n_bytes);
 
 		if (READ_TO(socket_fd, (char *)buffer_in, will_get_n_bytes, DEFAULT_COMM_TO) != will_get_n_bytes)
 		{
@@ -235,7 +236,11 @@ void egd_get(int fd, char *host, int port, bool blocking, char *password)
 				dolog(LOG_INFO, "short write on egd client (data)");
 		}
 
+
+		memset(buffer_out, 0x00, will_get_n_bytes);
+		unlock_mem(buffer_out, will_get_n_bytes);
 		free(buffer_out);
+
 		free(buffer_in);
 
 		break;
@@ -268,6 +273,7 @@ void egd_put(int fd, char *host, int port, char *password)
 	unsigned char byte_cnt = cmd[2];
 
 	char buffer[256];
+	lock_mem(buffer, sizeof buffer);
 	if (READ(fd, buffer, byte_cnt) != byte_cnt)
 	{
 		dolog(LOG_INFO, "EGD_put short read (2)");
@@ -276,6 +282,9 @@ void egd_put(int fd, char *host, int port, char *password)
 
 	int socket_fd = -1;
 	(void)message_transmit_entropy_data(host, port, &socket_fd, password, client_type, (unsigned char *)buffer, byte_cnt);
+
+	memset(buffer, 0x00, sizeof buffer);
+	unlock_mem(buffer, sizeof buffer);
 
 	close(socket_fd);
 }
@@ -402,7 +411,7 @@ int main(int argc, char *argv[])
 	if (chdir("/") == -1)
 		error_exit("chdir(/) failed");
 	(void)umask(0177);
-	lock_memory();
+	no_core();
 
 	set_logging_parameters(log_console, log_logfile, log_syslog);
 

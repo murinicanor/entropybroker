@@ -156,7 +156,7 @@ int main(int argc, char *argv[])
 
 	if (chdir("/") == -1)
 		error_exit("chdir(/) failed");
-// FIXME	lock_memory();
+	no_core();
 
 	if (!do_not_fork)
 	{
@@ -315,6 +315,7 @@ int main(int argc, char *argv[])
 			unsigned char *buffer_out = (unsigned char *)malloc(will_get_n_bytes);
 			if (!buffer_out)
 				error_exit("out of memory allocating %d bytes", will_get_n_bytes);
+			lock_mem(buffer_out, will_get_n_bytes);
 
 			if (READ_TO(socket_fd, (char *)buffer_in, will_get_n_bytes, DEFAULT_COMM_TO) != will_get_n_bytes)
 			{
@@ -337,7 +338,10 @@ int main(int argc, char *argv[])
 					error_exit("Failed to write to file");
 			}
 
+			memset(buffer_out, 0x00, will_get_n_bytes);
+			unlock_mem(buffer_out, will_get_n_bytes);
 			free(buffer_out);
+
 			free(buffer_in);
 
 			count -= will_get_n_bytes;

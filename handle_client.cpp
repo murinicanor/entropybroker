@@ -184,10 +184,10 @@ int do_client_get(pools *ppools, client_t *client, statistics_t *stats, config_t
 
 	memcpy(&output_buffer[8], ent_buffer, cur_n_bytes);
 
-	memset(ent_buffer, 0x00, cur_n_bytes);
 	free(ent_buffer);
 
 	memset(ent_buffer_in, 0x00, cur_n_bytes);
+	unlock_mem(ent_buffer_in, cur_n_bytes);
 	free(ent_buffer_in);
 
 	int rc = 0;
@@ -198,7 +198,6 @@ int do_client_get(pools *ppools, client_t *client, statistics_t *stats, config_t
 		rc = -1;
 	}
 
-	memset(output_buffer, 0x00, transmit_size);
 	free(output_buffer);
 
 	return rc;
@@ -276,6 +275,7 @@ int do_client_put(pools *ppools, client_t *client, statistics_t *stats, config_t
 	unsigned char *buffer_out = (unsigned char *)malloc(cur_n_bytes);
 	if (!buffer_out)
 		error_exit("%s error allocating %d bytes of memory", client -> host, cur_n_bytes);
+	lock_mem(buffer_out, cur_n_bytes);
 
 	if (READ_TO(client -> socket_fd, (char *)buffer_in, cur_n_bytes, config -> communication_timeout) != cur_n_bytes)
 	{
@@ -308,9 +308,9 @@ int do_client_put(pools *ppools, client_t *client, statistics_t *stats, config_t
 	*new_bits = true;
 
 	memset(buffer_out, 0x00, cur_n_bytes);
+	unlock_mem(buffer_out, cur_n_bytes);
 	free(buffer_out);
 
-	memset(buffer_in, 0x00, cur_n_bytes);
 	free(buffer_in);
 
 //	if (warn_all_full)
