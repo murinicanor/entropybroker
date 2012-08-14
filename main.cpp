@@ -101,6 +101,8 @@ int main(int argc, char *argv[])
 		}
 	}
 
+	(void)umask(0600);
+
 	set_logging_parameters(log_console, log_logfile, log_syslog);
 
 	load_config(config_file, &config);
