@@ -168,7 +168,7 @@ int main(int argc, char *argv[])
 
 	if (chdir("/") == -1)
 		error_exit("chdir(/) failed");
-	(void)umask(0122);
+	(void)umask(0177);
 	lock_memory();
 
 	dolog(LOG_INFO, "started with %d bits in kernel rng", kernel_rng_get_entropy_count());

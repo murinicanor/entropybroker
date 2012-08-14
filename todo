@@ -12,3 +12,5 @@
 - scsi-ping-entropyd
 
 - check with splint / flawfinder
+
+- lock_memory(char *pointer, int size) die dan zelf de size onthoudt

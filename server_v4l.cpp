@@ -219,8 +219,8 @@ int main(int argc, char *argv[])
 
 	if (chdir("/") == -1)
 		error_exit("chdir(/) failed");
-	(void)umask(0122);
-	lock_memory();
+	(void)umask(0177);
+	// FIXME lock_memory();
 
 	set_logging_parameters(log_console, log_logfile, log_syslog);
 

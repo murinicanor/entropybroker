@@ -430,11 +430,10 @@ void start_process(char *shell, char *cmd, int *fd, pid_t *pid)
 
 void lock_memory()
 {
-	if (mlockall(MCL_FUTURE) == -1)
-	{
-		fprintf(stderr, "mlockall(MCL_FUTURE) failed: this might be caused by this process not having enought rights. This call normally prevents any data of this process ending up in swap which might be a theoretical security issue.\nContinuing...\n");
-	}
-
+// FIME	if (mlockall(MCL_FUTURE) == -1)
+// FIME	{
+// FIME		fprintf(stderr, "mlockall(MCL_FUTURE) failed: this might be caused by this process not having enought rights. This call normally prevents any data of this process ending up in swap which might be a theoretical security issue.\nContinuing...\n");
+// FIME	}
 
 #ifndef _DEBUG
 	struct rlimit rlim = { 0, 0 };
