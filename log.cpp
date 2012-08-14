@@ -9,9 +9,9 @@
 #include "error.h"
 
 
-char log_console = 1;
+bool log_console = true;
 char *log_file = NULL;
-char log_syslog = 0;
+bool log_syslog = false;
 
 void dolog(int level, const char *format, ...)
 {
@@ -48,7 +48,7 @@ void dolog(int level, const char *format, ...)
 		syslog(level, "%s", buffer);
 }
 
-void set_logging_parameters(char console, char *file, char sl)
+void set_logging_parameters(bool console, char *file, bool sl)
 {
 	log_console = console;
 	log_file = file;

@@ -38,7 +38,7 @@ int main(int argc, char *argv[])
 	int port = 55225;
 	int socket_fd = -1;
 	int c;
-	char do_not_fork = 0, log_console = 0, log_syslog = 0;
+	bool do_not_fork = false, log_console = false, log_syslog = false;
 	char *log_logfile = NULL;
 	char *bytes_file = NULL;
 
@@ -57,7 +57,7 @@ int main(int argc, char *argv[])
 				break;
 
 			case 's':
-				log_syslog = 1;
+				log_syslog = true;
 				break;
 
 			case 'l':
@@ -65,8 +65,8 @@ int main(int argc, char *argv[])
 				break;
 
 			case 'n':
-				do_not_fork = 1;
-				log_console = 1;
+				do_not_fork = true;
+				log_console = true;
 				break;
 
 			default:
@@ -81,6 +81,7 @@ int main(int argc, char *argv[])
 	if (host != NULL && bytes_file != NULL)
 		error_exit("-o and -d are mutual exclusive");
 
+	(void)umask(0600);
 	lock_memory();
 
 	set_logging_parameters(log_console, log_logfile, log_syslog);

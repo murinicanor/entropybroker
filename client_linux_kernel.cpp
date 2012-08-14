@@ -105,7 +105,7 @@ int main(int argc, char *argv[])
 	int socket_fd = -1, dev_random_fd = open(DEV_RANDOM, O_RDWR);
 	int max_bits_in_kernel_rng = kernel_rng_get_max_entropy_count();
 	int c;
-	char do_not_fork = 0, log_console = 0, log_syslog = 0;
+	bool do_not_fork = false, log_console = false, log_syslog = false;
 	char *log_logfile = NULL;
 
 	printf("eb_client_linux_kernel v" VERSION ", (C) 2009-2012 by folkert@vanheusden.com\n");
@@ -127,7 +127,7 @@ int main(int argc, char *argv[])
 				break;
 
 			case 's':
-				log_syslog = 1;
+				log_syslog = true;
 				break;
 
 			case 'l':
@@ -135,8 +135,8 @@ int main(int argc, char *argv[])
 				break;
 
 			case 'n':
-				do_not_fork = 1;
-				log_console = 1;
+				do_not_fork = true;
+				log_console = true;
 				break;
 
 			default:
@@ -166,6 +166,7 @@ int main(int argc, char *argv[])
 	signal(SIGINT , sig_handler);
 	signal(SIGQUIT, sig_handler);
 
+	(void)umask(0600);
 	lock_memory();
 
 	dolog(LOG_INFO, "started with %d bits in kernel rng", kernel_rng_get_entropy_count());
