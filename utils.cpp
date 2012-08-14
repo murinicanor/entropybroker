@@ -439,12 +439,30 @@ void no_core()
 
 void lock_mem(void *p, int size)
 {
+	static bool notified_err = false;
+
 	if (mlock(p, size) == -1)
-		dolog(LOG_WARNING, "mlock failed");
+	{
+		if (!notified_err)
+		{
+			dolog(LOG_WARNING, "mlock failed");
+
+			notified_err = true;
+		}
+	}
 }
 
 void unlock_mem(void *p, int size)
 {
+	static bool notified_err = false;
+
 	if (munlock(p, size) == -1)
-		dolog(LOG_CRIT, "mlock failed");
+	{
+		if (!notified_err)
+		{
+			dolog(LOG_CRIT, "mlock failed");
+
+			notified_err = true;
+		}
+	}
 }
