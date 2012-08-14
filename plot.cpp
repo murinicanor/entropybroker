@@ -21,8 +21,7 @@ int main(int argc, char *argv[])
 	char *file_out = argv[2];
 
 	int bytes = 256 * 256 * sizeof(int);
-	unsigned int *points = (unsigned int *)malloc(bytes);
-	memset(points, 0x00, bytes);
+	unsigned int *points = (unsigned int *)calloc(1, bytes);
 
 	FILE *fhi = fopen(file_in, "rb");
 	if (!fhi)
@@ -62,8 +61,7 @@ int main(int argc, char *argv[])
 	double div = double(c_max) - double(c_min);
 
 	bytes = 256 * 256 * 3;
-	unsigned char *result = (unsigned char *)malloc(bytes);
-	memset(result, 0xff, bytes);
+	unsigned char *result = (unsigned char *)calloc(1, bytes);
 
 	for(int y=0; y<256; y++)
 	{
