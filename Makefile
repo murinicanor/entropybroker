@@ -41,6 +41,7 @@ OBJScf=client_file.o error.o log.o kernel_prng_io.o kernel_prng_rw.o math.o prot
 OBJSpf=server_push_file.o utils.o kernel_prng_rw.o kernel_prng_io.o log.o error.o protocol.o server_utils.o auth.o my_pty.o
 OBJSep=server_ext_proc.o utils.o kernel_prng_rw.o kernel_prng_io.o log.o error.o protocol.o server_utils.o auth.o my_pty.o
 OBJSsu=server_usb.o utils.o kernel_prng_rw.o kernel_prng_io.o log.o error.o protocol.o server_utils.o auth.o my_pty.o
+OBJScsr2000ku=server_ComScire_R2000KU.o utils.o kernel_prng_rw.o kernel_prng_io.o log.o error.o protocol.o server_utils.o auth.o my_pty.o
 
 all:
 	@echo targets:
@@ -80,6 +81,8 @@ all:
 	@echo
 	@echo eb_client_egd           - send entropy data to a EGD client \(e.g. OpenSSL\)
 	@echo
+	@echo eb_server_ComScire_R2000KU - retrieves entropy data from a ComScire R2000KU
+	@echo                         = requires libftdi-dev
 	@echo
 	@echo eb_test_egd_speed
 	@echo
@@ -94,7 +97,7 @@ all:
 	@echo to install all daemons etc. under $(PREFIX)
 	@echo
 
-everything: entropy_broker eb_server_audio eb_server_timers eb_server_v4l eb_server_stream eb_client_linux_kernel eb_server_egd eb_client_egd eb_test_egd_speed eb_server_linux_kernel eb_client_file eb_server_push_file eb_server_ext_proc eb_server_usb plot
+everything: entropy_broker eb_server_audio eb_server_timers eb_server_v4l eb_server_stream eb_client_linux_kernel eb_server_egd eb_client_egd eb_test_egd_speed eb_server_linux_kernel eb_client_file eb_server_push_file eb_server_ext_proc eb_server_usb plot eb_server_ComScire_R2000KU
 
 check:
 	cppcheck -v --enable=all --std=c++11 --inconclusive . 2> err.txt
@@ -141,6 +144,9 @@ eb_server_ext_proc: $(OBJSep)
 eb_server_usb: $(OBJSsu)
 	$(CXX) $(LINT) $(OBJSsu) $(LDFLAGS) -lusb-1.0 -o eb_server_usb
 
+eb_server_ComScire_R2000KU: $(OBJScsr2000ku)
+	$(CXX) $(LINT) $(OBJScsr2000ku) ComScire_R2000KU/qwqng.cpp $(LDFLAGS) -lftdi -o eb_server_ComScire_R2000KU
+
 plot: plot.o
 	$(CXX) $(LINT) plot.o $(LDFLAGS) -lpng -o plot
 
@@ -169,8 +175,9 @@ clean:
 	rm -f $(OBJSeb) $(OBJSsa) $(OBJSst) $(OBJSsv) $(OBJSss)$(OBJSse) $(OBJSclk) $(OBJSte) $(OBJSsk) $(OBJScf) $(OBJSpf) $(OBJSep) $(OBJSsu) entropy_broker core *.da *.gcov *.bb* *.o eb_server_audio eb_server_timers eb_server_v4l eb_server_stream eb_server_egd eb_client_linux_kernel eb_client_egd eb_test_egd_speed eb_server_linux_kernel eb_client_file eb_server_push_file eb_server_ext_proc eb_server_usb
 
 package:
-	mkdir eb-$(VERSION)
+	mkdir eb-$(VERSION) eb-$(VERSION)/ComScire_R2000KU
 	cp *.cpp *.h entropybroker.conf Makefile Changes password.txt readme.txt license.* eb-$(VERSION)
+	cp ComScire_R2000KU/*.[ch]pp ComScire_R2000KU/LICENSE eb-$(VERSION)/ComScire_R2000KU
 	cp -a doc eb-$(VERSION)
 	tar czf eb-$(VERSION).tgz eb-$(VERSION)
 	rm -rf eb-$(VERSION)
