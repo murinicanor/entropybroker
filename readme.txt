@@ -150,6 +150,12 @@ E.g.:
 	echo 512 > /proc/sys/kernel/random/write_wakeup_threshold
 This program is Linux-only.
 
+eb_client_kernel_generic is for other systems like for example 
+freebsd and macos x. For it to work, the /dev/random device needs to
+accept data written to it. This should be the case for *bsd. The
+program accepts a parameter indicating the number of bytes to write
+and the number of seconds to sleep between each write.
+
 To server entropy data like as if it was an EGD-server, start
 client_egd. E.g.:
 	eb_client_egd -d /tmp/egd.sock -i entropy_broker-server.test.com

@@ -76,6 +76,7 @@ all:
 	@echo                         = linux only
 	@echo
 	@echo eb_client_file          - send entropy data to a file
+	@echo eb_client_kernel_generic - send data to a generic kernel \(e.g. macos x/freebsd\)
 	@echo
 	@echo eb_client_egd           - send entropy data to a EGD client \(e.g. OpenSSL\)
 	@echo
@@ -156,6 +157,7 @@ install: entropy_broker eb_server_audio eb_server_timers eb_server_v4l eb_server
 	cp eb_test_egd_speed $(BIN)
 	cp eb_server_linux_kernel $(BIN)
 	cp eb_client_file $(BIN)
+	ln $(BIN)/eb_client_file $(BIN)/eb_client_kernel_generic
 	cp eb_server_push_file $(BIN)
 	cp eb_server_ext_proc $(BIN)
 	cp eb_server_usb $(BIN)

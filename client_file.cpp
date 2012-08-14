@@ -12,6 +12,7 @@
 #include <stddef.h>
 #include <sys/socket.h>
 #include <sys/un.h>
+#include <libgen.h>
 
 #include "error.h"
 #include "utils.h"
@@ -32,16 +33,23 @@ void sig_handler(int sig)
 	exit(0);
 }
 
-void help(void)
+void help(bool is_eb_client_file)
 {
 	printf("-i host   entropy_broker-host to connect to\n");
-	printf("-c count  number of BYTES\n");
-	printf("-f file   write bytes to \"file\"\n");
+	if (is_eb_client_file)
+		printf("-c count  number of BYTES, 0=no limit\n");
+	if (is_eb_client_file)
+		printf("-f file   write bytes to \"file\"\n");
 	printf("-l file   log to file 'file'\n");
 	printf("-s        log to syslog\n");
 	printf("-n        do not fork\n");
 	printf("-P file   write pid to file\n");
 	printf("-X file   read password from file\n");
+	if (!is_eb_client_file)
+	{
+		printf("-S time   how long to sleep between each iteration\n");
+		printf("-b x      how many BYTES to process each iteration\n");
+	}
 }
 
 int main(int argc, char *argv[])
@@ -53,15 +61,39 @@ int main(int argc, char *argv[])
 	char *log_logfile = NULL;
 	int count = 0;
 	char *file = NULL;
+	int block_size = 1024;
+	int sleep_time = 0;
+	char *prog = basename(strdup(argv[0]));
+	bool is_eb_client_file = strcmp(prog, "eb_client_file") == 0;
 
-	printf("eb_client_file v" VERSION ", (C) 2009-2012 by folkert@vanheusden.com\n");
+	if (!is_eb_client_file)
+		file = (char *)"/dev/random";
 
-	while((c = getopt(argc, argv, "hc:f:X:P:i:l:sn")) != -1)
+	if (is_eb_client_file)
+		printf("eb_client_file v" VERSION ", (C) 2009-2012 by folkert@vanheusden.com\n");
+	else
+		printf("eb_client_kernel_generic v" VERSION ", (C) 2009-2012 by folkert@vanheusden.com\n");
+
+	while((c = getopt(argc, argv, "b:S:hc:f:X:P:i:l:sn")) != -1)
 	{
 		switch(c)
 		{
+			case 'b':
+				block_size = atoi(optarg);
+				if (block_size < 1)
+					error_exit("invalid block size");
+				break;
+
+			case 'S':
+				sleep_time = atoi(optarg);
+				if (sleep_time < 1)
+					error_exit("invalid sleep time");
+				break;
+
 			case 'c':
 				count = atoi(optarg);
+				if (count <= 0)
+					count = -1;
 				break;
 
 			case 'f':
@@ -94,11 +126,11 @@ int main(int argc, char *argv[])
 				break;
 
 			case 'h':
-				help();
+				help(is_eb_client_file);
 				return 0;
 
 			default:
-				help();
+				help(is_eb_client_file);
 				return 1;
 		}
 	}
@@ -137,10 +169,10 @@ int main(int argc, char *argv[])
 	if (!fh)
 		error_exit("Failed to create file %s", file);
 
-	while(count > 0)
+	while(count > 0 || count == -1)
 	{
 		char get_msg[8 + 1], reply[8 + 1];
-		int n_bytes_to_get = min(count, 1249);
+		int n_bytes_to_get = min(block_size, min(count, 1249));
 		int n_bits_to_get = n_bytes_to_get * 8;
 
 		dolog(LOG_INFO, "will get %d bits", n_bits_to_get);
@@ -307,6 +339,9 @@ int main(int argc, char *argv[])
 
 			break;
 		}
+
+		if (sleep_time > 0)
+			sleep(sleep_time);
 	}
 
 	close(socket_fd);
