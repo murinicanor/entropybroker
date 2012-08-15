@@ -13,4 +13,4 @@
 
 - check with splint / flawfinder
 
-- server/client code in protocol.cpp stoppen zoveel mogelijk
+- client code in protocol.cpp stoppen zoveel mogelijk
