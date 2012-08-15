@@ -57,7 +57,7 @@ int main(int argc, char *argv[])
 	printf("Please note: this program RETRIEVES entropy data from the kernel and feeds that to the entropybroker!\n");
 	printf("If you want to ADD data to the kernel entropy buffer instead (which is what you most likely want to do), then use eb_client_linux_kernel\n");
 
-	while((c = getopt(argc, argv, "X:P:So:i:l:sn")) != -1)
+	while((c = getopt(argc, argv, "hX:P:So:i:l:sn")) != -1)
 	{
 		switch(c)
 		{

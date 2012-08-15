@@ -86,7 +86,7 @@ int setparams(snd_pcm_t *chandle, int sample_rate, snd_pcm_format_t *format)
 	/* Apply settings to sound device */
 	err = snd_pcm_hw_params(chandle, ct_params);
 	if (err < 0)
-		error_exit("Could not apply settings to sound device!");
+		error_exit("Could not apply settings to sound device! %s", snd_strerror(err));
 
 	return 0;
 }
@@ -126,17 +126,17 @@ void main_loop(char *host, int port, char *bytes_file, char show_bps, std::strin
 
 	lock_mem(bytes, sizeof bytes);
 
+	if ((err = snd_pcm_open(&chandle, cdevice, SND_PCM_STREAM_CAPTURE, 0)) < 0)
+		error_exit("Record open error: %s", snd_strerror(err));
+
+	/* Open and set up ALSA device for reading */
+	setparams(chandle, DEFAULT_SAMPLE_RATE, &format);
+
 	start_ts = get_ts();
 	cur_start_ts = start_ts;
 	for(;;)
 	{
 		char got_any = 0;
-
-		if ((err = snd_pcm_open(&chandle, cdevice, SND_PCM_STREAM_CAPTURE, 0)) < 0)
-			error_exit("Record open error: %s", snd_strerror(err));
-
-		/* Open and set up ALSA device for reading */
-		setparams(chandle, DEFAULT_SAMPLE_RATE, &format);
 
 		input_buffer_size = snd_pcm_frames_to_bytes(chandle, DEFAULT_SAMPLE_RATE * 2);
 		input_buffer = (char *)malloc(input_buffer_size);
@@ -179,8 +179,6 @@ void main_loop(char *host, int port, char *bytes_file, char show_bps, std::strin
 				dummy += frames_read;	
 			}
 		}
-
-		snd_pcm_close(chandle);
 
 		/* de-biase the data */
 		for(loop=0; loop<(DEFAULT_SAMPLE_RATE * 2/*16bits*/ * 2/*stereo*/ * 2); loop+=8)
@@ -289,6 +287,8 @@ void main_loop(char *host, int port, char *bytes_file, char show_bps, std::strin
 	}
 
 	unlock_mem(bytes, sizeof bytes);
+
+	snd_pcm_close(chandle);
 }
 
 int main(int argc, char *argv[])
@@ -304,7 +304,7 @@ int main(int argc, char *argv[])
 
 	fprintf(stderr, "%s, (C) 2009-2012 by folkert@vanheusden.com\n", server_type);
 
-	while((c = getopt(argc, argv, "X:P:So:i:d:l:sn")) != -1)
+	while((c = getopt(argc, argv, "hX:P:So:i:d:l:sn")) != -1)
 	{
 		switch(c)
 		{

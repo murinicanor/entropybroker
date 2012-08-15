@@ -112,7 +112,7 @@ int main(int argc, char *argv[])
 
 	printf("eb_client_linux_kernel v" VERSION ", (C) 2009-2012 by folkert@vanheusden.com\n");
 
-	while((c = getopt(argc, argv, "X:P:i:l:sn")) != -1)
+	while((c = getopt(argc, argv, "hX:P:i:l:sn")) != -1)
 	{
 		switch(c)
 		{

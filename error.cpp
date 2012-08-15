@@ -38,7 +38,7 @@ void error_exit(const char *format, ...)
 	char **messages = backtrace_symbols(trace, trace_size);
 	printf("\nExecution path:\n");
 	for(int index=0; index<trace_size; ++index)
-		printf("[bt] %s\n", messages[index]);
+		printf("%d %s\n", index, messages[index]);
 
 	exit(EXIT_FAILURE);
 }
