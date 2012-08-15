@@ -313,7 +313,14 @@ int request_bytes(int *socket_fd, char *host, int port, std::string username, st
 
 			dolog(LOG_DEBUG, "Send request (%s)", request);
 			if (WRITE(*socket_fd, request, 8) != 8)
+			{
+				close(*socket_fd);
+				*socket_fd = -1;
+
+				sleep(1); // FIXME random
+
 				continue;
+			}
 
 			request_sent = true;
 		}
@@ -425,7 +432,7 @@ int request_bytes(int *socket_fd, char *host, int port, std::string username, st
 			close(*socket_fd);
 			*socket_fd = -1;
 
-			sleep(10);
+			sleep(10); // FIXME random
 		}
 	}
 

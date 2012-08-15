@@ -1,3 +1,5 @@
+#include <string>
+#include <map>
 #include <sys/time.h>
 #include <stdio.h>
 #include <signal.h>
@@ -20,7 +22,6 @@
 #include "auth.h"
 
 const char *pid_file = PID_DIR "/server_egb.pid";
-char *password = NULL;
 
 void sig_handler(int sig)
 {
@@ -86,6 +87,7 @@ int main(int argc, char *argv[])
 	int verbose = 0;
 	char server_type[128];
 	bool show_bps = false;
+	std::string username, password;
 
 	fprintf(stderr, "eb_server_egb v" VERSION ", (C) 2009-2012 by folkert@vanheusden.com\n");
 
@@ -98,7 +100,7 @@ int main(int argc, char *argv[])
 				break;
 
 			case 'X':
-				password = get_password_from_file(optarg);
+				get_auth_from_file(optarg, username, password);
 				break;
 
 			case 'P':
@@ -154,8 +156,8 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if (!password)
-		error_exit("no password set");
+	if (username.length() == 0 || password.length() == 0)
+		error_exit("username + password cannot be empty");
 	set_password(password);
 
 	if (!host && !bytes_file)
@@ -221,7 +223,7 @@ int main(int argc, char *argv[])
 			}
 			else
 			{
-				if (message_transmit_entropy_data(host, port, &socket_fd, password, server_type, bytes, index) == -1)
+				if (message_transmit_entropy_data(host, port, &socket_fd, username, password, server_type, bytes, index) == -1)
 				{
 					dolog(LOG_INFO, "connection closed");
 

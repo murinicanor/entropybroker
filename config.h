@@ -35,7 +35,7 @@ typedef struct
 	char add_entropy_even_if_all_full;
 	char allow_prng;
 
-	std::string user_map;
+	std::string *user_map;
 } config_t;
 
 void load_config(const char *config, config_t *pconfig);

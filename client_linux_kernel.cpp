@@ -1,3 +1,5 @@
+#include <string>
+#include <map>
 #include <sys/time.h>
 #include <stdio.h>
 #include <signal.h>
@@ -20,7 +22,6 @@
 #define DEFAULT_COMM_TO 15
 const char *pid_file = PID_DIR "/client_linux_kernel.pid";
 const char *client_type = "client_linux_kernel " VERSION;
-char *password = NULL;
 
 void sig_handler(int sig)
 {
@@ -107,6 +108,7 @@ int main(int argc, char *argv[])
 	int c;
 	bool do_not_fork = false, log_console = false, log_syslog = false;
 	char *log_logfile = NULL;
+	std::string username, password;
 
 	printf("eb_client_linux_kernel v" VERSION ", (C) 2009-2012 by folkert@vanheusden.com\n");
 
@@ -115,7 +117,7 @@ int main(int argc, char *argv[])
 		switch(c)
 		{
 			case 'X':
-				password = get_password_from_file(optarg);
+				get_auth_from_file(optarg, username, password);
 				break;
 
 			case 'P':
@@ -145,8 +147,8 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if (!password)
-		error_exit("no password set");
+	if (username.length() == 0 || password.length() == 0)
+		error_exit("username + password cannot be empty");
 
 	if (!host)
 		error_exit("no host to connect to selected");
@@ -221,7 +223,7 @@ int main(int argc, char *argv[])
 				error_exit("out of memory allocating %d bytes", n_bytes_to_get);
 			lock_mem(buffer, n_bytes_to_get);
 
-			int n_bytes = request_bytes(&socket_fd, host, port, password, client_type, buffer, n_bits_to_get, false);
+			int n_bytes = request_bytes(&socket_fd, host, port, username, password, client_type, buffer, n_bits_to_get, false);
 
 			int is_n_bits = bce.get_bit_count((unsigned char *)buffer, n_bytes);
 

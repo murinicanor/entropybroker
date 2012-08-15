@@ -1,3 +1,5 @@
+#include <string>
+#include <map>
 #include <sys/time.h>
 #include <stdio.h>
 #include <signal.h>
@@ -40,7 +42,7 @@ void egd_get__failure(int fd)
 		dolog(LOG_INFO, "short write on egd client (# bytes)");
 }
 
-void egd_get(int fd, char *host, int port, bool blocking, char *password)
+void egd_get(int fd, char *host, int port, bool blocking, std::string username, std::string password)
 {
 	unsigned char n_bytes_to_get;
 
@@ -60,7 +62,7 @@ void egd_get(int fd, char *host, int port, bool blocking, char *password)
 	lock_mem(buffer, n_bytes_to_get);
 
 	int socket_fd = -1;
-	int n_bytes = request_bytes(&socket_fd, host, port, password, client_type, buffer, n_bits_to_get, !blocking);
+	int n_bytes = request_bytes(&socket_fd, host, port, username, password, client_type, buffer, n_bits_to_get, !blocking);
 	if (n_bytes == 0)
 		egd_get__failure(fd);
 	else
@@ -89,7 +91,7 @@ void egd_entropy_count(int fd)
 		dolog(LOG_INFO, "short write on egd client");
 }
 
-void egd_put(int fd, char *host, int port, char *password)
+void egd_put(int fd, char *host, int port, std::string username, std::string password)
 {
 	unsigned char cmd[3];
 	if (READ(fd, (char *)cmd, 3) != 3)
@@ -112,7 +114,7 @@ void egd_put(int fd, char *host, int port, char *password)
 	}
 
 	int socket_fd = -1;
-	(void)message_transmit_entropy_data(host, port, &socket_fd, password, client_type, (unsigned char *)buffer, byte_cnt);
+	(void)message_transmit_entropy_data(host, port, &socket_fd, username, password, client_type, (unsigned char *)buffer, byte_cnt);
 
 	memset(buffer, 0x00, sizeof buffer);
 	unlock_mem(buffer, sizeof buffer);
@@ -120,7 +122,7 @@ void egd_put(int fd, char *host, int port, char *password)
 	close(socket_fd);
 }
 
-void handle_client(int fd, char *host, int port, char *password)
+void handle_client(int fd, char *host, int port, std::string username, std::string password)
 {
 	unsigned char egd_msg;
 
@@ -133,11 +135,11 @@ void handle_client(int fd, char *host, int port, char *password)
 	if (egd_msg == 0)	// get entropy count
 		egd_entropy_count(fd);
 	else if (egd_msg == 1)	// get data, non blocking
-		egd_get(fd, host, port, false, password);
+		egd_get(fd, host, port, false, username, password);
 	else if (egd_msg == 2)	// get data, blocking
-		egd_get(fd, host, port, true, password);
+		egd_get(fd, host, port, true, username, password);
 	else if (egd_msg == 3)	// put data
-		egd_put(fd, host, port, password);
+		egd_put(fd, host, port, username, password);
 }
 
 int open_unixdomain_socket(char *path, int nListen)
@@ -187,7 +189,7 @@ int main(int argc, char *argv[])
 	char *log_logfile = NULL;
 	char *uds = NULL;
 	int listen_fd, nListen = 5;
-	char *password = NULL;
+	std::string username, password;
 
 	printf("eb_client_egd v" VERSION ", (C) 2009-2012 by folkert@vanheusden.com\n");
 
@@ -196,7 +198,7 @@ int main(int argc, char *argv[])
 		switch(c)
 		{
 			case 'X':
-				password = get_password_from_file(optarg);
+				get_auth_from_file(optarg, username, password);
 				break;
 
 			case 'P':
@@ -230,8 +232,8 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if (!password)
-		error_exit("no password set");
+	if (password.length() == 0 || username.length() == 0)
+		error_exit("please set a non-empty username + password");
 
 	if (!host)
 		error_exit("no host to connect to selected");
@@ -277,7 +279,7 @@ int main(int argc, char *argv[])
 
 			if (pid == 0)
 			{
-				handle_client(fd, host, port, password);
+				handle_client(fd, host, port, username, password);
 
 				if (!do_not_fork)
 					exit(0);

@@ -1,3 +1,5 @@
+#include <string>
+#include <map>
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
@@ -18,7 +20,6 @@
 
 const char *server_type = "eb_server_audio v" VERSION;
 const char *pid_file = PID_DIR "/eb_server_audio.pid";
-char *password = NULL;
 
 #include "error.h"
 #include "utils.h"
@@ -105,7 +106,7 @@ void help(void)
 	printf("-X file   read username+password from file\n");
 }
 
-void main_loop(char *host, int port, char *bytes_file, char show_bps)
+void main_loop(char *host, int port, char *bytes_file, char show_bps, std::string username, std::string password)
 {
 	int n_to_do, bits_out=0, loop;
 	char *dummy;
@@ -247,7 +248,7 @@ void main_loop(char *host, int port, char *bytes_file, char show_bps)
 						{
 							emit_buffer_to_file(bytes_file, bytes, bytes_out);
 						}
-						else if (message_transmit_entropy_data(host, port, &socket_fd, password, server_type, bytes, bytes_out) == -1)
+						else if (message_transmit_entropy_data(host, port, &socket_fd, username, password, server_type, bytes, bytes_out) == -1)
 						{
 							dolog(LOG_INFO, "connection closed");
 							close(socket_fd);
@@ -299,6 +300,7 @@ int main(int argc, char *argv[])
 	char *log_logfile = NULL;
 	char *bytes_file = NULL;
 	bool show_bps = false;
+	std::string username, password;
 
 	fprintf(stderr, "%s, (C) 2009-2012 by folkert@vanheusden.com\n", server_type);
 
@@ -307,7 +309,7 @@ int main(int argc, char *argv[])
 		switch(c)
 		{
 			case 'X':
-				password = get_password_from_file(optarg);
+				get_auth_from_file(optarg, username, password);
 				break;
 
 			case 'P':
@@ -349,8 +351,8 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if (!password)
-		error_exit("no password set");
+	if (username.length() == 0 || password.length() == 0)
+		error_exit("username + password cannot be empty");
 	set_password(password);
 
 	if (!host && !bytes_file)
@@ -379,7 +381,7 @@ int main(int argc, char *argv[])
 	signal(SIGINT , sig_handler);
 	signal(SIGQUIT, sig_handler);
 
-	main_loop(host, port, bytes_file, show_bps);
+	main_loop(host, port, bytes_file, show_bps, username, password);
 
 	unlink(pid_file);
 }

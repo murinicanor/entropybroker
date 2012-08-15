@@ -1,3 +1,5 @@
+#include <string>
+#include <map>
 #include <sys/time.h>
 #include <stdio.h>
 #include <signal.h>
@@ -9,7 +11,6 @@
 
 const char *server_type = "server_timers v" VERSION;
 const char *pid_file = PID_DIR "/server_timers.pid";
-char *password = NULL;
 
 #include "error.h"
 #include "utils.h"
@@ -65,6 +66,7 @@ int main(int argc, char *argv[])
 	char *log_logfile = NULL;
 	char *bytes_file = NULL;
 	bool show_bps = false;
+	std::string username, password;
 
 	fprintf(stderr, "%s, (C) 2009-2012 by folkert@vanheusden.com\n", server_type);
 
@@ -73,7 +75,7 @@ int main(int argc, char *argv[])
 		switch(c)
 		{
 			case 'X':
-				password = get_password_from_file(optarg);
+				get_auth_from_file(optarg, username, password);
 				break;
 
 			case 'P':
@@ -115,8 +117,8 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if (!password)
-		error_exit("no password set");
+	if (username.length() == 0 || password.length() == 0)
+		error_exit("username + password cannot be empty");
 	set_password(password);
 
 	if (!host && !bytes_file && !show_bps)
@@ -170,7 +172,7 @@ int main(int argc, char *argv[])
 				}
 				if (host)
 				{
-					if (message_transmit_entropy_data(host, port, &socket_fd, password, server_type, bytes, index) == -1)
+					if (message_transmit_entropy_data(host, port, &socket_fd, username, password, server_type, bytes, index) == -1)
 					{
 						dolog(LOG_INFO, "connection closed");
 						close(socket_fd);

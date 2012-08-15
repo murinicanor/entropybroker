@@ -160,7 +160,7 @@ install: entropy_broker eb_server_audio eb_server_timers eb_server_v4l eb_server
 		ln $(BIN)/eb_client_file $(BIN)/eb_client_kernel_generic)
 	test -e $(ETC)/entropybroker.conf || cp entropybroker.conf $(ETC)
 	test -e $(ETC)/entropybroker.conf && cp entropybroker.conf $(ETC)/entropybroker.conf.dist
-	test -e $(ETC)/password.txt || (cp password.txt $(ETC) ; chmod 600 $(ETC)/password.txt)
+	test -e $(ETC)/auth.txt || (cp auth.txt $(ETC) ; chmod 600 $(ETC)/auth.txt)
 
 clean:
 	rm -f $(OBJSeb) $(OBJSsa) $(OBJSst) $(OBJSsv) $(OBJSss)$(OBJSse) $(OBJSclk) $(OBJSte) $(OBJSsk) $(OBJScf) $(OBJSpf) $(OBJSep) $(OBJSsu) $(OBJScsr2000ku) $(OBJScle) $(OBJSse) plot.o entropy_broker core *.da *.gcov *.bb* eb_server_audio eb_server_timers eb_server_v4l eb_server_stream eb_server_egd eb_client_linux_kernel eb_client_egd eb_test_egd_speed eb_server_linux_kernel eb_client_file eb_server_push_file eb_server_ext_proc eb_server_usb eb_server_ComScire_R2000KU plot

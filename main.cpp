@@ -8,6 +8,7 @@
 #include <fcntl.h>
 #include <vector>
 #include <string>
+#include <map>
 #include <openssl/blowfish.h>
 
 #include "error.h"
@@ -111,12 +112,6 @@ int main(int argc, char *argv[])
 	load_config(config_file, &config);
 	if (stats_file)
 		config.stats_file = stats_file;
-
-	if (config.auth_password == NULL)
-	{
-		fprintf(stderr, "No password set in configurationfile\n");
-		return 1;
-	}
 
 	eb_output_scc -> set_threshold(config.scc_threshold);
 

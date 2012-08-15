@@ -508,6 +508,8 @@ void forget_client(client_t *clients, int *n_clients, int nr)
 	delete clients[nr].pfips140;
 	delete clients[nr].pscc;
 
+	free(clients[nr].password);
+
 	n_to_move = (*n_clients - nr) - 1;
 	if (n_to_move > 0)
 		memmove(&clients[nr], &clients[nr + 1], sizeof(client_t) * n_to_move);
@@ -661,7 +663,7 @@ void register_new_client(int listen_socket_fd, client_t **clients, int *n_client
 			p -> pscc     -> set_user(p -> host);
 			p -> pscc -> set_threshold(config -> scc_threshold);
 			memcpy(p -> ivec, password.c_str(), min(password.length(), 8));
-			p -> password = password;
+			p -> password = strdup(password.c_str());
 			BF_set_key(&p -> key, password.length(), (unsigned char *)password.c_str());
 
 			if (lookup_client_settings(&client_addr, p, config) == -1)
@@ -772,7 +774,7 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 
 	dolog(LOG_INFO, "main|main-loop started");
 
-	std::map<std::string, std::string> *user_map = load_usermap(config -> user_map);
+	std::map<std::string, std::string> *user_map = load_usermap(*config -> user_map);
 
 	bool no_bits = false, new_bits = false, prev_is_full = false;
 	for(;;)
@@ -821,7 +823,7 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 		{
 			dolog(LOG_DEBUG, "Got SIGHUP");
 			reset_SIGHUP();
-			user_map = load_usermap(config -> user_map);
+			user_map = load_usermap(*config -> user_map);
 			force_stats = 1;
 		}
 

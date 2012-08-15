@@ -67,7 +67,7 @@ void load_config(const char *config, config_t *pconfig)
 	pconfig -> add_entropy_even_if_all_full = 0;
 	pconfig -> allow_prng = 0;
 
-	pconfig -> user_map = "usermap.txt";
+	pconfig -> user_map = new std::string("usermap.txt");
 
         for(;;)
         {
@@ -119,7 +119,8 @@ void load_config(const char *config, config_t *pconfig)
 			else
 				sprintf(p_file, "%s/%s", cur_dir, par);
 			dolog(LOG_INFO, "Load users from %s", p_file);
-			pconfig -> user_map = p_file;
+			pconfig -> user_map = new std::string(p_file);
+			free(p_file);
 		}
 		else if (strcmp(cmd, "bitcount_estimator") == 0)
 		{

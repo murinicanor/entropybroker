@@ -1,3 +1,5 @@
+#include <string>
+#include <map>
 #include <sys/time.h>
 #include <stdio.h>
 #include <signal.h>
@@ -25,7 +27,6 @@
 #define DEFAULT_COMM_TO 15
 const char *pid_file = PID_DIR "/client_egd.pid";
 const char *client_type = NULL;
-char *password = NULL;
 
 void sig_handler(int sig)
 {
@@ -65,6 +66,7 @@ int main(int argc, char *argv[])
 	int block_size = 1249;
 	int sleep_time = 0;
 	char *prog = basename(strdup(argv[0]));
+	std::string username, password;
 	bool is_eb_client_file = strcmp(prog, "eb_client_file") == 0;
 
 	if (!is_eb_client_file)
@@ -103,7 +105,7 @@ int main(int argc, char *argv[])
 				break;
 
 			case 'X':
-				password = get_password_from_file(optarg);
+				get_auth_from_file(optarg, username, password);
 				break;
 
 			case 'P':
@@ -137,8 +139,8 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if (!password)
-		error_exit("No password set");
+	if (username.length() == 0 || password.length() == 0)
+		error_exit("password + username cannot be empty");
 
 	if (!host)
 		error_exit("No host to connect to selected");
@@ -185,7 +187,7 @@ int main(int argc, char *argv[])
 
 		dolog(LOG_INFO, "will get %d bits", n_bits_to_get);
 
-		int n_bytes = request_bytes(&socket_fd, host, port, password, client_type, buffer, n_bits_to_get, false);
+		int n_bytes = request_bytes(&socket_fd, host, port, username, password, client_type, buffer, n_bits_to_get, false);
 
 		count -= n_bytes;
 
