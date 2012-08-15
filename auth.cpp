@@ -5,13 +5,15 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string>
+#include <map>
 
 #include "error.h"
 #include "utils.h"
 #include "log.h"
 #include "protocol.h"
 
-int auth_eb(int fd, char *password, int to)
+int auth_eb(int fd, int to, std::map<std::string, std::string> *users)
 {
 	long int rnd = myrand();
 	char rnd_str[128];
@@ -46,7 +48,7 @@ int auth_eb(int fd, char *password, int to)
 		dolog(LOG_INFO, "Connection for fd %d closed (u1)", fd);
 		return -1;
 	}
-	char username[255 + 1];
+	char username[255 + 1] = { 0 };
 	if (username_length > 0)
 	{
 		if (READ_TO(fd, username, username_length, to) != username_length)
@@ -56,11 +58,24 @@ int auth_eb(int fd, char *password, int to)
 		}
 
 		username[username_length] = 0x00;
-		dolog(LOG_INFO, "User %s requesting access", username);
+	}
+	dolog(LOG_INFO, "User '%s' requesting access", username);
+
+	if (username[0] == 0x00)
+	{
+		dolog(LOG_WARNING, "Empty username");
+		return -1;
+	}
+
+	std::map<std::string, std::string>::iterator it = users -> find(username);
+	if (it == users -> end())
+	{
+		dolog(LOG_WARNING, "User '%s' not known", username);
+		return -1;
 	}
 
 	char hash_cmp_str[256], hash_cmp[SHA_DIGEST_LENGTH];
-	snprintf(hash_cmp_str, sizeof hash_cmp_str, "%s %s", rnd_str, password);
+	snprintf(hash_cmp_str, sizeof hash_cmp_str, "%s %s", rnd_str, it -> second.c_str());
 
         SHA1((const unsigned char *)hash_cmp_str, strlen(hash_cmp_str), (unsigned char *)hash_cmp);
 
@@ -113,7 +128,7 @@ char * get_password_from_file(char *filename)
 	return result;
 }
 
-int auth_client_server(int fd, char *password, int to)
+int auth_client_server(int fd, int to, std::string & username, std::string & password)
 {
 	char rnd_str[128];
 	unsigned char rnd_str_size;
@@ -145,15 +160,20 @@ int auth_client_server(int fd, char *password, int to)
 	}
 	rnd_str[rnd_str_size] = 0x00;
 
-	unsigned char username_length = 0; // FIXME not used yet
+	unsigned char username_length = username.length();
 	if (WRITE_TO(fd, (char *)&username_length, 1, to) != 1)
+	{
+		dolog(LOG_INFO, "Connection for fd %d closed (u1)", fd);
+		return -1;
+	}
+	if (WRITE_TO(fd, (char *)username.c_str(), username_length, to) != username_length)
 	{
 		dolog(LOG_INFO, "Connection for fd %d closed (u1)", fd);
 		return -1;
 	}
 
 	char hash_cmp_str[256], hash_cmp[SHA_DIGEST_LENGTH];
-	snprintf(hash_cmp_str, sizeof hash_cmp_str, "%s %s", rnd_str, password);
+	snprintf(hash_cmp_str, sizeof hash_cmp_str, "%s %s", rnd_str, password.c_str());
 
         SHA1((const unsigned char *)hash_cmp_str, strlen(hash_cmp_str), (unsigned char *)hash_cmp);
 
