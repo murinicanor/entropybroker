@@ -6,6 +6,7 @@
 #include <sys/types.h>
 #include <signal.h>
 #include <syslog.h>
+#include <execinfo.h>
 #include <openssl/err.h>
 
 #include "log.h"
@@ -31,6 +32,13 @@ void error_exit(const char *format, ...)
 
 		dolog(LOG_CRIT, "OpenSSL error: %s", ERR_error_string(ose, NULL));
 	}
+
+	void *trace[128];
+	int trace_size = backtrace(trace, 128);
+	char **messages = backtrace_symbols(trace, trace_size);
+	printf("\nExecution path:\n");
+	for(int index=0; index<trace_size; ++index)
+		printf("[bt] %s\n", messages[index]);
 
 	exit(EXIT_FAILURE);
 }
