@@ -15,6 +15,7 @@
 #include <openssl/blowfish.h>
 #include <vector>
 #include <string>
+#include <map>
 
 #include "error.h"
 #include "log.h"
@@ -106,7 +107,7 @@ int send_need_data(int fd, config_t *config)
 	return WRITE_TO(fd, buffer, 8, config -> communication_timeout) == 8 ? 0 : -1;
 }
 
-int do_client_get(pools *ppools, client_t *client, statistics_t *stats, config_t *config, fips140 *eb_output_fips140, scc *eb_output_scc, BF_KEY *key, bool *no_bits)
+int do_client_get(pools *ppools, client_t *client, statistics_t *stats, config_t *config, fips140 *eb_output_fips140, scc *eb_output_scc, bool *no_bits)
 {
 	int cur_n_bits, cur_n_bytes;
 	int transmit_size;
@@ -165,7 +166,7 @@ int do_client_get(pools *ppools, client_t *client, statistics_t *stats, config_t
 
 	// encrypt data. keep original data; will be used as ivec for next round
 	int num = 0;
-	BF_cfb64_encrypt(ent_buffer_in, ent_buffer, cur_n_bytes, key, client -> ivec, &num, BF_ENCRYPT);
+	BF_cfb64_encrypt(ent_buffer_in, ent_buffer, cur_n_bytes, &client -> key, client -> ivec, &num, BF_ENCRYPT);
 	memcpy(client -> ivec, ent_buffer_in, min(8, cur_n_bytes));
 
 	// update statistics for accounting
@@ -203,7 +204,7 @@ int do_client_get(pools *ppools, client_t *client, statistics_t *stats, config_t
 	return rc;
 }
 
-int do_client_put(pools *ppools, client_t *client, statistics_t *stats, config_t *config, BF_KEY *key, bool *new_bits, bool *is_full)
+int do_client_put(pools *ppools, client_t *client, statistics_t *stats, config_t *config, bool *new_bits, bool *is_full)
 {
 	char msg[4+4+1];
 	int cur_n_bits, cur_n_bytes;
@@ -291,7 +292,7 @@ int do_client_put(pools *ppools, client_t *client, statistics_t *stats, config_t
 
 	// decrypt data. decrypted data will be used as ivec for next round
 	int num = 0;
-	BF_cfb64_encrypt(buffer_in, buffer_out, cur_n_bytes, key, client -> ivec, &num, BF_DECRYPT);
+	BF_cfb64_encrypt(buffer_in, buffer_out, cur_n_bytes, &client -> key, client -> ivec, &num, BF_DECRYPT);
 	memcpy(client -> ivec, buffer_out, min(cur_n_bytes, 8));
 
 	client -> last_put_message = now;
@@ -449,7 +450,7 @@ int do_client_kernelpoolfilled_request(client_t *client, config_t *config)
 	return 0;
 }
 
-int do_client(pools *ppools, client_t *client, statistics_t *stats, config_t *config, fips140 *eb_output_fips140, scc *eb_output_scc, BF_KEY *key, bool *no_bits, bool *new_bits, bool *is_full)
+int do_client(pools *ppools, client_t *client, statistics_t *stats, config_t *config, fips140 *eb_output_fips140, scc *eb_output_scc, bool *no_bits, bool *new_bits, bool *is_full)
 {
 	char cmd[4 + 1];
 	cmd[4] = 0x00;
@@ -466,11 +467,11 @@ int do_client(pools *ppools, client_t *client, statistics_t *stats, config_t *co
 		// this flag could also be named 'is_interested_to_know_if_there_is_data'
 		client -> data_avail_signaled = false;
 
-		return do_client_get(ppools, client, stats, config, eb_output_fips140, eb_output_scc, key, no_bits);
+		return do_client_get(ppools, client, stats, config, eb_output_fips140, eb_output_scc, no_bits);
 	}
 	else if (strcmp(cmd, "0002") == 0)	// PUT bits
 	{
-		return do_client_put(ppools, client, stats, config, key, new_bits, is_full);
+		return do_client_put(ppools, client, stats, config, new_bits, is_full);
 	}
 	else if (strcmp(cmd, "0003") == 0)	// server type
 	{
@@ -613,7 +614,7 @@ int lookup_client_settings(struct sockaddr_in *client_addr, client_t *client, co
 	return 0;
 }
 
-void register_new_client(int listen_socket_fd, client_t **clients, int *n_clients, config_t *config)
+void register_new_client(int listen_socket_fd, client_t **clients, int *n_clients, std::map<std::string, std::string> *users, config_t *config)
 {
 	struct sockaddr_in client_addr;
 	socklen_t client_addr_len = sizeof(client_addr);
@@ -629,7 +630,8 @@ void register_new_client(int listen_socket_fd, client_t **clients, int *n_client
 		if (config -> enable_keepalive)
 			enable_tcp_keepalive(new_socket_fd);
 
-		bool ok = auth_eb(new_socket_fd, config -> auth_password, config -> communication_timeout) == 0;
+		std::string password;
+		bool ok = auth_eb(new_socket_fd, config -> communication_timeout, users, password) == 0;
 
 		if (!ok)
 		{
@@ -660,7 +662,9 @@ void register_new_client(int listen_socket_fd, client_t **clients, int *n_client
 			p -> pfips140 -> set_user(p -> host);
 			p -> pscc     -> set_user(p -> host);
 			p -> pscc -> set_threshold(config -> scc_threshold);
-			memcpy(p -> ivec, config -> auth_password, min(strlen(config -> auth_password), 8));
+			memcpy(p -> ivec, password.c_str(), min(password.length(), 8));
+			p -> password = password;
+			BF_set_key(&p -> key, password.length(), (unsigned char *)password.c_str());
 
 			if (lookup_client_settings(&client_addr, p, config) == -1)
 			{
@@ -770,8 +774,7 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 
 	dolog(LOG_INFO, "main|main-loop started");
 
-	BF_KEY key;
-	BF_set_key(&key, strlen(config -> auth_password), (unsigned char *)config -> auth_password);
+	std::map<std::string, std::string> *user_map = load_usermap(config -> usermap);
 
 	bool no_bits = false, new_bits = false, prev_is_full = false;
 	for(;;)
@@ -820,6 +823,7 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 		{
 			dolog(LOG_DEBUG, "Got SIGHUP");
 			reset_SIGHUP();
+			user_map = load_usermap(config -> usermap);
 			force_stats = 1;
 		}
 
@@ -896,7 +900,7 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 					clients[loop].last_message = now;
 
 					bool cur_no_bits = false, cur_new_bits = false;
-					if (do_client(ppools, &clients[loop], &stats, config, eb_output_fips140, eb_output_scc, &key, &cur_no_bits, &cur_new_bits, &is_full) == -1)
+					if (do_client(ppools, &clients[loop], &stats, config, eb_output_fips140, eb_output_scc, &cur_no_bits, &cur_new_bits, &is_full) == -1)
 					{
 						dolog(LOG_INFO, "main|connection closed, removing client %s from list", clients[loop].host);
 						dolog(LOG_DEBUG, "main|%s: %s, scc: %s", clients[loop].host, clients[loop].pfips140 -> stats(), clients[loop].pscc -> stats());
@@ -946,7 +950,7 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 
 			if (FD_ISSET(listen_socket_fd, &rfds))
 			{
-				register_new_client(listen_socket_fd, &clients, &n_clients, config);
+				register_new_client(listen_socket_fd, &clients, &n_clients, user_map, config);
 			}
 		}
 

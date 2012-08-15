@@ -9,7 +9,9 @@ typedef struct
 	char ignore_rngtest_fips140, ignore_rngtest_scc;
 	double last_message, last_put_message;
 	double connected_since;
+	std::string password;
 	unsigned char ivec[8]; // used for data encryption
+	BF_KEY key;
 	bool data_avail_signaled;
 
 	fips140 *pfips140;

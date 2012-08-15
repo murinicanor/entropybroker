@@ -13,7 +13,7 @@
 #include "log.h"
 #include "protocol.h"
 
-int auth_eb(int fd, int to, std::map<std::string, std::string> *users)
+int auth_eb(int fd, int to, std::map<std::string, std::string> *users, std::string & password)
 {
 	long int rnd = myrand();
 	char rnd_str[128];
@@ -74,8 +74,10 @@ int auth_eb(int fd, int to, std::map<std::string, std::string> *users)
 		return -1;
 	}
 
+	password.assign(it -> second);
+
 	char hash_cmp_str[256], hash_cmp[SHA_DIGEST_LENGTH];
-	snprintf(hash_cmp_str, sizeof hash_cmp_str, "%s %s", rnd_str, it -> second.c_str());
+	snprintf(hash_cmp_str, sizeof hash_cmp_str, "%s %s", rnd_str, password.c_str());
 
         SHA1((const unsigned char *)hash_cmp_str, strlen(hash_cmp_str), (unsigned char *)hash_cmp);
 
@@ -97,7 +99,7 @@ int auth_eb(int fd, int to, std::map<std::string, std::string> *users)
 	return -1;
 }
 
-char * get_password_from_file(char *filename)
+bool get_auth_from_file(char *filename, std::string & username, std::string & password)
 {
 	struct stat ss;
 
@@ -112,6 +114,7 @@ char * get_password_from_file(char *filename)
 		error_exit("failed to open %s", filename);
 
 	char password[128];
+// FIXME get username + password
 
 	if (fgets(password, sizeof password, fh) == NULL)
 		error_exit("Failed to read from %s", filename);
@@ -184,4 +187,10 @@ int auth_client_server(int fd, int to, std::string & username, std::string & pas
 	}
 
 	return 0;
+}
+
+std::map<std::string, std::string> * load_usermap(std::string filename)
+{
+	// FIXME
+	return NULL;
 }

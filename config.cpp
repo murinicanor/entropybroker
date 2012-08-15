@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <libgen.h>
+#include <string>
+#include <map>
 
 #include "error.h"
 #include "math.h"
@@ -65,7 +67,7 @@ void load_config(const char *config, config_t *pconfig)
 	pconfig -> add_entropy_even_if_all_full = 0;
 	pconfig -> allow_prng = 0;
 
-	pconfig -> auth_password = NULL;
+	pconfig -> user_map = "usermap.txt";
 
         for(;;)
         {
@@ -109,16 +111,15 @@ void load_config(const char *config, config_t *pconfig)
 			pconfig -> min_store_on_disk_n = parval;
 		else if (strcmp(cmd, "listen_adapter") == 0)
 			pconfig -> listen_adapter = strdup(par);
-		else if (strcmp(cmd, "password") == 0)
+		else if (strcmp(cmd, "users") == 0)
 		{
 			char *p_file = (char *)malloc(strlen(cur_dir) + strlen(par) + 1 + 1);
 			if (par[0] == '/')
 				strcpy(p_file, par);
 			else
 				sprintf(p_file, "%s/%s", cur_dir, par);
-			dolog(LOG_INFO, "Load password from %s", p_file);
-			pconfig -> auth_password = get_password_from_file(p_file);
-			free(p_file);
+			dolog(LOG_INFO, "Load users from %s", p_file);
+			pconfig -> user_map = p_file;
 		}
 		else if (strcmp(cmd, "bitcount_estimator") == 0)
 		{
