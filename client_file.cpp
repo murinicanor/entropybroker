@@ -62,7 +62,7 @@ int main(int argc, char *argv[])
 	char *log_logfile = NULL;
 	int count = 0;
 	char *file = NULL;
-	int block_size = 1024;
+	int block_size = 1249;
 	int sleep_time = 0;
 	char *prog = basename(strdup(argv[0]));
 	bool is_eb_client_file = strcmp(prog, "eb_client_file") == 0;

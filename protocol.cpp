@@ -371,7 +371,7 @@ int request_bytes(int *socket_fd, char *host, int port, char *password, const ch
                         // broker has data!
                         dolog(LOG_INFO, "Broker informs about data");
                 }
-		else if (memcmp(reply, "0001", 4) == 0)	// there's data!
+		else if (memcmp(reply, "0002", 4) == 0)	// there's data!
 		{
 			int will_get_n_bits = atoi(&reply[4]);
 			int will_get_n_bytes = (will_get_n_bits + 7) / 8;
