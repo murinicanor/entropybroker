@@ -39,7 +39,7 @@ void help(void)
         printf("-s        log to syslog\n");
         printf("-n        do not fork\n");
 	printf("-P file   write pid to file\n");
-	printf("-X file   read password from file\n");
+	printf("-X file   read username+password from file\n");
 }
 
 int main(int argc, char *argv[])

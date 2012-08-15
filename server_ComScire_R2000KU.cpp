@@ -40,7 +40,7 @@ void help(void)
 	printf("-S        show bps (mutual exclusive with -n)\n");
         printf("-n        do not fork\n");
 	printf("-P file   write pid to file\n");
-	printf("-X file   read password from file\n");
+	printf("-X file   read username+password from file\n");
 }
 
 int main(int argc, char *argv[])

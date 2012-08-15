@@ -34,7 +34,7 @@ void help(void)
 	printf("-s        log to syslog\n");
 	printf("-n        do not fork\n");
 	printf("-P file   write pid to file\n");
-	printf("-X file   read password from file\n");
+	printf("-X file   read username+password from file\n");
 }
 
 double gen_entropy_data(void)

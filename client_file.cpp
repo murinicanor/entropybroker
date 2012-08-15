@@ -45,7 +45,7 @@ void help(bool is_eb_client_file)
 	printf("-s        log to syslog\n");
 	printf("-n        do not fork\n");
 	printf("-P file   write pid to file\n");
-	printf("-X file   read password from file\n");
+	printf("-X file   read username+password from file\n");
 	if (!is_eb_client_file)
 	{
 		printf("-S time   how long to sleep between each iteration\n");

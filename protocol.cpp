@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <openssl/blowfish.h>
+#include <string>
+#include <map>
 
 #include "error.h"
 #include "log.h"
@@ -47,16 +49,16 @@ void error_sleep(int count)
 	usleep((long)sleep_micro_seconds);
 }
 
-void set_password(char *password)
+void set_password(std::string password)
 {
-	int len = strlen(password);
+	int len = password.length();
 
-	memcpy(ivec, password, min(len, 8));
+	memcpy(ivec, password.c_str(), min(len, 8));
 
-	BF_set_key(&key, len, (unsigned char *)password);
+	BF_set_key(&key, len, (unsigned char *)password.c_str());
 }
 
-int reconnect_server_socket(char *host, int port, char *password, int *socket_fd, const char *type, char is_server)
+int reconnect_server_socket(char *host, int port, std::string username, std::string password, int *socket_fd, const char *type, char is_server)
 {
 	char connect_msg = 0;
 	int count = 1;
@@ -74,7 +76,7 @@ int reconnect_server_socket(char *host, int port, char *password, int *socket_fd
 				*socket_fd = connect_to(host, port);
 				if (*socket_fd != -1)
 				{
-					if (auth_client_server(*socket_fd, password, 10) == 0)
+					if (auth_client_server(*socket_fd, 10, username, password) == 0)
 						break;
 
 					close(*socket_fd);
@@ -168,7 +170,7 @@ int sleep_interruptable(int socket_fd, int how_long)
 	return 0;
 }
 
-int message_transmit_entropy_data(char *host, int port, int *socket_fd, char *password, const char *server_type, unsigned char *bytes_in, int n_bytes)
+int message_transmit_entropy_data(char *host, int port, int *socket_fd, std::string username, std::string password, const char *server_type, unsigned char *bytes_in, int n_bytes)
 {
 	if (n_bytes > 1249)
 		error_exit("message_transmit_entropy_data: too many bytes %d", n_bytes);
@@ -179,7 +181,7 @@ int message_transmit_entropy_data(char *host, int port, int *socket_fd, char *pa
 		char reply[8 + 1] = { 0 };
 		char header[8 + 1] = { 0 };
 
-                if (reconnect_server_socket(host, port, password, socket_fd, server_type, 1) == -1)
+                if (reconnect_server_socket(host, port, username, password, socket_fd, server_type, 1) == -1)
                         continue;
 
                 disable_nagle(*socket_fd);
@@ -285,7 +287,7 @@ void decrypt(unsigned char *buffer_in, unsigned char *buffer_out, int n_bytes)
 	memcpy(ivec, buffer_out, min(8, n_bytes));
 }
 
-int request_bytes(int *socket_fd, char *host, int port, char *password, const char *client_type, char *where_to, int n_bits, bool fail_on_no_bits)
+int request_bytes(int *socket_fd, char *host, int port, std::string username, std::string password, const char *client_type, char *where_to, int n_bits, bool fail_on_no_bits)
 {
 	bool request_sent = false;
 
@@ -302,7 +304,7 @@ int request_bytes(int *socket_fd, char *host, int port, char *password, const ch
 		if (*socket_fd == -1)
 			request_sent = false;
 
-                if (reconnect_server_socket(host, port, password, socket_fd, client_type, 1) == -1)
+                if (reconnect_server_socket(host, port, username, password, socket_fd, client_type, 1) == -1)
                         error_exit("Failed to connect to %s:%d", host, port);
 
 		if (!request_sent || (sleep_trigger > 0.0 && get_ts() >= sleep_trigger))

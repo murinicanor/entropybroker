@@ -38,22 +38,15 @@ Since version 1.0 all entropy-data is encrypted before it is
 transmitted over the network.
 
 Also, clients and servers need to authenticate before they can
-talk to the entropybroker. For that you need to add a line
-to entropybroker.conf like this:
-	password = my-password.txt
-
-Then 'my-password.txt' should contain the password you want to
-use. Also the file should only be readable by the user under
-which the entropy-broker and/or servers/clients run.
+talk to the entropybroker.
+Then 'my-password.txt' should contain the username and password
+(on seperate lines) you want to use. Also the file should only
+be readable by the user under which the entropy-broker and/or
+servers/clients run.
 E.g. use chmod 600 my-password.txt
-
-The client/server processes don't have a configuration file. For
-them, you need to use '-X', e.g.:
 	eb_server_v4l -X my-password.txt
 
-Passwords should not be longer than 56 characters. If a binary
-password is used, note that it is cut-off at the first LF (\n)
-found.
+Passwords should not be longer than 56 characters.
 
 
 server processes

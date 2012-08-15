@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <string>
 #include <map>
+#include <fstream>
 
 #include "error.h"
 #include "utils.h"
@@ -109,26 +110,20 @@ bool get_auth_from_file(char *filename, std::string & username, std::string & pa
 	if (ss.st_mode & (S_IRWXG | S_IRWXO))
 		error_exit("file %s must only readable by its owner", filename);
 
-	FILE *fh = fopen(filename, "rb");
-	if (!fh)
-		error_exit("failed to open %s", filename);
+        std::ifstream fh(filename);
+        if (!fh.is_open())
+                error_exit("Cannot open %s", filename);
 
-	char password[128];
-// FIXME get username + password
+	std::string line;
+	std::getline(fh, line);
+	username.assign(line);
 
-	if (fgets(password, sizeof password, fh) == NULL)
-		error_exit("Failed to read from %s", filename);
-	char *lf = strchr(password, '\n');
-	if (lf)
-		*lf = 0x00;
+	std::getline(fh, line);
+	password.assign(line);
 
-	fclose(fh);
+	fh.close();
 
-	char *result = strdup(password);
-	if (!result)
-		error_exit("strdup failed");
-
-	return result;
+	return true;
 }
 
 int auth_client_server(int fd, int to, std::string & username, std::string & password)
