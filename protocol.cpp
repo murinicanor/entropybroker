@@ -175,11 +175,16 @@ int message_transmit_entropy_data(char *host, int port, int *socket_fd, std::str
 	if (n_bytes > 1249)
 		error_exit("message_transmit_entropy_data: too many bytes %d", n_bytes);
 
+	int error_count = 0;
 	for(;;)
 	{
 		int value;
 		char reply[8 + 1] = { 0 };
 		char header[8 + 1] = { 0 };
+
+		error_count++;
+		if (error_count > 10)
+			error_count = 10;
 
                 if (reconnect_server_socket(host, port, username, password, socket_fd, server_type, 1) == -1)
                         continue;
@@ -198,7 +203,12 @@ int message_transmit_entropy_data(char *host, int port, int *socket_fd, std::str
 		if (WRITE_TO(*socket_fd, (char *)header, 8, DEFAULT_COMM_TO) != 8)
 		{
 			dolog(LOG_INFO, "error transmitting header");
-			return -1;
+
+			close(*socket_fd);
+			*socket_fd = -1;
+
+			error_sleep(error_count);
+			continue;
 		}
 
 		// ack from server?
@@ -207,7 +217,12 @@ int message_transmit_entropy_data(char *host, int port, int *socket_fd, std::str
 		if (READ_TO(*socket_fd, reply, 8, DEFAULT_COMM_TO) != 8)
 		{
 			dolog(LOG_INFO, "error receiving ack/nack");
-			return -1;
+
+			close(*socket_fd);
+			*socket_fd = -1;
+
+			error_sleep(error_count);
+			continue;
 		}
 
 		value = atoi(&reply[4]);
@@ -274,8 +289,12 @@ int message_transmit_entropy_data(char *host, int port, int *socket_fd, std::str
 		else
 		{
 			dolog(LOG_CRIT, "garbage received: %s", reply);
-			return -1;
+
+			error_sleep(error_count);
+			continue;
 		}
+
+		error_count = 1;
 	}
 
 	return 0;

@@ -230,6 +230,7 @@ int main(int argc, char *argv[])
 	signal(SIGTERM, sig_handler);
 	signal(SIGINT , sig_handler);
 	signal(SIGQUIT, sig_handler);
+	signal(SIGPIPE, SIG_IGN);
 
 	if (!do_not_fork)
 	{

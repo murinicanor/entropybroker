@@ -1,2 +1,2 @@
 joe_user
-!my_password
+my_password
