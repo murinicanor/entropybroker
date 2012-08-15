@@ -39,6 +39,26 @@ int auth_eb(int fd, char *password, int to)
 		return -1;
 	}
 
+	// not used yet
+	unsigned char username_length = 0;
+	if (READ_TO(fd, (char *)&username_length, 1, to) != 1)
+	{
+		dolog(LOG_INFO, "Connection for fd %d closed (u1)", fd);
+		return -1;
+	}
+	char username[255 + 1];
+	if (username_length > 0)
+	{
+		if (READ_TO(fd, username, username_length, to) != username_length)
+		{
+			dolog(LOG_INFO, "Connection for fd %d closed (u2)", fd);
+			return -1;
+		}
+
+		username[username_length] = 0x00;
+		dolog(LOG_INFO, "User %s requesting access", username);
+	}
+
 	char hash_cmp_str[256], hash_cmp[SHA_DIGEST_LENGTH];
 	snprintf(hash_cmp_str, sizeof hash_cmp_str, "%s %s", rnd_str, password);
 
@@ -124,6 +144,13 @@ int auth_client_server(int fd, char *password, int to)
 		return -1;
 	}
 	rnd_str[rnd_str_size] = 0x00;
+
+	unsigned char username_length = 0; // FIXME not used yet
+	if (WRITE_TO(fd, (char *)&username_length, 1, to) != 1)
+	{
+		dolog(LOG_INFO, "Connection for fd %d closed (u1)", fd);
+		return -1;
+	}
 
 	char hash_cmp_str[256], hash_cmp[SHA_DIGEST_LENGTH];
 	snprintf(hash_cmp_str, sizeof hash_cmp_str, "%s %s", rnd_str, password);
