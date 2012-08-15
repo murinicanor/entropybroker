@@ -13,5 +13,4 @@
 
 - check with splint / flawfinder
 
-- server_*cpp lock_mem toevoegen
 - server/client code in protocol.cpp stoppen zoveel mogelijk

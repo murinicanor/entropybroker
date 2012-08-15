@@ -125,12 +125,14 @@ int main(int argc, char *argv[])
 	signal(SIGINT , sig_handler);
 	signal(SIGQUIT, sig_handler);
 
+	unsigned char bytes[1249];
+	lock_mem(bytes, sizeof bytes);
+
 	double cur_start_ts = get_ts();
 	for(;;)
 	{
 		dolog(LOG_DEBUG, "Bits available: %d", kernel_rng_get_entropy_count());
 
-		unsigned char bytes[1249];
 		if (kernel_rng_read_blocking(bytes, sizeof bytes) == -1)
 		{
 			dolog(LOG_WARNING, "Problem reading from kernel entropy buffer!");
@@ -182,6 +184,7 @@ int main(int argc, char *argv[])
 		}
 	}
 
+	memset(bytes, 0x00, sizeof bytes);
 	unlink(pid_file);
 
 	return 0;

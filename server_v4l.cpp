@@ -269,6 +269,10 @@ int main(int argc, char *argv[])
 			error_exit("out of memory");
 		struct v4l2_buffer buf;
 
+		lock_mem(img1, io_buffer_len);
+		lock_mem(img2, io_buffer_len);
+		lock_mem(unbiased, io_buffer_len);
+
 		/* take pictures */
 		dolog(LOG_DEBUG, "Smile!");
 		memset(&buf, 0x00, sizeof(buf));
@@ -313,7 +317,12 @@ int main(int argc, char *argv[])
 			}
 		}
 
+		memset(img2, 0x00, io_buffer_len);
+		lock_mem(img2, io_buffer_len);
 		free(img2);
+
+		memset(img1, 0x00, io_buffer_len);
+		lock_mem(img1, io_buffer_len);
 		free(img1);
 
 		dolog(LOG_DEBUG, "got %d bytes of entropy", nunbiased);
@@ -365,6 +374,8 @@ int main(int argc, char *argv[])
 			}
 		}
 
+		memset(unbiased, 0x00, io_buffer_len);
+		lock_mem(unbiased, io_buffer_len);
 		free(unbiased);
 	}
 

@@ -132,7 +132,8 @@ int main(int argc, char *argv[])
 	int got_bytes = -1;
 	pid_t child_pid;
 	int child_fd = -1;
-	char buffer[65536];
+	char buffer[32768];
+	lock_mem(buffer, sizeof buffer);
 	for(;;)
 	{
 		if (child_fd == -1)
@@ -188,6 +189,8 @@ int main(int argc, char *argv[])
 	}
 
 	unlink(pid_file);
+
+	memset(buffer, 0x00, sizeof buffer);
 
 	return 0;
 }

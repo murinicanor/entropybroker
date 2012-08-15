@@ -240,7 +240,6 @@ void help(void)
 int main(int argc, char *argv[])
 {
 	unsigned char bytes[1249];
-	int index = 0;
 	char *host = NULL;
 	int port = 55225;
 	int socket_fd = -1;
@@ -334,6 +333,7 @@ int main(int argc, char *argv[])
 		error_exit("chdir(/) failed");
 	(void)umask(0177);
 	no_core();
+	lock_mem(bytes, sizeof bytes);
 
 	if (!do_not_fork)
 	{
@@ -352,38 +352,28 @@ int main(int argc, char *argv[])
 	long int total_byte_cnt = 0;
 	for(;;)
 	{
-		char byte;
-
-		// gather random data
-		if  (READ(read_fd, &byte, 1) != 1)
+		if (READ(read_fd, (char *)bytes, 1249) != 1249)
 			error_exit("error reading from input");
 
-		bytes[index++] = byte;
-
-		if (index == sizeof(bytes))
+		if (bytes_file)
 		{
-			if (bytes_file)
+			emit_buffer_to_file(bytes_file, bytes, 1249);
+		}
+		else
+		{
+			if (message_transmit_entropy_data(host, port, &socket_fd, password, server_type, bytes, 1249) == -1)
 			{
-				emit_buffer_to_file(bytes_file, bytes, index);
+				dolog(LOG_INFO, "connection closed");
+				close(socket_fd);
+				socket_fd = -1;
 			}
-			else
-			{
-				if (message_transmit_entropy_data(host, port, &socket_fd, password, server_type, bytes, index) == -1)
-				{
-					dolog(LOG_INFO, "connection closed");
-					close(socket_fd);
-					socket_fd = -1;
-				}
-			}
-
-			index = 0;
 		}
 
 		if (show_bps)
 		{
 			double now_ts = get_ts();
 
-			total_byte_cnt++;
+			total_byte_cnt += 1249;
 
 			if ((now_ts - cur_start_ts) >= 1.0)
 			{
@@ -397,6 +387,7 @@ int main(int argc, char *argv[])
 		}
 	}
 
+	memset(bytes, 0x00, sizeof bytes);
 	unlink(pid_file);
 
 	return 0;

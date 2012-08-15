@@ -127,6 +127,8 @@ int main(int argc, char *argv[])
 	(void)umask(0177);
 	no_core();
 
+	lock_mem(bytes, sizeof bytes);
+
 	set_logging_parameters(log_console, log_logfile, log_syslog);
 
 	QWQNG *q = QWQNG::Instance();
@@ -135,6 +137,7 @@ int main(int argc, char *argv[])
 
 	if (!q -> DeviceID())
 		error_exit("Could not find a device? (2)");
+	lock_mem(q, sizeof *q);
 
 	snprintf(server_type, sizeof(server_type), "server_egb v" VERSION " %s", q -> DeviceID());
 
@@ -229,6 +232,8 @@ int main(int argc, char *argv[])
 			}
 		}
 	}
+
+	memset(bytes, 0x00, sizeof bytes);
 
 	unlink(pid_file);
 

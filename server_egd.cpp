@@ -168,6 +168,7 @@ int main(int argc, char *argv[])
 		error_exit("chdir(/) failed");
 	(void)umask(0177);
 	no_core();
+	lock_mem(bytes, sizeof bytes);
 
 	set_logging_parameters(log_console, log_logfile, log_syslog);
 
@@ -263,6 +264,7 @@ int main(int argc, char *argv[])
 		}
 	}
 
+	memset(bytes, 0x00, sizeof bytes);
 	unlink(pid_file);
 
 	return 0;
