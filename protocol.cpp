@@ -407,6 +407,11 @@ int request_bytes(int *socket_fd, char *host, int port, std::string username, st
                         // broker has data!
                         dolog(LOG_INFO, "Broker informs about data");
                 }
+                else if (memcmp(reply, "0010", 4) == 0)
+                {
+                        // broker has data!
+                        dolog(LOG_INFO, "Broker requests data");
+                }
 		else if (memcmp(reply, "0002", 4) == 0)	// there's data!
 		{
 			int will_get_n_bits = atoi(&reply[4]);
