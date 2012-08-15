@@ -105,6 +105,8 @@ to feed its data to entropy_broker. For example a rng in the system
 would be used like this:
 eb_server_stream -i entropy_broker -d /dev/hwrng -s -X password.txt
 For example an Orion RNG can be processed at 19200 bps via /dev/ttyS*
+An IDQ Quantis has a device node /dev/qrandom0 available
+(http://www.idquantique.com/true-random-number-generator/products-overview.html).
 
 On systems with an EntropyKey (http://www.entropykey.co.uk/) or
 EGD, start server_egd.

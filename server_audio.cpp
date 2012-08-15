@@ -154,7 +154,17 @@ void main_loop(char *host, int port, char *bytes_file, char show_bps, std::strin
 			snd_pcm_recover(chandle, garbage_frames_read, 0);
 		/* Nope, something else is wrong. Bail. */
 		if (garbage_frames_read < 0)
-			error_exit("Get random data: read error: %m");
+		{
+			dolog(LOG_INFO, "Get random data: read error: %m");
+
+			snd_pcm_close(chandle);
+
+			if ((err = snd_pcm_open(&chandle, cdevice, SND_PCM_STREAM_CAPTURE, 0)) < 0)
+				error_exit("Record open error: %s", snd_strerror(err));
+
+			/* Open and set up ALSA device for reading */
+			setparams(chandle, DEFAULT_SAMPLE_RATE, &format);
+		}
 
 		/* Read a buffer of audio */
 		n_to_do = DEFAULT_SAMPLE_RATE * 2;
