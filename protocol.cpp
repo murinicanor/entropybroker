@@ -310,6 +310,7 @@ int request_bytes(int *socket_fd, char *host, int port, char *password, const ch
 		{
 			sleep_trigger = -1.0;
 
+			dolog(LOG_DEBUG, "Send request (%s)", request);
 			if (WRITE(*socket_fd, request, 8) != 8)
 				continue;
 
@@ -322,8 +323,11 @@ int request_bytes(int *socket_fd, char *host, int port, char *password, const ch
 			continue;
 		if (rc != 8)
 		{
+			dolog(LOG_INFO, "Read error, got %d of 8 bytes", rc);
+
 			close(*socket_fd);
 			*socket_fd = -1;
+
 			continue;
 		}
 		reply[8] = 0x00;
@@ -332,7 +336,10 @@ int request_bytes(int *socket_fd, char *host, int port, char *password, const ch
 
                 if (memcmp(reply, "9000", 4) == 0 || memcmp(reply, "9002", 4) == 0) // no data/quota
                 {
-			sleep_trigger = get_ts() + atoi(&reply[4]);
+			int sleep_time = atoi(&reply[4]);
+			dolog(LOG_DEBUG, "data denied: %s, sleep for %d seconds", reply[3] == '0' ? "no data" : "quota", sleep_time);
+
+			sleep_trigger = get_ts() + sleep_time;
 
 			if (fail_on_no_bits)
 				return 0;
@@ -355,12 +362,14 @@ int request_bytes(int *socket_fd, char *host, int port, char *password, const ch
                 {
                         char xmit_buffer[128], val_buffer[128];
 
-                        snprintf(val_buffer, sizeof(val_buffer), "%d", kernel_rng_get_entropy_count());
+			int entropy_count = kernel_rng_get_entropy_count();
+                        snprintf(val_buffer, sizeof(val_buffer), "%d", entropy_count);
                         snprintf(xmit_buffer, sizeof(xmit_buffer), "0008%04d%s", (int)strlen(val_buffer), val_buffer);
 
-                        dolog(LOG_DEBUG, "Send kernel entropy count");
+                        dolog(LOG_DEBUG, "Send kernel entropy count %d bits", entropy_count);
 
-                        if (WRITE_TO(*socket_fd, xmit_buffer, strlen(xmit_buffer), DEFAULT_COMM_TO) != (int)strlen(xmit_buffer))
+			int send_len = strlen(xmit_buffer);
+                        if (WRITE_TO(*socket_fd, xmit_buffer, send_len, DEFAULT_COMM_TO) != send_len)
                         {
                                 close(*socket_fd);
                                 *socket_fd = -1;
@@ -391,7 +400,7 @@ int request_bytes(int *socket_fd, char *host, int port, char *password, const ch
 
 			if (READ_TO(*socket_fd, (char *)buffer_in, will_get_n_bytes, DEFAULT_COMM_TO) != will_get_n_bytes)
 			{
-				dolog(LOG_INFO, "Read error from %s:%d", host, port);
+				dolog(LOG_INFO, "Network read error");
 
 				free(buffer_in);
 
