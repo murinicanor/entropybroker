@@ -11,6 +11,7 @@ typedef struct
 	double connected_since;
 	std::string password;
 	unsigned char ivec[8]; // used for data encryption
+	int ivec_offset;
 	BF_KEY key;
 	bool data_avail_signaled;
 

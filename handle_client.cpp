@@ -165,8 +165,7 @@ int do_client_get(pools *ppools, client_t *client, statistics_t *stats, config_t
 		error_exit("error allocating %d bytes of memory", cur_n_bytes);
 
 	// encrypt data. keep original data; will be used as ivec for next round
-	int num = 0;
-	BF_cfb64_encrypt(ent_buffer_in, ent_buffer, cur_n_bytes, &client -> key, client -> ivec, &num, BF_ENCRYPT);
+	BF_cfb64_encrypt(ent_buffer_in, ent_buffer, cur_n_bytes, &client -> key, client -> ivec, &client -> ivec_offset, BF_ENCRYPT);
 	memcpy(client -> ivec, ent_buffer_in, min(8, cur_n_bytes));
 
 	// update statistics for accounting
@@ -291,8 +290,7 @@ int do_client_put(pools *ppools, client_t *client, statistics_t *stats, config_t
 	}
 
 	// decrypt data. decrypted data will be used as ivec for next round
-	int num = 0;
-	BF_cfb64_encrypt(buffer_in, buffer_out, cur_n_bytes, &client -> key, client -> ivec, &num, BF_DECRYPT);
+	BF_cfb64_encrypt(buffer_in, buffer_out, cur_n_bytes, &client -> key, client -> ivec, &client -> ivec_offset, BF_DECRYPT);
 	memcpy(client -> ivec, buffer_out, min(cur_n_bytes, 8));
 
 	client -> last_put_message = now;
@@ -774,7 +772,7 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 
 	dolog(LOG_INFO, "main|main-loop started");
 
-	std::map<std::string, std::string> *user_map = load_usermap(config -> usermap);
+	std::map<std::string, std::string> *user_map = load_usermap(config -> user_map);
 
 	bool no_bits = false, new_bits = false, prev_is_full = false;
 	for(;;)
@@ -823,7 +821,7 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 		{
 			dolog(LOG_DEBUG, "Got SIGHUP");
 			reset_SIGHUP();
-			user_map = load_usermap(config -> usermap);
+			user_map = load_usermap(config -> user_map);
 			force_stats = 1;
 		}
 

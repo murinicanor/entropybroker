@@ -14,6 +14,7 @@
 #define DEFAULT_COMM_TO 15
 
 unsigned char ivec[8] = { 0 };
+int ivec_offset = 0;
 BF_KEY key;
 
 static int sleep_9003 = 300;
@@ -226,8 +227,7 @@ int message_transmit_entropy_data(char *host, int port, int *socket_fd, char *pa
 			unsigned char *bytes_out = (unsigned char *)malloc(cur_n_bytes);
 			if (!bytes_out)
 				error_exit("out of memory");
-			int num = 0;
-			BF_cfb64_encrypt(bytes_in, bytes_out, cur_n_bytes, &key, ivec, &num, BF_ENCRYPT);
+			BF_cfb64_encrypt(bytes_in, bytes_out, cur_n_bytes, &key, ivec, &ivec_offset, BF_ENCRYPT);
 			memcpy(ivec, bytes_in, min(8, cur_n_bytes));
 
 			if (WRITE_TO(*socket_fd, (char *)bytes_out, cur_n_bytes, DEFAULT_COMM_TO) != cur_n_bytes)
@@ -281,8 +281,7 @@ int message_transmit_entropy_data(char *host, int port, int *socket_fd, char *pa
 
 void decrypt(unsigned char *buffer_in, unsigned char *buffer_out, int n_bytes)
 {
-	int num = 0;
-	BF_cfb64_encrypt(buffer_in, buffer_out, n_bytes, &key, ivec, &num, BF_DECRYPT);
+	BF_cfb64_encrypt(buffer_in, buffer_out, n_bytes, &key, ivec, &ivec_offset, BF_DECRYPT);
 	memcpy(ivec, buffer_out, min(8, n_bytes));
 }
 
