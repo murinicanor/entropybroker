@@ -14,3 +14,5 @@
 - check with splint / flawfinder
 
 - client code in protocol.cpp stoppen zoveel mogelijk
+
+- client_linux_kernel: periodically put data anyway to freshen up or so

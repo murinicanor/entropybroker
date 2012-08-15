@@ -176,80 +176,33 @@ int main(int argc, char *argv[])
 	if (dev_random_fd == -1)
 		error_exit("failed to open %s", DEV_RANDOM);
 
-	bool want_data = false, data_available = false;
-	double last_msg = 0.0;
+	bit_count_estimator bce(BCE_SHANNON);
+
 	for(;;)
 	{
-		bool re_request = false;
-
-		// sometimes tcp sessions fail silently, this code will make
-		// this program try at least once every 2 minutes to work
-		// around such problems
-		double now = get_ts();
-		if ((now - last_msg) > TCP_SILENT_FAIL_TEST_INTERVAL)
-			re_request = true;
-
-		fd_set read_fd;
-		FD_ZERO(&read_fd);
 		fd_set write_fd;
 		FD_ZERO(&write_fd);
 
-		if (socket_fd == -1)
-			re_request = true;
-
-		if (!want_data && !re_request)
-		{
-			// wait for /dev/random te become writable which means the entropy-
-			// level dropped below a certain threshold
-			FD_SET(dev_random_fd, &write_fd);
-		}
-
-		bool attempt_connect = socket_fd == -1;
-		if (reconnect_server_socket(host, port, password, &socket_fd, client_type, 0) == -1)
-			continue;
-		if (attempt_connect)
-			last_msg = get_ts();
-
-		disable_nagle(socket_fd);
-		enable_tcp_keepalive(socket_fd);
-
-		if (!re_request)
-			FD_SET(socket_fd, &read_fd);
+		// wait for /dev/random te become writable which means the entropy-
+		// level dropped below a certain threshold
+		FD_SET(dev_random_fd, &write_fd);
 
 		dolog(LOG_DEBUG, "wait for low-event");
-		for(;!re_request;)
+		for(;;)
 		{
-			int rc = select(max(socket_fd, dev_random_fd) + 1, &read_fd, &write_fd, NULL, NULL); /* wait for krng */
-			dolog(LOG_DEBUG, "select returned with %d", rc);
-			if (rc >= 0) break;
+			int rc = select(dev_random_fd + 1, NULL, &write_fd, NULL, NULL);
+			if (rc > 0) break;
+
 			if (errno != EINTR && errno != EAGAIN)
 				error_exit("Select error: %m");
 		}
-		dolog(LOG_DEBUG, "back from low-event wait");
-		now = get_ts();
 
-		if (FD_ISSET(socket_fd, &read_fd))
+		int n_bits_in_kernel_rng = kernel_rng_get_entropy_count();
+		dolog(LOG_DEBUG, "kernel rng bit count: %d", n_bits_in_kernel_rng);
+
+		if (FD_ISSET(dev_random_fd, &write_fd))
 		{
-			if (process_server_msg(socket_fd, &data_available) == 0)
-				last_msg = now;
-			else
-			{
-				close(socket_fd);
-				socket_fd = -1;
-
-				if (!data_available || !want_data)
-					continue;
-			}
-		}
-
-		if (FD_ISSET(dev_random_fd, &write_fd) || (data_available && want_data) || re_request)
-		{
-			data_available = want_data = false;
-
-			char recv_msg[8 + 1], reply[8 + 1];
-
 			/* find out how many bits to add */
-			int n_bits_in_kernel_rng = kernel_rng_get_entropy_count();
 			int n_bits_to_get = max_bits_in_kernel_rng - n_bits_in_kernel_rng;
 			if (n_bits_to_get <= 0)
 			{
@@ -261,73 +214,26 @@ int main(int argc, char *argv[])
 
 			dolog(LOG_INFO, "%d bits left (%d max), will get %d bits", n_bits_in_kernel_rng, max_bits_in_kernel_rng, n_bits_to_get);
 
-			snprintf(recv_msg, sizeof(recv_msg), "0001%04d", n_bits_to_get);
+			int n_bytes_to_get = (n_bits_to_get + 7) / 8;
 
-			if (WRITE_TO(socket_fd, recv_msg, 8, DEFAULT_COMM_TO) != 8)
-			{
-				dolog(LOG_INFO, "write error to %s:%d", host, port);
-				close(socket_fd);
-				socket_fd = -1;
-				continue;
-			}
+			char *buffer = (char *)malloc(n_bytes_to_get);
+			if (!buffer)
+				error_exit("out of memory allocating %d bytes", n_bytes_to_get);
+			lock_mem(buffer, n_bytes_to_get);
 
-			dolog(LOG_DEBUG, "request sent");
+			int n_bytes = request_bytes(&socket_fd, host, port, password, client_type, buffer, n_bits_to_get, false);
 
-			if (READ_TO(socket_fd, reply, 8, DEFAULT_COMM_TO) != 8)
-			{
-				dolog(LOG_INFO, "read error from %s:%d", host, port);
-				close(socket_fd);
-				socket_fd = -1;
-				continue;
-			}
-			reply[8] = 0x00;
-			dolog(LOG_DEBUG, "received reply: %s", reply);
-			if (reply[0] == '9' && reply[1] == '0' && reply[2] == '0' && (reply[3] == '0' || reply[3] == '2'))
-			{
-				dolog(LOG_WARNING, "server has no data/quota");
-				want_data = true;
-				continue;
-			}
-			int will_get_n_bits = atoi(&reply[4]);
-			int will_get_n_bytes = (will_get_n_bits + 7) / 8;
+			int is_n_bits = bce.get_bit_count((unsigned char *)buffer, n_bytes);
 
-			dolog(LOG_INFO, "server is offering %d bits (%d bytes)", will_get_n_bits, will_get_n_bytes);
-
-			unsigned char *buffer_in = (unsigned char *)malloc(will_get_n_bytes);
-			if (!buffer_in)
-				error_exit("out of memory allocating %d bytes", will_get_n_bytes);
-			unsigned char *buffer_out = (unsigned char *)malloc(will_get_n_bytes);
-			if (!buffer_out)
-				error_exit("out of memory allocating %d bytes", will_get_n_bytes);
-			lock_mem(buffer_out, will_get_n_bytes);
-
-			if (READ_TO(socket_fd, (char *)buffer_in, will_get_n_bytes, DEFAULT_COMM_TO) != will_get_n_bytes)
-			{
-				dolog(LOG_INFO, "read error from %s:%d", host, port);
-				free(buffer_in);
-				free(buffer_out);
-				close(socket_fd);
-				socket_fd = -1;
-				continue;
-			}
-
-			decrypt(buffer_in, buffer_out, will_get_n_bytes);
-
-			dolog(LOG_DEBUG, "data received");
-
-			int rc = kernel_rng_add_entropy(buffer_out, will_get_n_bytes, will_get_n_bits);
+			int rc = kernel_rng_add_entropy((unsigned char *)buffer, n_bytes, is_n_bits);
 			if (rc == -1)
 				error_exit("error submiting entropy data to kernel");
 
-			dolog(LOG_DEBUG, "%d bits from server, new entropy count: %d", will_get_n_bits, kernel_rng_get_entropy_count());
+			dolog(LOG_DEBUG, "new entropy count: %d", kernel_rng_get_entropy_count());
 
-			memset(buffer_out, 0x00, will_get_n_bytes);
-			unlock_mem(buffer_out, will_get_n_bytes);
-			free(buffer_out);
-
-			free(buffer_in);
-
-			last_msg = now;
+			memset(buffer, 0x00, n_bytes_to_get);
+			unlock_mem(buffer, n_bytes_to_get);
+			free(buffer);
 		}
 	}
 
