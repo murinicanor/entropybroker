@@ -197,6 +197,10 @@ All processes have the following command-line switches for that:
 
 Note: logfiles need an absolute path.
 
+Also note: if not a full path is given for the password-file
+(for client and server processes), then the program looks in
+the directory from the current configuration file.
+
 Please invoke these commands first with -h to see a list of
 options. You probably need to use '-i' to select the server
 on which 'entropy_broker' runs. Also adding '-s' is usefull as
