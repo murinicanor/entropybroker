@@ -30,70 +30,12 @@ void sig_handler(int sig)
 	exit(0);
 }
 
-int process_server_msg(int socket_fd, bool *data_available)
-{
-	char msg_cmd[4+1], msg_par[4+1];
-
-	*data_available = false;
-
-	if (READ_TO(socket_fd, msg_cmd, 4, DEFAULT_COMM_TO) != 4)
-	{
-		dolog(LOG_INFO, "short read on socket");
-		return -1;
-	}
-	msg_cmd[4] = 0x00;
-
-	if (READ_TO(socket_fd, msg_par, 4, DEFAULT_COMM_TO) != 4)
-	{
-		dolog(LOG_INFO, "short read on socket");
-		return -1;
-	}
-	msg_par[4] = 0x00;
-
-	if (strcmp(msg_cmd, "0004") == 0)	/* ping request */
-	{
-		static int pingnr = 0;
-		char xmit_buffer[8 + 1];
-
-		snprintf(xmit_buffer, sizeof(xmit_buffer), "0005%04d", pingnr++);
-
-		dolog(LOG_DEBUG, "Got a ping request (with parameter %s), sending reply (%s)", msg_par, xmit_buffer);
-
-		if (WRITE_TO(socket_fd, xmit_buffer, 8, DEFAULT_COMM_TO) != 8)
-			return -1;
-	}
-	else if (strcmp(msg_cmd, "0007") == 0)	/* kernel entropy count */
-	{
-		char xmit_buffer[128], val_buffer[128];
-
-		snprintf(val_buffer, sizeof(val_buffer), "%d", kernel_rng_get_entropy_count());
-		snprintf(xmit_buffer, sizeof(xmit_buffer), "0008%04d%s", (int)strlen(val_buffer), val_buffer);
-
-		dolog(LOG_DEBUG, "Got a kernel entropy count request (with parameter %s), sending reply (%s)", msg_par, xmit_buffer);
-
-		if (WRITE_TO(socket_fd, xmit_buffer, strlen(xmit_buffer), DEFAULT_COMM_TO) != (int)strlen(xmit_buffer))
-			return -1;
-	}
-	else if (strcmp(msg_cmd, "0009") == 0)	/* got data */
-	{
-		*data_available = true;
-
-		dolog(LOG_DEBUG, "Broker signals data available");
-	}
-	else
-	{
-		dolog(LOG_CRIT, "Got unknown request: %s", msg_cmd);
-		return -1;
-	}
-
-	return 0;
-}
-
 void help(void)
 {
 	printf("-i host   entropy_broker-host to connect to\n");
 	printf("-l file   log to file 'file'\n");
 	printf("-s        log to syslog\n");
+	printf("-b x      interval in which data will be seeded in a full(!) kernel entropy buffer (default is off)\n");
 	printf("-n        do not fork\n");
 	printf("-P file   write pid to file\n");
 	printf("-X file   read username+password from file\n");
@@ -109,13 +51,20 @@ int main(int argc, char *argv[])
 	bool do_not_fork = false, log_console = false, log_syslog = false;
 	char *log_logfile = NULL;
 	std::string username, password;
+	int interval = -1;
 
 	printf("eb_client_linux_kernel v" VERSION ", (C) 2009-2012 by folkert@vanheusden.com\n");
 
-	while((c = getopt(argc, argv, "hX:P:i:l:sn")) != -1)
+	while((c = getopt(argc, argv, "b:hX:P:i:l:sn")) != -1)
 	{
 		switch(c)
 		{
+			case 'b':
+				interval = atoi(optarg);
+				if (interval < 1)
+					error_exit("Interval must be > 0");
+				break;
+
 			case 'X':
 				get_auth_from_file(optarg, username, password);
 				break;
@@ -161,17 +110,15 @@ int main(int argc, char *argv[])
 			error_exit("fork failed");
 	}
 
+	(void)umask(0177);
+	no_core();
+
 	write_pid(pid_file);
 
 	signal(SIGPIPE, SIG_IGN);
 	signal(SIGTERM, sig_handler);
 	signal(SIGINT , sig_handler);
 	signal(SIGQUIT, sig_handler);
-
-	if (chdir("/") == -1)
-		error_exit("chdir(/) failed");
-	(void)umask(0177);
-	no_core();
 
 	dolog(LOG_INFO, "started with %d bits in kernel rng", kernel_rng_get_entropy_count());
 
@@ -182,18 +129,27 @@ int main(int argc, char *argv[])
 
 	for(;;)
 	{
-		fd_set write_fd;
-		FD_ZERO(&write_fd);
+		struct timeval tv, *ptv = NULL;
+
+		if (interval > 0)
+		{
+			tv.tv_sec = interval;
+			tv.tv_usec = 0;
+			ptv = &tv;
+		}
 
 		// wait for /dev/random te become writable which means the entropy-
 		// level dropped below a certain threshold
+		fd_set write_fd;
+		FD_ZERO(&write_fd);
 		FD_SET(dev_random_fd, &write_fd);
 
 		dolog(LOG_DEBUG, "wait for low-event");
 		for(;;)
 		{
-			int rc = select(dev_random_fd + 1, NULL, &write_fd, NULL, NULL);
+			int rc = select(dev_random_fd + 1, NULL, &write_fd, NULL, ptv);
 			if (rc > 0) break;
+			if (rc == 0 && interval> 0) break;
 
 			if (errno != EINTR && errno != EAGAIN)
 				error_exit("Select error: %m");
@@ -202,7 +158,7 @@ int main(int argc, char *argv[])
 		int n_bits_in_kernel_rng = kernel_rng_get_entropy_count();
 		dolog(LOG_DEBUG, "kernel rng bit count: %d", n_bits_in_kernel_rng);
 
-		if (FD_ISSET(dev_random_fd, &write_fd))
+		if (FD_ISSET(dev_random_fd, &write_fd) || interval > 0)
 		{
 			/* find out how many bits to add */
 			int n_bits_to_get = max_bits_in_kernel_rng - n_bits_in_kernel_rng;
