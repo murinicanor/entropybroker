@@ -12,6 +12,7 @@
 #include "utils.h"
 #include "auth.h"
 #include "kernel_prng_io.h"
+#include "protocol.h"
 
 #define DEFAULT_COMM_TO 15
 
