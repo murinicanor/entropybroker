@@ -317,9 +317,13 @@ int request_bytes(int *socket_fd, char *host, int port, std::string username, st
 	snprintf(request, sizeof request, "0001%04d", n_bits);
 
 	double sleep_trigger = -1;
-
+	int error_count = 1;
 	for(;;)
 	{
+		error_count++;
+		if (error_count > 15)
+			error_count = 15;
+
 		if (*socket_fd == -1)
 			request_sent = false;
 
@@ -336,7 +340,7 @@ int request_bytes(int *socket_fd, char *host, int port, std::string username, st
 				close(*socket_fd);
 				*socket_fd = -1;
 
-				sleep(1); // FIXME random
+				error_sleep(error_count);
 
 				continue;
 			}
@@ -355,6 +359,8 @@ int request_bytes(int *socket_fd, char *host, int port, std::string username, st
 			close(*socket_fd);
 			*socket_fd = -1;
 
+			error_sleep(error_count);
+
 			continue;
 		}
 		reply[8] = 0x00;
@@ -363,6 +369,7 @@ int request_bytes(int *socket_fd, char *host, int port, std::string username, st
 
                 if (memcmp(reply, "9000", 4) == 0 || memcmp(reply, "9002", 4) == 0) // no data/quota
                 {
+			error_count = 1;
 			int sleep_time = atoi(&reply[4]);
 			dolog(LOG_DEBUG, "data denied: %s, sleep for %d seconds", reply[3] == '0' ? "no data" : "quota", sleep_time);
 
@@ -373,6 +380,7 @@ int request_bytes(int *socket_fd, char *host, int port, std::string username, st
 		}
                 else if (memcmp(reply, "0004", 4) == 0)       /* ping request */
                 {
+			error_count = 1;
                         static int pingnr = 0;
                         char xmit_buffer[8 + 1];
 
@@ -387,6 +395,7 @@ int request_bytes(int *socket_fd, char *host, int port, std::string username, st
                 }
                 else if (memcmp(reply, "0007", 4) == 0)  /* kernel entropy count */
                 {
+			error_count = 1;
                         char xmit_buffer[128], val_buffer[128];
 
 			int entropy_count = kernel_rng_get_entropy_count();
@@ -404,18 +413,22 @@ int request_bytes(int *socket_fd, char *host, int port, std::string username, st
                 }
                 else if (memcmp(reply, "0009", 4) == 0)
                 {
+			error_count = 1;
                         dolog(LOG_INFO, "Broker informs about data");
                 }
                 else if (memcmp(reply, "0010", 4) == 0)
                 {
+			error_count = 1;
                         dolog(LOG_INFO, "Broker requests data");
                 }
                 else if (memcmp(reply, "9004", 4) == 0)
                 {
+			error_count = 1;
                         dolog(LOG_INFO, "Broker is full");
                 }
 		else if (memcmp(reply, "0002", 4) == 0)	// there's data!
 		{
+			error_count = 1;
 			int will_get_n_bits = atoi(&reply[4]);
 			int will_get_n_bytes = (will_get_n_bits + 7) / 8;
 
@@ -458,7 +471,7 @@ int request_bytes(int *socket_fd, char *host, int port, std::string username, st
 			close(*socket_fd);
 			*socket_fd = -1;
 
-			sleep(10); // FIXME random
+			error_sleep(error_count);
 		}
 	}
 

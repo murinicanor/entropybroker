@@ -21,10 +21,10 @@ CACHE=$(VAR)/cache
 PID=$(VAR)/run
 
 CXX=g++
-DEBUG= -g #-D_DEBUG #-fprofile-arcs -ftest-coverage # -pg -g
+DEBUG= #-D_DEBUG #-fprofile-arcs -ftest-coverage # -pg
 LINT=-Wshadow -Wall # -W -Wconversion -Wwrite-strings -Wunused
 #CXXFLAGS+=-O3 -g3 -ggdb -march=native -mtune=native -DVERSION=\"${VERSION}\" $(LINT) $(DEBUG) -DCONFIG=\"${ETC}/entropybroker.conf\" -DCACHE_DIR=\"${CACHE}\" -DPID_DIR=\"${PID}\"
-CXXFLAGS+=-O0 -g3 -ggdb -march=native -mtune=native -DVERSION=\"${VERSION}\" $(LINT) $(DEBUG) -DCONFIG=\"${ETC}/entropybroker.conf\" -DCACHE_DIR=\"${CACHE}\" -DPID_DIR=\"${PID}\" -rdynamic
+CXXFLAGS+=-O3 -g3 -ggdb -march=native -mtune=native -DVERSION=\"${VERSION}\" $(LINT) $(DEBUG) -DCONFIG=\"${ETC}/entropybroker.conf\" -DCACHE_DIR=\"${CACHE}\" -DPID_DIR=\"${PID}\" -rdynamic
 LDFLAGS+=$(DEBUG) -lcrypto -lrt -lz -lutil -rdynamic
 
 OBJSeb=pools.o handle_client.o config.o error.o fips140.o kernel_prng_rw.o log.o protocol.o main.o math.o pool.o scc.o signals.o utils.o auth.o my_pty.o ivec.o kernel_prng_io.o
