@@ -12,3 +12,6 @@
 
 - naast blowfish als 'mixer', configureerbaar maken
   idem qua sha1 als extractor
+
+DES_ede3_cfb64_encrypt: let op 56*3 bit key, niet 64*3!
+aes
