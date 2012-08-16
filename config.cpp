@@ -73,6 +73,8 @@ void load_config(const char *config, config_t *pconfig)
 
 	pconfig -> pool_size_bytes = DEFAULT_POOL_SIZE_BITS / 8;
 
+	pconfig -> prng_seed_file = NULL;
+
         for(;;)
         {
 		double parvald;
@@ -155,6 +157,16 @@ void load_config(const char *config, config_t *pconfig)
 			pconfig -> kernelpool_filled_interval = parval;
 		else if (strcmp(cmd, "stats_file") == 0)
 			pconfig -> stats_file = strdup(par);
+		else if (strcmp(cmd, "prng_seed_file") == 0)
+		{
+			char *p_file = (char *)malloc(strlen(VAR_DIR) + strlen(par) + 1 + 1);
+			if (par[0] == '/')
+				strcpy(p_file, par);
+			else
+				sprintf(p_file, VAR_DIR "/%s", par);
+			dolog(LOG_INFO, "Load OpenSSL PRNG seed from %s", p_file);
+			pconfig -> prng_seed_file = p_file;
+		}
 		else if (strcmp(cmd, "communication_timeout") == 0)
 			pconfig -> communication_timeout = parval;
 		else if (strcmp(cmd, "communication_session_timeout") == 0)

@@ -10,6 +10,7 @@
 #include <string>
 #include <map>
 #include <openssl/blowfish.h>
+#include <openssl/rand.h>
 
 #include "error.h"
 #include "math.h"
@@ -115,6 +116,9 @@ int main(int argc, char *argv[])
 
 	eb_output_scc -> set_threshold(config.scc_threshold);
 
+	if (config.prng_seed_file)
+		RAND_load_file(config.prng_seed_file, -1);
+
 	bit_count_estimator *bce = new bit_count_estimator(config.bitcount_estimator);
 
 	pools *ppools = new pools(std::string(CACHE_DIR), config.max_number_of_mem_pools, config.max_number_of_disk_pools, config.min_store_on_disk_n, bce, config.pool_size_bytes);
@@ -137,6 +141,16 @@ int main(int argc, char *argv[])
 
 	printf("Dumping pool contents to cache-file\n");
 	delete ppools;
+
+	if (config.prng_seed_file)
+	{
+		if (RAND_write_file(config.prng_seed_file) == -1)
+		{
+			unlink(config.prng_seed_file);
+
+			dolog(LOG_INFO, "SSL PRNG seed file deleted: not enough entropy data");
+		}
+	}
 
 	unlink(pid_file);
 

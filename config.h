@@ -3,6 +3,7 @@ typedef struct
 	unsigned int max_number_of_mem_pools;
 	unsigned int max_number_of_disk_pools;
 	unsigned int min_store_on_disk_n;
+	int pool_size_bytes;
 
 	char *listen_adapter;
 	int listen_port;
@@ -35,9 +36,9 @@ typedef struct
 	char add_entropy_even_if_all_full;
 	char allow_prng;
 
-	std::string *user_map;
+	char *prng_seed_file;
 
-	int pool_size_bytes;
+	std::string *user_map;
 } config_t;
 
 void load_config(const char *config, config_t *pconfig);

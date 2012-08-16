@@ -2,7 +2,6 @@
 - retrieve from other eb instance (eb_proxy)
 - keep stats of disk-get & put to advise user of ideal number of memory pools
 - acls (ip)
-- user-accounts in protocol?
 - multithreading
   in client_t: pthread_t id van de thread, dan in de main een pthread_join: met pthread_equal() kijken welke client dat is en die dan uit de lijst joepsen
   na een accept() door lijst itereren en een pthread_tryjoin_np doen op iedere thread?
@@ -10,7 +9,3 @@
 - http://en.wikipedia.org/wiki/Secure_Remote_Password_protocol
 
 - scsi-ping-entropyd
-
-- check with splint / flawfinder
-
-- client_linux_kernel: periodically put data anyway to freshen up or so
