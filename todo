@@ -9,3 +9,6 @@
 - http://en.wikipedia.org/wiki/Secure_Remote_Password_protocol
 
 - scsi-ping-entropyd
+
+- naast blowfish als 'mixer', configureerbaar maken
+  idem qua sha1 als extractor
