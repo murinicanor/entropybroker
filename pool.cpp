@@ -212,19 +212,19 @@ int pool::get_entropy_data(unsigned char *entropy_data, int n_bytes_requested, b
 
 		SHA512(entropy_pool, pool_size_bytes, hash);
 
-		// fold into 32 bytes
-		for(loop=0; loop<half_sha512_hash_len; loop++)
-			hash[loop] ^= hash[loop + half_sha512_hash_len];
-		memcpy(entropy_data, hash, n_given);
-
 		bits_in_pool -= (n_given * 8);
 		if (bits_in_pool < 0)
 			bits_in_pool = 0;
 
-		BF_set_key(&key, half_sha512_hash_len, hash);
+		BF_set_key(&key, SHA512_DIGEST_LENGTH, hash);
 		int ivec_offset = 0;
 		BF_cfb64_encrypt(entropy_pool, temp_buffer, pool_size_bytes, &key, cur_ivec, &ivec_offset, BF_DECRYPT);
 		memcpy(entropy_pool, temp_buffer, pool_size_bytes);
+
+		// fold into 32 bytes
+		for(loop=0; loop<half_sha512_hash_len; loop++)
+			hash[loop] ^= hash[loop + half_sha512_hash_len];
+		memcpy(entropy_data, hash, n_given);
 	}
 
 	memset(temp_buffer, 0x00, pool_size_bytes);
