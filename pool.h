@@ -1,4 +1,4 @@
-#define POOL_SIZE	4096	// in bits
+#define DEFAULT_POOL_SIZE_BITS	16384
 #define MAX_EVENT_BITS	11
 
 typedef struct
@@ -10,7 +10,8 @@ typedef struct
 class pool
 {
 private:
-	unsigned char entropy_pool[POOL_SIZE / 8];
+	unsigned char *entropy_pool;
+	int pool_size_bytes;
 	int bits_in_pool;
 	event_state_t state;
 	bit_count_estimator *bce;

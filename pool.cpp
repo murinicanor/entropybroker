@@ -39,32 +39,42 @@ pool::pool(bit_count_estimator *bce_in) : bce(bce_in)
 {
 	memset(&state, 0x00, sizeof(state));
 
-	lock_mem(entropy_pool, sizeof entropy_pool);
+	pool_size_bytes = DEFAULT_POOL_SIZE_BITS / 8;
+	entropy_pool = (unsigned char *)malloc(pool_size_bytes);
+	lock_mem(entropy_pool, pool_size_bytes);
 
 	bits_in_pool = 0;
 
-	if (kernel_rng_read_non_blocking(entropy_pool, sizeof(entropy_pool)) == -1)
-		error_exit("failed reading entropy data from kernel RNG");
+	if (RAND_bytes(entropy_pool, pool_size_bytes) == 0)
+		error_exit("RAND_bytes failed");
 
 	iv = new ivec(bce);
 }
 
 pool::pool(int pool_nr, FILE *fh, bit_count_estimator *bce_in) : bce(bce_in)
 {
-	unsigned char val_buffer[4];
-
-	lock_mem(entropy_pool, sizeof entropy_pool);
+	unsigned char val_buffer[8];
 
 	iv = NULL;
 
-	if (fread(val_buffer, 1, 4, fh) <= 0)
+	if (fread(val_buffer, 1, 8, fh) <= 0)
+	{
+		pool_size_bytes = DEFAULT_POOL_SIZE_BITS / 8;
+		entropy_pool = (unsigned char *)malloc(pool_size_bytes);
 		bits_in_pool = 0;
+
+		lock_mem(entropy_pool, pool_size_bytes);
+	}
 	else
 	{
 		bits_in_pool = (val_buffer[0] << 24) + (val_buffer[1] << 16) + (val_buffer[2] << 8) + val_buffer[3];
+		pool_size_bytes = (val_buffer[4] << 24) + (val_buffer[5] << 16) + (val_buffer[6] << 8) + val_buffer[7];
 
-		if (fread(entropy_pool, 1, POOL_SIZE / 8, fh) != POOL_SIZE / 8)
-			error_exit("Dump is corrupt (1)");
+		entropy_pool = (unsigned char *)malloc(pool_size_bytes);
+		lock_mem(entropy_pool, pool_size_bytes);
+
+		if (fread(entropy_pool, 1, pool_size_bytes, fh) != (size_t)pool_size_bytes)
+			error_exit("Dump is corrupt (using disk-pools from an entropybroker version older than v1.1?)");
 
 		iv = new ivec(fh, bce);
 
@@ -76,9 +86,9 @@ pool::pool(int pool_nr, FILE *fh, bit_count_estimator *bce_in) : bce(bce_in)
 
 pool::~pool()
 {
-	memset(entropy_pool, 0x00, sizeof(entropy_pool));
-
-	unlock_mem(entropy_pool, sizeof entropy_pool);
+	memset(entropy_pool, 0x00, pool_size_bytes);
+	unlock_mem(entropy_pool, pool_size_bytes);
+	free(entropy_pool);
 
 	delete iv;
 }
@@ -87,17 +97,21 @@ void pool::dump(FILE *fh)
 {
 	if (bits_in_pool > 0)
 	{
-		unsigned char val_buffer[4];
+		unsigned char val_buffer[8];
 
 		val_buffer[0] = (bits_in_pool >> 24) & 255;
 		val_buffer[1] = (bits_in_pool >> 16) & 255;
 		val_buffer[2] = (bits_in_pool >>  8) & 255;
 		val_buffer[3] = (bits_in_pool      ) & 255;
+		val_buffer[4] = (pool_size_bytes >> 24) & 255;
+		val_buffer[5] = (pool_size_bytes >> 16) & 255;
+		val_buffer[6] = (pool_size_bytes >>  8) & 255;
+		val_buffer[7] = (pool_size_bytes      ) & 255;
 
-		if (fwrite(val_buffer, 1, 4, fh) != 4)
+		if (fwrite(val_buffer, 1, 8, fh) != 8)
 			error_exit("Cannot write to dump (1)");
 
-		if (fwrite(entropy_pool, 1, POOL_SIZE / 8, fh) != POOL_SIZE / 8)
+		if (fwrite(entropy_pool, 1, pool_size_bytes, fh) != (size_t)pool_size_bytes)
 			error_exit("Cannot write to dump (2)");
 
 		iv -> dump(fh);
@@ -114,8 +128,11 @@ int pool::add_entropy_data(unsigned char *entropy_data, int n_bytes_in)
 		n_bytes_in -=8;
 	}
 
-	unsigned char temp_key[56] = { 0 }; // to silence valgrind
-	unsigned char temp_buffer[POOL_SIZE / 8];
+	unsigned char temp_key[56];
+
+	unsigned char *temp_buffer = (unsigned char *)malloc(pool_size_bytes);
+	lock_mem(temp_buffer, pool_size_bytes);
+
 	int n_added = bce -> get_bit_count(entropy_data, n_bytes_in);
 
 	while(n_bytes_in > 0)
@@ -140,16 +157,20 @@ int pool::add_entropy_data(unsigned char *entropy_data, int n_bytes_in)
 		BF_KEY key;
 		BF_set_key(&key, cur_to_add, temp_key);
 		int ivec_offset = 0;
-		BF_cfb64_encrypt(entropy_pool, temp_buffer, (POOL_SIZE / 8), &key, cur_ivec, &ivec_offset, BF_ENCRYPT);
-		memcpy(entropy_pool, temp_buffer, (POOL_SIZE / 8));
+		BF_cfb64_encrypt(entropy_pool, temp_buffer, pool_size_bytes, &key, cur_ivec, &ivec_offset, BF_ENCRYPT);
+		memcpy(entropy_pool, temp_buffer, pool_size_bytes);
 
 		entropy_data += cur_to_add;
 		n_bytes_in -= cur_to_add;
 	}
 
 	bits_in_pool += n_added;
-	if (bits_in_pool > POOL_SIZE)
-		bits_in_pool = POOL_SIZE;
+	if (bits_in_pool > (pool_size_bytes * 8))
+		bits_in_pool = (pool_size_bytes * 8);
+
+	memset(temp_buffer, 0x00, pool_size_bytes);
+	unlock_mem(temp_buffer, pool_size_bytes);
+	free(temp_buffer);
 
 	return n_added;
 }
@@ -161,7 +182,9 @@ int pool::get_n_bits_in_pool(void)
 
 int pool::get_entropy_data(unsigned char *entropy_data, int n_bytes_requested, bool prng_ok)
 {
-	unsigned char temp_buffer[POOL_SIZE / 8];
+	unsigned char *temp_buffer = (unsigned char *)malloc(pool_size_bytes);
+	lock_mem(temp_buffer, pool_size_bytes);
+
 	BF_KEY key;
 	// make sure the hash length is equal or less than 448 bits which is the maximum
 	// blowfish key size
@@ -180,7 +203,7 @@ int pool::get_entropy_data(unsigned char *entropy_data, int n_bytes_requested, b
 	{
 		int loop;
 
-		SHA512(entropy_pool, sizeof(entropy_pool), hash);
+		SHA512(entropy_pool, pool_size_bytes, hash);
 
 		// fold into 32 bytes
 		for(loop=0; loop<half_sha512_hash_len; loop++)
@@ -193,9 +216,13 @@ int pool::get_entropy_data(unsigned char *entropy_data, int n_bytes_requested, b
 
 		BF_set_key(&key, half_sha512_hash_len, hash);
 		int ivec_offset = 0;
-		BF_cfb64_encrypt(entropy_pool, temp_buffer, (POOL_SIZE / 8), &key, cur_ivec, &ivec_offset, BF_DECRYPT);
-		memcpy(entropy_pool, temp_buffer, (POOL_SIZE / 8));
+		BF_cfb64_encrypt(entropy_pool, temp_buffer, pool_size_bytes, &key, cur_ivec, &ivec_offset, BF_DECRYPT);
+		memcpy(entropy_pool, temp_buffer, pool_size_bytes);
 	}
+
+	memset(temp_buffer, 0x00, pool_size_bytes);
+	unlock_mem(temp_buffer, pool_size_bytes);
+	free(temp_buffer);
 
 	return n_given;
 }
@@ -212,23 +239,25 @@ int pool::get_get_size_in_bits()
 
 int pool::get_pool_size(void)
 {
-	return POOL_SIZE;
+	return pool_size_bytes * 8;
 }
 
 bool pool::is_full(void)
 {
-	return bits_in_pool == POOL_SIZE;
+	return bits_in_pool == (pool_size_bytes * 8);
 }
 
 bool pool::is_almost_full(void)
 {
-	return (POOL_SIZE - bits_in_pool) < get_get_size_in_bits();
+	return ((pool_size_bytes * 8) - bits_in_pool) < get_get_size_in_bits();
 }
 
 /* taken from random driver from linux-kernel */
 int pool::add_event(double ts, unsigned char *event_data, int n_event_data)
 {
-	unsigned char temp_buffer[POOL_SIZE / 8];
+	unsigned char *temp_buffer = (unsigned char *)malloc(pool_size_bytes);
+	lock_mem(temp_buffer, pool_size_bytes);
+
 	BF_KEY key;
 	int n_bits_added;
 	double delta, delta2, delta3;
@@ -259,16 +288,16 @@ int pool::add_event(double ts, unsigned char *event_data, int n_event_data)
 		n_bits_added = max(0, min(MAX_EVENT_BITS, log(delta) / log(2.0)));
 
 	bits_in_pool += n_bits_added;
-	if (bits_in_pool > POOL_SIZE)
-		bits_in_pool = POOL_SIZE;
+	if (bits_in_pool > (pool_size_bytes * 8))
+		bits_in_pool = (pool_size_bytes * 8);
 
 	unsigned char cur_ivec[8];
 	iv -> get(cur_ivec);
 
 	BF_set_key(&key, sizeof(ts), (const unsigned char *)&ts);
 	int ivec_offset = 0;
-	BF_cfb64_encrypt(entropy_pool, temp_buffer, (POOL_SIZE / 8), &key, cur_ivec, &ivec_offset, BF_ENCRYPT);
-	memcpy(entropy_pool, temp_buffer, (POOL_SIZE / 8));
+	BF_cfb64_encrypt(entropy_pool, temp_buffer, pool_size_bytes, &key, cur_ivec, &ivec_offset, BF_ENCRYPT);
+	memcpy(entropy_pool, temp_buffer, pool_size_bytes);
 
 	if (event_data)
 	{
@@ -276,9 +305,13 @@ int pool::add_event(double ts, unsigned char *event_data, int n_event_data)
 
 		BF_set_key(&key, n_event_data, event_data);
 		ivec_offset = 0;
-		BF_cfb64_encrypt(entropy_pool, temp_buffer, (POOL_SIZE / 8), &key, cur_ivec, &ivec_offset, BF_ENCRYPT);
-		memcpy(entropy_pool, temp_buffer, (POOL_SIZE / 8));
+		BF_cfb64_encrypt(entropy_pool, temp_buffer, pool_size_bytes, &key, cur_ivec, &ivec_offset, BF_ENCRYPT);
+		memcpy(entropy_pool, temp_buffer, pool_size_bytes);
 	}
+
+	memset(temp_buffer, 0x00, pool_size_bytes);
+	unlock_mem(temp_buffer, pool_size_bytes);
+	free(temp_buffer);
 
 	return n_bits_added;
 }
