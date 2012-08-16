@@ -129,6 +129,12 @@ int pool::add_entropy_data(unsigned char *entropy_data, int n_bytes_in)
 		n_bytes_in -=8;
 	}
 
+	// this implementation is described in RFC 4086 (June 2005) chapter 6.2.1, second paragraph
+
+	// NOTE (or FIXME if you like): not entirely sure if it is good enough to use a
+	// cryptographical strong RNG (the one from openssl) to set the ivec - could use "real"
+	// entropy values for that instead
+
 	unsigned char temp_key[56];
 
 	unsigned char *temp_buffer = (unsigned char *)malloc(pool_size_bytes);
