@@ -1,0 +1,24 @@
+.TH EB_SERVER_LINUX_KERNEL "1" "July 2012" "eb_server_linux_kernel" "User Commands"
+.SH NAME
+eb_server_linux_kernel \- retrieve entropy data from /dev/random
+.SH DESCRIPTION
+eb_server_linux_kernel v1.0, (C) 2009-2012 by folkert@vanheusden.com
+Please note: this program RETRIEVES entropy data from the kernel and feeds that to the entropybroker!
+If you want to ADD data to the kernel entropy buffer instead (which is what you most likely want to do), then use eb_client_linux_kernel
+.TP
+\fB\-i\fR host   eb\-host to connect to
+.TP
+\fB\-o\fR file   file to write entropy data to
+.TP
+\fB\-S\fR        show bps (mutual exclusive with \-n)
+.TP
+\fB\-l\fR file   log to file 'file'
+.TP
+\fB\-s\fR        log to syslog
+.TP
+\fB\-n\fR        do not fork
+.TP
+\fB\-P\fR file   file to write the PID to
+.TP
+\fB\-X\fR file   file to read the password from
+
