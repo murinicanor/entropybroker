@@ -152,8 +152,6 @@ void pools::merge_pools()
 		return;
 
 	int n_merged = 0;
-	unsigned char buffer[POOL_SIZE / 8];
-	lock_mem(buffer, sizeof buffer);
 
 	for(int i1=0; i1 < (pool_vector.size() - 1); i1++)
 	{
@@ -165,10 +163,14 @@ void pools::merge_pools()
 		for(int i2=(pool_vector.size() - 1); i2 >= (i1 + 1); i2--)
 		{
 			int i2_size = pool_vector.at(i2) -> get_n_bits_in_pool();
-			if (i1_size + i2_size > POOL_SIZE)
+			if (i1_size + i2_size > pool_vector.at(i1) -> get_pool_size())
 				continue;
 
 			int bytes = (i2_size + 7) / 8;
+
+			unsigned char *buffer = (unsigned char *)malloc(bytes);
+			lock_mem(buffer, sizeof buffer);
+
 			pool_vector.at(i2) -> get_entropy_data(buffer, bytes, false);
 
 			delete pool_vector.at(i2);
@@ -176,12 +178,14 @@ void pools::merge_pools()
 
 			pool_vector.at(i1) -> add_entropy_data(buffer, bytes);
 
+			memset(buffer, 0x00, sizeof buffer);
+			unlock_mem(buffer, sizeof buffer);
+			free(buffer);
+
 			n_merged++;
 		}
 	}
 
-	memset(buffer, 0x00, sizeof buffer);
-	unlock_mem(buffer, sizeof buffer);
 
 	if (n_merged)
 		dolog(LOG_INFO, "%d merged", n_merged);
@@ -376,11 +380,11 @@ int pools::add_bits_to_pools(unsigned char *data, int n_bytes, char ignore_rngte
 	{
 		index = select_pool_to_add_to();
 
-		int space_available = POOL_SIZE - pool_vector.at(index) -> get_n_bits_in_pool();
+		int space_available = pool_vector.at(index) -> get_pool_size() - pool_vector.at(index) -> get_n_bits_in_pool();
 		// in that case we're already mixing in so we can change all data anyway
 		// this only happens when all pools are full
 		if (space_available <= pool_vector.at(index) -> get_get_size_in_bits())
-			space_available = POOL_SIZE;
+			space_available = pool_vector.at(index) -> get_pool_size();
 
 		dolog(LOG_DEBUG, "Adding %d bits to pool %d", space_available, index);
 		unsigned int n_bytes_to_add = min(n_bytes, (space_available + 7) / 8);
