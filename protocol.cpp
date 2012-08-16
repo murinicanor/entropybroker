@@ -183,8 +183,8 @@ int message_transmit_entropy_data(char *host, int port, int *socket_fd, std::str
 		char header[8 + 1] = { 0 };
 
 		error_count++;
-		if (error_count > 10)
-			error_count = 10;
+		if (error_count > MAX_ERROR_SLEEP)
+			error_count = MAX_ERROR_SLEEP;
 
                 if (reconnect_server_socket(host, port, username, password, socket_fd, server_type, 1) == -1)
                         continue;
@@ -317,12 +317,12 @@ int request_bytes(int *socket_fd, char *host, int port, std::string username, st
 	snprintf(request, sizeof request, "0001%04d", n_bits);
 
 	double sleep_trigger = -1;
-	int error_count = 1;
+	int error_count = 0;
 	for(;;)
 	{
 		error_count++;
-		if (error_count > 15)
-			error_count = 15;
+		if (error_count > MAX_ERROR_SLEEP)
+			error_count = MAX_ERROR_SLEEP;
 
 		if (*socket_fd == -1)
 			request_sent = false;
@@ -369,7 +369,7 @@ int request_bytes(int *socket_fd, char *host, int port, std::string username, st
 
                 if (memcmp(reply, "9000", 4) == 0 || memcmp(reply, "9002", 4) == 0) // no data/quota
                 {
-			error_count = 1;
+			error_count = 0;
 			int sleep_time = atoi(&reply[4]);
 			dolog(LOG_DEBUG, "data denied: %s, sleep for %d seconds", reply[3] == '0' ? "no data" : "quota", sleep_time);
 
@@ -380,7 +380,7 @@ int request_bytes(int *socket_fd, char *host, int port, std::string username, st
 		}
                 else if (memcmp(reply, "0004", 4) == 0)       /* ping request */
                 {
-			error_count = 1;
+			error_count = 0;
                         static int pingnr = 0;
                         char xmit_buffer[8 + 1];
 
@@ -395,7 +395,7 @@ int request_bytes(int *socket_fd, char *host, int port, std::string username, st
                 }
                 else if (memcmp(reply, "0007", 4) == 0)  /* kernel entropy count */
                 {
-			error_count = 1;
+			error_count = 0;
                         char xmit_buffer[128], val_buffer[128];
 
 			int entropy_count = kernel_rng_get_entropy_count();
@@ -413,22 +413,22 @@ int request_bytes(int *socket_fd, char *host, int port, std::string username, st
                 }
                 else if (memcmp(reply, "0009", 4) == 0)
                 {
-			error_count = 1;
+			error_count = 0;
                         dolog(LOG_INFO, "Broker informs about data");
                 }
                 else if (memcmp(reply, "0010", 4) == 0)
                 {
-			error_count = 1;
+			error_count = 0;
                         dolog(LOG_INFO, "Broker requests data");
                 }
                 else if (memcmp(reply, "9004", 4) == 0)
                 {
-			error_count = 1;
+			error_count = 0;
                         dolog(LOG_INFO, "Broker is full");
                 }
 		else if (memcmp(reply, "0002", 4) == 0)	// there's data!
 		{
-			error_count = 1;
+			error_count = 0;
 			int will_get_n_bits = atoi(&reply[4]);
 			int will_get_n_bytes = (will_get_n_bits + 7) / 8;
 

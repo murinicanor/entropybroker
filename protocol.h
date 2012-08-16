@@ -1,5 +1,6 @@
 #define PROTOCOL_VERSION 3
 #define TCP_SILENT_FAIL_TEST_INTERVAL 120
+#define MAX_ERROR_SLEEP 12
 
 void make_msg(char *where_to, int code, int value);
 int reconnect_server_socket(char *host, int port, std::string username, std::string password, int *socket_fd, const char *type, char is_server);
