@@ -22,8 +22,10 @@
 #include "scc.h"
 #include "pools.h"
 
-pools::pools(std::string cache_dir_in, unsigned int max_n_mem_pools_in, unsigned int max_n_disk_pools_in, unsigned int min_store_on_disk_n_in, bit_count_estimator *bce_in) : cache_dir(cache_dir_in), max_n_mem_pools(max_n_mem_pools_in), max_n_disk_pools(max_n_disk_pools_in), min_store_on_disk_n(min_store_on_disk_n_in), disk_limit_reached_notified(false), bce(bce_in)
+pools::pools(std::string cache_dir_in, unsigned int max_n_mem_pools_in, unsigned int max_n_disk_pools_in, unsigned int min_store_on_disk_n_in, bit_count_estimator *bce_in, int new_pool_size_in_bytes) : cache_dir(cache_dir_in), max_n_mem_pools(max_n_mem_pools_in), max_n_disk_pools(max_n_disk_pools_in), min_store_on_disk_n(min_store_on_disk_n_in), disk_limit_reached_notified(false), bce(bce_in)
 {
+	new_pool_size = new_pool_size_in_bytes;
+
 	if (min_store_on_disk_n >= max_n_mem_pools)
 		error_exit("min_store_on_disk_n must be less than max_number_of_mem_pools");
 	if (min_store_on_disk_n < 1)
@@ -153,14 +155,14 @@ void pools::merge_pools()
 
 	int n_merged = 0;
 
-	for(int i1=0; i1 < (pool_vector.size() - 1); i1++)
+	for(int i1=0; i1 < (int(pool_vector.size()) - 1); i1++)
 	{
 		if (pool_vector.at(i1) -> is_full())
 			continue;
 
 		int i1_size = pool_vector.at(i1) -> get_n_bits_in_pool();
 
-		for(int i2=(pool_vector.size() - 1); i2 >= (i1 + 1); i2--)
+		for(int i2=(int(pool_vector.size()) - 1); i2 >= (i1 + 1); i2--)
 		{
 			int i2_size = pool_vector.at(i2) -> get_n_bits_in_pool();
 			if (i1_size + i2_size > pool_vector.at(i1) -> get_pool_size())
@@ -356,7 +358,7 @@ int pools::select_pool_to_add_to()
 		if (pool_vector.size() < max_n_mem_pools)
 		{
 			dolog(LOG_DEBUG, "Adding empty pool to queue (new number of pools: %d)", pool_vector.size() + 1);
-			pool_vector.push_back(new pool(bce));
+			pool_vector.push_back(new pool(new_pool_size, bce));
 		}
 
 		index = find_non_full_pool();

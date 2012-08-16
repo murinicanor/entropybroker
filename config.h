@@ -36,6 +36,8 @@ typedef struct
 	char allow_prng;
 
 	std::string *user_map;
+
+	int pool_size_bytes;
 } config_t;
 
 void load_config(const char *config, config_t *pconfig);

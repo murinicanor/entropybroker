@@ -10,6 +10,8 @@
 #include "config.h"
 #include "log.h"
 #include "auth.h"
+#include "ivec.h"
+#include "pool.h"
 
 char config_yes_no(char *what)
 {
@@ -68,6 +70,8 @@ void load_config(const char *config, config_t *pconfig)
 	pconfig -> allow_prng = 0;
 
 	pconfig -> user_map = new std::string("usermap.txt");
+
+	pconfig -> pool_size_bytes = DEFAULT_POOL_SIZE_BITS / 8;
 
         for(;;)
         {
@@ -145,6 +149,8 @@ void load_config(const char *config, config_t *pconfig)
 			pconfig -> statistics_interval = parval;
 		else if (strcmp(cmd, "ping_interval") == 0)
 			pconfig -> ping_interval = parval;
+		else if (strcmp(cmd, "pool_size_in_bytes") == 0)
+			pconfig -> pool_size_bytes = parval;
 		else if (strcmp(cmd, "kernelpool_filled_interval") == 0)
 			pconfig -> kernelpool_filled_interval = parval;
 		else if (strcmp(cmd, "stats_file") == 0)

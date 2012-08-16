@@ -18,7 +18,7 @@ private:
 	ivec *iv;
 
 public:
-	pool(bit_count_estimator *bce);
+	pool(int new_pool_size_bytes, bit_count_estimator *bce);
 	pool(int pool_nr, FILE *fh, bit_count_estimator *bce);
 	~pool();
 	void dump(FILE *fh);

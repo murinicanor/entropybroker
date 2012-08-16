@@ -1,7 +1,7 @@
 class scc
 {
 	int bytes_in, index;
-	unsigned char buffer[POOL_SIZE/8];
+	unsigned char buffer[DEFAULT_POOL_SIZE_BITS / 8];
 	double threshold;
 
 	char *user;

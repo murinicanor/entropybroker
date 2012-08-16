@@ -35,16 +35,17 @@
 #include "log.h"
 #include "utils.h"
 
-pool::pool(bit_count_estimator *bce_in) : bce(bce_in)
+pool::pool(int new_pool_size_bytes, bit_count_estimator *bce_in) : bce(bce_in)
 {
 	memset(&state, 0x00, sizeof(state));
 
-	pool_size_bytes = DEFAULT_POOL_SIZE_BITS / 8;
+	pool_size_bytes = new_pool_size_bytes;
 	entropy_pool = (unsigned char *)malloc(pool_size_bytes);
 	lock_mem(entropy_pool, pool_size_bytes);
 
 	bits_in_pool = 0;
 
+	// FIXME 'paranoid' boolean that enables /dev/(u)random?
 	if (RAND_bytes(entropy_pool, pool_size_bytes) == 0)
 		error_exit("RAND_bytes failed");
 

@@ -45,10 +45,10 @@ void scc::add(unsigned char byte)
 {
 	buffer[index++] = byte;
 
-	if (bytes_in < (POOL_SIZE / 8))
+	if (bytes_in < (DEFAULT_POOL_SIZE_BITS / 8))
 		bytes_in++;
 
-	if (index >= (POOL_SIZE / 8))
+	if (index >= (DEFAULT_POOL_SIZE_BITS / 8))
 		index = 0;
 }
 
