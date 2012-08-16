@@ -16,6 +16,17 @@ processes that read from a egb-compatible unix-domain socket.
 Most daemons should run on all UNIX systems. The ones that are
 Linux-specific are markes as such.
 
+
+*** PLEASE NOTE: since 1.0, 'eb' was renamed to 'entropy_broker' ***
+*** also the other daemons were renamed ***
+*** ALSO: the network protocol has changed so it is no longer ***
+*** compatible with older versions (1.1 is also incompatible ***
+*** with 1.0) ***
+*** ANOTHER NOTE: disk-pools of version 1.0 are NOT compatible ***
+*** with the ones of 1.1! ***
+*** LAST NOTE: the configuration file changed, see example ***
+
+
 Building
 --------
 	make install
@@ -23,13 +34,6 @@ Files will be installed in  /usr/local/entropybroker
 You need the OpenSSL and zlib development libraries.
 asound2 is for eb_server_audio
 libusb-1.0-0-dev is for eb_server_usb
-
-*** PLEASE NOTE: since 1.0, 'eb' was renamed to 'entropy_broker' ***
-*** also the other daemons were renamed ***
-*** ALSO: the network protocol has changed so it is no longer ***
-*** compatible with older versions (1.1 is also incompatible ***
-*** with 1.0) ***
-*** LAST NOTE: the configuration file changed, see example ***
 
 
 Usage
