@@ -20,9 +20,12 @@
 #include "hasher_sha512.h"
 #include "stirrer.h"
 #include "stirrer_blowfish.h"
+#include "stirrer_aes.h"
 #include "pool.h"
 #include "fips140.h"
 #include "scc.h"
+#include "hasher_type.h"
+#include "stirrer_type.h"
 #include "config.h"
 #include "pools.h"
 #include "handle_client.h"
@@ -126,8 +129,18 @@ int main(int argc, char *argv[])
 
 	bit_count_estimator *bce = new bit_count_estimator(config.bitcount_estimator);
 
-	hasher *h = new hasher_sha512();
-	stirrer *s = new stirrer_blowfish();
+	hasher *h = NULL;
+	if (config.ht == H_SHA512)
+		h = new hasher_sha512();
+	else if (config.ht == H_MD5)
+		h = new hasher_md5();
+
+	stirrer *s = NULL;
+	if (config.st == S_BLOWFISH)
+		s = new stirrer_blowfish();
+	else if (config.st == S_AES)
+		s = new stirrer_aes();
+
 	pools *ppools = new pools(std::string(CACHE_DIR), config.max_number_of_mem_pools, config.max_number_of_disk_pools, config.min_store_on_disk_n, bce, config.pool_size_bytes, h, s);
 
 	dolog(LOG_DEBUG, "Blowfish options: %s", BF_options());

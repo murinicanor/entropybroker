@@ -25,6 +25,8 @@
 #include "stirrer.h"
 #include "pool.h"
 #include "fips140.h"
+#include "hasher_type.h"
+#include "stirrer_type.h"
 #include "config.h"
 #include "scc.h"
 #include "pools.h"
@@ -850,6 +852,7 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 		if (config -> allow_event_entropy_addition)
 		{
 			int event_bits = ppools -> add_event(now, (unsigned char *)&rfds, sizeof(rfds));
+
 			dolog(LOG_DEBUG, "main|added %d bits of event-entropy to pool", event_bits);
 		}
 

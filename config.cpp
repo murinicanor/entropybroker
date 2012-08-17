@@ -7,6 +7,8 @@
 
 #include "error.h"
 #include "math.h"
+#include "hasher_type.h"
+#include "stirrer_type.h"
 #include "config.h"
 #include "log.h"
 #include "auth.h"
@@ -76,6 +78,9 @@ void load_config(const char *config, config_t *pconfig)
 	pconfig -> pool_size_bytes = DEFAULT_POOL_SIZE_BITS / 8;
 
 	pconfig -> prng_seed_file = NULL;
+
+	pconfig -> ht = H_SHA512;
+	pconfig -> st = S_BLOWFISH;
 
         for(;;)
         {
@@ -195,6 +200,24 @@ void load_config(const char *config, config_t *pconfig)
 			pconfig -> scc_threshold = parvald;
 		else if (strcmp(cmd, "when_pools_full_allow_submit_interval") == 0)
 			pconfig -> when_pools_full_allow_submit_interval = parval;
+		else if (strcmp(cmd, "hash_type") == 0)
+		{
+			if (strcmp(par, "sha512") == 0)
+				pconfig -> ht = H_SHA512;
+			else if (strcmp(par, "md5") == 0)
+				pconfig -> ht = H_MD5;
+			else
+				error_exit("Hash type '%s' not understood", par);
+		}
+		else if (strcmp(cmd, "stirrer_type") == 0)
+		{
+			if (strcmp(par, "blowfish") == 0)
+				pconfig -> st = S_BLOWFISH;
+			else if (strcmp(par, "aes") == 0)
+				pconfig -> st = S_AES;
+			else
+				error_exit("Stirrer type '%s' not understood", par);
+		}
 		else
 			error_exit("%s=%s not understood", cmd, par);
 	}

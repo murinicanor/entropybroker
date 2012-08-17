@@ -38,6 +38,9 @@ typedef struct
 
 	char *prng_seed_file;
 
+	hasher_type ht;
+	stirrer_type st;
+
 	std::string *user_map;
 } config_t;
 

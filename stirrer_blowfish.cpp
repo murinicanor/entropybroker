@@ -29,10 +29,12 @@ void stirrer_blowfish::do_stir(unsigned char *ivec, unsigned char *target, int t
 		// estimation
 		if (RAND_bytes(&temp_key[data_in_size], 4 - data_in_size) == 0)
 			error_exit("RAND_bytes failed");
+
+		data_in_size = 4;
 	}
 
 	BF_KEY key;
-	BF_set_key(&key, max(4, data_in_size), temp_key);
+	BF_set_key(&key, data_in_size, temp_key);
 	int ivec_offset = 0;
 	BF_cfb64_encrypt(target, temp_buffer, target_size, &key, ivec, &ivec_offset, direction ? BF_ENCRYPT : BF_DECRYPT);
 	memcpy(target, temp_buffer, target_size);

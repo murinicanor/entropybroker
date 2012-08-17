@@ -296,11 +296,16 @@ int pool::add_event(double ts, unsigned char *event_data, int n_event_data)
 
 	s -> do_stir(cur_ivec, entropy_pool, pool_size_bytes, (unsigned char *)&ts, sizeof ts, temp_buffer, true);
 
-	if (event_data)
+	while(n_event_data > 0)
 	{
+		int cur_n_event_data = min(n_event_data, s -> get_stir_size());
+
 		iv -> get(cur_ivec);
 
-		s -> do_stir(cur_ivec, entropy_pool, pool_size_bytes, event_data, n_event_data, temp_buffer, true);
+		s -> do_stir(cur_ivec, entropy_pool, pool_size_bytes, event_data, cur_n_event_data, temp_buffer, true);
+
+		event_data += cur_n_event_data;
+		n_event_data -= cur_n_event_data;
 	}
 
 	memset(temp_buffer, 0x00, pool_size_bytes);
