@@ -121,7 +121,7 @@ void pool::dump(FILE *fh)
 
 int pool::add_entropy_data(unsigned char *entropy_data, int n_bytes_in)
 {
-	if (is_full() && n_bytes_in >= 32 && ivec -> needs_seeding())
+	if (is_full() && n_bytes_in >= 32 && iv -> needs_seeding())
 	{
 		iv -> seed(entropy_data, 8);
 
