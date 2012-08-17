@@ -10,23 +10,25 @@
 #include <string>
 #include <map>
 #include <openssl/blowfish.h>
+#include <openssl/des.h>
 #include <openssl/rand.h>
 
 #include "error.h"
 #include "math.h"
 #include "ivec.h"
+#include "hasher_type.h"
 #include "hasher.h"
 #include "hasher_md5.h"
 #include "hasher_ripemd160.h"
 #include "hasher_sha512.h"
+#include "stirrer_type.h"
 #include "stirrer.h"
 #include "stirrer_blowfish.h"
 #include "stirrer_aes.h"
+#include "stirrer_3des.h"
 #include "pool.h"
 #include "fips140.h"
 #include "scc.h"
-#include "hasher_type.h"
-#include "stirrer_type.h"
 #include "config.h"
 #include "pools.h"
 #include "handle_client.h"
@@ -143,6 +145,8 @@ int main(int argc, char *argv[])
 		s = new stirrer_blowfish();
 	else if (config.st == S_AES)
 		s = new stirrer_aes();
+	else if (config.st == S_3DES)
+		s = new stirrer_3des();
 
 	pools *ppools = new pools(std::string(CACHE_DIR), config.max_number_of_mem_pools, config.max_number_of_disk_pools, config.min_store_on_disk_n, bce, config.pool_size_bytes, h, s);
 

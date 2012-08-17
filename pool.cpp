@@ -57,8 +57,6 @@ pool::pool(int pool_nr, FILE *fh, bit_count_estimator *bce_in, hasher *hclass, s
 {
 	unsigned char val_buffer[8];
 
-	iv = NULL;
-
 	if (fread(val_buffer, 1, 8, fh) <= 0)
 	{
 		pool_size_bytes = DEFAULT_POOL_SIZE_BITS / 8;
@@ -66,6 +64,8 @@ pool::pool(int pool_nr, FILE *fh, bit_count_estimator *bce_in, hasher *hclass, s
 		bits_in_pool = 0;
 
 		lock_mem(entropy_pool, pool_size_bytes);
+
+		iv = new ivec(s -> get_ivec_size(), bce);
 	}
 	else
 	{
@@ -187,9 +187,10 @@ int pool::get_entropy_data(unsigned char *entropy_data, int n_bytes_requested, b
 
 	// make sure the hash length is equal or less than 448 bits which is the maximum
 	// blowfish key size
-	int n_given, half_hash_len = h -> get_hash_size() / 2;;
+	int hash_len = h -> get_hash_size();
+	int n_given, half_hash_len = hash_len / 2;;
 	unsigned char *hash = (unsigned char *)malloc(h -> get_hash_size());
-	lock_mem(hash, h -> get_hash_size());
+	lock_mem(hash, hash_len);
 
 	unsigned char cur_ivec[8];
 	iv -> get(cur_ivec);
@@ -209,7 +210,18 @@ int pool::get_entropy_data(unsigned char *entropy_data, int n_bytes_requested, b
 		if (bits_in_pool < 0)
 			bits_in_pool = 0;
 
-		s -> do_stir(cur_ivec, entropy_pool, pool_size_bytes, hash, h -> get_hash_size(), temp_buffer, false);
+		// if the hash is bigger than what we can stir in: fold it
+		unsigned char *dummy_hash_p = hash;
+		int stir_size = s -> get_stir_size(), index = 0;
+		while(index < hash_len)
+		{
+			int cur_hash_n = min(hash_len - index, stir_size);
+
+			s -> do_stir(cur_ivec, entropy_pool, pool_size_bytes, dummy_hash_p, cur_hash_n, temp_buffer, false);
+
+			dummy_hash_p += cur_hash_n;
+			index += cur_hash_n;
+		}
 
 		// fold into half
 		for(loop=0; loop<half_hash_len; loop++)
@@ -221,8 +233,8 @@ int pool::get_entropy_data(unsigned char *entropy_data, int n_bytes_requested, b
 	unlock_mem(temp_buffer, pool_size_bytes);
 	free(temp_buffer);
 
-	memset(hash, 0x00, h -> get_hash_size());
-	unlock_mem(hash, h -> get_hash_size());
+	memset(hash, 0x00, hash_len);
+	unlock_mem(hash, hash_len);
 	free(hash);
 
 	return n_given;

@@ -331,12 +331,12 @@ int pools::get_bits_from_pools(int n_bits_requested, unsigned char **buffer, boo
 
 int pools::find_non_full_pool()
 {
-	unsigned int n = pool_vector.size();
-	unsigned int offset = myrand() % n;
+	int n = pool_vector.size();
+	int offset = myrand() % n;
 
-	for(unsigned int loop=0; loop<n; loop++)
+	for(int loop=0; loop<n; loop++)
 	{
-		unsigned int index = (offset + loop) % n;
+		int index = (offset + loop) % n;
 
 		if (!pool_vector.at(index) -> is_almost_full())
 			return index;
