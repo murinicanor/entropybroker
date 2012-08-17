@@ -11,6 +11,7 @@ private:
 	bit_count_estimator *bce;
 	int new_pool_size;
 	hasher *h;
+	stirrer *s;
 
 	void load_cachefiles_list();
 	void load_caches(unsigned int load_n_bits);
@@ -21,7 +22,7 @@ private:
 	void merge_pools();
 
 public:
-	pools(std::string cache_dir, unsigned int max_n_mem_pools, unsigned int max_n_disk_pools, unsigned int min_store_on_disk_n, bit_count_estimator *bce_in, int new_pool_size_in_bytes, hasher *hclass);
+	pools(std::string cache_dir, unsigned int max_n_mem_pools, unsigned int max_n_disk_pools, unsigned int min_store_on_disk_n, bit_count_estimator *bce_in, int new_pool_size_in_bytes, hasher *hclass, stirrer *sclass);
 	~pools();
 
 	int get_bits_from_pools(int n_bits_requested, unsigned char **buffer, bool allow_prng, bool ignore_rngtest_fips140, fips140 *prt, bool ignore_rngtest_scc, scc *pscc);

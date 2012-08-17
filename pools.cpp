@@ -17,13 +17,14 @@
 #include "math.h"
 #include "ivec.h"
 #include "hasher.h"
+#include "stirrer.h"
 #include "pool.h"
 #include "utils.h"
 #include "fips140.h"
 #include "scc.h"
 #include "pools.h"
 
-pools::pools(std::string cache_dir_in, unsigned int max_n_mem_pools_in, unsigned int max_n_disk_pools_in, unsigned int min_store_on_disk_n_in, bit_count_estimator *bce_in, int new_pool_size_in_bytes, hasher *hclass) : cache_dir(cache_dir_in), max_n_mem_pools(max_n_mem_pools_in), max_n_disk_pools(max_n_disk_pools_in), min_store_on_disk_n(min_store_on_disk_n_in), disk_limit_reached_notified(false), bce(bce_in), h(hclass)
+pools::pools(std::string cache_dir_in, unsigned int max_n_mem_pools_in, unsigned int max_n_disk_pools_in, unsigned int min_store_on_disk_n_in, bit_count_estimator *bce_in, int new_pool_size_in_bytes, hasher *hclass, stirrer *sclass) : cache_dir(cache_dir_in), max_n_mem_pools(max_n_mem_pools_in), max_n_disk_pools(max_n_disk_pools_in), min_store_on_disk_n(min_store_on_disk_n_in), disk_limit_reached_notified(false), bce(bce_in), h(hclass), s(sclass)
 {
 	new_pool_size = new_pool_size_in_bytes;
 
@@ -111,7 +112,7 @@ void pools::load_caches(unsigned int load_n_bits)
 
 		while(!feof(fh))
 		{
-			pool *new_pool = new pool(++files_loaded, fh, bce, h);
+			pool *new_pool = new pool(++files_loaded, fh, bce, h, s);
 			pool_vector.push_back(new_pool);
 
 			bits_loaded += new_pool -> get_n_bits_in_pool();
@@ -361,7 +362,7 @@ int pools::select_pool_to_add_to()
 		if (pool_vector.size() < max_n_mem_pools)
 		{
 			dolog(LOG_DEBUG, "Adding empty pool to queue (new number of pools: %d)", pool_vector.size() + 1);
-			pool_vector.push_back(new pool(new_pool_size, bce, h));
+			pool_vector.push_back(new pool(new_pool_size, bce, h, s));
 		}
 
 		index = find_non_full_pool();

@@ -16,14 +16,12 @@ private:
 	event_state_t state;
 	bit_count_estimator *bce;
 	hasher *h;
+	stirrer *s;
 	ivec *iv;
 
-	int get_stir_size() const;
-	void stir(unsigned char *ivec, unsigned char *what, int n, unsigned char *temp_buffer, bool direction);
-
 public:
-	pool(int new_pool_size_bytes, bit_count_estimator *bce, hasher *hclass);
-	pool(int pool_nr, FILE *fh, bit_count_estimator *bce, hasher *hclass);
+	pool(int new_pool_size_bytes, bit_count_estimator *bce, hasher *hclass, stirrer *sclass);
+	pool(int pool_nr, FILE *fh, bit_count_estimator *bce, hasher *hclass, stirrer *sclass);
 	~pool();
 	void dump(FILE *fh);
 

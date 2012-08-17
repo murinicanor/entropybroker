@@ -12,6 +12,7 @@
 #include "auth.h"
 #include "ivec.h"
 #include "hasher.h"
+#include "stirrer.h"
 #include "pool.h"
 
 char config_yes_no(char *what)

@@ -22,6 +22,7 @@
 #include "math.h"
 #include "ivec.h"
 #include "hasher.h"
+#include "stirrer.h"
 #include "pool.h"
 #include "fips140.h"
 #include "config.h"
