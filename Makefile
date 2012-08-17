@@ -169,6 +169,6 @@ package:
 	mkdir eb-$(VERSION) eb-$(VERSION)/ComScire_R2000KU
 	cp *.cpp *.h entropybroker.conf Makefile Changes auth.txt users.txt readme.txt license.* eb-$(VERSION)
 	cp ComScire_R2000KU/*.[ch]pp ComScire_R2000KU/LICENSE eb-$(VERSION)/ComScire_R2000KU
-	cp -a doc eb-$(VERSION)
+	tar cf - doc --exclude=.svn  | tar xvf - -C eb-$(VERSION)
 	tar czf eb-$(VERSION).tgz eb-$(VERSION)
 	rm -rf eb-$(VERSION)
