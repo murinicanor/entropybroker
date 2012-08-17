@@ -18,7 +18,6 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <openssl/blowfish.h>
-#include <openssl/sha.h>
 #include <string.h>
 #include <math.h>
 #include <unistd.h>
@@ -152,7 +151,7 @@ int pool::add_entropy_data(unsigned char *entropy_data, int n_bytes_in)
 		// a maximum of 448 bits which is 56 bytes
 		int cur_to_add = min(n_bytes_in, s -> get_stir_size());
 
-		s -> do_stir(cur_ivec, entropy_data, cur_to_add, temp_buffer, true);
+		s -> do_stir(cur_ivec, entropy_pool, pool_size_bytes, entropy_data, cur_to_add, temp_buffer, true);
 
 		entropy_data += cur_to_add;
 		n_bytes_in -= cur_to_add;
@@ -203,7 +202,7 @@ int pool::get_entropy_data(unsigned char *entropy_data, int n_bytes_requested, b
 		if (bits_in_pool < 0)
 			bits_in_pool = 0;
 
-		s -> do_stir(cur_ivec, hash, h -> get_hash_size(), temp_buffer, false);
+		s -> do_stir(cur_ivec, entropy_pool, pool_size_bytes, hash, h -> get_hash_size(), temp_buffer, false);
 
 		// fold into half
 		for(loop=0; loop<half_hash_len; loop++)
@@ -224,7 +223,7 @@ int pool::get_entropy_data(unsigned char *entropy_data, int n_bytes_requested, b
 
 int pool::get_get_size()
 {
-	return SHA512_DIGEST_LENGTH / 2;
+	return h -> get_hash_size() / 2;
 }
 
 int pool::get_get_size_in_bits()
@@ -253,7 +252,6 @@ int pool::add_event(double ts, unsigned char *event_data, int n_event_data)
 	unsigned char *temp_buffer = (unsigned char *)malloc(pool_size_bytes);
 	lock_mem(temp_buffer, pool_size_bytes);
 
-	BF_KEY key;
 	int n_bits_added;
 	double delta, delta2, delta3;
 
@@ -289,19 +287,13 @@ int pool::add_event(double ts, unsigned char *event_data, int n_event_data)
 	unsigned char cur_ivec[8];
 	iv -> get(cur_ivec);
 
-	BF_set_key(&key, sizeof(ts), (const unsigned char *)&ts);
-	int ivec_offset = 0;
-	BF_cfb64_encrypt(entropy_pool, temp_buffer, pool_size_bytes, &key, cur_ivec, &ivec_offset, BF_ENCRYPT);
-	memcpy(entropy_pool, temp_buffer, pool_size_bytes);
+	s -> do_stir(cur_ivec, entropy_pool, pool_size_bytes, (unsigned char *)&ts, sizeof ts, temp_buffer, true);
 
 	if (event_data)
 	{
 		iv -> get(cur_ivec);
 
-		BF_set_key(&key, n_event_data, event_data);
-		ivec_offset = 0;
-		BF_cfb64_encrypt(entropy_pool, temp_buffer, pool_size_bytes, &key, cur_ivec, &ivec_offset, BF_ENCRYPT);
-		memcpy(entropy_pool, temp_buffer, pool_size_bytes);
+		s -> do_stir(cur_ivec, entropy_pool, pool_size_bytes, event_data, n_event_data, temp_buffer, true);
 	}
 
 	memset(temp_buffer, 0x00, pool_size_bytes);
