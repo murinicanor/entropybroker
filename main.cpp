@@ -16,6 +16,7 @@
 #include "math.h"
 #include "ivec.h"
 #include "hasher.h"
+#include "hasher_md5.h"
 #include "hasher_sha512.h"
 #include "stirrer.h"
 #include "stirrer_blowfish.h"
