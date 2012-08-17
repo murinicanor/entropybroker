@@ -197,6 +197,16 @@ int pool::get_n_bits_in_pool(void)
 	return bits_in_pool;
 }
 
+int pool::get_hash_size() const
+{
+	return SHA512_DIGEST_LENGTH;
+}
+
+void pool::do_hash(unsigned char *dest)
+{
+	SHA512(entropy_pool, pool_size_bytes, dest);
+}
+
 int pool::get_entropy_data(unsigned char *entropy_data, int n_bytes_requested, bool prng_ok)
 {
 	unsigned char *temp_buffer = (unsigned char *)malloc(pool_size_bytes);
@@ -204,8 +214,9 @@ int pool::get_entropy_data(unsigned char *entropy_data, int n_bytes_requested, b
 
 	// make sure the hash length is equal or less than 448 bits which is the maximum
 	// blowfish key size
-	int n_given, half_sha512_hash_len = SHA512_DIGEST_LENGTH / 2;;
-	unsigned char hash[SHA512_DIGEST_LENGTH];
+	int n_given, half_hash_len = get_hash_size() / 2;;
+	unsigned char *hash = (unsigned char *)malloc(get_hash_size());
+	lock_mem(hash, get_hash_size());
 
 	unsigned char cur_ivec[8];
 	iv -> get(cur_ivec);
@@ -213,29 +224,33 @@ int pool::get_entropy_data(unsigned char *entropy_data, int n_bytes_requested, b
 	n_given = n_bytes_requested;
 	if (!prng_ok)
 		n_given = min(n_given, bits_in_pool / 8);
-	n_given = min(n_given, half_sha512_hash_len);
+	n_given = min(n_given, half_hash_len);
 
 	if (n_given > 0)
 	{
 		int loop;
 
-		SHA512(entropy_pool, pool_size_bytes, hash);
+		do_hash(hash);
 
 		bits_in_pool -= (n_given * 8);
 		if (bits_in_pool < 0)
 			bits_in_pool = 0;
 
-		stir(cur_ivec, hash, SHA512_DIGEST_LENGTH, temp_buffer, false);
+		stir(cur_ivec, hash, get_hash_size(), temp_buffer, false);
 
-		// fold into 32 bytes
-		for(loop=0; loop<half_sha512_hash_len; loop++)
-			hash[loop] ^= hash[loop + half_sha512_hash_len];
+		// fold into half
+		for(loop=0; loop<half_hash_len; loop++)
+			hash[loop] ^= hash[loop + half_hash_len];
 		memcpy(entropy_data, hash, n_given);
 	}
 
 	memset(temp_buffer, 0x00, pool_size_bytes);
 	unlock_mem(temp_buffer, pool_size_bytes);
 	free(temp_buffer);
+
+	memset(hash, 0x00, get_hash_size());
+	unlock_mem(hash, get_hash_size());
+	free(hash);
 
 	return n_given;
 }

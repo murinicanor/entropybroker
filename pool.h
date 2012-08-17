@@ -20,6 +20,9 @@ private:
 	int get_stir_size() const;
 	void stir(unsigned char *ivec, unsigned char *what, int n, unsigned char *temp_buffer, bool direction);
 
+	int get_hash_size() const;
+	void do_hash(unsigned char *dest);
+
 public:
 	pool(int new_pool_size_bytes, bit_count_estimator *bce);
 	pool(int pool_nr, FILE *fh, bit_count_estimator *bce);
