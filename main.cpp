@@ -15,6 +15,7 @@
 #include "error.h"
 #include "math.h"
 #include "ivec.h"
+#include "hasher.h"
 #include "pool.h"
 #include "fips140.h"
 #include "scc.h"
@@ -121,7 +122,8 @@ int main(int argc, char *argv[])
 
 	bit_count_estimator *bce = new bit_count_estimator(config.bitcount_estimator);
 
-	pools *ppools = new pools(std::string(CACHE_DIR), config.max_number_of_mem_pools, config.max_number_of_disk_pools, config.min_store_on_disk_n, bce, config.pool_size_bytes);
+	hasher *h = new hasher();
+	pools *ppools = new pools(std::string(CACHE_DIR), config.max_number_of_mem_pools, config.max_number_of_disk_pools, config.min_store_on_disk_n, bce, config.pool_size_bytes, h);
 
 	dolog(LOG_DEBUG, "Blowfish options: %s", BF_options());
 

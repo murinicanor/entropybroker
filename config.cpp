@@ -11,6 +11,7 @@
 #include "log.h"
 #include "auth.h"
 #include "ivec.h"
+#include "hasher.h"
 #include "pool.h"
 
 char config_yes_no(char *what)

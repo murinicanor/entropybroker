@@ -6,8 +6,6 @@
 #include "error.h"
 #include "math.h"
 #include "log.h"
-#include "ivec.h"
-#include "pool.h"
 #include "scc.h"
 
 scc::scc()
@@ -45,10 +43,10 @@ void scc::add(unsigned char byte)
 {
 	buffer[index++] = byte;
 
-	if (bytes_in < (DEFAULT_POOL_SIZE_BITS / 8))
+	if (bytes_in < SCC_BUFFER_SIZE)
 		bytes_in++;
 
-	if (index >= (DEFAULT_POOL_SIZE_BITS / 8))
+	if (index >= SCC_BUFFER_SIZE)
 		index = 0;
 }
 

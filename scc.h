@@ -1,7 +1,8 @@
+#define SCC_BUFFER_SIZE 4096
 class scc
 {
 	int bytes_in, index;
-	unsigned char buffer[DEFAULT_POOL_SIZE_BITS / 8];
+	unsigned char buffer[SCC_BUFFER_SIZE];
 	double threshold;
 
 	char *user;

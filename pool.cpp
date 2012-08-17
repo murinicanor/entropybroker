@@ -29,13 +29,14 @@
 
 #include "math.h"
 #include "ivec.h"
+#include "hasher.h"
 #include "pool.h"
 #include "error.h"
 #include "kernel_prng_rw.h"
 #include "log.h"
 #include "utils.h"
 
-pool::pool(int new_pool_size_bytes, bit_count_estimator *bce_in) : bce(bce_in)
+pool::pool(int new_pool_size_bytes, bit_count_estimator *bce_in, hasher *hclass) : bce(bce_in), h(hclass)
 {
 	memset(&state, 0x00, sizeof(state));
 
@@ -52,7 +53,7 @@ pool::pool(int new_pool_size_bytes, bit_count_estimator *bce_in) : bce(bce_in)
 	iv = new ivec(bce);
 }
 
-pool::pool(int pool_nr, FILE *fh, bit_count_estimator *bce_in) : bce(bce_in)
+pool::pool(int pool_nr, FILE *fh, bit_count_estimator *bce_in, hasher *hclass) : bce(bce_in), h(hclass)
 {
 	unsigned char val_buffer[8];
 
@@ -197,16 +198,6 @@ int pool::get_n_bits_in_pool(void)
 	return bits_in_pool;
 }
 
-int pool::get_hash_size() const
-{
-	return SHA512_DIGEST_LENGTH;
-}
-
-void pool::do_hash(unsigned char *dest)
-{
-	SHA512(entropy_pool, pool_size_bytes, dest);
-}
-
 int pool::get_entropy_data(unsigned char *entropy_data, int n_bytes_requested, bool prng_ok)
 {
 	unsigned char *temp_buffer = (unsigned char *)malloc(pool_size_bytes);
@@ -214,9 +205,9 @@ int pool::get_entropy_data(unsigned char *entropy_data, int n_bytes_requested, b
 
 	// make sure the hash length is equal or less than 448 bits which is the maximum
 	// blowfish key size
-	int n_given, half_hash_len = get_hash_size() / 2;;
-	unsigned char *hash = (unsigned char *)malloc(get_hash_size());
-	lock_mem(hash, get_hash_size());
+	int n_given, half_hash_len = h -> get_hash_size() / 2;;
+	unsigned char *hash = (unsigned char *)malloc(h -> get_hash_size());
+	lock_mem(hash, h -> get_hash_size());
 
 	unsigned char cur_ivec[8];
 	iv -> get(cur_ivec);
@@ -230,13 +221,13 @@ int pool::get_entropy_data(unsigned char *entropy_data, int n_bytes_requested, b
 	{
 		int loop;
 
-		do_hash(hash);
+		h -> do_hash(entropy_pool, pool_size_bytes, hash);
 
 		bits_in_pool -= (n_given * 8);
 		if (bits_in_pool < 0)
 			bits_in_pool = 0;
 
-		stir(cur_ivec, hash, get_hash_size(), temp_buffer, false);
+		stir(cur_ivec, hash, h -> get_hash_size(), temp_buffer, false);
 
 		// fold into half
 		for(loop=0; loop<half_hash_len; loop++)
@@ -248,8 +239,8 @@ int pool::get_entropy_data(unsigned char *entropy_data, int n_bytes_requested, b
 	unlock_mem(temp_buffer, pool_size_bytes);
 	free(temp_buffer);
 
-	memset(hash, 0x00, get_hash_size());
-	unlock_mem(hash, get_hash_size());
+	memset(hash, 0x00, h -> get_hash_size());
+	unlock_mem(hash, h -> get_hash_size());
 	free(hash);
 
 	return n_given;
