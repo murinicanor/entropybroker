@@ -226,7 +226,29 @@ void pools::load_cachefiles_list()
 	closedir(dirp);
 }
 
-int pools::get_bits_from_pools(int n_bits_requested, unsigned char **buffer, char allow_prng, char ignore_rngtest_fips140, fips140 *pfips, char ignore_rngtest_scc, scc *pscc)
+bool pools::verify_quality(unsigned char *data, int n, bool ignore_rngtest_fips140, fips140 *pfips, bool ignore_rngtest_scc, scc *pscc)
+{
+	if (!ignore_rngtest_fips140 || !ignore_rngtest_scc)
+	{
+		for(unsigned int rngtest_loop=0; rngtest_loop<n; rngtest_loop++)
+		{
+			pfips -> add(data[rngtest_loop]);
+			pscc -> add(data[rngtest_loop]);
+		}
+	}
+
+	bool rc_fips140 = true, rc_scc = true;
+
+	if (!ignore_rngtest_fips140)
+		rc_fips140 = pfips -> is_ok();
+
+	if (!ignore_rngtest_scc)
+		rc_scc = pfips -> is_ok();
+
+	return rc_fips140 == true && rc_scc == true;
+}
+
+int pools::get_bits_from_pools(int n_bits_requested, unsigned char **buffer, bool allow_prng, bool ignore_rngtest_fips140, fips140 *pfips, bool ignore_rngtest_scc, scc *pscc)
 {
 	int n_to_do_bytes = (n_bits_requested + 7) / 8;
 	int n_to_do_bits = n_to_do_bytes * 8;
@@ -249,35 +271,25 @@ int pools::get_bits_from_pools(int n_bits_requested, unsigned char **buffer, cha
 		load_caches(bits_needed_to_load);
 	}
 
-	// search from the end as those pools will have the least number of bits
-	// (unless pools from disk were retrieved, then the first pool might have less
-	// bits - it will then have less bits than the pool block size)
-	for(int loop=pool_vector.size() - 1; loop >= 0; loop--)
+	int n = pool_vector.size();
+	int offset = myrand() % n;
+	for(int loop=0; loop < n; loop++)
 	{
+		int index = (offset + loop) % n;
+
 		// this gets the minimum number of bits one can retrieve from a
 		// pool in one request
-		int pool_block_size = pool_vector.at(loop) -> get_get_size();
+		int pool_block_size = pool_vector.at(index) -> get_get_size();
 
-		while(pool_vector.at(loop) -> get_n_bits_in_pool() > pool_block_size)
+		while(pool_vector.at(index) -> get_n_bits_in_pool() > pool_block_size)
 		{
 			int cur_n_to_get_bits = min(n_to_do_bits, pool_block_size);
 			int cur_n_to_get_bytes = (cur_n_to_get_bits + 7) / 8;
 
-			unsigned int got_n_bytes = pool_vector.at(loop) -> get_entropy_data(cur_p, cur_n_to_get_bytes, 0);
+			unsigned int got_n_bytes = pool_vector.at(index) -> get_entropy_data(cur_p, cur_n_to_get_bytes, 0);
 			unsigned int got_n_bits = got_n_bytes * 8;
 
-			for(unsigned int rngtest_loop=0; rngtest_loop<got_n_bytes; rngtest_loop++)
-			{
-				pfips -> add(cur_p[rngtest_loop]);
-				pscc -> add(cur_p[rngtest_loop]);
-			}
-
-			bool rc_fips140 = true, rc_scc = true;
-			if (!ignore_rngtest_fips140)
-				rc_fips140 = pfips -> is_ok();
-			if (!ignore_rngtest_scc)
-				rc_scc = pfips -> is_ok();
-			if (rc_fips140 == true && rc_scc == true)
+			if (verify_quality(cur_p, got_n_bytes, ignore_rngtest_fips140, pfips, ignore_rngtest_scc, pscc))
 			{
 				cur_p += got_n_bytes;
 				n_to_do_bits -= got_n_bits;
@@ -293,37 +305,22 @@ int pools::get_bits_from_pools(int n_bits_requested, unsigned char **buffer, cha
 
 	if (allow_prng)
 	{
-		unsigned int index = 0;
-
 		while(n_to_do_bits > 0)
 		{
+			unsigned int index = myrand() % n;
+
 			int cur_n_to_get_bits = min(pool_vector.at(index) -> get_pool_size(), n_to_do_bits);
 			int cur_n_to_get_bytes = (cur_n_to_get_bits + 7) / 8;
 
 			unsigned int got_n_bytes = pool_vector.at(index) -> get_entropy_data(cur_p, cur_n_to_get_bytes, 1);
 			unsigned int got_n_bits = got_n_bytes * 8;
 
-			for(unsigned int rngtest_loop=0; rngtest_loop<got_n_bytes; rngtest_loop++)
-			{
-				pfips -> add(cur_p[rngtest_loop]);
-				pscc -> add(cur_p[rngtest_loop]);
-			}
-
-			bool rc_fips140 = true, rc_scc = true;
-			if (!ignore_rngtest_fips140)
-				rc_fips140 = pfips -> is_ok();
-			if (!ignore_rngtest_scc)
-				rc_scc = pfips -> is_ok();
-			if (rc_fips140 == true && rc_scc == true)
+			if (verify_quality(cur_p, got_n_bytes, ignore_rngtest_fips140, pfips, ignore_rngtest_scc, pscc))
 			{
 				cur_p += got_n_bytes;
 				n_to_do_bits -= got_n_bits;
 				n_bits_retrieved += got_n_bits;
 			}
-
-			index++;
-			if (index == pool_vector.size())
-				index = 0;
 		}
 	}
 
@@ -378,7 +375,7 @@ int pools::select_pool_to_add_to()
 	return index;
 }
 
-int pools::add_bits_to_pools(unsigned char *data, int n_bytes, char ignore_rngtest_fips140, fips140 *pfips, char ignore_rngtest_scc, scc *pscc)
+int pools::add_bits_to_pools(unsigned char *data, int n_bytes, bool ignore_rngtest_fips140, fips140 *pfips, bool ignore_rngtest_scc, scc *pscc)
 {
 	int n_bits_added = 0;
 	int index = -1;
@@ -396,26 +393,8 @@ int pools::add_bits_to_pools(unsigned char *data, int n_bytes, char ignore_rngte
 		dolog(LOG_DEBUG, "Adding %d bits to pool %d", space_available, index);
 		unsigned int n_bytes_to_add = min(n_bytes, (space_available + 7) / 8);
 
-		if (!ignore_rngtest_fips140 || !ignore_rngtest_scc)
-		{
-			for(unsigned int rngtest_loop=0; rngtest_loop<n_bytes_to_add; rngtest_loop++)
-			{
-				if (!ignore_rngtest_fips140)
-					pfips -> add(data[rngtest_loop]);
-				if (!ignore_rngtest_scc)
-					pscc -> add(data[rngtest_loop]);
-			}
-		}
-
-		bool rc_fips140 = true, rc_scc = true;
-		if (!ignore_rngtest_fips140)
-			rc_fips140 = pfips -> is_ok();
-		if (!ignore_rngtest_scc)
-			rc_scc = pfips -> is_ok();
-		if (rc_fips140 == true && rc_scc == true)
-		{
+		if (verify_quality(data, n_bytes_to_add, ignore_rngtest_fips140, pfips, ignore_rngtest_scc, pscc))
 			n_bits_added += pool_vector.at(index) -> add_entropy_data(data, n_bytes_to_add);
-		}
 
 		n_bytes -= n_bytes_to_add;
 		data += n_bytes_to_add;
@@ -429,9 +408,7 @@ int pools::get_bit_sum()
 	int bit_count = 0;
 
 	for(unsigned int loop=0; loop<pool_vector.size(); loop++)
-	{
 		bit_count += pool_vector.at(loop) -> get_n_bits_in_pool();
-	}
 
 	return bit_count;
 }
