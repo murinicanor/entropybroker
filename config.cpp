@@ -206,6 +206,8 @@ void load_config(const char *config, config_t *pconfig)
 				pconfig -> ht = H_SHA512;
 			else if (strcmp(par, "md5") == 0)
 				pconfig -> ht = H_MD5;
+			else if (strcmp(par, "ripemd160") == 0)
+				pconfig -> ht = H_RIPEMD160;
 			else
 				error_exit("Hash type '%s' not understood", par);
 		}

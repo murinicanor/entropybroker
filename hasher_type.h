@@ -1,1 +1,1 @@
-enum hasher_type { H_SHA512, H_MD5 };
+enum hasher_type { H_SHA512, H_MD5, H_RIPEMD160 };
