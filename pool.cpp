@@ -121,7 +121,7 @@ void pool::dump(FILE *fh)
 
 int pool::add_entropy_data(unsigned char *entropy_data, int n_bytes_in)
 {
-	if (is_full() && n_bytes_in >= 32)
+	if (is_full() && n_bytes_in >= 32 && ivec -> needs_seeding())
 	{
 		iv -> seed(entropy_data, 8);
 
@@ -162,7 +162,7 @@ int pool::add_entropy_data(unsigned char *entropy_data, int n_bytes_in)
 		}
 
 		BF_KEY key;
-		BF_set_key(&key, cur_to_add, temp_key);
+		BF_set_key(&key, max(4, cur_to_add), temp_key);
 		int ivec_offset = 0;
 		BF_cfb64_encrypt(entropy_pool, temp_buffer, pool_size_bytes, &key, cur_ivec, &ivec_offset, BF_ENCRYPT);
 		memcpy(entropy_pool, temp_buffer, pool_size_bytes);

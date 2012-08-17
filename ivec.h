@@ -14,4 +14,6 @@ public:
 
 	void get(unsigned char *where_to);
 	void seed(unsigned char *in, int n);
+
+	bool needs_seeding();
 };
