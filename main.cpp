@@ -18,6 +18,7 @@
 #include "hasher.h"
 #include "hasher_sha512.h"
 #include "stirrer.h"
+#include "stirrer_blowfish.h"
 #include "pool.h"
 #include "fips140.h"
 #include "scc.h"
@@ -125,7 +126,7 @@ int main(int argc, char *argv[])
 	bit_count_estimator *bce = new bit_count_estimator(config.bitcount_estimator);
 
 	hasher *h = new hasher_sha512();
-	stirrer *s = new stirrer();
+	stirrer *s = new stirrer_blowfish();
 	pools *ppools = new pools(std::string(CACHE_DIR), config.max_number_of_mem_pools, config.max_number_of_disk_pools, config.min_store_on_disk_n, bce, config.pool_size_bytes, h, s);
 
 	dolog(LOG_DEBUG, "Blowfish options: %s", BF_options());

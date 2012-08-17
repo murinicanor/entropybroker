@@ -6,14 +6,26 @@
 #include "ivec.h"
 #include "log.h"
 
-ivec::ivec(bit_count_estimator *bce_in) : bce(bce_in)
+ivec::ivec(int size_in, bit_count_estimator *bce_in) : size(size_in), bce(bce_in)
 {
 	init();
 }
 
-ivec::ivec(FILE *fh, bit_count_estimator *bce_in) : bce(bce_in)
+ivec::ivec(FILE *fh, int size_in, bit_count_estimator *bce_in) : size(size_in), bce(bce_in)
 {
 	init();
+
+	unsigned char dummy;
+	if (fread(&dummy, 1, 1, fh) != 1)
+		error_exit("ivec initializer: error reading stream");
+
+	if (dummy)
+	{
+		dolog(LOG_WARNING, "Ignoring ivec data in disk-pool!");
+
+		if (fseek(fh, dummy, SEEK_CUR) == -1)
+			error_exit("ivec initializer: error seeking in file");
+	}
 }
 
 void ivec::init()
@@ -28,11 +40,14 @@ ivec::~ivec()
 
 void ivec::dump(FILE *fh)
 {
+	unsigned char dummy;
+	if (fwrite(&dummy, 1, 1, fh) != 1)
+		error_exit("ivec: error writing to stream");
 }
 
 void ivec::get(unsigned char *dest)
 {
-	if (RAND_bytes(dest, 8) == 0)
+	if (RAND_bytes(dest, size) == 0)
 		error_exit("RAND_bytes failed");
 }
 

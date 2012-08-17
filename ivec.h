@@ -1,13 +1,14 @@
 class ivec
 {
 private:
+	int size;
 	bit_count_estimator *bce;
 
 	void init(void);
 
 public:
-	ivec(bit_count_estimator *bce);
-	ivec(FILE *fh, bit_count_estimator *bce);
+	ivec(int size, bit_count_estimator *bce);
+	ivec(FILE *fh, int size, bit_count_estimator *bce);
 	~ivec();
 
 	void dump(FILE *fh);

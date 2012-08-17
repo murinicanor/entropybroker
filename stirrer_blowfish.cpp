@@ -42,3 +42,8 @@ int stirrer_blowfish::get_stir_size() const
 {
 	return 56; // BLOWFISH
 }
+
+int stirrer_blowfish::get_ivec_size() const
+{
+	return 8;
+}

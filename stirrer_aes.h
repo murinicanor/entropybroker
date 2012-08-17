@@ -1,8 +1,8 @@
-class stirrer_blowfish : public stirrer
+class stirrer_aes : public stirrer
 {
 public:
-	stirrer_blowfish();
-	~stirrer_blowfish();
+	stirrer_aes();
+	~stirrer_aes();
 
 	int get_ivec_size() const;
 	int get_stir_size() const;

@@ -27,7 +27,7 @@ LINT=-Wshadow -Wall # -W -Wconversion -Wwrite-strings -Wunused
 CXXFLAGS+=-O3 -g3 -ggdb -march=native -mtune=native -DVERSION=\"${VERSION}\" $(LINT) $(DEBUG) -DCONFIG=\"${ETC}/entropybroker.conf\" -DCACHE_DIR=\"${CACHE}\" -DPID_DIR=\"${PID}\" -DVAR_DIR=\"${VAR}\" -rdynamic
 LDFLAGS+=$(DEBUG) -lcrypto -lrt -lz -lutil -rdynamic
 
-OBJSeb=pools.o handle_client.o config.o error.o fips140.o kernel_prng_rw.o log.o protocol.o main.o math.o pool.o scc.o signals.o utils.o auth.o my_pty.o ivec.o kernel_prng_io.o hasher.o stirrer.o hasher_sha512.o stirrer_blowfish.o
+OBJSeb=pools.o handle_client.o config.o error.o fips140.o kernel_prng_rw.o log.o protocol.o main.o math.o pool.o scc.o signals.o utils.o auth.o my_pty.o ivec.o kernel_prng_io.o hasher.o stirrer.o hasher_sha512.o stirrer_blowfish.o stirrer_aes.o
 OBJSsa=server_audio.o error.o utils.o kernel_prng_rw.o log.o protocol.o server_utils.o auth.o my_pty.o kernel_prng_io.o
 OBJSst=server_timers.o log.o utils.o error.o kernel_prng_rw.o protocol.o server_utils.o auth.o my_pty.o kernel_prng_io.o
 OBJSsv=server_v4l.o error.o log.o protocol.o kernel_prng_rw.o utils.o server_utils.o auth.o my_pty.o kernel_prng_io.o

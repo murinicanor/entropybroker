@@ -50,7 +50,7 @@ pool::pool(int new_pool_size_bytes, bit_count_estimator *bce_in, hasher *hclass,
 	if (RAND_bytes(entropy_pool, pool_size_bytes) == 0)
 		error_exit("RAND_bytes failed");
 
-	iv = new ivec(bce);
+	iv = new ivec(s -> get_ivec_size(), bce);
 }
 
 pool::pool(int pool_nr, FILE *fh, bit_count_estimator *bce_in, hasher *hclass, stirrer *sclass) : bce(bce_in), h(hclass), s(sclass)
@@ -78,7 +78,7 @@ pool::pool(int pool_nr, FILE *fh, bit_count_estimator *bce_in, hasher *hclass, s
 		if (fread(entropy_pool, 1, pool_size_bytes, fh) != (size_t)pool_size_bytes)
 			error_exit("Dump is corrupt (using disk-pools from an entropybroker version older than v1.1?)");
 
-		iv = new ivec(fh, bce);
+		iv = new ivec(fh, s -> get_ivec_size(), bce);
 
 		dolog(LOG_DEBUG, "Pool %d: loaded %d bits from cache", pool_nr, bits_in_pool);
 	}
@@ -122,12 +122,16 @@ void pool::dump(FILE *fh)
 
 int pool::add_entropy_data(unsigned char *entropy_data, int n_bytes_in)
 {
-	if (is_full() && n_bytes_in >= 32 && iv -> needs_seeding())
-	{
-		iv -> seed(entropy_data, 8);
+	int ivec_size = s -> get_ivec_size();
+	unsigned char *cur_ivec = (unsigned char *)malloc(ivec_size);
+	lock_mem(cur_ivec, ivec_size);
 
-		entropy_data += 8;
-		n_bytes_in -=8;
+	if (is_full() && n_bytes_in >= (24 + ivec_size) && iv -> needs_seeding())
+	{
+		iv -> seed(entropy_data, ivec_size);
+
+		entropy_data += ivec_size;
+		n_bytes_in -= ivec_size;
 	}
 
 	// this implementation is described in RFC 4086 (June 2005) chapter 6.2.1, second paragraph
@@ -143,7 +147,6 @@ int pool::add_entropy_data(unsigned char *entropy_data, int n_bytes_in)
 
 	while(n_bytes_in > 0)
 	{
-		unsigned char cur_ivec[8];
 		iv -> get(cur_ivec);
 
 		// when adding data to the pool, we encrypt the pool using blowfish with
@@ -164,6 +167,10 @@ int pool::add_entropy_data(unsigned char *entropy_data, int n_bytes_in)
 	memset(temp_buffer, 0x00, pool_size_bytes);
 	unlock_mem(temp_buffer, pool_size_bytes);
 	free(temp_buffer);
+
+	memset(cur_ivec, 0x00, ivec_size);
+	unlock_mem(cur_ivec, ivec_size);
+	free(cur_ivec);
 
 	return n_added;
 }
