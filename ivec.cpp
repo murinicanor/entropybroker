@@ -15,7 +15,7 @@ ivec::ivec(FILE *fh, int size_in, bit_count_estimator *bce_in) : size(size_in), 
 {
 	init();
 
-	unsigned char dummy;
+	unsigned char dummy = 0;
 	if (fread(&dummy, 1, 1, fh) != 1)
 		error_exit("ivec initializer: error reading stream");
 
@@ -40,7 +40,7 @@ ivec::~ivec()
 
 void ivec::dump(FILE *fh)
 {
-	unsigned char dummy;
+	unsigned char dummy = 0;
 	if (fwrite(&dummy, 1, 1, fh) != 1)
 		error_exit("ivec: error writing to stream");
 }

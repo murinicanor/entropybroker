@@ -173,7 +173,7 @@ void pools::merge_pools()
 			int bytes = (i2_size + 7) / 8;
 
 			unsigned char *buffer = (unsigned char *)malloc(bytes);
-			lock_mem(buffer, sizeof buffer);
+			lock_mem(buffer, bytes);
 
 			pool_vector.at(i2) -> get_entropy_data(buffer, bytes, false);
 
@@ -182,8 +182,8 @@ void pools::merge_pools()
 
 			pool_vector.at(i1) -> add_entropy_data(buffer, bytes);
 
-			memset(buffer, 0x00, sizeof buffer);
-			unlock_mem(buffer, sizeof buffer);
+			memset(buffer, 0x00, bytes);
+			unlock_mem(buffer, bytes);
 			free(buffer);
 
 			n_merged++;
