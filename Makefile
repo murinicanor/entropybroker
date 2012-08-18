@@ -174,6 +174,8 @@ coverity:
 	rm -rf cov-int
 	cov-build --dir cov-int make everything
 	tar vczf ~/site/coverity/EntropyBroker.tgz README cov-int/
+	putsite -q
+	/home/folkert/.coverity-eb.sh
 
 check:
 	cppcheck -v --enable=all --std=c++11 --inconclusive . 2> err.txt
