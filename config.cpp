@@ -219,6 +219,8 @@ void load_config(const char *config, config_t *pconfig)
 				pconfig -> st = S_AES;
 			else if (strcmp(par, "3des") == 0)
 				pconfig -> st = S_3DES;
+			else if (strcmp(par, "camellia") == 0)
+				pconfig -> st = S_CAMELLIA;
 			else
 				error_exit("Stirrer type '%s' not understood", par);
 		}
