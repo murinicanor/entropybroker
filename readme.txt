@@ -29,6 +29,8 @@ Linux-specific are markes as such.
 
 How it really works at the lowest level
 =======================================
+the broker
+**********
 Adding data:
  - the amount of information is calculated
  - then the data is stirred into the pool
@@ -50,6 +52,28 @@ In both cases:
 References:
  - entropy estimation: http://en.wikipedia.org/wiki/Entropy_estimation
  - stirring: RFC 4086 (June 2005) chapter 6.2.1, second paragraph
+
+servers (daemons producing entropy)
+***********************************
+server_timers:
+ - measures the jitter of two timer-frequencies 
+
+server_audio:
+ - measures the noise in an audio-stream. preferably of a low-volume
+   stream so that the noise in the electronics is measured (a song
+   or someone talking might not be that random)
+
+server_video:
+ - see server_audio but this one measures the noise in a video
+   signal. if you have a tv-card, tune it to a frequency where it
+   only receives noise
+
+server_usb:
+ - like server_timers only here the difference of the local system
+   clock and the clock in an USB device is measured
+
+In all cases:
+ - where applicable, von Neumann whitening is applied
 
 
 Building
