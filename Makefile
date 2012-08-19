@@ -147,7 +147,7 @@ eb_server_ComScire_R2000KU: $(OBJScsr2000ku)
 plot: plot.o
 	$(CXX) $(LINT) plot.o $(LDFLAGS) -lpng -o plot
 
-install: entropy_broker eb_server_audio eb_server_timers eb_server_v4l eb_server_stream eb_server_egd eb_client_linux_kernel eb_client_egd eb_test_egd_speed eb_server_linux_kernel eb_client_file eb_server_push_file eb_server_ext_proc eb_server_usb plot
+install: everything
 	mkdir -p $(BIN) $(ETC) $(VAR) $(PID) $(CACHE)
 	for file in entropy_broker eb_server_audio eb_server_timers eb_server_v4l eb_server_stream eb_server_egd eb_client_linux_kernel eb_client_egd eb_test_egd_speed eb_server_linux_kernel eb_client_file eb_server_push_file eb_server_ext_proc eb_server_usb eb_server_ComScire_R2000KU ; do \
 		test -e $(file) && cp $$file $(BIN) ; \
