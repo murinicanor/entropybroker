@@ -1,3 +1,13 @@
+*** PLEASE NOTE: since 1.0, 'eb' was renamed to 'entropy_broker' ***
+*** also the other daemons were renamed ***
+*** ALSO: the network protocol has changed so it is no longer ***
+*** compatible with older versions (1.1 is also incompatible ***
+*** with 1.0) ***
+*** ANOTHER NOTE: disk-pools of version 1.0 are NOT compatible ***
+*** with the ones of 1.1! ***
+*** LAST NOTE: the configuration file changed, see example ***
+
+
 How it works
 ------------
 The 'entropy_broker' process is the central process of it all. It
@@ -16,18 +26,30 @@ processes that read from a egb-compatible unix-domain socket.
 Most daemons should run on all UNIX systems. The ones that are
 Linux-specific are markes as such.
 
-Please note that the current (v1.1) protocol version does not protect
-you from man-in-the-middle attacks. It only prevents sniffers from
-obtaining your entropy data.
 
-*** PLEASE NOTE: since 1.0, 'eb' was renamed to 'entropy_broker' ***
-*** also the other daemons were renamed ***
-*** ALSO: the network protocol has changed so it is no longer ***
-*** compatible with older versions (1.1 is also incompatible ***
-*** with 1.0) ***
-*** ANOTHER NOTE: disk-pools of version 1.0 are NOT compatible ***
-*** with the ones of 1.1! ***
-*** LAST NOTE: the configuration file changed, see example ***
+How it really works at the lowest level
+=======================================
+Adding data:
+ - the amount of information is calculated
+ - then the data is stirred into the pool
+    this is accomplished by encrypting the pool with e.g. AES
+    or 3DES or whatever the user selected
+    the key used, is the entropy data to add
+
+Retrieving data:
+ - the pool is hashed
+ - then the pool is 'unstirred' by decrypting it with the hash
+   as a key
+ - the hash is fold in half and then returned to the user
+
+In both cases:
+ - the initial vector (as used by the stirrer) is initialized
+   to a random value. this random value is obtained from the
+   OpenSSL prng
+
+References:
+ - entropy estimation: http://en.wikipedia.org/wiki/Entropy_estimation
+ - stirring: RFC 4086 (June 2005) chapter 6.2.1, second paragraph
 
 
 Building
@@ -218,7 +240,7 @@ If a warning appears about mlock() failing you have to options:
 
 
 Tips
-====
+----
 When your system has enough entropy, you can decide to let all
 OpenSSL applications use the kernel entropy driver. For that,
 in /etc/ssl/openssl.cnf change the line with RANDFILE in it
@@ -227,7 +249,7 @@ to:
 
 
 Evaluation Entropy Broker
-=========================
+-------------------------
 Use client_file to write a couple of bytes to a file.
 Then with dieharder:
 	http://www.phy.duke.edu/~rgb/General/dieharder.php
@@ -258,7 +280,10 @@ To invoke:
 
 
 License
-=======
+-------
 GPL2
 
---- folkert@vanheusden.com / folkert.mobiel@gmail.com
+
+Contact info
+------------
+either folkert@vanheusden.com or folkert.mobiel@gmail.com
