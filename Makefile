@@ -170,7 +170,7 @@ package:
 	tar czf eb-$(VERSION).tgz eb-$(VERSION)
 	rm -rf eb-$(VERSION)
 
-coverity:
+coverity: clean
 	rm -rf cov-int
 	cov-build --dir cov-int make everything
 	tar vczf ~/site/coverity/EntropyBroker.tgz README cov-int/

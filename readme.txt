@@ -16,6 +16,9 @@ processes that read from a egb-compatible unix-domain socket.
 Most daemons should run on all UNIX systems. The ones that are
 Linux-specific are markes as such.
 
+Please note that the current (v1.1) protocol version does not protect
+you from man-in-the-middle attacks. It only prevents sniffers from
+obtaining your entropy data.
 
 *** PLEASE NOTE: since 1.0, 'eb' was renamed to 'entropy_broker' ***
 *** also the other daemons were renamed ***
