@@ -21,6 +21,7 @@
 #include "hasher_md5.h"
 #include "hasher_ripemd160.h"
 #include "hasher_sha512.h"
+#include "hasher_whirlpool.h"
 #include "stirrer_type.h"
 #include "stirrer.h"
 #include "stirrer_3des.h"
@@ -140,6 +141,8 @@ int main(int argc, char *argv[])
 		h = new hasher_md5();
 	else if (config.ht == H_RIPEMD160)
 		h = new hasher_ripemd160();
+	else if (config.ht == H_WHIRLPOOL)
+		h = new hasher_whirlpool();
 	else
 		error_exit("Internal error: no hasher (%d)", config.ht);
 

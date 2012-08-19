@@ -208,6 +208,8 @@ void load_config(const char *config, config_t *pconfig)
 				pconfig -> ht = H_MD5;
 			else if (strcmp(par, "ripemd160") == 0)
 				pconfig -> ht = H_RIPEMD160;
+			else if (strcmp(par, "whirlpool") == 0)
+				pconfig -> ht = H_WHIRLPOOL;
 			else
 				error_exit("Hash type '%s' not understood", par);
 		}
