@@ -13,7 +13,7 @@
 #include <sys/time.h>
 #include <sys/resource.h>
 #include <openssl/blowfish.h>
-#include <openssl/md5.h>
+#include <openssl/sha.h>
 #include <vector>
 #include <string>
 #include <map>
@@ -166,16 +166,16 @@ int do_client_get(pools *ppools, client_t *client, statistics_t *stats, config_t
 	cur_n_bytes = (cur_n_bits + 7) / 8;
 	dolog(LOG_DEBUG, "get|%s got %d bits from pool", client -> host, cur_n_bits);
 
-	int out_len = cur_n_bytes + MD5_DIGEST_LENGTH;
+	int out_len = cur_n_bytes + DATA_HASH_LEN;
 	unsigned char *ent_buffer_in = (unsigned char *)malloc(out_len);
 	lock_mem(ent_buffer_in, out_len);
 
-	memcpy(&ent_buffer_in[MD5_DIGEST_LENGTH], temp_buffer, cur_n_bytes);
-	memset(ent_buffer_in, 0x00, MD5_DIGEST_LENGTH);
-	MD5(&ent_buffer_in[MD5_DIGEST_LENGTH], cur_n_bytes, ent_buffer_in);
+	memcpy(&ent_buffer_in[DATA_HASH_LEN], temp_buffer, cur_n_bytes);
+	memset(ent_buffer_in, 0x00, DATA_HASH_LEN);
+	DATA_HASH_FUNC(&ent_buffer_in[DATA_HASH_LEN], cur_n_bytes, ent_buffer_in);
 
 	// printf("send: "); hexdump(ent_buffer_in, 16);
-	// printf("data: "); hexdump(ent_buffer_in + MD5_DIGEST_LENGTH, 8);
+	// printf("data: "); hexdump(ent_buffer_in + DATA_HASH_LEN, 8);
 
 	unsigned char *ent_buffer = (unsigned char *)malloc(out_len);
 	if (!ent_buffer)
@@ -290,7 +290,7 @@ int do_client_put(pools *ppools, client_t *client, statistics_t *stats, config_t
 
 	cur_n_bytes = (cur_n_bits + 7) / 8;
 
-	int in_len = cur_n_bytes + MD5_DIGEST_LENGTH;
+	int in_len = cur_n_bytes + DATA_HASH_LEN;
 	unsigned char *buffer_in = (unsigned char *)malloc(in_len);
 	if (!buffer_in)
 		error_exit("%s error allocating %d bytes of memory", client -> host, in_len);
@@ -312,12 +312,12 @@ int do_client_put(pools *ppools, client_t *client, statistics_t *stats, config_t
 	// decrypt data
 	BF_cfb64_encrypt(buffer_in, buffer_out, in_len, &client -> key, client -> ivec, &client -> ivec_offset, BF_DECRYPT);
 
-	unsigned char *entropy_data = &buffer_out[MD5_DIGEST_LENGTH];
-	int entropy_data_len = cur_n_bytes - MD5_DIGEST_LENGTH;
-	unsigned char hash[MD5_DIGEST_LENGTH];
-	MD5(entropy_data, entropy_data_len, hash);
+	unsigned char *entropy_data = &buffer_out[DATA_HASH_LEN];
+	int entropy_data_len = cur_n_bytes - DATA_HASH_LEN;
+	unsigned char hash[DATA_HASH_LEN];
+	DATA_HASH_FUNC(entropy_data, entropy_data_len, hash);
 
-	if (memcmp(hash, buffer_in, MD5_DIGEST_LENGTH) != 0)
+	if (memcmp(hash, buffer_in, DATA_HASH_LEN) != 0)
 		dolog(LOG_WARNING, "Hash mismatch in retrieved entropy data!");
 
 	client -> last_put_message = now;

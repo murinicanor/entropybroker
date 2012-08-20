@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <openssl/blowfish.h>
-#include <openssl/md5.h>
+#include <openssl/sha.h>
 #include <string>
 #include <map>
 
@@ -283,7 +283,7 @@ int message_transmit_entropy_data(char *host, int port, int *socket_fd, std::str
 			dolog(LOG_DEBUG, "Transmitting %d bytes", cur_n_bytes);
 
 			// encrypt data
-			int with_hash_n = cur_n_bytes + MD5_DIGEST_LENGTH;
+			int with_hash_n = cur_n_bytes + DATA_HASH_LEN;
 
 			unsigned char *bytes_out = (unsigned char *)malloc(with_hash_n);
 			if (!bytes_out)
@@ -293,8 +293,8 @@ int message_transmit_entropy_data(char *host, int port, int *socket_fd, std::str
 				error_exit("out of memory");
 			lock_mem(temp_buffer, with_hash_n);
 
-			MD5(bytes_in, cur_n_bytes, temp_buffer);
-			memcpy(&temp_buffer[MD5_DIGEST_LENGTH], bytes_in, cur_n_bytes);
+			DATA_HASH_FUNC(bytes_in, cur_n_bytes, temp_buffer);
+			memcpy(&temp_buffer[DATA_HASH_LEN], bytes_in, cur_n_bytes);
 
 			do_encrypt(temp_buffer, bytes_out, with_hash_n);
 
@@ -490,7 +490,7 @@ int request_bytes(int *socket_fd, char *host, int port, std::string username, st
 				continue;
 			}
 
-			int xmit_bytes = will_get_n_bytes + MD5_DIGEST_LENGTH;
+			int xmit_bytes = will_get_n_bytes + DATA_HASH_LEN;
 			unsigned char *buffer_in = (unsigned char *)malloc(xmit_bytes);
 			if (!buffer_in)
 				error_exit("out of memory allocating %d bytes", will_get_n_bytes);
@@ -515,18 +515,18 @@ int request_bytes(int *socket_fd, char *host, int port, std::string username, st
 			do_decrypt(buffer_in, temp_buffer, xmit_bytes);
 
 			// verify data is correct
-			unsigned char hash[MD5_DIGEST_LENGTH] = { 0 };
-			MD5(&temp_buffer[MD5_DIGEST_LENGTH], will_get_n_bytes, hash);
+			unsigned char hash[DATA_HASH_LEN] = { 0 };
+			DATA_HASH_FUNC(&temp_buffer[DATA_HASH_LEN], will_get_n_bytes, hash);
 
 			// printf("in  : "); hexdump(temp_buffer, 16);
 			// printf("calc: "); hexdump(hash, 16);
 
-			// printf("data: "); hexdump(temp_buffer + MD5_DIGEST_LENGTH, 8);
+			// printf("data: "); hexdump(temp_buffer + DATA_HASH_LEN, 8);
 
 			if (memcmp(hash, temp_buffer, 16) != 0)
 				error_exit("Data corrupt!");
 
-			memcpy(where_to, &temp_buffer[MD5_DIGEST_LENGTH], will_get_n_bytes);
+			memcpy(where_to, &temp_buffer[DATA_HASH_LEN], will_get_n_bytes);
 
 			memset(temp_buffer, 0x00, xmit_bytes);
 			unlock_mem(temp_buffer, xmit_bytes);
