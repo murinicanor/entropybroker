@@ -45,6 +45,8 @@ int open_unixdomain_socket(char *path)
         len = offsetof(struct sockaddr_un, sun_path) + strlen(path);
 
         fd = socket(AF_UNIX, SOCK_STREAM, 0);
+	if (fd == -1)
+		error_exit("Failed to create socket");
 
 	if (connect(fd, (struct sockaddr *)&addr, len) == 0)
 		return fd;

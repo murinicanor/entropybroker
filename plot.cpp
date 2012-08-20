@@ -72,9 +72,8 @@ int main(int argc, char *argv[])
 
 			double val = double(points[y * 256 + x] - c_min) / div;
 
-			result[y * 256 * 3 + x * 3 + 0] = 0;
-			result[y * 256 * 3 + x * 3 + 1] = maxval(minval(255, (unsigned char )(val * 255.0)), 0);
-			result[y * 256 * 3 + x * 3 + 2] = 0;
+			result[y * 256 * 3 + x * 3 + 0] = result[y * 256 * 3 + x * 3 + 2] = 0;
+			result[y * 256 * 3 + x * 3 + 1] = (unsigned char)maxval(minval(255.0, val * 255.0), 0.0);
 		}
 	}
 

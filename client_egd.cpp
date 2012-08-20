@@ -107,7 +107,7 @@ void egd_put(int fd, char *host, int port, std::string username, std::string pas
 
 	char buffer[256];
 	lock_mem(buffer, sizeof buffer);
-	if (READ(fd, buffer, byte_cnt) != byte_cnt)
+	if (byte_cnt > 0 && READ(fd, buffer, byte_cnt) != byte_cnt)
 	{
 		dolog(LOG_INFO, "EGD_put short read (2)");
 		return;
