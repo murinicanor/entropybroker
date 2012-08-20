@@ -164,15 +164,13 @@ int do_client_get(pools *ppools, client_t *client, statistics_t *stats, config_t
 	cur_n_bytes = (cur_n_bits + 7) / 8;
 	dolog(LOG_DEBUG, "get|%s got %d bits from pool", client -> host, cur_n_bits);
 
-	unsigned char lrc = calc_lrc(ent_buffer_in, cur_n_bytes);
-
-	unsigned char *ent_buffer = (unsigned char *)malloc(cur_n_bytes);
+	unsigned char *ent_buffer = (unsigned char *)malloc(cur_n_bytes + MD5_DIGEST_LENGTH);
 	if (!ent_buffer)
 		error_exit("error allocating %d bytes of memory", cur_n_bytes);
 
-// FIXME put at &ent_buffer[MD5_SIZE] en dan hash putten aan 't begin
 	// encrypt data. keep original data; will be used as ivec for next round
-	BF_cfb64_encrypt(ent_buffer_in, ent_buffer, cur_n_bytes, &client -> key, client -> ivec, &client -> ivec_offset, BF_ENCRYPT);
+	BF_cfb64_encrypt(ent_buffer_in, &ent_buffer[MD5_DIGEST_LENGTH], cur_n_bytes, &client -> key, client -> ivec, &client -> ivec_offset, BF_ENCRYPT);
+	MD5(ent_buffer_in, ent_buffer, cur_n_bytes);
 	memcpy(client -> ivec, ent_buffer_in, min(8, cur_n_bytes));
 
 	calc_ivec(client -> password, client -> challenge, ++client -> ivec_counter, client -> ivec);
@@ -183,7 +181,7 @@ int do_client_get(pools *ppools, client_t *client, statistics_t *stats, config_t
 	stats -> total_sent += cur_n_bits;
 	stats -> total_sent_requests++;
 
-	transmit_size = 4 + 4 + cur_n_bytes;
+	transmit_size = 4 + 4 + MD5_DIGEST_LENGTH + cur_n_bytes;
 	unsigned char *output_buffer = (unsigned char *)malloc(transmit_size);
 	if (!output_buffer)
 		error_exit("error allocating %d bytes of memory", cur_n_bytes);
@@ -200,14 +198,7 @@ int do_client_get(pools *ppools, client_t *client, statistics_t *stats, config_t
 	free(ent_buffer_in);
 
 	int rc = 0;
-	if (rc == 0 && WRITE_TO(client -> socket_fd, (char *)&lrc, 1, config -> communication_timeout) != 1)
-	{
-		dolog(LOG_INFO, "%s error while sending LRC to client", client -> host);
-
-		rc = -1;
-	}
-
-	if (rc == 0 && WRITE_TO(client -> socket_fd, (char *)output_buffer, transmit_size, config -> communication_timeout) != transmit_size)
+	if (WRITE_TO(client -> socket_fd, (char *)output_buffer, transmit_size, config -> communication_timeout) != transmit_size)
 	{
 		dolog(LOG_INFO, "%s error while sending data to client", client -> host);
 
@@ -285,14 +276,6 @@ int do_client_put(pools *ppools, client_t *client, statistics_t *stats, config_t
 
 	cur_n_bytes = (cur_n_bits + 7) / 8;
 
-	unsigned char lrc_in = 0;
-	if (READ_TO(client -> socket_fd, (char *)&lrc_in, 1, config -> communication_timeout) != 1)
-	{
-		dolog(LOG_INFO, "put|%s short read while retrieving entropy LRC", client -> host);
-
-		return -1;
-	}
-
 	unsigned char *buffer_in = (unsigned char *)malloc(cur_n_bytes);
 	if (!buffer_in)
 		error_exit("%s error allocating %d bytes of memory", client -> host, cur_n_bytes);
@@ -316,18 +299,19 @@ int do_client_put(pools *ppools, client_t *client, statistics_t *stats, config_t
 	BF_cfb64_encrypt(buffer_in, buffer_out, cur_n_bytes, &client -> key, client -> ivec, &client -> ivec_offset, BF_DECRYPT);
 	memcpy(client -> ivec, buffer_out, min(cur_n_bytes, 8));
 
-	unsigned char lrc_calc = calc_lrc(buffer_out, cur_n_bytes);
+	unsigned char *entropy_data = &buffer_out[MD5_DIGEST_LENGTH];
+	int entropy_data_len = cur_n_bytes - MD5_DIGEST_LENGTH;
+	unsigned char hash[MD5_DIGEST_LENGTH];
+	MD5(entropy_data, hash, entropy_data_len);
 
-	if (lrc_in != lrc_calc)
-		dolog(LOG_WARNING, "LRC mismatch in retrieved entropy data! (expected: %02x, calculated: %02x)", lrc_in, lrc_calc);
-	else
-		dolog(LOG_DEBUG, "LRC expected: %02x, calculated: %02x", lrc_in, lrc_calc);
+	if (memcmp(hash, buffer_in, MD5_DIGEST_LENGTH) != 0)
+		dolog(LOG_WARNING, "Hash mismatch in retrieved entropy data!");
 
 	calc_ivec(client -> password, client -> challenge, ++client -> ivec_counter, client -> ivec);
 
 	client -> last_put_message = now;
 
-	n_bits_added = ppools -> add_bits_to_pools(buffer_out, cur_n_bytes, client -> ignore_rngtest_fips140, client -> pfips140, client -> ignore_rngtest_scc, client -> pscc);
+	n_bits_added = ppools -> add_bits_to_pools(entropy_data, entropy_data_len, client -> ignore_rngtest_fips140, client -> pfips140, client -> ignore_rngtest_scc, client -> pscc);
 	if (n_bits_added == -1)
 		dolog(LOG_CRIT, "put|%s error while adding data to pools", client -> host);
 	else
