@@ -17,6 +17,7 @@
 #define DEFAULT_COMM_TO 15
 
 unsigned char ivec[8] = { 0 };
+long long unsigned ivec_counter = 0, challenge = 13;
 int ivec_offset = 0;
 BF_KEY key;
 
@@ -54,9 +55,37 @@ void set_password(std::string password)
 {
 	int len = password.length();
 
-	memcpy(ivec, password.c_str(), min(len, 8));
-
 	BF_set_key(&key, len, (unsigned char *)password.c_str());
+}
+
+void calc_ivec(char *password, long long unsigned int rnd, long long unsigned int counter, unsigned char *dest)
+{
+	unsigned char *prnd = (unsigned char *)&rnd;
+	unsigned char dummy[8] = { 0 };
+
+	memcpy(dummy, password, min(strlen(password), 8));
+
+	rnd ^= counter;
+
+	// this loop could be replaced if I were sure what
+	// the size of a long is. it is specified to be
+	// bigger than an int and at least 64 bit. that
+	// would allow 128 (or even bigger) as well
+	int index_dummy = 0, index_rnd = 0, rnd_len = sizeof rnd;
+	while(index_dummy < 8)
+	{
+		dummy[index_dummy++] ^= prnd[index_rnd++];
+
+		if (index_rnd == rnd_len)
+			index_rnd = 0;
+	}
+
+	memcpy(dest, dummy, 8);
+}
+
+void set_ivec(std::string password, long long unsigned int rnd, long long unsigned int counter)
+{
+	calc_ivec((char *)password.c_str(), rnd, counter, ivec);
 }
 
 int reconnect_server_socket(char *host, int port, std::string username, std::string password, int *socket_fd, const char *type, char is_server)
@@ -77,7 +106,7 @@ int reconnect_server_socket(char *host, int port, std::string username, std::str
 				*socket_fd = connect_to(host, port);
 				if (*socket_fd != -1)
 				{
-					if (auth_client_server(*socket_fd, 10, username, password) == 0)
+					if (auth_client_server(*socket_fd, 10, username, password, &challenge) == 0)
 						break;
 
 					close(*socket_fd);
@@ -91,6 +120,7 @@ int reconnect_server_socket(char *host, int port, std::string username, std::str
 			}
 
 			set_password(password);
+			set_ivec(password, challenge, 0);
 		}
 
 		if (connect_msg)
@@ -254,6 +284,8 @@ int message_transmit_entropy_data(char *host, int port, int *socket_fd, std::str
 				free(bytes_out);
 				return -1;
 			}
+
+			set_ivec(password, challenge, ++ivec_counter);
 
 			free(bytes_out);
 
@@ -460,6 +492,8 @@ int request_bytes(int *socket_fd, char *host, int port, std::string username, st
 
 			// caller should take care of lock_mem()
 			decrypt(buffer_in, (unsigned char *)where_to, will_get_n_bytes);
+
+			set_ivec(password, challenge, ++ivec_counter);
 
 			free(buffer_in);
 

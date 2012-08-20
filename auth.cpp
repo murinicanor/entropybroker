@@ -1,4 +1,5 @@
 #include <openssl/sha.h>
+#include <openssl/rand.h>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -14,11 +15,15 @@
 #include "log.h"
 #include "protocol.h"
 
-int auth_eb(int fd, int to, std::map<std::string, std::string> *users, std::string & password)
+int auth_eb(int fd, int to, std::map<std::string, std::string> *users, std::string & password, long long unsigned int *challenge)
 {
-	long int rnd = myrand();
+	long long unsigned int rnd = 9;
+	RAND_bytes((unsigned char *)&rnd, sizeof rnd);
+
 	char rnd_str[128];
-	unsigned char rnd_str_size = snprintf(rnd_str, sizeof rnd_str, "%ld", rnd);
+	unsigned char rnd_str_size = snprintf(rnd_str, sizeof rnd_str, "%llu", rnd);
+
+	*challenge = rnd;
 
 	char prot_ver[4+1];
 	snprintf(prot_ver, 4, "%d", PROTOCOL_VERSION);
@@ -126,7 +131,7 @@ bool get_auth_from_file(char *filename, std::string & username, std::string & pa
 	return true;
 }
 
-int auth_client_server(int fd, int to, std::string & username, std::string & password)
+int auth_client_server(int fd, int to, std::string & username, std::string & password, long long unsigned int *challenge)
 {
 	char rnd_str[128];
 	unsigned char rnd_str_size;
@@ -157,6 +162,9 @@ int auth_client_server(int fd, int to, std::string & username, std::string & pas
 		return -1;
 	}
 	rnd_str[rnd_str_size] = 0x00;
+
+	char *dummy = NULL;
+	*challenge = strtoull(rnd_str, &dummy, 10);
 
 	unsigned char username_length = username.length();
 	if (WRITE_TO(fd, (char *)&username_length, 1, to) != 1)

@@ -172,6 +172,8 @@ int do_client_get(pools *ppools, client_t *client, statistics_t *stats, config_t
 	BF_cfb64_encrypt(ent_buffer_in, ent_buffer, cur_n_bytes, &client -> key, client -> ivec, &client -> ivec_offset, BF_ENCRYPT);
 	memcpy(client -> ivec, ent_buffer_in, min(8, cur_n_bytes));
 
+	calc_ivec(client -> password, client -> challenge, ++client -> ivec_counter, client -> ivec);
+
 	// update statistics for accounting
 	client -> bits_sent += cur_n_bits;
 	stats -> bps_cur += cur_n_bits;
@@ -296,6 +298,8 @@ int do_client_put(pools *ppools, client_t *client, statistics_t *stats, config_t
 	// decrypt data. decrypted data will be used as ivec for next round
 	BF_cfb64_encrypt(buffer_in, buffer_out, cur_n_bytes, &client -> key, client -> ivec, &client -> ivec_offset, BF_DECRYPT);
 	memcpy(client -> ivec, buffer_out, min(cur_n_bytes, 8));
+
+	calc_ivec(client -> password, client -> challenge, ++client -> ivec_counter, client -> ivec);
 
 	client -> last_put_message = now;
 
@@ -634,8 +638,9 @@ void register_new_client(int listen_socket_fd, client_t **clients, int *n_client
 		if (config -> enable_keepalive)
 			enable_tcp_keepalive(new_socket_fd);
 
+		long long unsigned int auth_rnd = 1;
 		std::string password;
-		bool ok = auth_eb(new_socket_fd, config -> communication_timeout, users, password) == 0;
+		bool ok = auth_eb(new_socket_fd, config -> communication_timeout, users, password, &auth_rnd) == 0;
 
 		if (!ok)
 		{
@@ -666,7 +671,11 @@ void register_new_client(int listen_socket_fd, client_t **clients, int *n_client
 			p -> pfips140 -> set_user(p -> host);
 			p -> pscc     -> set_user(p -> host);
 			p -> pscc -> set_threshold(config -> scc_threshold);
-			memcpy(p -> ivec, password.c_str(), min(password.length(), 8));
+
+			p -> challenge = auth_rnd;
+			p -> ivec_counter = 0;
+			calc_ivec((char *)password.c_str(), p -> challenge, p -> ivec_counter, p -> ivec);
+
 			p -> password = strdup(password.c_str());
 			BF_set_key(&p -> key, password.length(), (unsigned char *)password.c_str());
 

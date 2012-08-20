@@ -10,8 +10,12 @@ typedef struct
 	double last_message, last_put_message;
 	double connected_since;
 	char *password;
+
 	unsigned char ivec[8]; // used for data encryption
 	int ivec_offset;
+	long long unsigned int challenge;
+	long long unsigned int ivec_counter; // required for CFB
+
 	BF_KEY key;
 	bool data_avail_signaled;
 
