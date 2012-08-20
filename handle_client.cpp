@@ -164,6 +164,8 @@ int do_client_get(pools *ppools, client_t *client, statistics_t *stats, config_t
 	cur_n_bytes = (cur_n_bits + 7) / 8;
 	dolog(LOG_DEBUG, "get|%s got %d bits from pool", client -> host, cur_n_bits);
 
+	unsigned char lrc = calc_lrc(ent_buffer_in, cur_n_bytes);
+
 	unsigned char *ent_buffer = (unsigned char *)malloc(cur_n_bytes);
 	if (!ent_buffer)
 		error_exit("error allocating %d bytes of memory", cur_n_bytes);
@@ -197,9 +199,16 @@ int do_client_get(pools *ppools, client_t *client, statistics_t *stats, config_t
 	free(ent_buffer_in);
 
 	int rc = 0;
-	if (WRITE_TO(client -> socket_fd, (char *)output_buffer, transmit_size, config -> communication_timeout) != transmit_size)
+	if (rc == 0 && WRITE_TO(client -> socket_fd, (char *)&lrc, 1, config -> communication_timeout) != 1)
 	{
-		dolog(LOG_INFO, "%s error while sending to client", client -> host);
+		dolog(LOG_INFO, "%s error while sending LRC to client", client -> host);
+
+		rc = -1;
+	}
+
+	if (rc == 0 && WRITE_TO(client -> socket_fd, (char *)output_buffer, transmit_size, config -> communication_timeout) != transmit_size)
+	{
+		dolog(LOG_INFO, "%s error while sending data to client", client -> host);
 
 		rc = -1;
 	}
@@ -275,19 +284,21 @@ int do_client_put(pools *ppools, client_t *client, statistics_t *stats, config_t
 
 	cur_n_bytes = (cur_n_bits + 7) / 8;
 
+	unsigned char lrc_in = 0;
+	if (READ_TO(client -> socket_fd, (char *)&lrc_in, 1, config -> communication_timeout) != 1)
+	{
+		dolog(LOG_INFO, "put|%s short read while retrieving entropy LRC", client -> host);
+
+		return -1;
+	}
+
 	unsigned char *buffer_in = (unsigned char *)malloc(cur_n_bytes);
 	if (!buffer_in)
 		error_exit("%s error allocating %d bytes of memory", client -> host, cur_n_bytes);
-	unsigned char *buffer_out = (unsigned char *)malloc(cur_n_bytes);
-	if (!buffer_out)
-		error_exit("%s error allocating %d bytes of memory", client -> host, cur_n_bytes);
-	lock_mem(buffer_out, cur_n_bytes);
 
 	if (READ_TO(client -> socket_fd, (char *)buffer_in, cur_n_bytes, config -> communication_timeout) != cur_n_bytes)
 	{
 		dolog(LOG_INFO, "put|%s short read while retrieving entropy data", client -> host);
-
-		free(buffer_out);
 
 		memset(buffer_in, 0x00, cur_n_bytes);
 		free(buffer_in);
@@ -295,9 +306,21 @@ int do_client_put(pools *ppools, client_t *client, statistics_t *stats, config_t
 		return -1;
 	}
 
+	unsigned char *buffer_out = (unsigned char *)malloc(cur_n_bytes);
+	if (!buffer_out)
+		error_exit("%s error allocating %d bytes of memory", client -> host, cur_n_bytes);
+	lock_mem(buffer_out, cur_n_bytes);
+
 	// decrypt data. decrypted data will be used as ivec for next round
 	BF_cfb64_encrypt(buffer_in, buffer_out, cur_n_bytes, &client -> key, client -> ivec, &client -> ivec_offset, BF_DECRYPT);
 	memcpy(client -> ivec, buffer_out, min(cur_n_bytes, 8));
+
+	unsigned char lrc_calc = calc_lrc(buffer_out, cur_n_bytes);
+
+	if (lrc_in != lrc_calc)
+		dolog(LOG_WARNING, "LRC mismatch in retrieved entropy data! (expected: %02x, calculated: %02x)", lrc_in, lrc_calc);
+	else
+		dolog(LOG_DEBUG, "LRC expected: %02x, calculated: %02x", lrc_in, lrc_calc);
 
 	calc_ivec(client -> password, client -> challenge, ++client -> ivec_counter, client -> ivec);
 

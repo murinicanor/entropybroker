@@ -271,6 +271,13 @@ int message_transmit_entropy_data(char *host, int port, int *socket_fd, std::str
 
 			dolog(LOG_DEBUG, "Transmitting %d bytes", cur_n_bytes);
 
+			unsigned char lrc = calc_lrc(bytes_in, cur_n_bytes);
+			if (WRITE_TO(*socket_fd, (char *)&lrc, 1, DEFAULT_COMM_TO) != 1)
+			{
+				dolog(LOG_INFO, "error transmitting lrc");
+				return -1;
+			}
+
 			// encrypt data. keep original data; will be used as ivec for next round
 			unsigned char *bytes_out = (unsigned char *)malloc(cur_n_bytes);
 			if (!bytes_out)
@@ -474,24 +481,45 @@ int request_bytes(int *socket_fd, char *host, int port, std::string username, st
 				continue;
 			}
 
+			unsigned char lrc_in;
+			if (READ_TO(*socket_fd, (char *)&lrc_in, 1, DEFAULT_COMM_TO) != 1)
+			{
+				dolog(LOG_INFO, "Network read error (lrc)");
+
+				close(*socket_fd);
+				*socket_fd = -1;
+
+				request_sent = false;
+
+				continue;
+			}
+
 			unsigned char *buffer_in = (unsigned char *)malloc(will_get_n_bytes);
 			if (!buffer_in)
 				error_exit("out of memory allocating %d bytes", will_get_n_bytes);
 
 			if (READ_TO(*socket_fd, (char *)buffer_in, will_get_n_bytes, DEFAULT_COMM_TO) != will_get_n_bytes)
 			{
-				dolog(LOG_INFO, "Network read error");
+				dolog(LOG_INFO, "Network read error (data)");
 
 				free(buffer_in);
 
 				close(*socket_fd);
 				*socket_fd = -1;
 
+				request_sent = false;
+
 				continue;
 			}
 
 			// caller should take care of lock_mem()
 			decrypt(buffer_in, (unsigned char *)where_to, will_get_n_bytes);
+
+			unsigned char lrc_calc = calc_lrc((unsigned char *)where_to, will_get_n_bytes);
+			if (lrc_calc != lrc_in)
+				error_exit("LRC mismatch on data! man in the middle attack? (%02x calculated, %02x expected)", lrc_calc, lrc_in);
+			else
+				dolog(LOG_DEBUG, "LRC expected: %02x, calculated: %02x", lrc_in, lrc_calc);
 
 			set_ivec(password, challenge, ++ivec_counter);
 
@@ -511,4 +539,14 @@ int request_bytes(int *socket_fd, char *host, int port, std::string username, st
 	}
 
 	return 0;
+}
+
+unsigned char calc_lrc(unsigned char *in, int in_len)
+{
+	unsigned char lrc = 0;
+
+	for(int index=0; index<in_len; index++)
+		lrc ^= in[index];
+
+	return lrc;
 }
