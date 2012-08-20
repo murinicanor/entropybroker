@@ -86,6 +86,14 @@ authentication:
    broker does the same calculating and compares the results.
    if they're not equal, the session is aborted.
 
+entropy data transmission:
+ - an MD5 is calculated over the data, then the data is
+   concatenated. after that, the result of the previous is
+   encrypted with blowfish using the authentication-password as
+   the key. the IV is initialized with the password XORed with
+   the random used during the authentication.
+
+
 Building
 --------
 	make install
