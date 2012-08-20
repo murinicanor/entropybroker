@@ -172,9 +172,10 @@ int do_client_get(pools *ppools, client_t *client, statistics_t *stats, config_t
 
 	memcpy(&ent_buffer_in[MD5_DIGEST_LENGTH], temp_buffer, cur_n_bytes);
 	memset(ent_buffer_in, 0x00, MD5_DIGEST_LENGTH);
-	MD5(temp_buffer, cur_n_bytes, ent_buffer_in);
+	MD5(&ent_buffer_in[MD5_DIGEST_LENGTH], cur_n_bytes, ent_buffer_in);
 
-	printf("send: "); hexdump(ent_buffer_in, 16);
+	// printf("send: "); hexdump(ent_buffer_in, 16);
+	// printf("data: "); hexdump(ent_buffer_in + MD5_DIGEST_LENGTH, 8);
 
 	unsigned char *ent_buffer = (unsigned char *)malloc(out_len);
 	if (!ent_buffer)
@@ -182,7 +183,7 @@ int do_client_get(pools *ppools, client_t *client, statistics_t *stats, config_t
 
 	// encrypt data
 	BF_cfb64_encrypt(ent_buffer_in, ent_buffer, out_len, &client -> key, client -> ivec, &client -> ivec_offset, BF_ENCRYPT);
-	printf("encr: "); hexdump(ent_buffer, 16);
+	// printf("encr: "); hexdump(ent_buffer, 16);
 
 	memset(temp_buffer, 0x00, cur_n_bytes);
 	unlock_mem(temp_buffer, cur_n_bytes);
@@ -202,7 +203,7 @@ int do_client_get(pools *ppools, client_t *client, statistics_t *stats, config_t
 
 	dolog(LOG_DEBUG, "get|%s transmit size: %d, msg: %s", client -> host, transmit_size, output_buffer);
 
-	memcpy(&output_buffer[8], ent_buffer, cur_n_bytes);
+	memcpy(&output_buffer[8], ent_buffer, out_len);
 
 	free(ent_buffer);
 

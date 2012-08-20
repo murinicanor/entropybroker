@@ -518,8 +518,10 @@ int request_bytes(int *socket_fd, char *host, int port, std::string username, st
 			unsigned char hash[MD5_DIGEST_LENGTH] = { 0 };
 			MD5(&temp_buffer[MD5_DIGEST_LENGTH], will_get_n_bytes, hash);
 
-			printf("in  : "); hexdump(temp_buffer, 16);
-			printf("calc: "); hexdump(hash, 16);
+			// printf("in  : "); hexdump(temp_buffer, 16);
+			// printf("calc: "); hexdump(hash, 16);
+
+			// printf("data: "); hexdump(temp_buffer + MD5_DIGEST_LENGTH, 8);
 
 			if (memcmp(hash, temp_buffer, 16) != 0)
 				error_exit("Data corrupt!");
@@ -532,7 +534,7 @@ int request_bytes(int *socket_fd, char *host, int port, std::string username, st
 
 			free(buffer_in);
 
-			return will_get_n_bytes - MD5_DIGEST_LENGTH;
+			return will_get_n_bytes;
 		}
 		else
 		{
