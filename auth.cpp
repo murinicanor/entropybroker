@@ -18,7 +18,9 @@
 int auth_eb(int fd, int to, std::map<std::string, std::string> *users, std::string & password, long long unsigned int *challenge)
 {
 	long long unsigned int rnd = 9;
-	RAND_bytes((unsigned char *)&rnd, sizeof rnd);
+
+	if (RAND_bytes((unsigned char *)&rnd, sizeof rnd) == 0)
+		error_exit("RAND_bytes fails");
 
 	char rnd_str[128];
 	unsigned char rnd_str_size = snprintf(rnd_str, sizeof rnd_str, "%llu", rnd);
