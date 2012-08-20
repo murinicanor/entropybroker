@@ -827,6 +827,7 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 		{
 			dolog(LOG_DEBUG, "Got SIGHUP");
 			reset_SIGHUP();
+			delete user_map;
 			user_map = load_usermap(*config -> user_map);
 			force_stats = 1;
 		}

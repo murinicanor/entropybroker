@@ -101,6 +101,13 @@ E.g. use chmod 600 my-password.txt
 
 Passwords should not be longer than 56 characters.
 
+On the server, there should be a password-file too. This file
+should contain one users per line, with the password seperated
+with a '|', e.g.:
+user|password
+If you change the password and want to reload the user-file
+without restarting the complete broker, sent SIGHUP to it.
+
 
 server processes
 ================
