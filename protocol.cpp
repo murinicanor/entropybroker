@@ -24,6 +24,16 @@ BF_KEY key;
 
 static int sleep_9003 = 300;
 
+void do_decrypt(unsigned char *buffer_in, unsigned char *buffer_out, int n_bytes)
+{
+	BF_cfb64_encrypt(buffer_in, buffer_out, n_bytes, &key, ivec, &ivec_offset, BF_DECRYPT);
+}
+
+void do_encrypt(unsigned char *buffer_in, unsigned char *buffer_out, int n_bytes)
+{
+	BF_cfb64_encrypt(buffer_in, buffer_out, n_bytes, &key, ivec, &ivec_offset, BF_ENCRYPT);
+}
+
 void make_msg(char *where_to, int code, int value)
 {
 	if (code < 0 || code > 9999)
@@ -87,11 +97,6 @@ void calc_ivec(char *password, long long unsigned int rnd, long long unsigned in
 void init_ivec(std::string password, long long unsigned int rnd, long long unsigned int counter)
 {
 	calc_ivec((char *)password.c_str(), rnd, counter, ivec);
-}
-
-void update_ivec(unsigned char *in, int in_len)
-{
-	memcpy(ivec, in, min(8, in_len));
 }
 
 int reconnect_server_socket(char *host, int port, std::string username, std::string password, int *socket_fd, const char *type, char is_server)
@@ -277,7 +282,7 @@ int message_transmit_entropy_data(char *host, int port, int *socket_fd, std::str
 
 			dolog(LOG_DEBUG, "Transmitting %d bytes", cur_n_bytes);
 
-			// encrypt data. keep original data; will be used as ivec for next round
+			// encrypt data
 			int with_hash_n = cur_n_bytes + MD5_DIGEST_LENGTH;
 
 			unsigned char *bytes_out = (unsigned char *)malloc(with_hash_n);
@@ -291,8 +296,7 @@ int message_transmit_entropy_data(char *host, int port, int *socket_fd, std::str
 			MD5(bytes_in, cur_n_bytes, temp_buffer);
 			memcpy(&temp_buffer[MD5_DIGEST_LENGTH], bytes_in, cur_n_bytes);
 
-			BF_cfb64_encrypt(temp_buffer, bytes_out, with_hash_n, &key, ivec, &ivec_offset, BF_ENCRYPT);
-			update_ivec(bytes_in, cur_n_bytes);
+			do_encrypt(temp_buffer, bytes_out, with_hash_n);
 
 			memset(temp_buffer, 0x00, with_hash_n);
 			unlock_mem(temp_buffer, with_hash_n);
@@ -349,12 +353,6 @@ int message_transmit_entropy_data(char *host, int port, int *socket_fd, std::str
 	}
 
 	return 0;
-}
-
-void decrypt(unsigned char *buffer_in, unsigned char *buffer_out, int n_bytes)
-{
-	BF_cfb64_encrypt(buffer_in, buffer_out, n_bytes, &key, ivec, &ivec_offset, BF_DECRYPT);
-	update_ivec(buffer_out, n_bytes);
 }
 
 int request_bytes(int *socket_fd, char *host, int port, std::string username, std::string password, const char *client_type, char *where_to, int n_bits, bool fail_on_no_bits)
@@ -514,7 +512,7 @@ int request_bytes(int *socket_fd, char *host, int port, std::string username, st
 			int in_len = will_get_n_bytes + MD5_DIGEST_LENGTH;
 			unsigned char *temp_buffer = (unsigned char *)malloc(in_len);
 			lock_mem(temp_buffer, will_get_n_bytes);
-			decrypt(buffer_in, temp_buffer, in_len);
+			do_decrypt(buffer_in, temp_buffer, in_len);
 
 			// verify data is correct
 			unsigned char hash[MD5_DIGEST_LENGTH];

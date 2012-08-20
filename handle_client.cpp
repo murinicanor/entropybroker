@@ -177,9 +177,8 @@ int do_client_get(pools *ppools, client_t *client, statistics_t *stats, config_t
 	if (!ent_buffer)
 		error_exit("error allocating %d bytes of memory", out_len);
 
-	// encrypt data. keep original data; will be used as ivec for next round
+	// encrypt data
 	BF_cfb64_encrypt(ent_buffer_in, ent_buffer, out_len, &client -> key, client -> ivec, &client -> ivec_offset, BF_ENCRYPT);
-	memcpy(client -> ivec, temp_buffer, min(8, cur_n_bytes));
 
 	memset(temp_buffer, 0x00, cur_n_bytes);
 	unlock_mem(temp_buffer, cur_n_bytes);
@@ -305,9 +304,8 @@ int do_client_put(pools *ppools, client_t *client, statistics_t *stats, config_t
 		error_exit("%s error allocating %d bytes of memory", client -> host, cur_n_bytes);
 	lock_mem(buffer_out, cur_n_bytes);
 
-	// decrypt data. decrypted data will be used as ivec for next round
+	// decrypt data
 	BF_cfb64_encrypt(buffer_in, buffer_out, in_len, &client -> key, client -> ivec, &client -> ivec_offset, BF_DECRYPT);
-	memcpy(client -> ivec, buffer_out, min(cur_n_bytes, 8));
 
 	unsigned char *entropy_data = &buffer_out[MD5_DIGEST_LENGTH];
 	int entropy_data_len = cur_n_bytes - MD5_DIGEST_LENGTH;
