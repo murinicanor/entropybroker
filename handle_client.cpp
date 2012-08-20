@@ -159,21 +159,22 @@ int do_client_get(pools *ppools, client_t *client, statistics_t *stats, config_t
 		*no_bits = true;
 		return send_denied_empty(client -> socket_fd, stats, config);
 	}
+// FIXME add md5, encrypt also md5
 	if (cur_n_bits < 0)
 		error_exit("internal error: %d < 0", cur_n_bits);
 	cur_n_bytes = (cur_n_bits + 7) / 8;
 	dolog(LOG_DEBUG, "get|%s got %d bits from pool", client -> host, cur_n_bits);
 
-	unsigned char *ent_buffer = (unsigned char *)malloc(cur_n_bytes + MD5_DIGEST_LENGTH);
+	int out_len = cur_n_bytes + MD5_DIGEST_LENGTH;
+	unsigned char *ent_buffer = (unsigned char *)malloc(out_len);
 	if (!ent_buffer)
-		error_exit("error allocating %d bytes of memory", cur_n_bytes);
+		error_exit("error allocating %d bytes of memory", out_len;
+
+	MD5(&ent_buffer_in[MD5_DIGEST_LENGTH], ent_buffer, cur_n_bytes);
 
 	// encrypt data. keep original data; will be used as ivec for next round
-	BF_cfb64_encrypt(ent_buffer_in, &ent_buffer[MD5_DIGEST_LENGTH], cur_n_bytes, &client -> key, client -> ivec, &client -> ivec_offset, BF_ENCRYPT);
-	MD5(ent_buffer_in, ent_buffer, cur_n_bytes);
+	BF_cfb64_encrypt(ent_buffer_in, &ent_buffer[MD5_DIGEST_LENGTH], out_len;
 	memcpy(client -> ivec, ent_buffer_in, min(8, cur_n_bytes));
-
-	calc_ivec(client -> password, client -> challenge, ++client -> ivec_counter, client -> ivec);
 
 	// update statistics for accounting
 	client -> bits_sent += cur_n_bits;
@@ -276,27 +277,27 @@ int do_client_put(pools *ppools, client_t *client, statistics_t *stats, config_t
 
 	cur_n_bytes = (cur_n_bits + 7) / 8;
 
-	unsigned char *buffer_in = (unsigned char *)malloc(cur_n_bytes);
+	int in_len = cur_n_bytes + MD5_DIGEST_LENGTH;
+	unsigned char *buffer_in = (unsigned char *)malloc(in_len);
 	if (!buffer_in)
-		error_exit("%s error allocating %d bytes of memory", client -> host, cur_n_bytes);
+		error_exit("%s error allocating %d bytes of memory", client -> host, in_len);
 
-	if (READ_TO(client -> socket_fd, (char *)buffer_in, cur_n_bytes, config -> communication_timeout) != cur_n_bytes)
+	if (READ_TO(client -> socket_fd, (char *)buffer_in, in_len, config -> communication_timeout) != in_len)
 	{
 		dolog(LOG_INFO, "put|%s short read while retrieving entropy data", client -> host);
 
-		memset(buffer_in, 0x00, cur_n_bytes);
 		free(buffer_in);
 
 		return -1;
 	}
 
-	unsigned char *buffer_out = (unsigned char *)malloc(cur_n_bytes);
+	unsigned char *buffer_out = (unsigned char *)malloc(in_len);
 	if (!buffer_out)
 		error_exit("%s error allocating %d bytes of memory", client -> host, cur_n_bytes);
 	lock_mem(buffer_out, cur_n_bytes);
 
 	// decrypt data. decrypted data will be used as ivec for next round
-	BF_cfb64_encrypt(buffer_in, buffer_out, cur_n_bytes, &client -> key, client -> ivec, &client -> ivec_offset, BF_DECRYPT);
+	BF_cfb64_encrypt(buffer_in, buffer_out, in_len, &client -> key, client -> ivec, &client -> ivec_offset, BF_DECRYPT);
 	memcpy(client -> ivec, buffer_out, min(cur_n_bytes, 8));
 
 	unsigned char *entropy_data = &buffer_out[MD5_DIGEST_LENGTH];
@@ -306,8 +307,6 @@ int do_client_put(pools *ppools, client_t *client, statistics_t *stats, config_t
 
 	if (memcmp(hash, buffer_in, MD5_DIGEST_LENGTH) != 0)
 		dolog(LOG_WARNING, "Hash mismatch in retrieved entropy data!");
-
-	calc_ivec(client -> password, client -> challenge, ++client -> ivec_counter, client -> ivec);
 
 	client -> last_put_message = now;
 

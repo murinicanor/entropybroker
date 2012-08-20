@@ -277,7 +277,6 @@ int message_transmit_entropy_data(char *host, int port, int *socket_fd, std::str
 			if (!bytes_out)
 				error_exit("out of memory");
 			BF_cfb64_encrypt(bytes_in, bytes_out, cur_n_bytes, &key, ivec, &ivec_offset, BF_ENCRYPT);
-			memcpy(ivec, bytes_in, min(8, cur_n_bytes));
 
 			int xmit_n = -1;
 			insert_hash(&bytes_out, cur_n_bytes, &xmit_n);
@@ -340,7 +339,6 @@ int message_transmit_entropy_data(char *host, int port, int *socket_fd, std::str
 void decrypt(unsigned char *buffer_in, unsigned char *buffer_out, int n_bytes)
 {
 	BF_cfb64_encrypt(buffer_in, buffer_out, n_bytes, &key, ivec, &ivec_offset, BF_DECRYPT);
-	memcpy(ivec, buffer_out, min(8, n_bytes));
 }
 
 int request_bytes(int *socket_fd, char *host, int port, std::string username, std::string password, const char *client_type, char *where_to, int n_bits, bool fail_on_no_bits)
@@ -478,24 +476,11 @@ int request_bytes(int *socket_fd, char *host, int port, std::string username, st
 				continue;
 			}
 
-			unsigned char lrc_in;
-			if (READ_TO(*socket_fd, (char *)&lrc_in, 1, DEFAULT_COMM_TO) != 1)
-			{
-				dolog(LOG_INFO, "Network read error (lrc)");
-
-				close(*socket_fd);
-				*socket_fd = -1;
-
-				request_sent = false;
-
-				continue;
-			}
-
 			unsigned char *buffer_in = (unsigned char *)malloc(will_get_n_bytes);
 			if (!buffer_in)
 				error_exit("out of memory allocating %d bytes", will_get_n_bytes);
 
-			if (READ_TO(*socket_fd, (char *)buffer_in, will_get_n_bytes, DEFAULT_COMM_TO) != will_get_n_bytes)
+			if (READ_TO(*socket_fd, (char *)buffer_in, will_get_n_bytes + MD5_DIGEST_LENGTH, DEFAULT_COMM_TO) != will_get_n_bytes)
 			{
 				dolog(LOG_INFO, "Network read error (data)");
 
@@ -509,21 +494,30 @@ int request_bytes(int *socket_fd, char *host, int port, std::string username, st
 				continue;
 			}
 
-			// caller should take care of lock_mem()
-			decrypt(buffer_in, (unsigned char *)where_to, will_get_n_bytes);
+			// decrypt
+			int in_len = will_get_n_bytes + MD5_DIGEST_LENGTH;
+			unsigned char *temp_buffer = (unsigned char *)malloc(in_len);
+			lock_mem(temp_buffer, will_get_n_bytes);
+			decrypt(buffer_in, temp_buffer, in_len;
 
-// FIXME
-			unsigned char lrc_calc = calc_lrc((unsigned char *)where_to, will_get_n_bytes);
-			if (lrc_calc != lrc_in)
-				error_exit("LRC mismatch on data! man in the middle attack? (%02x calculated, %02x expected)", lrc_calc, lrc_in);
-			else
-				dolog(LOG_DEBUG, "LRC expected: %02x, calculated: %02x", lrc_in, lrc_calc);
+			// verify data is correct
+			unsigned char hash[MD5_DIGEST_LENGTH];
+			MD5(&temp_buffer[MD5_DIGEST_LENGTH], hash, will_get_n_bytes);
+
+			if (memcmp(hash, temp_buffer, 16) != 0)
+				error_exit("Data corrupt!");
+
+			memcpy(where_to, &temp_buffer[MD5_DIGEST_LENGTH], will_get_n_bytes)
+
+			memset(temp_buffer, 0x00, in_len);
+			unlock_mem(temp_buffer, in_len);
+			free(temp_buffer);
 
 			set_ivec(password, challenge, ++ivec_counter);
 
 			free(buffer_in);
 
-			return will_get_n_bytes;
+			return will_get_n_bytes - MD5_DIGEST_LENGTH;
 		}
 		else
 		{
