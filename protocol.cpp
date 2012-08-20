@@ -278,16 +278,27 @@ int message_transmit_entropy_data(char *host, int port, int *socket_fd, std::str
 			dolog(LOG_DEBUG, "Transmitting %d bytes", cur_n_bytes);
 
 			// encrypt data. keep original data; will be used as ivec for next round
-			unsigned char *bytes_out = (unsigned char *)malloc(cur_n_bytes);
+			int with_hash_n = cur_n_bytes + MD5_DIGEST_LENGTH;
+
+			unsigned char *bytes_out = (unsigned char *)malloc(with_hash_n);
 			if (!bytes_out)
 				error_exit("out of memory");
-			BF_cfb64_encrypt(bytes_in, bytes_out, cur_n_bytes, &key, ivec, &ivec_offset, BF_ENCRYPT);
+			unsigned char *temp_buffer = (unsigned char *)malloc(with_hash_n);
+			if (!temp_buffer)
+				error_exit("out of memory");
+			lock_mem(temp_buffer, with_hash_n);
+
+			MD5(bytes_in, cur_n_bytes, temp_buffer);
+			memcpy(&temp_buffer[MD5_DIGEST_LENGTH], bytes_in, cur_n_bytes);
+
+			BF_cfb64_encrypt(temp_buffer, bytes_out, with_hash_n, &key, ivec, &ivec_offset, BF_ENCRYPT);
 			update_ivec(bytes_in, cur_n_bytes);
 
-			int xmit_n = -1;
-			insert_hash(&bytes_out, cur_n_bytes, &xmit_n);
+			memset(temp_buffer, 0x00, with_hash_n);
+			unlock_mem(temp_buffer, with_hash_n);
+			free(temp_buffer);
 
-			if (WRITE_TO(*socket_fd, (char *)bytes_out, xmit_n, DEFAULT_COMM_TO) != xmit_n)
+			if (WRITE_TO(*socket_fd, (char *)bytes_out, with_hash_n, DEFAULT_COMM_TO) != with_hash_n)
 			{
 				dolog(LOG_INFO, "error transmitting data");
 				free(bytes_out);
@@ -534,19 +545,4 @@ int request_bytes(int *socket_fd, char *host, int port, std::string username, st
 	}
 
 	return 0;
-}
-
-void insert_hash(unsigned char **in, int in_len, int *out_len)
-{
-	unsigned char hash[MD5_DIGEST_LENGTH];
-	MD5(*in, in_len, hash);
-
-	*out_len = in_len + MD5_DIGEST_LENGTH;
-	unsigned char *out = (unsigned char *)malloc(*out_len);
-
-	memcpy(out, hash, MD5_DIGEST_LENGTH);
-	memcpy(&out[MD5_DIGEST_LENGTH], *in, in_len);
-
-	free(*in);
-	*in = out;
 }
