@@ -84,9 +84,14 @@ void calc_ivec(char *password, long long unsigned int rnd, long long unsigned in
 	memcpy(dest, dummy, 8);
 }
 
-void set_ivec(std::string password, long long unsigned int rnd, long long unsigned int counter)
+void init_ivec(std::string password, long long unsigned int rnd, long long unsigned int counter)
 {
 	calc_ivec((char *)password.c_str(), rnd, counter, ivec);
+}
+
+void update_ivec(unsigned char *in, int in_len)
+{
+	memcpy(ivec, in, min(8, in_len));
 }
 
 int reconnect_server_socket(char *host, int port, std::string username, std::string password, int *socket_fd, const char *type, char is_server)
@@ -121,7 +126,7 @@ int reconnect_server_socket(char *host, int port, std::string username, std::str
 			}
 
 			set_password(password);
-			set_ivec(password, challenge, 0);
+			init_ivec(password, challenge, 0);
 		}
 
 		if (connect_msg)
@@ -277,6 +282,7 @@ int message_transmit_entropy_data(char *host, int port, int *socket_fd, std::str
 			if (!bytes_out)
 				error_exit("out of memory");
 			BF_cfb64_encrypt(bytes_in, bytes_out, cur_n_bytes, &key, ivec, &ivec_offset, BF_ENCRYPT);
+			update_ivec(bytes_in, cur_n_bytes);
 
 			int xmit_n = -1;
 			insert_hash(&bytes_out, cur_n_bytes, &xmit_n);
@@ -287,8 +293,6 @@ int message_transmit_entropy_data(char *host, int port, int *socket_fd, std::str
 				free(bytes_out);
 				return -1;
 			}
-
-			set_ivec(password, challenge, ++ivec_counter);
 
 			free(bytes_out);
 
@@ -339,6 +343,7 @@ int message_transmit_entropy_data(char *host, int port, int *socket_fd, std::str
 void decrypt(unsigned char *buffer_in, unsigned char *buffer_out, int n_bytes)
 {
 	BF_cfb64_encrypt(buffer_in, buffer_out, n_bytes, &key, ivec, &ivec_offset, BF_DECRYPT);
+	update_ivec(buffer_out, n_bytes);
 }
 
 int request_bytes(int *socket_fd, char *host, int port, std::string username, std::string password, const char *client_type, char *where_to, int n_bits, bool fail_on_no_bits)
@@ -512,8 +517,6 @@ int request_bytes(int *socket_fd, char *host, int port, std::string username, st
 			memset(temp_buffer, 0x00, in_len);
 			unlock_mem(temp_buffer, in_len);
 			free(temp_buffer);
-
-			set_ivec(password, challenge, ++ivec_counter);
 
 			free(buffer_in);
 
