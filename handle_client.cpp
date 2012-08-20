@@ -170,6 +170,7 @@ int do_client_get(pools *ppools, client_t *client, statistics_t *stats, config_t
 	if (!ent_buffer)
 		error_exit("error allocating %d bytes of memory", cur_n_bytes);
 
+// FIXME put at &ent_buffer[MD5_SIZE] en dan hash putten aan 't begin
 	// encrypt data. keep original data; will be used as ivec for next round
 	BF_cfb64_encrypt(ent_buffer_in, ent_buffer, cur_n_bytes, &client -> key, client -> ivec, &client -> ivec_offset, BF_ENCRYPT);
 	memcpy(client -> ivec, ent_buffer_in, min(8, cur_n_bytes));

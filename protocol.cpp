@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <openssl/blowfish.h>
+#include <openssl/md5.h>
 #include <string>
 #include <map>
 
@@ -271,13 +272,6 @@ int message_transmit_entropy_data(char *host, int port, int *socket_fd, std::str
 
 			dolog(LOG_DEBUG, "Transmitting %d bytes", cur_n_bytes);
 
-			unsigned char lrc = calc_lrc(bytes_in, cur_n_bytes);
-			if (WRITE_TO(*socket_fd, (char *)&lrc, 1, DEFAULT_COMM_TO) != 1)
-			{
-				dolog(LOG_INFO, "error transmitting lrc");
-				return -1;
-			}
-
 			// encrypt data. keep original data; will be used as ivec for next round
 			unsigned char *bytes_out = (unsigned char *)malloc(cur_n_bytes);
 			if (!bytes_out)
@@ -285,7 +279,10 @@ int message_transmit_entropy_data(char *host, int port, int *socket_fd, std::str
 			BF_cfb64_encrypt(bytes_in, bytes_out, cur_n_bytes, &key, ivec, &ivec_offset, BF_ENCRYPT);
 			memcpy(ivec, bytes_in, min(8, cur_n_bytes));
 
-			if (WRITE_TO(*socket_fd, (char *)bytes_out, cur_n_bytes, DEFAULT_COMM_TO) != cur_n_bytes)
+			int xmit_n = -1;
+			insert_hash(&bytes_out, cur_n_bytes, &xmit_n);
+
+			if (WRITE_TO(*socket_fd, (char *)bytes_out, xmit_n, DEFAULT_COMM_TO) != xmit_n)
 			{
 				dolog(LOG_INFO, "error transmitting data");
 				free(bytes_out);
@@ -515,6 +512,7 @@ int request_bytes(int *socket_fd, char *host, int port, std::string username, st
 			// caller should take care of lock_mem()
 			decrypt(buffer_in, (unsigned char *)where_to, will_get_n_bytes);
 
+// FIXME
 			unsigned char lrc_calc = calc_lrc((unsigned char *)where_to, will_get_n_bytes);
 			if (lrc_calc != lrc_in)
 				error_exit("LRC mismatch on data! man in the middle attack? (%02x calculated, %02x expected)", lrc_calc, lrc_in);
@@ -541,12 +539,17 @@ int request_bytes(int *socket_fd, char *host, int port, std::string username, st
 	return 0;
 }
 
-unsigned char calc_lrc(unsigned char *in, int in_len)
+void insert_hash(unsigned char **in, int in_len, int *out_len)
 {
-	unsigned char lrc = 0;
+	unsigned char hash[MD5_DIGEST_LENGTH];
+	MD5(in, in_len, hash);
 
-	for(int index=0; index<in_len; index++)
-		lrc ^= in[index];
+	*out_len = in_len + MD5_DIGEST_LENGTH;
+	unsigned char *out = (unsigned char *)malloc(*out_len);
 
-	return lrc;
+	memcpy(out, hash, MD5_DIGEST_LENGTH);
+	memcpy(&out[MD5_DIGEST_LENGTH], *in, in_len);
+
+	free(*in);
+	*in = out;
 }
