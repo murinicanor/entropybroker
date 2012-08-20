@@ -490,11 +490,12 @@ int request_bytes(int *socket_fd, char *host, int port, std::string username, st
 				continue;
 			}
 
-			unsigned char *buffer_in = (unsigned char *)malloc(will_get_n_bytes);
+			int xmit_bytes = will_get_n_bytes + MD5_DIGEST_LENGTH;
+			unsigned char *buffer_in = (unsigned char *)malloc(xmit_bytes);
 			if (!buffer_in)
 				error_exit("out of memory allocating %d bytes", will_get_n_bytes);
 
-			if (READ_TO(*socket_fd, (char *)buffer_in, will_get_n_bytes + MD5_DIGEST_LENGTH, DEFAULT_COMM_TO) != will_get_n_bytes)
+			if (READ_TO(*socket_fd, (char *)buffer_in, xmit_bytes, DEFAULT_COMM_TO) != xmit_bytes)
 			{
 				dolog(LOG_INFO, "Network read error (data)");
 
@@ -509,10 +510,9 @@ int request_bytes(int *socket_fd, char *host, int port, std::string username, st
 			}
 
 			// decrypt
-			int in_len = will_get_n_bytes + MD5_DIGEST_LENGTH;
-			unsigned char *temp_buffer = (unsigned char *)malloc(in_len);
+			unsigned char *temp_buffer = (unsigned char *)malloc(xmit_bytes);
 			lock_mem(temp_buffer, will_get_n_bytes);
-			do_decrypt(buffer_in, temp_buffer, in_len);
+			do_decrypt(buffer_in, temp_buffer, xmit_bytes);
 
 			// verify data is correct
 			unsigned char hash[MD5_DIGEST_LENGTH];
@@ -523,8 +523,8 @@ int request_bytes(int *socket_fd, char *host, int port, std::string username, st
 
 			memcpy(where_to, &temp_buffer[MD5_DIGEST_LENGTH], will_get_n_bytes);
 
-			memset(temp_buffer, 0x00, in_len);
-			unlock_mem(temp_buffer, in_len);
+			memset(temp_buffer, 0x00, xmit_bytes);
+			unlock_mem(temp_buffer, xmit_bytes);
 			free(temp_buffer);
 
 			free(buffer_in);
