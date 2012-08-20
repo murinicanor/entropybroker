@@ -503,16 +503,16 @@ int request_bytes(int *socket_fd, char *host, int port, std::string username, st
 			int in_len = will_get_n_bytes + MD5_DIGEST_LENGTH;
 			unsigned char *temp_buffer = (unsigned char *)malloc(in_len);
 			lock_mem(temp_buffer, will_get_n_bytes);
-			decrypt(buffer_in, temp_buffer, in_len;
+			decrypt(buffer_in, temp_buffer, in_len);
 
 			// verify data is correct
 			unsigned char hash[MD5_DIGEST_LENGTH];
-			MD5(&temp_buffer[MD5_DIGEST_LENGTH], hash, will_get_n_bytes);
+			MD5(&temp_buffer[MD5_DIGEST_LENGTH], will_get_n_bytes, hash);
 
 			if (memcmp(hash, temp_buffer, 16) != 0)
 				error_exit("Data corrupt!");
 
-			memcpy(where_to, &temp_buffer[MD5_DIGEST_LENGTH], will_get_n_bytes)
+			memcpy(where_to, &temp_buffer[MD5_DIGEST_LENGTH], will_get_n_bytes);
 
 			memset(temp_buffer, 0x00, in_len);
 			unlock_mem(temp_buffer, in_len);
@@ -539,7 +539,7 @@ int request_bytes(int *socket_fd, char *host, int port, std::string username, st
 void insert_hash(unsigned char **in, int in_len, int *out_len)
 {
 	unsigned char hash[MD5_DIGEST_LENGTH];
-	MD5(in, in_len, hash);
+	MD5(*in, in_len, hash);
 
 	*out_len = in_len + MD5_DIGEST_LENGTH;
 	unsigned char *out = (unsigned char *)malloc(*out_len);

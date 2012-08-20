@@ -13,6 +13,7 @@
 #include <sys/time.h>
 #include <sys/resource.h>
 #include <openssl/blowfish.h>
+#include <openssl/md5.h>
 #include <vector>
 #include <string>
 #include <map>
@@ -151,30 +152,38 @@ int do_client_get(pools *ppools, client_t *client, statistics_t *stats, config_t
 
 	dolog(LOG_DEBUG, "get|%s memory allocated, retrieving bits", client -> host);
 
-	unsigned char *ent_buffer_in = NULL;
-	cur_n_bits = ppools -> get_bits_from_pools(cur_n_bits, &ent_buffer_in, client -> allow_prng, client -> ignore_rngtest_fips140, eb_output_fips140, client -> ignore_rngtest_scc, eb_output_scc);
+	unsigned char *temp_buffer = NULL;
+	cur_n_bits = ppools -> get_bits_from_pools(cur_n_bits, &temp_buffer, client -> allow_prng, client -> ignore_rngtest_fips140, eb_output_fips140, client -> ignore_rngtest_scc, eb_output_scc);
 	if (cur_n_bits == 0)
 	{
 		dolog(LOG_WARNING, "get|%s no bits in pools, sending deny", client -> host);
 		*no_bits = true;
 		return send_denied_empty(client -> socket_fd, stats, config);
 	}
-// FIXME add md5, encrypt also md5
+
 	if (cur_n_bits < 0)
 		error_exit("internal error: %d < 0", cur_n_bits);
 	cur_n_bytes = (cur_n_bits + 7) / 8;
 	dolog(LOG_DEBUG, "get|%s got %d bits from pool", client -> host, cur_n_bits);
 
 	int out_len = cur_n_bytes + MD5_DIGEST_LENGTH;
+	unsigned char *ent_buffer_in = (unsigned char *)malloc(out_len);
+	lock_mem(ent_buffer_in, out_len);
+
+	memcpy(&ent_buffer_in[MD5_DIGEST_LENGTH], temp_buffer, cur_n_bytes);
+	MD5(&ent_buffer_in[MD5_DIGEST_LENGTH], cur_n_bytes, ent_buffer_in);
+
 	unsigned char *ent_buffer = (unsigned char *)malloc(out_len);
 	if (!ent_buffer)
-		error_exit("error allocating %d bytes of memory", out_len;
-
-	MD5(&ent_buffer_in[MD5_DIGEST_LENGTH], ent_buffer, cur_n_bytes);
+		error_exit("error allocating %d bytes of memory", out_len);
 
 	// encrypt data. keep original data; will be used as ivec for next round
-	BF_cfb64_encrypt(ent_buffer_in, &ent_buffer[MD5_DIGEST_LENGTH], out_len;
-	memcpy(client -> ivec, ent_buffer_in, min(8, cur_n_bytes));
+	BF_cfb64_encrypt(ent_buffer_in, ent_buffer, out_len, &client -> key, client -> ivec, &client -> ivec_offset, BF_ENCRYPT);
+	memcpy(client -> ivec, temp_buffer, min(8, cur_n_bytes));
+
+	memset(temp_buffer, 0x00, cur_n_bytes);
+	unlock_mem(temp_buffer, cur_n_bytes);
+	free(temp_buffer);
 
 	// update statistics for accounting
 	client -> bits_sent += cur_n_bits;
@@ -182,7 +191,7 @@ int do_client_get(pools *ppools, client_t *client, statistics_t *stats, config_t
 	stats -> total_sent += cur_n_bits;
 	stats -> total_sent_requests++;
 
-	transmit_size = 4 + 4 + MD5_DIGEST_LENGTH + cur_n_bytes;
+	transmit_size = 4 + 4 + out_len;
 	unsigned char *output_buffer = (unsigned char *)malloc(transmit_size);
 	if (!output_buffer)
 		error_exit("error allocating %d bytes of memory", cur_n_bytes);
@@ -303,7 +312,7 @@ int do_client_put(pools *ppools, client_t *client, statistics_t *stats, config_t
 	unsigned char *entropy_data = &buffer_out[MD5_DIGEST_LENGTH];
 	int entropy_data_len = cur_n_bytes - MD5_DIGEST_LENGTH;
 	unsigned char hash[MD5_DIGEST_LENGTH];
-	MD5(entropy_data, hash, entropy_data_len);
+	MD5(entropy_data, entropy_data_len, hash);
 
 	if (memcmp(hash, buffer_in, MD5_DIGEST_LENGTH) != 0)
 		dolog(LOG_WARNING, "Hash mismatch in retrieved entropy data!");
