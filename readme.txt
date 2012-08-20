@@ -75,6 +75,16 @@ server_usb:
 In all cases:
  - where applicable, von Neumann whitening is applied
 
+network protocol
+****************
+authentication:
+ - client/server process sends his username to the broker
+ - a 64 bit random is send to the client. the client then
+   concatenates this value as a string to his password (with a
+   space in between) and then proceeds by calculating a 'sha512'
+   over this string. this string is returned to the broker. the
+   broker does the same calculating and compares the results.
+   if they're not equal, the session is aborted.
 
 Building
 --------

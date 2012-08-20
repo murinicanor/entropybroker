@@ -84,19 +84,19 @@ int auth_eb(int fd, int to, std::map<std::string, std::string> *users, std::stri
 
 	password.assign(it -> second);
 
-	char hash_cmp_str[256], hash_cmp[SHA_DIGEST_LENGTH];
+	char hash_cmp_str[256], hash_cmp[SHA512_DIGEST_LENGTH];
 	snprintf(hash_cmp_str, sizeof hash_cmp_str, "%s %s", rnd_str, password.c_str());
 
-        SHA1((const unsigned char *)hash_cmp_str, strlen(hash_cmp_str), (unsigned char *)hash_cmp);
+        SHA512((const unsigned char *)hash_cmp_str, strlen(hash_cmp_str), (unsigned char *)hash_cmp);
 
-	char hash_in[SHA_DIGEST_LENGTH];
-	if (READ_TO(fd, hash_in, SHA_DIGEST_LENGTH, to) <= 0)
+	char hash_in[SHA512_DIGEST_LENGTH];
+	if (READ_TO(fd, hash_in, SHA512_DIGEST_LENGTH, to) <= 0)
 	{
 		dolog(LOG_INFO, "Connection for fd %d closed (3)", fd);
 		return -1;
 	}
 
-	if (memcmp(hash_cmp, hash_in, SHA_DIGEST_LENGTH) == 0)
+	if (memcmp(hash_cmp, hash_in, SHA512_DIGEST_LENGTH) == 0)
 	{
 		dolog(LOG_INFO, "Connection for fd %d: authentication ok", fd);
 		return 0;
@@ -180,12 +180,12 @@ int auth_client_server(int fd, int to, std::string & username, std::string & pas
 		return -1;
 	}
 
-	char hash_cmp_str[256], hash_cmp[SHA_DIGEST_LENGTH];
+	char hash_cmp_str[256], hash_cmp[SHA512_DIGEST_LENGTH];
 	snprintf(hash_cmp_str, sizeof hash_cmp_str, "%s %s", rnd_str, password.c_str());
 
-        SHA1((const unsigned char *)hash_cmp_str, strlen(hash_cmp_str), (unsigned char *)hash_cmp);
+        SHA512((const unsigned char *)hash_cmp_str, strlen(hash_cmp_str), (unsigned char *)hash_cmp);
 
-	if (WRITE(fd, hash_cmp, SHA_DIGEST_LENGTH) == -1)
+	if (WRITE(fd, hash_cmp, SHA512_DIGEST_LENGTH) == -1)
 	{
 		dolog(LOG_INFO, "Connection for fd %d closed (3)", fd);
 		return -1;
