@@ -466,3 +466,11 @@ void unlock_mem(void *p, int size)
 		}
 	}
 }
+
+void hexdump(unsigned char *in, int n)
+{
+	for(int index=0; index<n; index++)
+		printf("%02x ", in[index]);
+
+	printf("\n");
+}

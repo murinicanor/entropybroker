@@ -19,3 +19,4 @@ void start_process(char *shell, char *cmd, int *fd, pid_t *pid);
 void no_core();
 void lock_mem(void *p, int size);
 void unlock_mem(void *p, int size);
+void hexdump(unsigned char *in, int n);
