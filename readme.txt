@@ -26,72 +26,10 @@ processes that read from a egb-compatible unix-domain socket.
 Most daemons should run on all UNIX systems. The ones that are
 Linux-specific are markes as such.
 
+See "design.txt" for details on the crypto used.
 
-How it really works at the lowest level
-=======================================
-the broker
-**********
-Adding data:
- - the amount of information is calculated
- - then the data is stirred into the pool
-    this is accomplished by encrypting the pool with e.g. AES
-    or 3DES or whatever the user selected
-    the key used, is the entropy data to add
-
-Retrieving data:
- - the pool is hashed
- - then the pool is 'unstirred' by decrypting it with the hash
-   as a key
- - the hash is fold in half and then returned to the user
-
-In both cases:
- - the initial vector (as used by the stirrer) is initialized
-   to a random value. this random value is obtained from the
-   OpenSSL prng
-
-References:
- - entropy estimation: http://en.wikipedia.org/wiki/Entropy_estimation
- - stirring: RFC 4086 (June 2005) chapter 6.2.1, second paragraph
-
-servers (daemons producing entropy)
-***********************************
-server_timers:
- - measures the jitter of two timer-frequencies 
-
-server_audio:
- - measures the noise in an audio-stream. preferably of a low-volume
-   stream so that the noise in the electronics is measured (a song
-   or someone talking might not be that random)
-
-server_video:
- - see server_audio but this one measures the noise in a video
-   signal. if you have a tv-card, tune it to a frequency where it
-   only receives noise
-
-server_usb:
- - like server_timers only here the difference of the local system
-   clock and the clock in an USB device is measured
-
-In all cases:
- - where applicable, von Neumann whitening is applied
-
-network protocol
-****************
-authentication:
- - client/server process sends his username to the broker
- - a 64 bit random is send to the client. the client then
-   concatenates this value as a string to his password (with a
-   space in between) and then proceeds by calculating a 'sha512'
-   over this string. this string is returned to the broker. the
-   broker does the same calculating and compares the results.
-   if they're not equal, the session is aborted.
-
-entropy data transmission:
- - an SHA256 is calculated over the data, then the data is
-   concatenated. after that, the result of the previous is
-   encrypted with blowfish using the authentication-password as
-   the key. the IV is initialized with the password XORed with
-   the random used during the authentication.
+See "interfacing.txt" for details on how to connect your own
+applications to entropy broker.
 
 
 Building
@@ -296,33 +234,6 @@ OpenSSL applications use the kernel entropy driver. For that,
 in /etc/ssl/openssl.cnf change the line with RANDFILE in it
 to:
 	RANDFILE = /dev/urandom
-
-
-Writing your own server/client
-------------------------------
-- include <protocol.h>, <string>, <openssl/blowfish.h>
-- instantiate a 'protocol'-class:
-  protocol *p = new protocol(char *host, int port, std::string username, std::string password, bool is_server, std::string type);
-      host + port = entropy broker
-      username + password = authentication against broker
-      is_server = false for client, true for server
-      type = name of server/client with any details added
-- then to transmit data:
-  int message_transmit_entropy_data(unsigned char *bytes, int n_bytes);
-      bytes / n_bytes = where from, how many
-      returns 0 for ok, -1 for error
-- to retrieve data:
-  int request_bytes(char *where_to, int n_bits, bool fail_on_no_bits);
-      where_to = where to place the data
-      n_bits = number of bits requested, broker may return less
-      fail_on_no_bits = if the broker does not have data and this
-                        is set to true, then this method won't
-                        keep trying
-- when linking, add the following files:
-  error.cpp log.cpp kernel_prng_rw.cpp protocol.cpp utils.cpp
-  server_utils.cpp auth.cpp my_pty.cpp kernel_prng_io.cpp
-  also add the following libraries:
-  -lcrypto -lrt -lz -lutil -rdynamic
 
 
 Evaluating Entropy Broker
