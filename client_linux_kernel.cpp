@@ -10,6 +10,7 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
+#include <openssl/blowfish.h>
 
 #include "error.h"
 #include "kernel_prng_io.h"
@@ -45,7 +46,7 @@ int main(int argc, char *argv[])
 {
 	char *host = NULL;
 	int port = 55225;
-	int socket_fd = -1, dev_random_fd = open(DEV_RANDOM, O_RDWR);
+	int dev_random_fd = open(DEV_RANDOM, O_RDWR);
 	int max_bits_in_kernel_rng = kernel_rng_get_max_entropy_count();
 	int c;
 	bool do_not_fork = false, log_console = false, log_syslog = false;
@@ -109,6 +110,8 @@ int main(int argc, char *argv[])
 		if (daemon(0, 0) == -1)
 			error_exit("fork failed");
 	}
+
+	protocol *p = new protocol(host, port, username, password, false, client_type);
 
 	(void)umask(0177);
 	no_core();
@@ -179,7 +182,7 @@ int main(int argc, char *argv[])
 				error_exit("out of memory allocating %d bytes", n_bytes_to_get);
 			lock_mem(buffer, n_bytes_to_get);
 
-			int n_bytes = request_bytes(&socket_fd, host, port, username, password, client_type, buffer, n_bits_to_get, false);
+			int n_bytes = p -> request_bytes(buffer, n_bits_to_get, false);
 
 			int is_n_bits = bce.get_bit_count((unsigned char *)buffer, n_bytes);
 
@@ -196,6 +199,8 @@ int main(int argc, char *argv[])
 	}
 
 	unlink(pid_file);
+
+	delete p;
 
 	return 0;
 }

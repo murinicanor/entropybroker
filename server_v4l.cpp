@@ -15,6 +15,7 @@
 #include <sys/types.h>
 #include <time.h>
 #include <unistd.h>
+#include <openssl/blowfish.h>
 
 #include "error.h"
 #include "log.h"
@@ -145,7 +146,6 @@ int main(int argc, char *argv[])
 	char *log_logfile = NULL;
 	char *device = NULL;
 	unsigned char byte = 0;
-	int socket_fd = -1;
 	char *bytes_file = NULL;
 	int loop;
 	bool show_bps = false;
@@ -208,7 +208,6 @@ int main(int argc, char *argv[])
 
 	if (username.length() == 0 || password.length() == 0)
 		error_exit("username + password cannot be empty");
-	set_password(password);
 
 	if (!host && !bytes_file)
 		error_exit("no host to connect to given");
@@ -239,6 +238,8 @@ int main(int argc, char *argv[])
 	}
 
 	write_pid(pid_file);
+
+	protocol *p = new protocol(host, port, username, password, true, server_type);
 
 	/* open device */
 	int fd = -1;
@@ -344,13 +345,10 @@ int main(int argc, char *argv[])
 				{
 					int n_to_do = min(count, 1249);
 
-					if (message_transmit_entropy_data(host, port, &socket_fd, username, password, server_type, tempp, n_to_do) == -1)
+					if (p -> message_transmit_entropy_data(tempp, n_to_do) == -1)
 					{
 						dolog(LOG_INFO, "connection closed");
-
-						close(socket_fd);
-						socket_fd = -1;
-
+						p -> drop();
 						break;
 					}
 
@@ -384,6 +382,8 @@ int main(int argc, char *argv[])
 
 	dolog(LOG_DEBUG, "Cleaning up");
 	close_device(fd, io_buffer, io_buffer_len);
+
+	delete p;
 
 	unlink(pid_file);
 
