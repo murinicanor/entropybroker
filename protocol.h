@@ -6,11 +6,36 @@
 #define DATA_HASH_LEN SHA256_DIGEST_LENGTH
 
 void make_msg(char *where_to, int code, int value);
-int reconnect_server_socket(char *host, int port, std::string username, std::string password, int *socket_fd, const char *type, char is_server);
-void set_password(std::string password);
 void calc_ivec(char *password, long long unsigned int rnd, long long unsigned int counter, unsigned char *dest);
-int sleep_interruptable(int socket_fd, int how_long);
-int message_transmit_entropy_data(char *host, int port, int *socket_fd, std::string username, std::string password, const char *server_type, unsigned char *bytes_in, int n_bytes);
-void decrypt(unsigned char *buffer_in, unsigned char *buffer_out, int n_bytes);
-int request_bytes(int *socket_fd, char *host, int port, std::string username, std::string password, const char *client_type, char *where_to, int n_bits, bool fail_on_no_bits);
-void insert_hash(unsigned char **in, int in_len, int *out_len);
+
+class protocol
+{
+private:
+	char *host;
+	int port;
+	std::string username, password;
+	bool is_server;
+	std::string type;
+	//
+	int socket_fd;
+	int sleep_9003;
+	unsigned char ivec[8];
+	long long unsigned ivec_counter, challenge;
+	int ivec_offset;
+	BF_KEY key;
+
+	void do_encrypt(unsigned char *buffer_in, unsigned char *buffer_out, int n_bytes);
+	void do_decrypt(unsigned char *buffer_in, unsigned char *buffer_out, int n_bytes);
+	void init_ivec(std::string password, long long unsigned int rnd, long long unsigned int counter);
+	int reconnect_server_socket();
+	void set_password(std::string password);
+	void error_sleep(int count);
+	int sleep_interruptable(int how_long);
+
+public:
+	protocol(char *host, int port, std::string username, std::string password, bool is_server, std::string type);
+	~protocol();
+
+	int message_transmit_entropy_data(unsigned char *bytes_in, int n_bytes);
+	int request_bytes(char *where_to, int n_bits, bool fail_on_no_bits);
+};

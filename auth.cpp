@@ -1,3 +1,4 @@
+#include <openssl/blowfish.h>
 #include <openssl/sha.h>
 #include <openssl/rand.h>
 #include <string.h>

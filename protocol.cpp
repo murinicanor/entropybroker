@@ -17,23 +17,6 @@
 
 #define DEFAULT_COMM_TO 15
 
-unsigned char ivec[8] = { 0 };
-long long unsigned ivec_counter = 0, challenge = 13;
-int ivec_offset = 0;
-BF_KEY key;
-
-static int sleep_9003 = 300;
-
-void do_decrypt(unsigned char *buffer_in, unsigned char *buffer_out, int n_bytes)
-{
-	BF_cfb64_encrypt(buffer_in, buffer_out, n_bytes, &key, ivec, &ivec_offset, BF_DECRYPT);
-}
-
-void do_encrypt(unsigned char *buffer_in, unsigned char *buffer_out, int n_bytes)
-{
-	BF_cfb64_encrypt(buffer_in, buffer_out, n_bytes, &key, ivec, &ivec_offset, BF_ENCRYPT);
-}
-
 void make_msg(char *where_to, int code, int value)
 {
 	if (code < 0 || code > 9999)
@@ -51,22 +34,6 @@ void make_msg(char *where_to, int code, int value)
 	}
 
 	snprintf(where_to, 9, "%04d%04d", code, value);
-}
-
-void error_sleep(int count)
-{
-	long int sleep_micro_seconds = myrand(count * 1000000) + 1;
-
-	dolog(LOG_WARNING, "Failed connecting, sleeping for %f seconds", (double)sleep_micro_seconds / 1000000.0);
-
-	usleep((long)sleep_micro_seconds);
-}
-
-void set_password(std::string password)
-{
-	int len = password.length();
-
-	BF_set_key(&key, len, (unsigned char *)password.c_str());
 }
 
 void calc_ivec(char *password, long long unsigned int rnd, long long unsigned int counter, unsigned char *dest)
@@ -94,12 +61,53 @@ void calc_ivec(char *password, long long unsigned int rnd, long long unsigned in
 	memcpy(dest, dummy, 8);
 }
 
-void init_ivec(std::string password, long long unsigned int rnd, long long unsigned int counter)
+protocol::protocol(char *host_in, int port_in, std::string username_in, std::string password_in, bool is_server_in, std::string type_in) : port(port_in), username(username_in), password(password_in), is_server(is_server_in), type(type_in)
 {
-	calc_ivec((char *)password.c_str(), rnd, counter, ivec);
+        socket_fd = -1;
+        sleep_9003 = 300;
+
+        ivec_counter = 0;
+	challenge = 13;
+        ivec_offset = 0;
 }
 
-int reconnect_server_socket(char *host, int port, std::string username, std::string password, int *socket_fd, const char *type, char is_server)
+protocol::~protocol()
+{
+	free(host);
+}
+
+void protocol::do_decrypt(unsigned char *buffer_in, unsigned char *buffer_out, int n_bytes)
+{
+	BF_cfb64_encrypt(buffer_in, buffer_out, n_bytes, &key, ivec, &ivec_offset, BF_DECRYPT);
+}
+
+void protocol::do_encrypt(unsigned char *buffer_in, unsigned char *buffer_out, int n_bytes)
+{
+	BF_cfb64_encrypt(buffer_in, buffer_out, n_bytes, &key, ivec, &ivec_offset, BF_ENCRYPT);
+}
+
+void protocol::error_sleep(int count)
+{
+	long int sleep_micro_seconds = myrand(count * 1000000) + 1;
+
+	dolog(LOG_WARNING, "Failed connecting, sleeping for %f seconds", (double)sleep_micro_seconds / 1000000.0);
+
+	usleep((long)sleep_micro_seconds);
+}
+
+void protocol::set_password(std::string password_in)
+{
+	int len = password_in.length();
+
+	BF_set_key(&key, len, (unsigned char *)password_in.c_str());
+}
+
+void protocol::init_ivec(std::string password_in, long long unsigned int rnd, long long unsigned int counter)
+{
+	calc_ivec((char *)password_in.c_str(), rnd, counter, ivec);
+}
+
+int protocol::reconnect_server_socket()
 {
 	char connect_msg = 0;
 	int count = 1;
@@ -107,21 +115,21 @@ int reconnect_server_socket(char *host, int port, std::string username, std::str
 	for(;;)
 	{
 		// connect to server
-		if (*socket_fd == -1)
+		if (socket_fd == -1)
 		{
 			dolog(LOG_INFO, "Connecting to %s:%d", host, port);
 			connect_msg = 1;
 
 			for(;;)
 			{
-				*socket_fd = connect_to(host, port);
-				if (*socket_fd != -1)
+				socket_fd = connect_to(host, port);
+				if (socket_fd != -1)
 				{
-					if (auth_client_server(*socket_fd, 10, username, password, &challenge) == 0)
+					if (auth_client_server(socket_fd, 10, username, password, &challenge) == 0)
 						break;
 
-					close(*socket_fd);
-					*socket_fd = -1;
+					close(socket_fd);
+					socket_fd = -1;
 				}
 
 				error_sleep(count);
@@ -140,9 +148,9 @@ int reconnect_server_socket(char *host, int port, std::string username, std::str
 
 			dolog(LOG_INFO, "Connected");
 
-			int len = strlen(type);
+			int len = type.length();
 			if (len > 1240)
-				error_exit("client/server-type too large %d (%s)", len, type);
+				error_exit("client/server-type too large %d (%s)", len, type.c_str());
 
 			if (len == 0)
 				error_exit("client/server-type should not be 0 bytes in size");
@@ -151,15 +159,15 @@ int reconnect_server_socket(char *host, int port, std::string username, std::str
 				make_msg((char *)buffer, 3, len);
 			else
 				make_msg((char *)buffer, 6, len);
-			strcat((char *)buffer, type);
+			strcat((char *)buffer, type.c_str());
 
 			int msg_len = strlen(buffer);
 
-			if (WRITE_TO(*socket_fd, buffer, msg_len, DEFAULT_COMM_TO) != msg_len)
+			if (WRITE_TO(socket_fd, buffer, msg_len, DEFAULT_COMM_TO) != msg_len)
 			{
 				dolog(LOG_INFO, "connection closed");
-				close(*socket_fd);
-				*socket_fd = -1;
+				close(socket_fd);
+				socket_fd = -1;
 
 				error_sleep(count);
 
@@ -173,7 +181,7 @@ int reconnect_server_socket(char *host, int port, std::string username, std::str
 	return 0;
 }
 
-int sleep_interruptable(int socket_fd, int how_long)
+int protocol::sleep_interruptable(int how_long)
 {
 	int rc = -1;
 	fd_set rfds;
@@ -212,7 +220,7 @@ int sleep_interruptable(int socket_fd, int how_long)
 	return 0;
 }
 
-int message_transmit_entropy_data(char *host, int port, int *socket_fd, std::string username, std::string password, const char *server_type, unsigned char *bytes_in, int n_bytes)
+int protocol::message_transmit_entropy_data(unsigned char *bytes_in, int n_bytes)
 {
 	if (n_bytes > 1249)
 		error_exit("message_transmit_entropy_data: too many bytes %d", n_bytes);
@@ -228,11 +236,11 @@ int message_transmit_entropy_data(char *host, int port, int *socket_fd, std::str
 		if (error_count > MAX_ERROR_SLEEP)
 			error_count = MAX_ERROR_SLEEP;
 
-                if (reconnect_server_socket(host, port, username, password, socket_fd, server_type, 1) == -1)
+                if (reconnect_server_socket() == -1)
                         continue;
 
-                disable_nagle(*socket_fd);
-                enable_tcp_keepalive(*socket_fd);
+                disable_nagle(socket_fd);
+                enable_tcp_keepalive(socket_fd);
 
 		dolog(LOG_DEBUG, "request to send %d bytes", n_bytes);
 
@@ -242,12 +250,12 @@ int message_transmit_entropy_data(char *host, int port, int *socket_fd, std::str
 		snprintf(header, sizeof(header), "0002%04d", n_bytes * 8);
 
 		// header
-		if (WRITE_TO(*socket_fd, (char *)header, 8, DEFAULT_COMM_TO) != 8)
+		if (WRITE_TO(socket_fd, (char *)header, 8, DEFAULT_COMM_TO) != 8)
 		{
 			dolog(LOG_INFO, "error transmitting header");
 
-			close(*socket_fd);
-			*socket_fd = -1;
+			close(socket_fd);
+			socket_fd = -1;
 
 			error_sleep(error_count);
 			continue;
@@ -256,12 +264,12 @@ int message_transmit_entropy_data(char *host, int port, int *socket_fd, std::str
 		// ack from server?
 	ignore_unsollicited_msg: // we jump to this label when unsollicited msgs are
 		// received during data-transmission handshake
-		if (READ_TO(*socket_fd, reply, 8, DEFAULT_COMM_TO) != 8)
+		if (READ_TO(socket_fd, reply, 8, DEFAULT_COMM_TO) != 8)
 		{
 			dolog(LOG_INFO, "error receiving ack/nack");
 
-			close(*socket_fd);
-			*socket_fd = -1;
+			close(socket_fd);
+			socket_fd = -1;
 
 			error_sleep(error_count);
 			continue;
@@ -302,7 +310,7 @@ int message_transmit_entropy_data(char *host, int port, int *socket_fd, std::str
 			unlock_mem(temp_buffer, with_hash_n);
 			free(temp_buffer);
 
-			if (WRITE_TO(*socket_fd, (char *)bytes_out, with_hash_n, DEFAULT_COMM_TO) != with_hash_n)
+			if (WRITE_TO(socket_fd, (char *)bytes_out, with_hash_n, DEFAULT_COMM_TO) != with_hash_n)
 			{
 				dolog(LOG_INFO, "error transmitting data");
 				free(bytes_out);
@@ -316,7 +324,7 @@ int message_transmit_entropy_data(char *host, int port, int *socket_fd, std::str
 				// only usefull for eb_proxy
 				dolog(LOG_DEBUG, "pool full, sleeping %d seconds (with ACK)", sleep_9003);
 				// same comments as for 9001 apply
-				sleep_interruptable(*socket_fd, sleep_9003);
+				sleep_interruptable(sleep_9003);
 			}
 
 			break;
@@ -331,7 +339,7 @@ int message_transmit_entropy_data(char *host, int port, int *socket_fd, std::str
 			// to pass or a 0010 to come in. in reality we just
 			// sleep until the first message comes in and then
 			// continue; it'll only be 0010 anyway
-			sleep_interruptable(*socket_fd, value);
+			sleep_interruptable(value);
 		}
 		else if (strcmp(reply, "0010") == 0)            // there's a need for data
 		{
@@ -355,7 +363,7 @@ int message_transmit_entropy_data(char *host, int port, int *socket_fd, std::str
 	return 0;
 }
 
-int request_bytes(int *socket_fd, char *host, int port, std::string username, std::string password, const char *client_type, char *where_to, int n_bits, bool fail_on_no_bits)
+int protocol::request_bytes(char *where_to, int n_bits, bool fail_on_no_bits)
 {
 	bool request_sent = false;
 
@@ -373,10 +381,10 @@ int request_bytes(int *socket_fd, char *host, int port, std::string username, st
 		if (error_count > MAX_ERROR_SLEEP)
 			error_count = MAX_ERROR_SLEEP;
 
-		if (*socket_fd == -1)
+		if (socket_fd == -1)
 			request_sent = false;
 
-                if (reconnect_server_socket(host, port, username, password, socket_fd, client_type, 1) == -1)
+                if (reconnect_server_socket() == -1)
                         error_exit("Failed to connect to %s:%d", host, port);
 
 		if (!request_sent || (sleep_trigger > 0.0 && get_ts() >= sleep_trigger))
@@ -384,10 +392,10 @@ int request_bytes(int *socket_fd, char *host, int port, std::string username, st
 			sleep_trigger = -1.0;
 
 			dolog(LOG_DEBUG, "Send request (%s)", request);
-			if (WRITE(*socket_fd, request, 8) != 8)
+			if (WRITE(socket_fd, request, 8) != 8)
 			{
-				close(*socket_fd);
-				*socket_fd = -1;
+				close(socket_fd);
+				socket_fd = -1;
 
 				error_sleep(error_count);
 
@@ -398,15 +406,15 @@ int request_bytes(int *socket_fd, char *host, int port, std::string username, st
 		}
 
 		char reply[8 + 1];
-		int rc = READ_TO(*socket_fd, reply, 8, DEFAULT_COMM_TO);
+		int rc = READ_TO(socket_fd, reply, 8, DEFAULT_COMM_TO);
 		if (rc == 0)
 			continue;
 		if (rc != 8)
 		{
 			dolog(LOG_INFO, "Read error, got %d of 8 bytes", rc);
 
-			close(*socket_fd);
-			*socket_fd = -1;
+			close(socket_fd);
+			socket_fd = -1;
 
 			error_sleep(error_count);
 
@@ -436,10 +444,10 @@ int request_bytes(int *socket_fd, char *host, int port, std::string username, st
                         snprintf(xmit_buffer, sizeof(xmit_buffer), "0005%04d", pingnr++);
                         dolog(LOG_DEBUG, "PING");
 
-                        if (WRITE_TO(*socket_fd, xmit_buffer, 8, DEFAULT_COMM_TO) != 8)
+                        if (WRITE_TO(socket_fd, xmit_buffer, 8, DEFAULT_COMM_TO) != 8)
                         {
-                                close(*socket_fd);
-                                *socket_fd = -1;
+                                close(socket_fd);
+                                socket_fd = -1;
                         }
                 }
                 else if (memcmp(reply, "0007", 4) == 0)  /* kernel entropy count */
@@ -454,10 +462,10 @@ int request_bytes(int *socket_fd, char *host, int port, std::string username, st
                         dolog(LOG_DEBUG, "Send kernel entropy count %d bits", entropy_count);
 
 			int send_len = strlen(xmit_buffer);
-                        if (WRITE_TO(*socket_fd, xmit_buffer, send_len, DEFAULT_COMM_TO) != send_len)
+                        if (WRITE_TO(socket_fd, xmit_buffer, send_len, DEFAULT_COMM_TO) != send_len)
                         {
-                                close(*socket_fd);
-                                *socket_fd = -1;
+                                close(socket_fd);
+                                socket_fd = -1;
                         }
                 }
                 else if (memcmp(reply, "0009", 4) == 0)
@@ -495,14 +503,14 @@ int request_bytes(int *socket_fd, char *host, int port, std::string username, st
 			if (!buffer_in)
 				error_exit("out of memory allocating %d bytes", will_get_n_bytes);
 
-			if (READ_TO(*socket_fd, (char *)buffer_in, xmit_bytes, DEFAULT_COMM_TO) != xmit_bytes)
+			if (READ_TO(socket_fd, (char *)buffer_in, xmit_bytes, DEFAULT_COMM_TO) != xmit_bytes)
 			{
 				dolog(LOG_INFO, "Network read error (data)");
 
 				free(buffer_in);
 
-				close(*socket_fd);
-				*socket_fd = -1;
+				close(socket_fd);
+				socket_fd = -1;
 
 				request_sent = false;
 
@@ -540,8 +548,8 @@ int request_bytes(int *socket_fd, char *host, int port, std::string username, st
 		{
 			dolog(LOG_WARNING, "Unknown message %s received", reply);
 
-			close(*socket_fd);
-			*socket_fd = -1;
+			close(socket_fd);
+			socket_fd = -1;
 
 			error_sleep(error_count);
 		}
