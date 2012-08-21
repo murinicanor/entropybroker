@@ -8,6 +8,7 @@
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <openssl/blowfish.h>
 
 const char *server_type = "server_kernel v" VERSION;
 const char *pid_file = PID_DIR "/server_kernel.pid";
@@ -44,7 +45,6 @@ int main(int argc, char *argv[])
 {
 	char *host = NULL;
 	int port = 55225;
-	int socket_fd = -1;
 	int c;
 	bool do_not_fork = false, log_console = false, log_syslog = false;
 	char *log_logfile = NULL;
@@ -102,7 +102,6 @@ int main(int argc, char *argv[])
 
 	if (username.length() == 0 || password.length() == 0)
 		error_exit("username + password cannot be empty");
-	set_password(password);
 
 	if (!host && !bytes_file && !show_bps)
 		error_exit("no host to connect to/file to write to given");
@@ -122,6 +121,8 @@ int main(int argc, char *argv[])
 
 	write_pid(pid_file);
 
+	protocol *p = new protocol(host, port, username, password, true, server_type);
+
 	signal(SIGPIPE, SIG_IGN);
 	signal(SIGTERM, sig_handler);
 	signal(SIGINT , sig_handler);
@@ -139,13 +140,10 @@ int main(int argc, char *argv[])
 		{
 			dolog(LOG_WARNING, "Problem reading from kernel entropy buffer!");
 
-			if (socket_fd != -1 && sleep_interruptable(socket_fd, 5) != 0)
+			if (p -> sleep_interruptable(5) != 0)
 			{
 				dolog(LOG_INFO, "connection closed");
-
-				close(socket_fd);
-				socket_fd = -1;
-
+				p -> drop();
 				continue;
 			}
 		}
@@ -157,13 +155,10 @@ int main(int argc, char *argv[])
 
 		if (host)
 		{
-			if (message_transmit_entropy_data(host, port, &socket_fd, username, password, server_type, bytes, sizeof bytes) == -1)
+			if (p -> message_transmit_entropy_data(bytes, sizeof bytes) == -1)
 			{
 				dolog(LOG_INFO, "connection closed");
-
-				close(socket_fd);
-				socket_fd = -1;
-
+				p -> drop();
 				continue;
 			}
 		}
@@ -188,6 +183,8 @@ int main(int argc, char *argv[])
 
 	memset(bytes, 0x00, sizeof bytes);
 	unlink(pid_file);
+
+	delete p;
 
 	return 0;
 }

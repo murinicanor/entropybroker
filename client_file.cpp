@@ -15,6 +15,7 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <libgen.h>
+#include <openssl/blowfish.h>
 
 #include "error.h"
 #include "utils.h"
@@ -154,6 +155,8 @@ int main(int argc, char *argv[])
 	(void)umask(0177);
 	set_logging_parameters(log_console, log_logfile, log_syslog);
 
+	protocol *p = new protocol(host, port, username, password, false, client_type);
+
 	FILE *fh = fopen(file, "wb");
 	if (!fh)
 		error_exit("Failed to create file %s", file);
@@ -176,8 +179,6 @@ int main(int argc, char *argv[])
 	signal(SIGINT , sig_handler);
 	signal(SIGQUIT, sig_handler);
 
-	int socket_fd = -1;
-
 	char buffer[1249];
 	lock_mem(buffer, sizeof buffer);
 	while(count > 0 || count == -1)
@@ -187,7 +188,7 @@ int main(int argc, char *argv[])
 
 		dolog(LOG_INFO, "will get %d bits", n_bits_to_get);
 
-		int n_bytes = request_bytes(&socket_fd, host, port, username, password, client_type, buffer, n_bits_to_get, false);
+		int n_bytes = p -> request_bytes(buffer, n_bits_to_get, false);
 
 		count -= n_bytes;
 
@@ -200,10 +201,11 @@ int main(int argc, char *argv[])
 	memset(buffer, 0x00, sizeof buffer);
 	unlock_mem(buffer, sizeof buffer);
 
-	close(socket_fd);
 	fclose(fh);
 
 	unlink(pid_file);
+
+	delete p;
 
 	dolog(LOG_INFO, "Finished");
 

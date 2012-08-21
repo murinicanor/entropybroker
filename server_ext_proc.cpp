@@ -11,6 +11,7 @@
 #include <fcntl.h>
 #include <termios.h>
 #include <sys/wait.h>
+#include <openssl/blowfish.h>
 
 #define SHELL "/bin/bash"
 
@@ -100,7 +101,6 @@ int main(int argc, char *argv[])
 
 	if (username.length() == 0 || password.length() == 0)
 		error_exit("username + password cannot be empty");
-	set_password(password);
 
 	if (!host)
 		error_exit("no host to connect to given");
@@ -123,6 +123,8 @@ int main(int argc, char *argv[])
 
 	write_pid(pid_file);
 
+	protocol *p = new protocol(host, port, username, password, true, server_type);
+
 	signal(SIGPIPE, SIG_IGN);
 	signal(SIGTERM, sig_handler);
 	signal(SIGINT , sig_handler);
@@ -130,7 +132,6 @@ int main(int argc, char *argv[])
 	signal(SIGCHLD, sig_handler);
 
 	bool data = false;
-	int socket_fd = -1;
 	int got_bytes = -1;
 	pid_t child_pid;
 	int child_fd = -1;
@@ -167,22 +168,19 @@ int main(int argc, char *argv[])
 
 		if (data)
 		{
-			unsigned char *p = (unsigned char *)buffer;
+			unsigned char *pnt = (unsigned char *)buffer;
 			while(got_bytes > 0)
 			{
 				int cur_count = min(got_bytes, 1249);
 
-				if (message_transmit_entropy_data(host, port, &socket_fd, username, password, server_type, p, cur_count) == -1)
+				if (p -> message_transmit_entropy_data(pnt, cur_count) == -1)
 				{
 					dolog(LOG_INFO, "connection closed");
-
-					close(socket_fd);
-					socket_fd = -1;
-
+					p -> drop();
 					break;
 				}
 
-				p += cur_count;
+				pnt += cur_count;
 				got_bytes -= cur_count;
 			}
 
@@ -193,6 +191,8 @@ int main(int argc, char *argv[])
 	unlink(pid_file);
 
 	memset(buffer, 0x00, sizeof buffer);
+
+	delete p;
 
 	return 0;
 }

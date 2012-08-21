@@ -10,6 +10,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <termios.h>
+#include <openssl/blowfish.h>
 
 const char *server_type = "server_push_file v" VERSION;
 const char *pid_file = PID_DIR "/server_push_file.pid";
@@ -93,7 +94,6 @@ int main(int argc, char *argv[])
 
 	if (username.length() == 0 || password.length() == 0)
 		error_exit("username + password cannot be empty");
-	set_password(password);
 
 	if (!host)
 		error_exit("no host to connect to given");
@@ -120,13 +120,14 @@ int main(int argc, char *argv[])
 
 	write_pid(pid_file);
 
+	protocol *p = new protocol(host, port, username, password, true, server_type);
+
 	signal(SIGPIPE, SIG_IGN);
 	signal(SIGTERM, sig_handler);
 	signal(SIGINT , sig_handler);
 	signal(SIGQUIT, sig_handler);
 
 	bool data = false;
-	int socket_fd = -1;
 	int got_bytes = -1;
 	for(;!feof(fh);)
 	{
@@ -142,11 +143,10 @@ int main(int argc, char *argv[])
 
 		if (data)
 		{
-			if (message_transmit_entropy_data(host, port, &socket_fd, username, password, server_type, bytes, got_bytes) == -1)
+			if (p -> message_transmit_entropy_data(bytes, got_bytes) == -1)
 			{
 				dolog(LOG_INFO, "connection closed");
-				close(socket_fd);
-				socket_fd = -1;
+				p -> drop();
 				continue;
 			}
 
@@ -157,6 +157,8 @@ int main(int argc, char *argv[])
 	fclose(fh);
 
 	unlink(pid_file);
+
+	delete p;
 
 	return 0;
 }
