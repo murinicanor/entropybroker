@@ -557,3 +557,10 @@ int protocol::request_bytes(char *where_to, int n_bits, bool fail_on_no_bits)
 
 	return 0;
 }
+
+void protocol::drop()
+{
+	close(socket_fd);
+
+	socket_fd = -1;
+}

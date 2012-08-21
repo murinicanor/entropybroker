@@ -17,6 +17,7 @@
 #include <sys/time.h>
 #include <errno.h>
 #include <alsa/asoundlib.h>
+#include <openssl/blowfish.h>
 
 const char *server_type = "eb_server_audio v" VERSION;
 const char *pid_file = PID_DIR "/eb_server_audio.pid";
@@ -118,11 +119,12 @@ void main_loop(char *host, int port, char *bytes_file, char show_bps, std::strin
 	snd_pcm_t *chandle;
 	snd_pcm_format_t format;
 	int err;
-	int socket_fd = -1;
 	unsigned char bytes[1249]; // 1249 * 8: 9992, must be less then 9999
 	int bytes_out = 0;
 	double start_ts, cur_start_ts;
 	long int total_byte_cnt = 0;
+
+	protocol *p = new protocol(host, port, username, password, true, server_type);
 
 	lock_mem(bytes, sizeof bytes);
 
@@ -256,11 +258,10 @@ void main_loop(char *host, int port, char *bytes_file, char show_bps, std::strin
 						{
 							emit_buffer_to_file(bytes_file, bytes, bytes_out);
 						}
-						else if (message_transmit_entropy_data(host, port, &socket_fd, username, password, server_type, bytes, bytes_out) == -1)
+						else if (p -> message_transmit_entropy_data(bytes, bytes_out) == -1)
 						{
 							dolog(LOG_INFO, "connection closed");
-							close(socket_fd);
-							socket_fd = -1;
+							p -> drop();
 						}
 
 						bytes_out = 0;
@@ -299,6 +300,8 @@ void main_loop(char *host, int port, char *bytes_file, char show_bps, std::strin
 	unlock_mem(bytes, sizeof bytes);
 
 	snd_pcm_close(chandle);
+
+	delete p;
 }
 
 int main(int argc, char *argv[])
@@ -363,7 +366,6 @@ int main(int argc, char *argv[])
 
 	if (username.length() == 0 || password.length() == 0)
 		error_exit("username + password cannot be empty");
-	set_password(password);
 
 	if (!host && !bytes_file)
 		error_exit("no host to connect to given");
