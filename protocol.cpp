@@ -74,6 +74,9 @@ protocol::protocol(char *host_in, int port_in, std::string username_in, std::str
 protocol::~protocol()
 {
 	free(host);
+
+	if (socket_fd != -1)
+		close(socket_fd);
 }
 
 void protocol::do_decrypt(unsigned char *buffer_in, unsigned char *buffer_out, int n_bytes)
@@ -183,6 +186,9 @@ int protocol::reconnect_server_socket()
 
 int protocol::sleep_interruptable(int how_long)
 {
+	if (socket_fd == -1)
+		return -1;
+
 	int rc = -1;
 	fd_set rfds;
 

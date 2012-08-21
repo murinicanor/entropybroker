@@ -30,12 +30,12 @@ private:
 	int reconnect_server_socket();
 	void set_password(std::string password);
 	void error_sleep(int count);
-	int sleep_interruptable(int how_long);
 
 public:
 	protocol(char *host, int port, std::string username, std::string password, bool is_server, std::string type);
 	~protocol();
 
+	int sleep_interruptable(int how_long);
 	int message_transmit_entropy_data(unsigned char *bytes_in, int n_bytes);
 	int request_bytes(char *where_to, int n_bits, bool fail_on_no_bits);
 	void drop();

@@ -13,6 +13,7 @@
 #include <termios.h>
 #include <sys/socket.h>
 #include <sys/un.h>
+#include <openssl/blowfish.h>
 
 #include "error.h"
 #include "utils.h"
@@ -76,7 +77,6 @@ int main(int argc, char *argv[])
 	unsigned char bytes[1249];
 	char *host = NULL;
 	int port = 55225;
-	int socket_fd = -1;
 	int read_fd = -1;
 	int c;
 	bool do_not_fork = false, log_console = false, log_syslog = false;
@@ -160,7 +160,6 @@ int main(int argc, char *argv[])
 
 	if (username.length() == 0 || password.length() == 0)
 		error_exit("username + password cannot be empty");
-	set_password(password);
 
 	if (!host && !bytes_file)
 		error_exit("no host to connect to given");
@@ -175,6 +174,8 @@ int main(int argc, char *argv[])
 	lock_mem(bytes, sizeof bytes);
 
 	set_logging_parameters(log_console, log_logfile, log_syslog);
+
+	protocol *p = new protocol(host, port, username, password, true, server_type);
 
 	if (device)
 		read_fd = open_unixdomain_socket(device);
@@ -225,12 +226,10 @@ int main(int argc, char *argv[])
 			}
 			else
 			{
-				if (message_transmit_entropy_data(host, port, &socket_fd, username, password, server_type, bytes, index) == -1)
+				if (p -> message_transmit_entropy_data(bytes, index) == -1)
 				{
 					dolog(LOG_INFO, "connection closed");
-
-					close(socket_fd);
-					socket_fd = -1;
+					p -> drop();
 				}
 			}
 
@@ -256,13 +255,10 @@ int main(int argc, char *argv[])
 
 		if (index == 0 || bytes_to_read == 0)
 		{
-			if (socket_fd != -1 && sleep_interruptable(socket_fd, read_interval) != 0)
+			if (p -> sleep_interruptable(read_interval) != 0)
 			{
 				dolog(LOG_INFO, "connection closed");
-
-				close(socket_fd);
-				socket_fd = -1;
-
+				p -> drop();
 				continue;
 			}
 		}
@@ -270,6 +266,8 @@ int main(int argc, char *argv[])
 
 	memset(bytes, 0x00, sizeof bytes);
 	unlink(pid_file);
+
+	delete p;
 
 	return 0;
 }

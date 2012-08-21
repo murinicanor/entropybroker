@@ -14,6 +14,7 @@
 #include <stddef.h>
 #include <sys/socket.h>
 #include <sys/un.h>
+#include <openssl/blowfish.h>
 
 #include "error.h"
 #include "utils.h"
@@ -42,7 +43,7 @@ void egd_get__failure(int fd)
 		dolog(LOG_INFO, "short write on egd client (# bytes)");
 }
 
-void egd_get(int fd, char *host, int port, bool blocking, std::string username, std::string password)
+void egd_get(int fd, protocol *p, bool blocking)
 {
 	unsigned char n_bytes_to_get;
 
@@ -61,8 +62,7 @@ void egd_get(int fd, char *host, int port, bool blocking, std::string username, 
 		error_exit("Out of memory");
 	lock_mem(buffer, n_bytes_to_get);
 
-	int socket_fd = -1;
-	int n_bytes = request_bytes(&socket_fd, host, port, username, password, client_type, buffer, n_bits_to_get, !blocking);
+	int n_bytes = p -> request_bytes(buffer, n_bits_to_get, !blocking);
 	if (n_bytes == 0)
 		egd_get__failure(fd);
 	else
@@ -78,8 +78,6 @@ void egd_get(int fd, char *host, int port, bool blocking, std::string username, 
 
 	unlock_mem(buffer, n_bytes);
 	free(buffer);
-
-	close(socket_fd);
 }
 
 void egd_entropy_count(int fd)
@@ -91,7 +89,7 @@ void egd_entropy_count(int fd)
 		dolog(LOG_INFO, "short write on egd client");
 }
 
-void egd_put(int fd, char *host, int port, std::string username, std::string password)
+void egd_put(int fd, protocol *p)
 {
 	unsigned char cmd[3];
 	if (READ(fd, (char *)cmd, 3) != 3)
@@ -114,7 +112,7 @@ void egd_put(int fd, char *host, int port, std::string username, std::string pas
 	}
 
 	int socket_fd = -1;
-	(void)message_transmit_entropy_data(host, port, &socket_fd, username, password, client_type, (unsigned char *)buffer, byte_cnt);
+	(void)p -> message_transmit_entropy_data((unsigned char *)buffer, byte_cnt);
 
 	memset(buffer, 0x00, sizeof buffer);
 	unlock_mem(buffer, sizeof buffer);
@@ -122,7 +120,7 @@ void egd_put(int fd, char *host, int port, std::string username, std::string pas
 	close(socket_fd);
 }
 
-void handle_client(int fd, char *host, int port, std::string username, std::string password)
+void handle_client(int fd, protocol *p)
 {
 	unsigned char egd_msg;
 
@@ -135,11 +133,11 @@ void handle_client(int fd, char *host, int port, std::string username, std::stri
 	if (egd_msg == 0)	// get entropy count
 		egd_entropy_count(fd);
 	else if (egd_msg == 1)	// get data, non blocking
-		egd_get(fd, host, port, false, username, password);
+		egd_get(fd, p, false);
 	else if (egd_msg == 2)	// get data, blocking
-		egd_get(fd, host, port, true, username, password);
+		egd_get(fd, p, true);
 	else if (egd_msg == 3)	// put data
-		egd_put(fd, host, port, username, password);
+		egd_put(fd, p);
 }
 
 int open_unixdomain_socket(char *path, int nListen)
@@ -248,6 +246,8 @@ int main(int argc, char *argv[])
 
 	set_logging_parameters(log_console, log_logfile, log_syslog);
 
+	protocol *p = new protocol(host, port, username, password, false, client_type);
+
 	listen_fd = open_unixdomain_socket(uds, nListen);
 
 	if (!do_not_fork)
@@ -279,7 +279,7 @@ int main(int argc, char *argv[])
 
 			if (pid == 0)
 			{
-				handle_client(fd, host, port, username, password);
+				handle_client(fd, p);
 
 				if (!do_not_fork)
 					exit(0);
