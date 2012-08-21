@@ -298,7 +298,34 @@ to:
 	RANDFILE = /dev/urandom
 
 
-Evaluation Entropy Broker
+Writing your own server/client
+------------------------------
+- include <protocol.h>, <string>, <openssl/blowfish.h>
+- instantiate a 'protocol'-class:
+  protocol *p = new protocol(char *host, int port, std::string username, std::string password, bool is_server, std::string type);
+      host + port = entropy broker
+      username + password = authentication against broker
+      is_server = false for client, true for server
+      type = name of server/client with any details added
+- then to transmit data:
+  int message_transmit_entropy_data(unsigned char *bytes, int n_bytes);
+      bytes / n_bytes = where from, how many
+      returns 0 for ok, -1 for error
+- to retrieve data:
+  int request_bytes(char *where_to, int n_bits, bool fail_on_no_bits);
+      where_to = where to place the data
+      n_bits = number of bits requested, broker may return less
+      fail_on_no_bits = if the broker does not have data and this
+                        is set to true, then this method won't
+                        keep trying
+- when linking, add the following files:
+  error.cpp log.cpp kernel_prng_rw.cpp protocol.cpp utils.cpp
+  server_utils.cpp auth.cpp my_pty.cpp kernel_prng_io.cpp
+  also add the following libraries:
+  -lcrypto -lrt -lz -lutil -rdynamic
+
+
+Evaluating Entropy Broker
 -------------------------
 Use client_file to write a couple of bytes to a file.
 Then with dieharder:
