@@ -18,7 +18,7 @@
 
 int auth_eb_user(int fd, int to, std::map<std::string, std::string> *users, std::string & password, long long unsigned int *challenge, bool is_proxy_auth)
 {
-	const char *ts = is_proxy_auth ? "Connection" : "Proxy-auth";
+	const char *ts = is_proxy_auth ? "Proxy-auth" : "Connection";
 
 	long long unsigned int rnd = 9;
 
