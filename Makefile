@@ -169,6 +169,8 @@ package:
 	tar cf - doc --exclude=.svn  | tar xvf - -C eb-$(VERSION)
 	tar czf eb-$(VERSION).tgz eb-$(VERSION)
 	rm -rf eb-$(VERSION)
+	#
+	cp design.txt ~/site/entropybroker/
 
 coverity: clean
 	rm -rf cov-int
