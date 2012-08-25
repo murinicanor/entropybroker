@@ -572,3 +572,53 @@ void protocol::drop()
 
 	socket_fd = -1;
 }
+
+bool protocol::proxy_auth_user(std::string pa_username, std::string pa_password)
+{
+	bool rc = false;
+	int count = 1;
+
+	for(;;)
+	{
+		bool ok = true;
+
+		if (reconnect_server_socket() == -1)
+			error_exit("Failed to connect to %s:%d", host, port);
+
+		char *request = "0011";
+		if (ok == true && WRITE_TO(socket_fd, request, 4, DEFAULT_COMM_TO) != 4)
+			ok = false;
+
+		long long unsigned int dummy_challenge = 123;
+		if (ok == true && auth_client_server_user(socket_fd, DEFAULT_COMM_TO, pa_username, pa_password, &dummy_challenge) != 0)
+			ok = false;
+
+		char reply[8 + 1];
+		if (ok == true && READ_TO(socket_fd, reply, 8, DEFAULT_COMM_TO) != 8)
+			ok = false;
+
+		if (ok == true && memcmp(reply, "0012", 4) != 0)
+			ok = false;
+
+		if (ok == true)
+		{
+			if (memcmp(&reply[4], "0000", 4) == 0)
+				rc = true;
+			else
+				rc = false;
+
+			break;
+		}
+
+		dolog(LOG_INFO, "connection closed");
+
+		close(socket_fd);
+		socket_fd = -1;
+
+		error_sleep(count);
+		if (count < 16)
+			count++;
+	}
+
+	return rc;
+}

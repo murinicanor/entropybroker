@@ -39,4 +39,5 @@ public:
 	int message_transmit_entropy_data(unsigned char *bytes_in, int n_bytes);
 	int request_bytes(char *where_to, int n_bits, bool fail_on_no_bits);
 	void drop();
+	bool proxy_auth_user(std::string username, std::string password);
 };

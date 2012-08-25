@@ -147,22 +147,10 @@ bool get_auth_from_file(char *filename, std::string & username, std::string & pa
 	return true;
 }
 
-int auth_client_server(int fd, int to, std::string & username, std::string & password, long long unsigned int *challenge)
+int auth_client_server_user(int fd, int to, std::string & username, std::string & password, long long unsigned int *challenge)
 {
 	char rnd_str[128];
 	unsigned char rnd_str_size;
-	char prot_ver[4 + 1];
-
-	if (READ_TO(fd, prot_ver, 4, to) <= 0)
-	{
-		dolog(LOG_INFO, "Connection for fd %d closed (0)", fd);
-		return -1;
-	}
-	prot_ver[4] = 0x00;
-	int eb_ver = atoi(prot_ver);
-	if (eb_ver != PROTOCOL_VERSION)
-		error_exit("Broker server has unsupported protocol version %d! (expecting %d)", eb_ver, PROTOCOL_VERSION);
-
 	if (READ_TO(fd, (char *)&rnd_str_size, 1, to) <= 0)
 	{
 		dolog(LOG_INFO, "Connection for fd %d closed (1)", fd);
@@ -206,6 +194,23 @@ int auth_client_server(int fd, int to, std::string & username, std::string & pas
 	}
 
 	return 0;
+}
+
+int auth_client_server(int fd, int to, std::string & username, std::string & password, long long unsigned int *challenge)
+{
+	char prot_ver[4 + 1];
+
+	if (READ_TO(fd, prot_ver, 4, to) <= 0)
+	{
+		dolog(LOG_INFO, "Connection for fd %d closed (0)", fd);
+		return -1;
+	}
+	prot_ver[4] = 0x00;
+	int eb_ver = atoi(prot_ver);
+	if (eb_ver != PROTOCOL_VERSION)
+		error_exit("Broker server has unsupported protocol version %d! (expecting %d)", eb_ver, PROTOCOL_VERSION);
+
+	return auth_client_server_user(fd, to, username, password, challenge);
 }
 
 std::map<std::string, std::string> * load_usermap(std::string filename)

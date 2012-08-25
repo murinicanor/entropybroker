@@ -119,10 +119,11 @@ int do_proxy_auth(client_t *client, config_t *config, std::map<std::string, std:
 	std::string password;
 	long long unsigned int challenge;
 
+	// 0012
 	if (auth_eb_user(client -> socket_fd, config -> communication_timeout, user_map, password, &challenge, true) == 0)
-		make_msg(reply, 12, 0);
+		make_msg(reply, 12, 0); // 0 == OK
 	else
-		make_msg(reply, 12, 1);
+		make_msg(reply, 12, 1); // 1 == FAIL
 
 	return WRITE_TO(client -> socket_fd, reply, 8, config -> communication_timeout) == 8 ? 0 : -1;
 }
