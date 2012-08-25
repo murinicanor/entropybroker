@@ -27,7 +27,7 @@
 
 #define DEFAULT_COMM_TO 15
 const char *pid_file = PID_DIR "/proxy_knuth.pid";
-const char *client_type = "bla";
+const char *client_type = "proxy_knuth";
 
 void sig_handler(int sig)
 {
@@ -36,71 +36,33 @@ void sig_handler(int sig)
 	exit(0);
 }
 
-void help(bool is_eb_client_file)
+void help()
 {
 	printf("-i host   entropy_broker-host to connect to\n");
-	if (is_eb_client_file)
-		printf("-c count  number of BYTES, 0=no limit\n");
-	if (is_eb_client_file)
-		printf("-f file   write bytes to \"file\"\n");
+	printf("-j adapter  adapter to listen on\n");
+	printf("-p port   port to listen on\n");
 	printf("-l file   log to file 'file'\n");
 	printf("-s        log to syslog\n");
 	printf("-n        do not fork\n");
 	printf("-P file   write pid to file\n");
 	printf("-X file   read username+password from file\n");
-	if (!is_eb_client_file)
-	{
-		printf("-S time   how long to sleep between each iteration\n");
-		printf("-b x      how many BYTES to process each iteration\n");
-	}
 }
 
 int main(int argc, char *argv[])
 {
-	char *host = NULL;
-	int port = 55225;
+	char *host = NULL, *listen_adapter = NULL;
+	int port = 55225, listen_port = 55225;
 	int c;
 	bool do_not_fork = false, log_console = false, log_syslog = false;
 	char *log_logfile = NULL;
-	int count = 0;
-	char *file = NULL;
-	int block_size = 1249;
-	int sleep_time = 0;
-	char *prog = basename(strdup(argv[0]));
 	std::string username, password;
-	bool is_eb_client_file = strcmp(prog, "eb_client_file") == 0;
-
-	if (!is_eb_client_file)
-		file = (char *)"/dev/random";
 
 	printf("proxy_knuth, (C) 2009-2012 by folkert@vanheusden.com\n");
 
-	while((c = getopt(argc, argv, "b:S:hc:f:X:P:i:l:sn")) != -1)
+	while((c = getopt(argc, argv, "hf:X:P:i:l:sn")) != -1)
 	{
 		switch(c)
 		{
-			case 'b':
-				block_size = atoi(optarg);
-				if (block_size < 1)
-					error_exit("invalid block size");
-				break;
-
-			case 'S':
-				sleep_time = atoi(optarg);
-				if (sleep_time < 1)
-					error_exit("invalid sleep time");
-				break;
-
-			case 'c':
-				count = atoi(optarg);
-				if (count <= 0)
-					count = -1;
-				break;
-
-			case 'f':
-				file = optarg;
-				break;
-
 			case 'X':
 				get_auth_from_file(optarg, username, password);
 				break;
@@ -127,11 +89,11 @@ int main(int argc, char *argv[])
 				break;
 
 			case 'h':
-				help(is_eb_client_file);
+				help();
 				return 0;
 
 			default:
-				help(is_eb_client_file);
+				help();
 				return 1;
 		}
 	}
@@ -142,20 +104,10 @@ int main(int argc, char *argv[])
 	if (!host)
 		error_exit("No host to connect to selected");
 
-	if (!file)
-		error_exit("No file to write to selected");
-
-	if (count < 1)
-		error_exit("Count must be >= 1");
-
 	(void)umask(0177);
 	set_logging_parameters(log_console, log_logfile, log_syslog);
 
 	protocol *p = new protocol(host, port, username, password, false, client_type);
-
-	FILE *fh = fopen(file, "wb");
-	if (!fh)
-		error_exit("Failed to create file %s", file);
 
 	if (chdir("/") == -1)
 		error_exit("chdir(/) failed");
@@ -175,35 +127,74 @@ int main(int argc, char *argv[])
 	signal(SIGINT , sig_handler);
 	signal(SIGQUIT, sig_handler);
 
-	char buffer[1249];
-	lock_mem(buffer, sizeof buffer);
-	// while(count > 0 || count == -1)
-	// {
-		int n_bytes_to_get = min(block_size, min(count <= 0 ? 1249 : count, 1249));
-		int n_bits_to_get = n_bytes_to_get * 8;
+	int fds_clients[] = { -1, -1 };
+	int listen_socket_fd = start_listen(listen_adapter, listen_port, 5);
 
-		dolog(LOG_INFO, "will get %d bits", n_bits_to_get);
+	for(;;)
+	{
+		fd_set rfds;
+		FD_ZERO(&rfds);
 
-		int n_bytes = p -> request_bytes(buffer, n_bits_to_get, false);
+		int max_fd = -1;
 
-		count -= n_bytes;
+		FD_SET(listen_socket_fd, &rfds);
+		max_fd = max(max_fd, listen_socket_fd);
 
-		if (fwrite(buffer, 1, n_bytes, fh) != (size_t)n_bytes)
-			error_exit("Failed to write %d bytes to file", n_bytes);
+		if (fds_clients[0] != -1)
+		{
+			FD_SET(fds_clients[0], &rfds);
+			max_fd = max(max_fd, fds_clients[0]);
+		}
 
-		if (sleep_time > 0)
-			sleep(sleep_time);
-	// }
-	memset(buffer, 0x00, sizeof buffer);
-	unlock_mem(buffer, sizeof buffer);
+		if (fds_clients[1] != -1)
+		{
+			FD_SET(fds_clients[1], &rfds);
+			max_fd = max(max_fd, fds_clients[0]);
+		}
 
-	fclose(fh);
+		if (select(max_fd + 1, &rfds, NULL, NULL, NULL) == -1)
+		{
+			if (errno != EINTR)
+				error_exit("select failed");
+
+			continue;
+		}
+
+		if (fds_clients[0] != -1 && FD_ISSET(fds_clients[0], &rfds))
+		{
+		}
+
+		if (fds_clients[1] != -1 && FD_ISSET(fds_clients[1], &rfds))
+		{
+		}
+
+		if (FD_ISSET(listen_socket_fd, &rfds))
+		{
+			if (fds_clients[0] != -1 && fds_clients[1] != -1)
+			{
+				close(fds_clients[0]);
+				close(fds_clients[1]);
+				fds_clients[0] = -1;
+				fds_clients[1] = -1;
+			}
+
+			struct sockaddr_in client_addr;
+			socklen_t client_addr_len = sizeof(client_addr);
+			int new_socket_fd = accept(listen_socket_fd, (struct sockaddr *)&client_addr, &client_addr_len);
+
+			if (fds_clients[0] == -1)
+				fds_clients[0] = new_socket_fd;
+			else if (fds_clients[1] == -1)
+				fds_clients[1] = new_socket_fd;
+		}
+	}
 
 	printf("bla\n");
-	printf("%d\n", p -> proxy_auth_user(std::string("123"), std::string("456")));
-	printf("%d\n", p -> proxy_auth_user(std::string("joe_user"), std::string("my_password")));
-
-	unlink(pid_file);
+	for(int loop=0; loop<1000; loop++)
+	{
+		p -> proxy_auth_user(std::string("123"), std::string("456"));
+		p -> proxy_auth_user(std::string("joe_user"), std::string("my_password"));
+	}
 
 	delete p;
 
