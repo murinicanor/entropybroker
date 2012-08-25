@@ -42,7 +42,7 @@ extern const char *pid_file;
 int send_denied_empty(int fd, statistics_t *stats, config_t *config)
 {
 	int seconds = config -> default_sleep_when_pools_empty; // & default_max_sleep_when_pools_empty
-	char buffer[4+4+1];
+	char buffer[4 + 4 + 1];
 
 	stats -> n_times_empty++;
 
@@ -53,7 +53,7 @@ int send_denied_empty(int fd, statistics_t *stats, config_t *config)
 
 int send_denied_quota(int fd, statistics_t *stats, config_t *config)
 {
-	char buffer[4+4+1];
+	char buffer[4 + 4 + 1];
 
 	stats -> n_times_quota++;
 
@@ -64,7 +64,7 @@ int send_denied_quota(int fd, statistics_t *stats, config_t *config)
 
 int send_denied_full(client_t *client, pools *ppools, statistics_t *stats, config_t *config)
 {
-	char buffer[4+4+1];
+	char buffer[4 + 4 + 1];
 	int seconds = config -> default_sleep_time_when_pools_full;
 
 	stats -> n_times_full++;
@@ -81,7 +81,7 @@ int send_denied_full(client_t *client, pools *ppools, statistics_t *stats, confi
 
 int send_accepted_while_full(client_t *client, config_t *config)
 {
-	char buffer[4+4+1];
+	char buffer[4 + 4 + 1];
 
 	make_msg(buffer, 9003, config -> default_sleep_time_when_pools_full);
 
@@ -95,7 +95,7 @@ int send_accepted_while_full(client_t *client, config_t *config)
 
 int send_got_data(int fd, pools *ppools, config_t *config)
 {
-	char buffer[4+4+1];
+	char buffer[4 + 4 + 1];
 
 	// data is an estimate; it can be different anyway as other clients may come first
 	make_msg(buffer, 9, min(9999, ppools -> get_bit_sum())); // 0009
@@ -105,11 +105,26 @@ int send_got_data(int fd, pools *ppools, config_t *config)
 
 int send_need_data(int fd, config_t *config)
 {
-	char buffer[4+4+1];
+	char buffer[4 + 4 + 1];
 
 	make_msg(buffer, 10, 0); // 0010 0000
 
 	return WRITE_TO(fd, buffer, 8, config -> communication_timeout) == 8 ? 0 : -1;
+}
+
+int do_proxy_auth(client_t *client, config_t *config, std::map<std::string, std::string> *user_map)
+{
+	char reply[4 + 4 + 1];
+
+	std::string password;
+	long long unsigned int challenge;
+
+	if (auth_eb_user(client -> socket_fd, config -> communication_timeout, user_map, password, &challenge, true) == 0)
+		make_msg(reply, 12, 0);
+	else
+		make_msg(reply, 12, 1);
+
+	return WRITE_TO(client -> socket_fd, reply, 8, config -> communication_timeout) == 8 ? 0 : -1;
 }
 
 int do_client_get(pools *ppools, client_t *client, statistics_t *stats, config_t *config, fips140 *eb_output_fips140, scc *eb_output_scc, bool *no_bits)
@@ -226,7 +241,7 @@ int do_client_get(pools *ppools, client_t *client, statistics_t *stats, config_t
 
 int do_client_put(pools *ppools, client_t *client, statistics_t *stats, config_t *config, bool *new_bits, bool *is_full)
 {
-	char msg[4+4+1];
+	char msg[4 + 4 + 1];
 	int cur_n_bits, cur_n_bytes;
 	int n_bits_added;
 	char n_bits[4 + 1];
@@ -475,7 +490,7 @@ int do_client_kernelpoolfilled_request(client_t *client, config_t *config)
 	return 0;
 }
 
-int do_client(pools *ppools, client_t *client, statistics_t *stats, config_t *config, fips140 *eb_output_fips140, scc *eb_output_scc, bool *no_bits, bool *new_bits, bool *is_full)
+int do_client(pools *ppools, client_t *client, statistics_t *stats, config_t *config, fips140 *eb_output_fips140, scc *eb_output_scc, bool *no_bits, bool *new_bits, bool *is_full, std::map<std::string, std::string> *user_map)
 {
 	char cmd[4 + 1];
 	cmd[4] = 0x00;
@@ -515,6 +530,10 @@ int do_client(pools *ppools, client_t *client, statistics_t *stats, config_t *co
 	else if (strcmp(cmd, "0008") == 0)	// # bits in kernel reply (to 0007)
 	{
 		return do_client_kernelpoolfilled_reply(client, config);
+	}
+	else if (strcmp(cmd, "0011") == 0)	// proxy auth
+	{
+		return do_proxy_auth(client, config, user_map);
 	}
 	else
 	{
@@ -934,7 +953,7 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 					clients[loop].last_message = now;
 
 					bool cur_no_bits = false, cur_new_bits = false;
-					if (do_client(ppools, &clients[loop], &stats, config, eb_output_fips140, eb_output_scc, &cur_no_bits, &cur_new_bits, &is_full) == -1)
+					if (do_client(ppools, &clients[loop], &stats, config, eb_output_fips140, eb_output_scc, &cur_no_bits, &cur_new_bits, &is_full, user_map) == -1)
 					{
 						dolog(LOG_INFO, "main|connection closed, removing client %s from list", clients[loop].host);
 						dolog(LOG_DEBUG, "main|%s: %s, scc: %s", clients[loop].host, clients[loop].pfips140 -> stats(), clients[loop].pscc -> stats());

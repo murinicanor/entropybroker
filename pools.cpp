@@ -275,15 +275,18 @@ int pools::get_bits_from_pools(int n_bits_requested, unsigned char **buffer, boo
 
 	int n = pool_vector.size();
 	int offset = myrand() % n;
-	for(int loop=0; loop < n; loop++)
-	{
-		int index = (offset + loop) % n;
+	int index = offset;
+	bool round_two = false;
 
+	// n_to_do_bits can be less than 0 due to the pool block size (more bits might
+	// get returned than what was requested)
+	while(n_to_do_bits > 0)
+	{
 		// this gets the minimum number of bits one can retrieve from a
 		// pool in one request
 		int pool_block_size = pool_vector.at(index) -> get_get_size();
 
-		while(pool_vector.at(index) -> get_n_bits_in_pool() > pool_block_size)
+		if (pool_vector.at(index) -> get_n_bits_in_pool() > pool_block_size || round_two)
 		{
 			int cur_n_to_get_bits = min(n_to_do_bits, pool_block_size);
 			int cur_n_to_get_bytes = (cur_n_to_get_bits + 7) / 8;
@@ -297,33 +300,19 @@ int pools::get_bits_from_pools(int n_bits_requested, unsigned char **buffer, boo
 				n_to_do_bits -= got_n_bits;
 				n_bits_retrieved += got_n_bits;
 			}
-
-			// can be less due to the pool block size (more bits might
-			// get returned than what was requested)
-			if (n_to_do_bits <= 0)
-				return n_bits_retrieved;
 		}
-	}
 
-	if (allow_prng)
-	{
-		while(n_to_do_bits > 0)
+		index++;
+		if (index == offset)
 		{
-			unsigned int index = myrand() % n;
+			round_two = true;
 
-			int cur_n_to_get_bits = min(pool_vector.at(index) -> get_pool_size(), n_to_do_bits);
-			int cur_n_to_get_bytes = (cur_n_to_get_bits + 7) / 8;
-
-			unsigned int got_n_bytes = pool_vector.at(index) -> get_entropy_data(cur_p, cur_n_to_get_bytes, 1);
-			unsigned int got_n_bits = got_n_bytes * 8;
-
-			if (verify_quality(cur_p, got_n_bytes, ignore_rngtest_fips140, pfips, ignore_rngtest_scc, pscc))
-			{
-				cur_p += got_n_bytes;
-				n_to_do_bits -= got_n_bits;
-				n_bits_retrieved += got_n_bits;
-			}
+			if (!allow_prng)
+				break;
 		}
+
+		if (index == n)
+			index = 0;
 	}
 
 	return n_bits_retrieved;
@@ -332,14 +321,17 @@ int pools::get_bits_from_pools(int n_bits_requested, unsigned char **buffer, boo
 int pools::find_non_full_pool()
 {
 	int n = pool_vector.size();
-	int offset = myrand() % n;
-
-	for(int loop=0; loop<n; loop++)
+	if (n > 0)
 	{
-		int index = (offset + loop) % n;
+		int offset = myrand() % n;
 
-		if (!pool_vector.at(index) -> is_almost_full())
-			return index;
+		for(int loop=0; loop<n; loop++)
+		{
+			int index = (offset + loop) % n;
+
+			if (!pool_vector.at(index) -> is_almost_full())
+				return index;
+		}
 	}
 
 	return -1;

@@ -63,6 +63,8 @@ void calc_ivec(char *password, long long unsigned int rnd, long long unsigned in
 
 protocol::protocol(char *host_in, int port_in, std::string username_in, std::string password_in, bool is_server_in, std::string type_in) : port(port_in), username(username_in), password(password_in), is_server(is_server_in), type(type_in)
 {
+	host = strdup(host_in);
+
         socket_fd = -1;
         sleep_9003 = 300;
 
