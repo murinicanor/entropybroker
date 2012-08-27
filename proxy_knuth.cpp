@@ -231,13 +231,6 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	printf("bla\n");
-	for(int loop=0; loop<1000; loop++)
-	{
-		p -> proxy_auth_user(std::string("123"), std::string("456"));
-		p -> proxy_auth_user(std::string("joe_user"), std::string("my_password"));
-	}
-
 	delete p;
 
 	dolog(LOG_INFO, "Finished");
