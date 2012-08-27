@@ -59,11 +59,16 @@ pool::pool(int pool_nr, FILE *fh, bit_count_estimator *bce_in, hasher *hclass, s
 
 	if (fread(val_buffer, 1, 8, fh) <= 0)
 	{
+		// FIXME throw an exception instead to prevent a 0-bits pool?
 		pool_size_bytes = DEFAULT_POOL_SIZE_BITS / 8;
 		entropy_pool = (unsigned char *)malloc(pool_size_bytes);
 		bits_in_pool = 0;
 
 		lock_mem(entropy_pool, pool_size_bytes);
+
+		// FIXME 'paranoid' boolean that enables /dev/(u)random?
+		if (RAND_bytes(entropy_pool, pool_size_bytes) == 0)
+			error_exit("RAND_bytes failed");
 
 		iv = new ivec(s -> get_ivec_size(), bce);
 	}
