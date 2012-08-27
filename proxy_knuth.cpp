@@ -15,6 +15,9 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <libgen.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <netdb.h>
 #include <openssl/blowfish.h>
 
 #include "error.h"
@@ -54,6 +57,7 @@ void help()
 	printf("-n        do not fork\n");
 	printf("-P file   write pid to file\n");
 	printf("-X file   read username+password from file\n");
+	printf("-U file   read u/p for clients from file\n");
 }
 
 int main(int argc, char *argv[])
@@ -64,13 +68,18 @@ int main(int argc, char *argv[])
 	bool do_not_fork = false, log_console = false, log_syslog = false;
 	char *log_logfile = NULL;
 	std::string username, password;
+	std::string clients_auths;
 
 	printf("proxy_knuth, (C) 2009-2012 by folkert@vanheusden.com\n");
 
-	while((c = getopt(argc, argv, "hf:X:P:i:l:sn")) != -1)
+	while((c = getopt(argc, argv, "U:hf:X:P:i:l:sn")) != -1)
 	{
 		switch(c)
 		{
+			case 'U':
+				clients_auths = optarg;
+				break;
+
 			case 'X':
 				get_auth_from_file(optarg, username, password);
 				break;
@@ -109,11 +118,16 @@ int main(int argc, char *argv[])
 	if (username.length() == 0 || password.length() == 0)
 		error_exit("password + username cannot be empty");
 
+	if (clients_auths.length() == 0)
+		error_exit("No file with usernames + passwords selected for client authentication");
+
 	if (!host)
 		error_exit("No host to connect to selected");
 
 	(void)umask(0177);
 	set_logging_parameters(log_console, log_logfile, log_syslog);
+
+	users *user_map = new users(clients_auths);
 
 	protocol *p = new protocol(host, port, username, password, false, client_type);
 
@@ -193,22 +207,22 @@ int main(int argc, char *argv[])
 			socklen_t client_addr_len = sizeof(client_addr);
 			int new_socket_fd = accept(listen_socket_fd, (struct sockaddr *)&client_addr, &client_addr_len);
 
-			std::string password;
+			std::string client_password;
 			long long unsigned int challenge = 1;
-			if (auth_eb(new_socket_fd, DEFAULT_COMM_TO, user_map, std::string & password, long long unsigned int *challenge) == 0)
+			if (auth_eb(new_socket_fd, DEFAULT_COMM_TO, user_map, client_password, &challenge) == 0)
 			{
 // do a handshake like a broker would do
 // broker-protocol also in a class
-				proxy_client_t *p = NULL;
+				proxy_client_t *pcp = NULL;
 
 				if (clients[0] -> fd == -1)
-					p = &clients[0];
+					pcp = clients[0];
 				else if (clients[1] -> fd == -1)
-					p = &clients[1];
+					pcp = clients[1];
 
-				p -> fd = new_socket_fd;
-				p -> password = password;
-				p -> challenge = challenge;
+				pcp -> fd = new_socket_fd;
+				pcp -> password = client_password;
+				pcp -> challenge = challenge;
 			}
 			else
 			{
