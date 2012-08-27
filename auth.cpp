@@ -45,7 +45,6 @@ int auth_eb_user(int fd, int to, users *user_map, std::string & password, long l
 		return -1;
 	}
 
-	// not used yet
 	unsigned char username_length = 0;
 	if (READ_TO(fd, (char *)&username_length, 1, to) != 1)
 	{
@@ -85,7 +84,7 @@ int auth_eb_user(int fd, int to, users *user_map, std::string & password, long l
 	SHA512((const unsigned char *)hash_cmp_str, strlen(hash_cmp_str), (unsigned char *)hash_cmp);
 
 	char hash_in[SHA512_DIGEST_LENGTH];
-	if (READ_TO(fd, hash_in, SHA512_DIGEST_LENGTH, to) <= 0)
+	if (READ_TO(fd, hash_in, SHA512_DIGEST_LENGTH, to) != SHA512_DIGEST_LENGTH)
 	{
 		dolog(LOG_INFO, "%s for fd %d closed (3)", ts, fd);
 		return -1;
@@ -146,7 +145,7 @@ int auth_client_server_user(int fd, int to, std::string & username, std::string 
 {
 	char rnd_str[128];
 	unsigned char rnd_str_size;
-	if (READ_TO(fd, (char *)&rnd_str_size, 1, to) <= 0)
+	if (READ_TO(fd, (char *)&rnd_str_size, 1, to) != 1)
 	{
 		dolog(LOG_INFO, "Connection for fd %d closed (1)", fd);
 		return -1;
@@ -155,7 +154,7 @@ int auth_client_server_user(int fd, int to, std::string & username, std::string 
 		error_exit("INTERNAL ERROR: random string is 0 characters!");
 	if (rnd_str_size >= sizeof rnd_str)
 		error_exit("INTERNAL ERROR: random string too long!");
-	if (READ_TO(fd, rnd_str, rnd_str_size, to) <= 0)
+	if (READ_TO(fd, rnd_str, rnd_str_size, to) != rnd_str_size)
 	{
 		dolog(LOG_INFO, "Connection for fd %d closed (2)", fd);
 		return -1;
@@ -195,7 +194,7 @@ int auth_client_server(int fd, int to, std::string & username, std::string & pas
 {
 	char prot_ver[4 + 1];
 
-	if (READ_TO(fd, prot_ver, 4, to) <= 0)
+	if (READ_TO(fd, prot_ver, 4, to) != 4)
 	{
 		dolog(LOG_INFO, "Connection for fd %d closed (0)", fd);
 		return -1;
@@ -208,47 +207,55 @@ int auth_client_server(int fd, int to, std::string & username, std::string & pas
 	return auth_client_server_user(fd, to, username, password, challenge);
 }
 
-int auth_proxy(int fd_broker, int fd_client, int to, users *user_map, std::string & password, long long unsigned int *challenge, bool is_proxy_auth)
+int auth_proxy(int fd_broker, int fd_client, int to, long long unsigned int *challenge)
 {
-	const char *ts = is_proxy_auth ? "Proxy-auth" : "Connection";
-
-	long long unsigned int rnd = 9;
-
-	if (RAND_bytes((unsigned char *)&rnd, sizeof rnd) == 0)
-		error_exit("RAND_bytes fails");
-
+	// *** RECEIVE RANDOM ***
 	char rnd_str[128];
-	unsigned char rnd_str_size = snprintf(rnd_str, sizeof rnd_str, "%llu", rnd);
-
-	*challenge = rnd;
-
+	unsigned char rnd_str_size;
+	if (READ_TO(fd_broker, (char *)&rnd_str_size, 1, to) != 1)
+	{
+		dolog(LOG_INFO, "Connection to broker closed (1)");
+		return -1;
+	}
 	if (rnd_str_size == 0)
 		error_exit("INTERNAL ERROR: random string is 0 characters!");
-
-	if (WRITE_TO(fd, (char *)&rnd_str_size, 1, to) == -1)
+	if (rnd_str_size >= sizeof rnd_str)
+		error_exit("INTERNAL ERROR: random string too long!");
+	if (READ_TO(fd_broker, rnd_str, rnd_str_size, to) <= 0)
 	{
-		dolog(LOG_INFO, "%s for fd %d closed (1)", ts, fd);
+		dolog(LOG_INFO, "Connection to broker closed (2)");
 		return -1;
 	}
-	if (WRITE_TO(fd, rnd_str, rnd_str_size, to) == -1)
+	rnd_str[rnd_str_size] = 0x00;
+
+	char *dummy = NULL;
+	*challenge = strtoull(rnd_str, &dummy, 10);
+
+	// *** PROXY RANDOM ***
+	if (WRITE_TO(fd_client, &rnd_str_size, 1, to) != 1)
 	{
-		dolog(LOG_INFO, "%s for fd %d closed (2)", ts, fd);
+		dolog(LOG_INFO, "Connection to proxified client closed (1)");
+		return -1;
+	}
+	if (WRITE_TO(fd_client, rnd_str, rnd_str_size, to) != rnd_str_size)
+	{
+		dolog(LOG_INFO, "Connection to proxified client closed (2)");
 		return -1;
 	}
 
-	// not used yet
+	// *** RETRIEVE USER FROM CLIENT ***
 	unsigned char username_length = 0;
-	if (READ_TO(fd, (char *)&username_length, 1, to) != 1)
+	if (READ_TO(fd_client, (char *)&username_length, 1, to) != 1)
 	{
-		dolog(LOG_INFO, "%s for fd %d closed (u1)", ts, fd);
+		dolog(LOG_INFO, "Connection to proxified client closed (3)");
 		return -1;
 	}
 	char username[255 + 1] = { 0 };
 	if (username_length > 0)
 	{
-		if (READ_TO(fd, username, username_length, to) != username_length)
+		if (READ_TO(fd_client, username, username_length, to) != username_length)
 		{
-			dolog(LOG_INFO, "%s for fd %d closed (u2)", ts, fd);
+			dolog(LOG_INFO, "Connection to proxified client closed (4)");
 			return -1;
 		}
 
@@ -256,40 +263,32 @@ int auth_proxy(int fd_broker, int fd_client, int to, users *user_map, std::strin
 	}
 	dolog(LOG_INFO, "User '%s' requesting access", username);
 
-	if (username[0] == 0x00)
+	// *** SEND USERNAME TO BROKER ***
+	if (WRITE_TO(fd_broker, &username_length, 1, to) != 1)
 	{
-		dolog(LOG_WARNING, "Empty username");
+		dolog(LOG_INFO, "Connection to broker closed (3)");
+		return -1;
+	}
+	if (WRITE_TO(fd_broker, username, username_length, to) != username_length)
+	{
+		dolog(LOG_INFO, "Connection to broker closed (4)");
 		return -1;
 	}
 
-	bool user_known = user_map -> find(usesrname, password);
-	if (!user_known)
-	{
-		dolog(LOG_WARNING, "User '%s' not known", username);
-
-		user_known = false;
-	}
-
-	char hash_cmp_str[256], hash_cmp[SHA512_DIGEST_LENGTH];
-	snprintf(hash_cmp_str, sizeof hash_cmp_str, "%s %s", rnd_str, password.c_str());
-
-	SHA512((const unsigned char *)hash_cmp_str, strlen(hash_cmp_str), (unsigned char *)hash_cmp);
-
+	// *** RECEIVE HASH FROM PROXIFIED CLIENT ***
 	char hash_in[SHA512_DIGEST_LENGTH];
-	if (READ_TO(fd, hash_in, SHA512_DIGEST_LENGTH, to) <= 0)
+	if (READ_TO(fd_client, hash_in, SHA512_DIGEST_LENGTH, to) != SHA512_DIGEST_LENGTH)
 	{
-		dolog(LOG_INFO, "%s for fd %d closed (3)", ts, fd);
+		dolog(LOG_INFO, "Connection to proxified client closed (5)");
 		return -1;
 	}
 
-	if (user_known && memcmp(hash_cmp, hash_in, SHA512_DIGEST_LENGTH) == 0)
+	// *** SEND HASH TO BROKER ***
+	if (WRITE_TO(fd_broker, hash_in, SHA512_DIGEST_LENGTH, to) != SHA512_DIGEST_LENGTH)
 	{
-		dolog(LOG_INFO, "%s for fd %d: authentication ok", ts, fd);
-		return 0;
+		dolog(LOG_INFO, "Connection to broker closed(5)");
+		return -1;
 	}
-
-	dolog(LOG_INFO, "%s for fd %d: authentication failed!", ts, fd);
 
 	return -1;
 }
-
