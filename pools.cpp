@@ -286,7 +286,7 @@ int pools::get_bits_from_pools(int n_bits_requested, unsigned char **buffer, boo
 		// pool in one request
 		int pool_block_size = pool_vector.at(index) -> get_get_size();
 
-		if (pool_vector.at(index) -> get_n_bits_in_pool() > pool_block_size || round_two)
+		if (pool_vector.at(index) -> get_n_bits_in_pool() > pool_block_size || (round_two && allow_prng))
 		{
 			int cur_n_to_get_bits = min(n_to_do_bits, pool_block_size);
 			int cur_n_to_get_bytes = (cur_n_to_get_bits + 7) / 8;
@@ -303,16 +303,11 @@ int pools::get_bits_from_pools(int n_bits_requested, unsigned char **buffer, boo
 		}
 
 		index++;
-		if (index == offset)
-		{
-			round_two = true;
-
-			if (!allow_prng)
-				break;
-		}
-
 		if (index == n)
 			index = 0;
+
+		if (index == offset)
+			round_two = true;
 	}
 
 	return n_bits_retrieved;
