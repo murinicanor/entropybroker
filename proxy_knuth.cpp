@@ -22,12 +22,20 @@
 #include "log.h"
 #include "math.h"
 #include "protocol.h"
+#include "users.h"
 #include "auth.h"
 #include "kernel_prng_io.h"
 
 #define DEFAULT_COMM_TO 15
 const char *pid_file = PID_DIR "/proxy_knuth.pid";
 const char *client_type = "proxy_knuth";
+
+typedef struct
+{
+	int fd;
+	std::string password;
+	long long unsigned int challenge;
+} proxy_client_t;
 
 void sig_handler(int sig)
 {
@@ -127,8 +135,11 @@ int main(int argc, char *argv[])
 	signal(SIGINT , sig_handler);
 	signal(SIGQUIT, sig_handler);
 
-	int fds_clients[] = { -1, -1 };
+	proxy_client_t *clients[2] = { new proxy_client_t, new proxy_client_t };
 	int listen_socket_fd = start_listen(listen_adapter, listen_port, 5);
+
+	clients[0] -> fd = -1;
+	clients[1] -> fd = -1;
 
 	for(;;)
 	{
@@ -140,16 +151,16 @@ int main(int argc, char *argv[])
 		FD_SET(listen_socket_fd, &rfds);
 		max_fd = max(max_fd, listen_socket_fd);
 
-		if (fds_clients[0] != -1)
+		if (clients[0] -> fd != -1)
 		{
-			FD_SET(fds_clients[0], &rfds);
-			max_fd = max(max_fd, fds_clients[0]);
+			FD_SET(clients[0] -> fd, &rfds);
+			max_fd = max(max_fd, clients[0] -> fd);
 		}
 
-		if (fds_clients[1] != -1)
+		if (clients[1] -> fd != -1)
 		{
-			FD_SET(fds_clients[1], &rfds);
-			max_fd = max(max_fd, fds_clients[0]);
+			FD_SET(clients[1] -> fd, &rfds);
+			max_fd = max(max_fd, clients[1] -> fd);
 		}
 
 		if (select(max_fd + 1, &rfds, NULL, NULL, NULL) == -1)
@@ -160,34 +171,49 @@ int main(int argc, char *argv[])
 			continue;
 		}
 
-		if (fds_clients[0] != -1 && FD_ISSET(fds_clients[0], &rfds))
+		if (clients[0] -> fd != -1 && FD_ISSET(clients[0] -> fd, &rfds))
 		{
 		}
 
-		if (fds_clients[1] != -1 && FD_ISSET(fds_clients[1], &rfds))
+		if (clients[1] -> fd != -1 && FD_ISSET(clients[1] -> fd, &rfds))
 		{
 		}
 
 		if (FD_ISSET(listen_socket_fd, &rfds))
 		{
-			if (fds_clients[0] != -1 && fds_clients[1] != -1)
+			if (clients[0] -> fd != -1 && clients[1] -> fd != -1)
 			{
-				close(fds_clients[0]);
-				close(fds_clients[1]);
-				fds_clients[0] = -1;
-				fds_clients[1] = -1;
+				close(clients[0] -> fd);
+				close(clients[1] -> fd);
+				clients[0] -> fd = -1;
+				clients[1] -> fd = -1;
 			}
 
 			struct sockaddr_in client_addr;
 			socklen_t client_addr_len = sizeof(client_addr);
 			int new_socket_fd = accept(listen_socket_fd, (struct sockaddr *)&client_addr, &client_addr_len);
 
+			std::string password;
+			long long unsigned int challenge = 1;
+			if (auth_eb(new_socket_fd, DEFAULT_COMM_TO, user_map, std::string & password, long long unsigned int *challenge) == 0)
+			{
 // do a handshake like a broker would do
 // broker-protocol also in a class
-			if (fds_clients[0] == -1)
-				fds_clients[0] = new_socket_fd;
-			else if (fds_clients[1] == -1)
-				fds_clients[1] = new_socket_fd;
+				proxy_client_t *p = NULL;
+
+				if (clients[0] -> fd == -1)
+					p = &clients[0];
+				else if (clients[1] -> fd == -1)
+					p = &clients[1];
+
+				p -> fd = new_socket_fd;
+				p -> password = password;
+				p -> challenge = challenge;
+			}
+			else
+			{
+				close(new_socket_fd);
+			}
 		}
 	}
 

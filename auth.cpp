@@ -70,7 +70,7 @@ int auth_eb_user(int fd, int to, users *user_map, std::string & password, long l
 		return -1;
 	}
 
-	bool user_known = user_map -> find(usesrname, password);
+	bool user_known = user_map -> find_user(username, password);
 	if (!user_known)
 	{
 		dolog(LOG_WARNING, "User '%s' not known", username);

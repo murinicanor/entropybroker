@@ -20,6 +20,7 @@ const char *pid_file = PID_DIR "/server_push_file.pid";
 #include "log.h"
 #include "protocol.h"
 #include "server_utils.h"
+#include "users.h"
 #include "auth.h"
 
 void sig_handler(int sig)

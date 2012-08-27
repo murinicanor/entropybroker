@@ -11,11 +11,10 @@
 #include "error.h"
 #include "log.h"
 #include "utils.h"
+#include "users.h"
 #include "auth.h"
 #include "kernel_prng_io.h"
 #include "protocol.h"
-
-#define DEFAULT_COMM_TO 15
 
 void make_msg(char *where_to, int code, int value)
 {

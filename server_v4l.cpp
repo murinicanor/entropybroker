@@ -22,6 +22,7 @@
 #include "protocol.h"
 #include "server_utils.h"
 #include "utils.h"
+#include "users.h"
 #include "auth.h"
 
 const char *server_type = "server_v4l v" VERSION;

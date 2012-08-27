@@ -23,6 +23,7 @@ const char *pid_file = PID_DIR "/server_usb.pid";
 #include "log.h"
 #include "protocol.h"
 #include "server_utils.h"
+#include "users.h"
 #include "auth.h"
 
 void poke(libusb_device_handle *dev)

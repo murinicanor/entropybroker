@@ -28,6 +28,7 @@
 #include "fips140.h"
 #include "hasher_type.h"
 #include "stirrer_type.h"
+#include "users.h"
 #include "config.h"
 #include "scc.h"
 #include "pools.h"
@@ -112,7 +113,7 @@ int send_need_data(int fd, config_t *config)
 	return WRITE_TO(fd, buffer, 8, config -> communication_timeout) == 8 ? 0 : -1;
 }
 
-int do_proxy_auth(client_t *client, config_t *config, std::map<std::string, std::string> *user_map)
+int do_proxy_auth(client_t *client, config_t *config, users *user_map)
 {
 	char reply[4 + 4 + 1];
 
@@ -491,7 +492,7 @@ int do_client_kernelpoolfilled_request(client_t *client, config_t *config)
 	return 0;
 }
 
-int do_client(pools *ppools, client_t *client, statistics_t *stats, config_t *config, fips140 *eb_output_fips140, scc *eb_output_scc, bool *no_bits, bool *new_bits, bool *is_full, std::map<std::string, std::string> *user_map)
+int do_client(pools *ppools, client_t *client, statistics_t *stats, config_t *config, fips140 *eb_output_fips140, scc *eb_output_scc, bool *no_bits, bool *new_bits, bool *is_full, users *user_map)
 {
 	char cmd[4 + 1];
 	cmd[4] = 0x00;
@@ -661,7 +662,7 @@ int lookup_client_settings(struct sockaddr_in *client_addr, client_t *client, co
 	return 0;
 }
 
-void register_new_client(int listen_socket_fd, client_t **clients, int *n_clients, std::map<std::string, std::string> *users, config_t *config)
+void register_new_client(int listen_socket_fd, client_t **clients, int *n_clients, users *user_map, config_t *config)
 {
 	struct sockaddr_in client_addr;
 	socklen_t client_addr_len = sizeof(client_addr);
@@ -679,7 +680,7 @@ void register_new_client(int listen_socket_fd, client_t **clients, int *n_client
 
 		long long unsigned int auth_rnd = 1;
 		std::string password;
-		bool ok = auth_eb(new_socket_fd, config -> communication_timeout, users, password, &auth_rnd) == 0;
+		bool ok = auth_eb(new_socket_fd, config -> communication_timeout, user_map, password, &auth_rnd) == 0;
 
 		if (!ok)
 		{
@@ -826,7 +827,7 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 
 	dolog(LOG_INFO, "main|main-loop started");
 
-	std::map<std::string, std::string> *user_map = load_usermap(*config -> user_map);
+	users *user_map = new users(*config -> user_map);
 
 	bool no_bits = false, new_bits = false, prev_is_full = false;
 	for(;;)
@@ -875,8 +876,7 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 		{
 			dolog(LOG_DEBUG, "Got SIGHUP");
 			reset_SIGHUP();
-			delete user_map;
-			user_map = load_usermap(*config -> user_map);
+			user_map -> reload();
 			force_stats = 1;
 		}
 

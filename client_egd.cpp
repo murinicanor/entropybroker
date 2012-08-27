@@ -21,6 +21,7 @@
 #include "log.h"
 #include "math.h"
 #include "protocol.h"
+#include "users.h"
 #include "auth.h"
 #include "kernel_prng_io.h"
 

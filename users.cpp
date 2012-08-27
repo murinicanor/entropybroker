@@ -1,5 +1,6 @@
 #include <string>
 #include <map>
+#include <fstream>
 
 #include "error.h"
 #include "log.h"
@@ -14,6 +15,12 @@ users::users(std::string filename_in) : filename(filename_in)
 users::~users()
 {
 	delete user_map;
+}
+
+void users::reload()
+{
+	delete user_map;
+	load_usermap();
 }
 
 void users::load_usermap()
@@ -45,12 +52,10 @@ void users::load_usermap()
 		if (username.length() == 0 || password.length() == 0)
 			error_exit("%s: username/password cannot be empty at line %d (%s)", filename.c_str(), line_nr, line.c_str());
 
-		(*output)[username] = password;
+		(*user_map)[username] = password;
 	}
 
 	fh.close();
-
-	return output;
 }
 
 bool users::find_user(std::string username, std::string & password)
