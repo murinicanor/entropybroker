@@ -60,7 +60,7 @@ void calc_ivec(char *password, long long unsigned int rnd, long long unsigned in
 	memcpy(dest, dummy, 8);
 }
 
-protocol::protocol(char *host_in, int port_in, std::string username_in, std::string password_in, bool is_server_in, std::string type_in) : port(port_in), username(username_in), password(password_in), is_server(is_server_in), type(type_in)
+protocol::protocol(const char *host_in, int port_in, std::string username_in, std::string password_in, bool is_server_in, std::string type_in) : port(port_in), username(username_in), password(password_in), is_server(is_server_in), type(type_in)
 {
 	host = strdup(host_in);
 
@@ -160,9 +160,9 @@ int protocol::reconnect_server_socket()
 				error_exit("client/server-type should not be 0 bytes in size");
 
 			if (is_server)
-				make_msg((char *)buffer, 3, len);
+				make_msg((char *)buffer, 3, len); // 0003 server type
 			else
-				make_msg((char *)buffer, 6, len);
+				make_msg((char *)buffer, 6, len); // 0006 client type
 			strcat((char *)buffer, type.c_str());
 
 			int msg_len = strlen(buffer);

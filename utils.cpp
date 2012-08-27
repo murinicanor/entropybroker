@@ -222,7 +222,7 @@ int WRITE_TO(int fd, char *whereto, size_t len, double to)
 	return cnt;
 }
 
-int start_listen(char *adapter, int portnr, int listen_queue_size)
+int start_listen(const char *adapter, int portnr, int listen_queue_size)
 {
 	int reuse_addr = 1;
 	struct sockaddr_in server_addr;

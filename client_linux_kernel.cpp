@@ -35,6 +35,7 @@ void sig_handler(int sig)
 void help(void)
 {
 	printf("-i host   entropy_broker-host to connect to\n");
+	printf("-x port   port to connect to (default: %d)\n", DEFAULT_BROKER_PORT);
 	printf("-l file   log to file 'file'\n");
 	printf("-s        log to syslog\n");
 	printf("-b x      interval in which data will be seeded in a full(!) kernel entropy buffer (default is off)\n");
@@ -46,7 +47,7 @@ void help(void)
 int main(int argc, char *argv[])
 {
 	char *host = NULL;
-	int port = 55225;
+	int port = DEFAULT_BROKER_PORT;
 	int dev_random_fd = open(DEV_RANDOM, O_RDWR);
 	int max_bits_in_kernel_rng = kernel_rng_get_max_entropy_count();
 	int c;
@@ -57,10 +58,16 @@ int main(int argc, char *argv[])
 
 	printf("eb_client_linux_kernel v" VERSION ", (C) 2009-2012 by folkert@vanheusden.com\n");
 
-	while((c = getopt(argc, argv, "b:hX:P:i:l:sn")) != -1)
+	while((c = getopt(argc, argv, "x:b:hX:P:i:l:sn")) != -1)
 	{
 		switch(c)
 		{
+			case 'x':
+				port = atoi(optarg);
+				if (port < 1)
+					error_exit("-x requires a value >= 1");
+				break;
+
 			case 'b':
 				interval = atoi(optarg);
 				if (interval < 1)

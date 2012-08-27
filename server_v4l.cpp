@@ -124,6 +124,7 @@ void untake_picture(int fd, struct v4l2_buffer *buf)
 void help(void)
 {
 	printf("-i host   entropy_broker-host to connect to\n");
+	printf("-x port   port to connect to (default: %d)\n", DEFAULT_BROKER_PORT);
 	printf("-d x   device to use\n");
 	printf("-o file   file to write entropy data to (mututal exclusive with -d)\n");
 	printf("-f x   skip x frames before processing images (in case the device\n");
@@ -141,7 +142,7 @@ int main(int argc, char *argv[])
 	int device_settle = 25;
 	int c;
 	char *host = NULL;
-	int port = 55225;
+	int port = DEFAULT_BROKER_PORT;
 	unsigned char *img1, *img2, *unbiased;
 	bool do_not_fork = false, log_console = false, log_syslog = false;
 	char *log_logfile = NULL;
@@ -154,10 +155,16 @@ int main(int argc, char *argv[])
 
 	fprintf(stderr, "%s, (C) 2009-2012 by folkert@vanheusden.com\n", server_type);
 
-	while((c = getopt(argc, argv, "hSX:P:f:o:i:d:l:sn")) != -1)
+	while((c = getopt(argc, argv, "x:hSX:P:f:o:i:d:l:sn")) != -1)
 	{
 		switch(c)
 		{
+			case 'x':
+				port = atoi(optarg);
+				if (port < 1)
+					error_exit("-x requires a value >= 1");
+				break;
+
 			case 'S':
 				show_bps = true;
 				break;

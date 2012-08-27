@@ -61,6 +61,7 @@ void sig_handler(int sig)
 void help(void)
 {
 	printf("-i host   entropy_broker-host to connect to\n");
+	printf("-x port   port to connect to (default: %d)\n", DEFAULT_BROKER_PORT);
 	printf("-o file   file to write entropy data to\n");
 	printf("-S        show bps (mutual exclusive with -n)\n");
 	printf("-l file   log to file 'file'\n");
@@ -76,7 +77,7 @@ int main(int argc, char *argv[])
 	unsigned char byte = 0;
 	int bits = 0;
 	char *host = NULL;
-	int port = 55225;
+	int port = DEFAULT_BROKER_PORT;
 	int c;
 	bool do_not_fork = false, log_console = false, log_syslog = false;
 	char *log_logfile = NULL;
@@ -86,10 +87,16 @@ int main(int argc, char *argv[])
 
 	fprintf(stderr, "%s, (C) 2009-2012 by folkert@vanheusden.com\n", server_type);
 
-	while((c = getopt(argc, argv, "hX:P:So:i:l:sn")) != -1)
+	while((c = getopt(argc, argv, "x:hX:P:So:i:l:sn")) != -1)
 	{
 		switch(c)
 		{
+			case 'x':
+				port = atoi(optarg);
+				if (port < 1)
+					error_exit("-x requires a value >= 1");
+				break;
+
 			case 'X':
 				get_auth_from_file(optarg, username, password);
 				break;

@@ -36,6 +36,7 @@ void sig_handler(int sig)
 void help(void)
 {
         printf("-i host   entropy_broker-host to connect to\n");
+	printf("-x port   port to connect to (default: %d)\n", DEFAULT_BROKER_PORT);
 	printf("-c command   command to execute\n");
 	printf("-S shell  shell to use. default is " SHELL "\n");
         printf("-l file   log to file 'file'\n");
@@ -48,7 +49,7 @@ void help(void)
 int main(int argc, char *argv[])
 {
 	char *host = NULL;
-	int port = 55225;
+	int port = DEFAULT_BROKER_PORT;
 	int c;
 	bool do_not_fork = false, log_console = false, log_syslog = false;
 	char *log_logfile = NULL;
@@ -57,10 +58,16 @@ int main(int argc, char *argv[])
 
 	fprintf(stderr, "%s, (C) 2009-2012 by folkert@vanheusden.com\n", server_type);
 
-	while((c = getopt(argc, argv, "hc:S:X:P:o:p:i:d:l:sn")) != -1)
+	while((c = getopt(argc, argv, "x:hc:S:X:P:o:p:i:d:l:sn")) != -1)
 	{
 		switch(c)
 		{
+			case 'x':
+				port = atoi(optarg);
+				if (port < 1)
+					error_exit("-x requires a value >= 1");
+				break;
+
 			case 'X':
 				get_auth_from_file(optarg, username, password);
 				break;

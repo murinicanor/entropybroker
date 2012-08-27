@@ -61,6 +61,7 @@ int open_unixdomain_socket(char *path)
 void help(void)
 {
         printf("-i host   entropy_broker-host to connect to\n");
+	printf("-x port   port to connect to (default: %d)\n", DEFAULT_BROKER_PORT);
 	printf("-d path   unix domain socket to read from\n");
 	printf("-o file   file to write entropy data to (mututal exclusive with -i)\n");
 	printf("-a x      bytes per interval to read from egd\n");
@@ -77,7 +78,7 @@ int main(int argc, char *argv[])
 {
 	unsigned char bytes[1249];
 	char *host = NULL;
-	int port = 55225;
+	int port = DEFAULT_BROKER_PORT;
 	int read_fd = -1;
 	int c;
 	bool do_not_fork = false, log_console = false, log_syslog = false;
@@ -94,10 +95,16 @@ int main(int argc, char *argv[])
 
 	fprintf(stderr, "eb_server_egb v" VERSION ", (C) 2009-2012 by folkert@vanheusden.com\n");
 
-	while((c = getopt(argc, argv, "hSX:P:a:b:o:i:d:l:snv")) != -1)
+	while((c = getopt(argc, argv, "x:hSX:P:a:b:o:i:d:l:snv")) != -1)
 	{
 		switch(c)
 		{
+			case 'x':
+				port = atoi(optarg);
+				if (port < 1)
+					error_exit("-x requires a value >= 1");
+				break;
+
 			case 'S':
 				show_bps = true;
 				break;

@@ -29,16 +29,43 @@
 #include "auth.h"
 #include "kernel_prng_io.h"
 
-#define DEFAULT_COMM_TO 15
 const char *pid_file = PID_DIR "/proxy_knuth.pid";
 const char *client_type = "proxy_knuth";
 
 typedef struct
 {
 	int fd;
+	std::string host, type;
 	std::string password;
 	long long unsigned int challenge;
 } proxy_client_t;
+
+bool handle_client(proxy_client_t *client)
+{
+	char cmd[4 + 1] = { 0 };
+
+	if (READ_TO(client -> fd, cmd, 4, DEFAULT_COMM_TO) != 4)
+	{
+		dolog(LOG_INFO, "Short read on fd %d / %s", client -> fd, client -> host.c_str());
+		return false;
+	}
+
+	if (memcmp(cmd, "0003", 4) == 0) // server info msg
+	{
+	}
+	else if (memcmp(cmd, "0006", 4) == 0) // client info msg
+	{
+		dolog(LOG_WARNING, "Clients connecting to this proxy not supported!");
+		return false;
+	}
+	else
+	{
+		dolog(LOG_WARNING, "Unknown / unexpected message %s received", cmd);
+		return false;
+	}
+
+	return true;
+}
 
 void sig_handler(int sig)
 {
@@ -50,8 +77,9 @@ void sig_handler(int sig)
 void help()
 {
 	printf("-i host   entropy_broker-host to connect to\n");
+	printf("-x port   port to connect to (default: %d)\n", DEFAULT_BROKER_PORT);
 	printf("-j adapter  adapter to listen on\n");
-	printf("-p port   port to listen on\n");
+	printf("-p port   port to listen on (default: %d)\n", DEFAULT_PROXY_LISTEN_PORT);
 	printf("-l file   log to file 'file'\n");
 	printf("-s        log to syslog\n");
 	printf("-n        do not fork\n");
@@ -62,8 +90,8 @@ void help()
 
 int main(int argc, char *argv[])
 {
-	char *host = NULL, *listen_adapter = NULL;
-	int port = 55225, listen_port = 55225;
+	const char *host = NULL, *listen_adapter = "0.0.0.0";
+	int port = DEFAULT_BROKER_PORT, listen_port = DEFAULT_PROXY_LISTEN_PORT;
 	int c;
 	bool do_not_fork = false, log_console = false, log_syslog = false;
 	char *log_logfile = NULL;
@@ -72,10 +100,24 @@ int main(int argc, char *argv[])
 
 	printf("proxy_knuth, (C) 2009-2012 by folkert@vanheusden.com\n");
 
-	while((c = getopt(argc, argv, "U:hf:X:P:i:l:sn")) != -1)
+	while((c = getopt(argc, argv, "x:j:p:U:hf:X:P:i:l:sn")) != -1)
 	{
 		switch(c)
 		{
+			case 'x':
+				port = atoi(optarg);
+				if (port < 1)
+					error_exit("-x requires a value >= 1");
+				break;
+
+			case 'j':
+				listen_adapter = optarg;
+				break;
+
+			case 'p':
+				listen_port = atoi(optarg);
+				break;
+
 			case 'U':
 				clients_auths = optarg;
 				break;
@@ -165,16 +207,13 @@ int main(int argc, char *argv[])
 		FD_SET(listen_socket_fd, &rfds);
 		max_fd = max(max_fd, listen_socket_fd);
 
-		if (clients[0] -> fd != -1)
+		for(int client_index=0; client_index<2; client_index++)
 		{
-			FD_SET(clients[0] -> fd, &rfds);
-			max_fd = max(max_fd, clients[0] -> fd);
-		}
-
-		if (clients[1] -> fd != -1)
-		{
-			FD_SET(clients[1] -> fd, &rfds);
-			max_fd = max(max_fd, clients[1] -> fd);
+			if (clients[client_index] -> fd != -1)
+			{
+				FD_SET(clients[client_index] -> fd, &rfds);
+				max_fd = max(max_fd, clients[client_index] -> fd);
+			}
 		}
 
 		if (select(max_fd + 1, &rfds, NULL, NULL, NULL) == -1)
@@ -185,18 +224,25 @@ int main(int argc, char *argv[])
 			continue;
 		}
 
-		if (clients[0] -> fd != -1 && FD_ISSET(clients[0] -> fd, &rfds))
+		for(int client_index=0; client_index<2; client_index++)
 		{
-		}
+			if (clients[client_index] -> fd != -1 && FD_ISSET(clients[client_index] -> fd, &rfds))
+			{
+				if (handle_client(clients[client_index]) == false)
+				{
+					close(clients[client_index] -> fd);
 
-		if (clients[1] -> fd != -1 && FD_ISSET(clients[1] -> fd, &rfds))
-		{
+					clients[client_index] -> fd = -1;
+				}
+			}
 		}
 
 		if (FD_ISSET(listen_socket_fd, &rfds))
 		{
 			if (clients[0] -> fd != -1 && clients[1] -> fd != -1)
 			{
+				dolog(LOG_WARNING, "New connection with 2 clients connected: dropping all previous connections");
+
 				close(clients[0] -> fd);
 				close(clients[1] -> fd);
 				clients[0] -> fd = -1;
@@ -206,6 +252,8 @@ int main(int argc, char *argv[])
 			struct sockaddr_in client_addr;
 			socklen_t client_addr_len = sizeof(client_addr);
 			int new_socket_fd = accept(listen_socket_fd, (struct sockaddr *)&client_addr, &client_addr_len);
+
+			dolog(LOG_INFO, "new client: %s:%d (fd: %d)", inet_ntoa(client_addr.sin_addr), client_addr.sin_port, new_socket_fd);
 
 			std::string client_password;
 			long long unsigned int challenge = 1;

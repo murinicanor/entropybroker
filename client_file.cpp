@@ -40,6 +40,7 @@ void sig_handler(int sig)
 void help(bool is_eb_client_file)
 {
 	printf("-i host   entropy_broker-host to connect to\n");
+	printf("-x port   port to connect to (default: %d)\n", DEFAULT_BROKER_PORT);
 	if (is_eb_client_file)
 		printf("-c count  number of BYTES, 0=no limit\n");
 	if (is_eb_client_file)
@@ -59,7 +60,7 @@ void help(bool is_eb_client_file)
 int main(int argc, char *argv[])
 {
 	char *host = NULL;
-	int port = 55225;
+	int port = DEFAULT_BROKER_PORT;
 	int c;
 	bool do_not_fork = false, log_console = false, log_syslog = false;
 	char *log_logfile = NULL;
@@ -80,10 +81,16 @@ int main(int argc, char *argv[])
 		client_type = "eb_client_kernel_generic v" VERSION;
 	printf("%s, (C) 2009-2012 by folkert@vanheusden.com\n", client_type);
 
-	while((c = getopt(argc, argv, "b:S:hc:f:X:P:i:l:sn")) != -1)
+	while((c = getopt(argc, argv, "x:b:S:hc:f:X:P:i:l:sn")) != -1)
 	{
 		switch(c)
 		{
+			case 'x':
+				port = atoi(optarg);
+				if (port < 1)
+					error_exit("-x requires a value >= 1");
+				break;
+
 			case 'b':
 				block_size = atoi(optarg);
 				if (block_size < 1)

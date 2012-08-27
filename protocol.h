@@ -2,6 +2,10 @@
 #define TCP_SILENT_FAIL_TEST_INTERVAL 120
 #define MAX_ERROR_SLEEP 12
 
+#define DEFAULT_BROKER_PORT 55225
+
+#define DEFAULT_PROXY_LISTEN_PORT 12347
+
 #define DEFAULT_COMM_TO 15
 
 #define DATA_HASH_FUNC(x, y, z) SHA256(x, y, z)
@@ -34,7 +38,7 @@ private:
 	void error_sleep(int count);
 
 public:
-	protocol(char *host, int port, std::string username, std::string password, bool is_server, std::string type);
+	protocol(const char *host, int port, std::string username, std::string password, bool is_server, std::string type);
 	~protocol();
 
 	int sleep_interruptable(int how_long);

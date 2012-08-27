@@ -4,12 +4,14 @@
 #include <libgen.h>
 #include <string>
 #include <map>
+#include <openssl/blowfish.h>
 
 #include "error.h"
 #include "math.h"
 #include "hasher_type.h"
 #include "stirrer_type.h"
 #include "users.h"
+#include "protocol.h"
 #include "config.h"
 #include "log.h"
 #include "auth.h"
@@ -45,7 +47,7 @@ void load_config(const char *config, config_t *pconfig)
 	pconfig -> bitcount_estimator = BCE_SHANNON;
 
 	pconfig -> listen_adapter    = (char *)"0.0.0.0";
-	pconfig -> listen_port       = 55225;
+	pconfig -> listen_port       = DEFAULT_BROKER_PORT;
 	pconfig -> listen_queue_size = 5;
 	pconfig -> disable_nagle     = 0;
 	pconfig -> enable_keepalive  = 1;

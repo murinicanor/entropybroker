@@ -228,6 +228,7 @@ void set_serial_parameters(int fd, char *pars_in)
 void help(void)
 {
         printf("-i host   entropy_broker-host to connect to\n");
+	printf("-x port   port to connect to (default: %d)\n", DEFAULT_BROKER_PORT);
 	printf("-d dev    device to retrieve from\n");
 	printf("-o file   file to write entropy data to (mututal exclusive with -d)\n");
 	printf("-p pars   if the device is a serial device, then with -p\n");
@@ -244,7 +245,7 @@ int main(int argc, char *argv[])
 {
 	unsigned char bytes[1249];
 	char *host = NULL;
-	int port = 55225;
+	int port = DEFAULT_BROKER_PORT;
 	int read_fd = -1;
 	int c;
 	bool do_not_fork = false, log_console = false, log_syslog = false;
@@ -257,10 +258,16 @@ int main(int argc, char *argv[])
 
 	fprintf(stderr, "%s, (C) 2009-2012 by folkert@vanheusden.com\n", server_type);
 
-	while((c = getopt(argc, argv, "hSX:P:o:p:i:d:l:sn")) != -1)
+	while((c = getopt(argc, argv, "x:hSX:P:o:p:i:d:l:sn")) != -1)
 	{
 		switch(c)
 		{
+			case 'x':
+				port = atoi(optarg);
+				if (port < 1)
+					error_exit("-x requires a value >= 1");
+				break;
+
 			case 'S':
 				show_bps = true;
 				break;
