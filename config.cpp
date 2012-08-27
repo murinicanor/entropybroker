@@ -9,6 +9,7 @@
 #include "math.h"
 #include "hasher_type.h"
 #include "stirrer_type.h"
+#include "users.h"
 #include "config.h"
 #include "log.h"
 #include "auth.h"

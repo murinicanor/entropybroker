@@ -15,8 +15,9 @@
 #include "utils.h"
 #include "log.h"
 #include "protocol.h"
+#include "users.h"
 
-int auth_eb_user(int fd, int to, std::map<std::string, std::string> *users, std::string & password, long long unsigned int *challenge, bool is_proxy_auth)
+int auth_eb_user(int fd, int to, users *user_map, std::string & password, long long unsigned int *challenge, bool is_proxy_auth)
 {
 	const char *ts = is_proxy_auth ? "Proxy-auth" : "Connection";
 
@@ -70,19 +71,13 @@ int auth_eb_user(int fd, int to, std::map<std::string, std::string> *users, std:
 		return -1;
 	}
 
-	bool user_known = true;
-	std::map<std::string, std::string>::iterator it = users -> find(username);
-	if (it == users -> end())
+	bool user_known = user_map -> find(usesrname, password);
+	if (!user_known)
 	{
 		dolog(LOG_WARNING, "User '%s' not known", username);
 
 		user_known = false;
 	}
-
-	if (user_known)
-		password.assign(it -> second);
-	else
-		password.assign("12345"); // doesn't matter
 
 	char hash_cmp_str[256], hash_cmp[SHA512_DIGEST_LENGTH];
 	snprintf(hash_cmp_str, sizeof hash_cmp_str, "%s %s", rnd_str, password.c_str());
@@ -107,7 +102,7 @@ int auth_eb_user(int fd, int to, std::map<std::string, std::string> *users, std:
 	return -1;
 }
 
-int auth_eb(int fd, int to, std::map<std::string, std::string> *users, std::string & password, long long unsigned int *challenge)
+int auth_eb(int fd, int to, users *user_map, std::string & password, long long unsigned int *challenge)
 {
 	char prot_ver[4 + 1];
 	snprintf(prot_ver, 4, "%d", PROTOCOL_VERSION);
@@ -118,7 +113,7 @@ int auth_eb(int fd, int to, std::map<std::string, std::string> *users, std::stri
 		return -1;
 	}
 
-	return auth_eb_user(fd, to, users, password, challenge, false);
+	return auth_eb_user(fd, to, user_map, password, challenge, false);
 }
 
 bool get_auth_from_file(char *filename, std::string & username, std::string & password)
@@ -213,38 +208,88 @@ int auth_client_server(int fd, int to, std::string & username, std::string & pas
 	return auth_client_server_user(fd, to, username, password, challenge);
 }
 
-std::map<std::string, std::string> * load_usermap(std::string filename)
+int auth_proxy(int fd_broker, int fd_client, int to, users *user_map, std::string & password, long long unsigned int *challenge, bool is_proxy_auth)
 {
-	std::map<std::string, std::string> *output = new std::map<std::string, std::string>();
+	const char *ts = is_proxy_auth ? "Proxy-auth" : "Connection";
 
-	std::ifstream fh(filename.c_str());
-	if (!fh.is_open())
-		error_exit("Cannot open %s", filename.c_str());
+	long long unsigned int rnd = 9;
 
-	std::string line;
-	int line_nr = 0;
-	while(!fh.eof())
+	if (RAND_bytes((unsigned char *)&rnd, sizeof rnd) == 0)
+		error_exit("RAND_bytes fails");
+
+	char rnd_str[128];
+	unsigned char rnd_str_size = snprintf(rnd_str, sizeof rnd_str, "%llu", rnd);
+
+	*challenge = rnd;
+
+	if (rnd_str_size == 0)
+		error_exit("INTERNAL ERROR: random string is 0 characters!");
+
+	if (WRITE_TO(fd, (char *)&rnd_str_size, 1, to) == -1)
 	{
-		std::getline(fh, line);
-		if (line.length() == 0)
-			break;
-
-		line_nr++;
-
-		size_t pos = line.find("|");
-		if (pos == std::string::npos)
-			error_exit("%s: seperator missing at line %d (%s)", filename.c_str(), line_nr, line.c_str());
-
-		std::string username = line.substr(0, pos);
-		std::string password = line.substr(pos + 1);
-
-		if (username.length() == 0 || password.length() == 0)
-			error_exit("%s: username/password cannot be empty at line %d (%s)", filename.c_str(), line_nr, line.c_str());
-
-		(*output)[username] = password;
+		dolog(LOG_INFO, "%s for fd %d closed (1)", ts, fd);
+		return -1;
+	}
+	if (WRITE_TO(fd, rnd_str, rnd_str_size, to) == -1)
+	{
+		dolog(LOG_INFO, "%s for fd %d closed (2)", ts, fd);
+		return -1;
 	}
 
-	fh.close();
+	// not used yet
+	unsigned char username_length = 0;
+	if (READ_TO(fd, (char *)&username_length, 1, to) != 1)
+	{
+		dolog(LOG_INFO, "%s for fd %d closed (u1)", ts, fd);
+		return -1;
+	}
+	char username[255 + 1] = { 0 };
+	if (username_length > 0)
+	{
+		if (READ_TO(fd, username, username_length, to) != username_length)
+		{
+			dolog(LOG_INFO, "%s for fd %d closed (u2)", ts, fd);
+			return -1;
+		}
 
-	return output;
+		username[username_length] = 0x00;
+	}
+	dolog(LOG_INFO, "User '%s' requesting access", username);
+
+	if (username[0] == 0x00)
+	{
+		dolog(LOG_WARNING, "Empty username");
+		return -1;
+	}
+
+	bool user_known = user_map -> find(usesrname, password);
+	if (!user_known)
+	{
+		dolog(LOG_WARNING, "User '%s' not known", username);
+
+		user_known = false;
+	}
+
+	char hash_cmp_str[256], hash_cmp[SHA512_DIGEST_LENGTH];
+	snprintf(hash_cmp_str, sizeof hash_cmp_str, "%s %s", rnd_str, password.c_str());
+
+	SHA512((const unsigned char *)hash_cmp_str, strlen(hash_cmp_str), (unsigned char *)hash_cmp);
+
+	char hash_in[SHA512_DIGEST_LENGTH];
+	if (READ_TO(fd, hash_in, SHA512_DIGEST_LENGTH, to) <= 0)
+	{
+		dolog(LOG_INFO, "%s for fd %d closed (3)", ts, fd);
+		return -1;
+	}
+
+	if (user_known && memcmp(hash_cmp, hash_in, SHA512_DIGEST_LENGTH) == 0)
+	{
+		dolog(LOG_INFO, "%s for fd %d: authentication ok", ts, fd);
+		return 0;
+	}
+
+	dolog(LOG_INFO, "%s for fd %d: authentication failed!", ts, fd);
+
+	return -1;
 }
+
