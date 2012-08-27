@@ -80,6 +80,27 @@ void stirrer_3des::do_stir(unsigned char *ivec, unsigned char *target, int targe
 	set_3des_key(&ks2, &temp_key[ 8]);
 	set_3des_key(&ks3, &temp_key[16]);
 
+	// retrieve bit7 of each key-byte and mix it into
+	// the ivec as it is not used by the DES key
+	int io = 0, bits = 0;
+	unsigned char byte = 0;
+	for(int index=0; index<24; index++)
+	{
+		byte <<= 1;
+
+		if (temp_key[index] & 128)
+			byte |= 1;
+
+		bits++;
+
+		if (bits == 8)
+		{
+			ivec[io++] ^= byte;
+
+			bits = 0;
+		}
+	}
+
 	DES_cblock iv;
 	memcpy(iv, ivec, 8);
 
