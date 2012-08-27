@@ -182,6 +182,8 @@ int main(int argc, char *argv[])
 			socklen_t client_addr_len = sizeof(client_addr);
 			int new_socket_fd = accept(listen_socket_fd, (struct sockaddr *)&client_addr, &client_addr_len);
 
+// do a handshake like a broker would do
+// broker-protocol also in a class
 			if (fds_clients[0] == -1)
 				fds_clients[0] = new_socket_fd;
 			else if (fds_clients[1] == -1)
