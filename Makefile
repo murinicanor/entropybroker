@@ -23,8 +23,8 @@ PID=$(VAR)/run
 CXX=g++
 DEBUG= #-D_DEBUG #-fprofile-arcs -ftest-coverage # -pg
 LINT=-Wshadow -Wall # -W -Wconversion -Wwrite-strings -Wunused
-#CXXFLAGS+=-O3 -g3 -ggdb -march=native -mtune=native -DVERSION=\"${VERSION}\" $(LINT) $(DEBUG) -DCONFIG=\"${ETC}/entropybroker.conf\" -DCACHE_DIR=\"${CACHE}\" -DPID_DIR=\"${PID}\"
-CXXFLAGS+=-O3 -g3 -ggdb -march=native -mtune=native -DVERSION=\"${VERSION}\" $(LINT) $(DEBUG) -DCONFIG=\"${ETC}/entropybroker.conf\" -DCACHE_DIR=\"${CACHE}\" -DPID_DIR=\"${PID}\" -DVAR_DIR=\"${VAR}\" -rdynamic
+#CXXFLAGS+=-O3 -g3 -ggdb -march=native -mtune=native -DVERSION=\"${VERSION}\" $(LINT) $(DEBUG) -DCONFIG=\"${ETC}/entropy_broker.conf\" -DCACHE_DIR=\"${CACHE}\" -DPID_DIR=\"${PID}\"
+CXXFLAGS+=-O3 -g3 -ggdb -march=native -mtune=native -DVERSION=\"${VERSION}\" $(LINT) $(DEBUG) -DCONFIG=\"${ETC}/entropy_broker.conf\" -DCACHE_DIR=\"${CACHE}\" -DPID_DIR=\"${PID}\" -DVAR_DIR=\"${VAR}\" -rdynamic
 LDFLAGS+=$(DEBUG) -lcrypto -lrt -lz -lutil -rdynamic
 
 BINARIES=entropy_broker eb_server_audio eb_server_timers eb_server_v4l eb_server_stream eb_client_linux_kernel eb_server_egd eb_client_egd eb_test_egd_speed eb_server_linux_kernel eb_client_file eb_server_push_file eb_server_ext_proc eb_server_usb plot eb_server_ComScire_R2000KU proxy_knuth
@@ -163,8 +163,8 @@ install: everything
 	test -e $(BIN)/eb_client_file && \
 		(test -e $(BIN)/eb_client_kernel_generic || \
 		ln $(BIN)/eb_client_file $(BIN)/eb_client_kernel_generic)
-	test -e $(ETC)/entropybroker.conf || cp entropybroker.conf $(ETC)
-	test -e $(ETC)/entropybroker.conf && cp entropybroker.conf $(ETC)/entropybroker.conf.dist
+	test -e $(ETC)/entropy_broker.conf || cp entropy_broker.conf $(ETC)
+	test -e $(ETC)/entropy_broker.conf && cp entropy_broker.conf $(ETC)/entropy_broker.conf.dist
 	test -e $(ETC)/users.txt || (cp users.txt $(ETC) ; chmod 600 $(ETC)/users.txt)
 
 clean:
@@ -172,7 +172,7 @@ clean:
 
 package:
 	mkdir eb-$(VERSION) eb-$(VERSION)/ComScire_R2000KU
-	cp *.cpp *.h entropybroker.conf Makefile Changes auth.txt users.txt readme.txt design.txt interfacing.txt license.* eb-$(VERSION)
+	cp *.cpp *.h entropy_broker.conf Makefile Changes auth.txt users.txt readme.txt design.txt interfacing.txt license.* eb-$(VERSION)
 	cp ComScire_R2000KU/*.[ch]pp ComScire_R2000KU/LICENSE eb-$(VERSION)/ComScire_R2000KU
 	tar cf - doc --exclude=.svn  | tar xvf - -C eb-$(VERSION)
 	tar czf eb-$(VERSION).tgz eb-$(VERSION)
