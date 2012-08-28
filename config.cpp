@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <limits.h>
 #include <string.h>
 #include <libgen.h>
 #include <string>
@@ -33,7 +34,10 @@ char config_yes_no(char *what)
 void load_config(const char *config, config_t *pconfig)
 {
 	char *dummy = strdup(config);
-	char *cur_dir = dirname(dummy);
+
+	char *cur_dir_dummy = dirname(dummy);
+	char *cur_dir = realpath(cur_dir_dummy, NULL);
+
         int linenr = 0;
         FILE *fh = fopen(config, "r");
         if (!fh)
@@ -238,4 +242,5 @@ void load_config(const char *config, config_t *pconfig)
 	fclose(fh);
 
 	free(dummy);
+	free(cur_dir);
 }

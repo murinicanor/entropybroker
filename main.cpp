@@ -116,9 +116,6 @@ int main(int argc, char *argv[])
 				return 1;
 		}
 	}
-
-	if (chdir("/") == -1)
-		error_exit("chdir(/) failed");
 	(void)umask(0177);
 	no_core();
 
@@ -127,6 +124,9 @@ int main(int argc, char *argv[])
 	load_config(config_file, &config);
 	if (stats_file)
 		config.stats_file = stats_file;
+
+	if (chdir("/") == -1)
+		error_exit("chdir(/) failed");
 
 	eb_output_scc -> set_threshold(config.scc_threshold);
 
