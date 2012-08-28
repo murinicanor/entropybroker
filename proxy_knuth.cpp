@@ -19,6 +19,7 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <openssl/blowfish.h>
+#include <openssl/sha.h>
 
 #include "error.h"
 #include "utils.h"
@@ -42,7 +43,13 @@ typedef struct
 	int fd;
 	std::string host, type;
 	std::string password;
-	long long unsigned int challenge;
+
+        unsigned char ivec[8]; // used for data encryption
+        int ivec_offset;
+        long long unsigned int challenge;
+        long long unsigned int ivec_counter; // required for CFB
+
+        BF_KEY key;
 } proxy_client_t;
 
 typedef struct
@@ -77,14 +84,67 @@ void write_knuth_file(std::string file, lookup_t *lt)
 	// FIXME
 }
 
-bool handle_client(proxy_client_t *client, lookup_t *lt)
+int put_data(proxy_client_t *client, lookup_t *lt)
+{
+	char bit_cnt[4 + 1] = { 0 };
+
+	// receive number of bits
+	if (READ_TO(client -> fd, bit_cnt, 4, DEFAULT_COMM_TO) != 4)
+		return -1;
+
+	int cur_n_bits = atoi(bit_cnt);
+	if (cur_n_bits > 9992)
+		return -1;
+
+	char reply[4 + 4 + 1] = { 0 };
+	make_msg(reply, 1, cur_n_bits);
+	if (WRITE_TO(client -> fd, reply, 8, DEFAULT_COMM_TO) != 8)
+		return -1;
+
+	int cur_n_bytes = (cur_n_bits + 7) / 8;
+
+	int in_len = cur_n_bytes + DATA_HASH_LEN;
+	unsigned char *buffer_in = (unsigned char *)malloc(in_len);
+	if (!buffer_in)
+		error_exit("%s error allocating %d bytes of memory", client -> host.c_str(), in_len);
+
+	if (READ_TO(client -> fd, (char *)buffer_in, in_len, DEFAULT_COMM_TO) != in_len)
+	{
+		dolog(LOG_INFO, "put|%s short read while retrieving entropy data", client -> host.c_str());
+
+		free(buffer_in);
+
+		return -1;
+	}
+
+	unsigned char *buffer_out = (unsigned char *)malloc(in_len);
+	if (!buffer_out)
+		error_exit("%s error allocating %d bytes of memory", client -> host.c_str(), cur_n_bytes);
+	// FIXME lock_mem(buffer_out, cur_n_bytes);
+
+	// decrypt data
+	BF_cfb64_encrypt(buffer_in, buffer_out, in_len, &client -> key, client -> ivec, &client -> ivec_offset, BF_DECRYPT);
+
+	unsigned char *entropy_data = &buffer_out[DATA_HASH_LEN];
+	int entropy_data_len = cur_n_bytes - DATA_HASH_LEN;
+	unsigned char hash[DATA_HASH_LEN];
+	DATA_HASH_FUNC(entropy_data, entropy_data_len, hash);
+
+	if (memcmp(hash, buffer_in, DATA_HASH_LEN) != 0)
+		dolog(LOG_WARNING, "Hash mismatch in retrieved entropy data!");
+	// FIXME process
+
+	return 0;
+}
+
+int handle_client(proxy_client_t *client, lookup_t *lt)
 {
 	char cmd[4 + 1] = { 0 };
 
 	if (READ_TO(client -> fd, cmd, 4, DEFAULT_COMM_TO) != 4)
 	{
 		dolog(LOG_INFO, "Short read on fd %d / %s", client -> fd, client -> host.c_str());
-		return false;
+		return -1;
 	}
 
 	if (memcmp(cmd, "0003", 4) == 0) // server info msg
@@ -92,7 +152,7 @@ bool handle_client(proxy_client_t *client, lookup_t *lt)
 		char *info = NULL;
 		int info_len = 0;
 		if (recv_length_data(client -> fd, &info, &info_len, DEFAULT_COMM_TO) == -1)
-			return false;
+			return -1;
 
 		client -> type = std::string(info);
 		dolog(LOG_WARNING, "Client %s is: %s", client -> host.c_str(), info);
@@ -104,20 +164,24 @@ bool handle_client(proxy_client_t *client, lookup_t *lt)
 		char *info = NULL;
 		int info_len = 0;
 		if (recv_length_data(client -> fd, &info, &info_len, DEFAULT_COMM_TO) == -1)
-			return false;
+			return -1;
 
 		dolog(LOG_WARNING, "Clients (%s/%s) connecting to this proxy not supported!", client -> host.c_str(), info);
 		free(info);
 
-		return false;
+		return -1;
+	}
+	else if (memcmp(cmd, "0002", 4) == 0) // put data
+	{
+		return put_data(client, lt);
 	}
 	else
 	{
 		dolog(LOG_WARNING, "Unknown / unexpected message %s received", cmd);
-		return false;
+		return -1;
 	}
 
-	return true;
+	return 0;
 }
 
 void sig_handler(int sig)
@@ -311,7 +375,7 @@ int main(int argc, char *argv[])
 		{
 			if (clients[client_index] -> fd != -1 && FD_ISSET(clients[client_index] -> fd, &rfds))
 			{
-				if (handle_client(clients[client_index], &lt) == false)
+				if (handle_client(clients[client_index], &lt) == -1)
 				{
 					close(clients[client_index] -> fd);
 
@@ -356,6 +420,13 @@ int main(int argc, char *argv[])
 				char dummy_str[256];
 				snprintf(dummy_str, sizeof dummy_str, "%s:%d", inet_ntoa(client_addr.sin_addr), client_addr.sin_port);
 				pcp -> host = dummy_str;
+
+				pcp -> challenge = challenge;
+				pcp -> ivec_counter = 0;
+				calc_ivec((char *)client_password.c_str(), pcp -> challenge, pcp -> ivec_counter, pcp -> ivec);
+
+				pcp -> password = strdup(client_password.c_str());
+				BF_set_key(&pcp -> key, client_password.length(), (unsigned char *)client_password.c_str());
 			}
 			else
 			{

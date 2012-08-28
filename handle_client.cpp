@@ -336,19 +336,21 @@ int do_client_put(pools *ppools, client_t *client, statistics_t *stats, config_t
 
 	if (memcmp(hash, buffer_in, DATA_HASH_LEN) != 0)
 		dolog(LOG_WARNING, "Hash mismatch in retrieved entropy data!");
-
-	client -> last_put_message = now;
-
-	n_bits_added = ppools -> add_bits_to_pools(entropy_data, entropy_data_len, client -> ignore_rngtest_fips140, client -> pfips140, client -> ignore_rngtest_scc, client -> pscc);
-	if (n_bits_added == -1)
-		dolog(LOG_CRIT, "put|%s error while adding data to pools", client -> host);
 	else
-		dolog(LOG_DEBUG, "put|%s %d bits mixed into pools", client -> host, n_bits_added);
+	{
+		client -> last_put_message = now;
 
-	client -> bits_recv += n_bits_added;
-	stats -> total_recv += n_bits_added;
-	stats -> total_recv_requests++;
-	*new_bits = true;
+		n_bits_added = ppools -> add_bits_to_pools(entropy_data, entropy_data_len, client -> ignore_rngtest_fips140, client -> pfips140, client -> ignore_rngtest_scc, client -> pscc);
+		if (n_bits_added == -1)
+			dolog(LOG_CRIT, "put|%s error while adding data to pools", client -> host);
+		else
+			dolog(LOG_DEBUG, "put|%s %d bits mixed into pools", client -> host, n_bits_added);
+
+		client -> bits_recv += n_bits_added;
+		stats -> total_recv += n_bits_added;
+		stats -> total_recv_requests++;
+		*new_bits = true;
+	}
 
 	memset(buffer_out, 0x00, cur_n_bytes);
 	unlock_mem(buffer_out, cur_n_bytes);
