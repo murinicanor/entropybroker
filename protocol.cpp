@@ -20,7 +20,7 @@ int recv_length_data(int fd, char **data, int *len)
 {
 	char len_buffer[4 + 1] = { 0 };
 
-	if (READ_TO(fd, len_buffer, 4) != 4)
+	if (READ_TO(fd, len_buffer, 4, DEFAULT_COMM_TO) != 4)
 		return -1;
 
 	*len = atoi(len_buffer);
