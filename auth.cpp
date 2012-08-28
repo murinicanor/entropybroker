@@ -91,8 +91,8 @@ int auth_eb_user(int fd, int to, users *user_map, std::string & password, long l
 
 int auth_eb(int fd, int to, users *user_map, std::string & password, long long unsigned int *challenge)
 {
-	char prot_ver[4 + 1];
-	snprintf(prot_ver, 4, "%d", PROTOCOL_VERSION);
+	char prot_ver[4 + 1] = { 0 };
+	snprintf(prot_ver, sizeof prot_ver, "%04d", PROTOCOL_VERSION);
 
 	if (WRITE_TO(fd, prot_ver, 4, to) == -1)
 	{
@@ -171,14 +171,13 @@ int auth_client_server_user(int fd, int to, std::string & username, std::string 
 
 int auth_client_server(int fd, int to, std::string & username, std::string & password, long long unsigned int *challenge)
 {
-	char prot_ver[4 + 1];
+	char prot_ver[4 + 1] = { 0 };
 
 	if (READ_TO(fd, prot_ver, 4, to) != 4)
 	{
 		dolog(LOG_INFO, "Connection for fd %d closed (0)", fd);
 		return -1;
 	}
-	prot_ver[4] = 0x00;
 	int eb_ver = atoi(prot_ver);
 	if (eb_ver != PROTOCOL_VERSION)
 		error_exit("Broker server has unsupported protocol version %d! (expecting %d)", eb_ver, PROTOCOL_VERSION);

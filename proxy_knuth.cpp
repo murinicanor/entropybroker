@@ -31,6 +31,7 @@
 #include "kernel_prng_io.h"
 
 #define KNUTH_SIZE 8192
+#define A_B_SIZE 8192
 #define KNUTH_FILE "lookup.knuth"
 
 const char *pid_file = PID_DIR "/proxy_knuth.pid";
@@ -54,8 +55,13 @@ typedef struct
 typedef struct
 {
 	short *table;
-	int size, offset;
+	int t_size, t_offset;
 	bool is_valid;
+
+	short *A;
+	int n_A;
+	short *B;
+	int n_B;
 } lookup_t;
 
 void load_knuth_file(std::string file, lookup_t *lt)
@@ -65,10 +71,16 @@ void load_knuth_file(std::string file, lookup_t *lt)
 	{
 		if (errno != ENOENT)
 			error_exit("Error accessing file %s", file.c_str());
+
+		lt -> t_size = KNUTH_SIZE;
+		lt -> table = (short *)malloc(lt -> t_size * sizeof(short));
+
+		lt -> A = (short *)malloc(A_B_SIZE * sizeof(short));
+		lt -> B = (short *)malloc(A_B_SIZE * sizeof(short));
 	}
 	else
 	{
-
+error_exit("unexpected");
 // FIXME
 // size
 // n_set
@@ -83,7 +95,7 @@ void write_knuth_file(std::string file, lookup_t *lt)
 	// FIXME
 }
 
-int put_data(proxy_client_t *client, lookup_t *lt)
+int put_data(proxy_client_t *client, lookup_t *lt, bool is_A)
 {
 	char bit_cnt[4 + 1] = { 0 };
 
@@ -136,12 +148,48 @@ int put_data(proxy_client_t *client, lookup_t *lt)
 		return -1;
 	}
 
-	// FIXME process
+	if (is_A)
+	{
+		if (lt -> t_offset < lt -> t_size)
+		{
+			int n = lt -> t_size - lt -> t_offset;
+
+			int do_n_bytes = min(n * sizeof(short), cur_n_bytes);
+			memcpy(lt -> table, buffer_out, do_n_bytes);
+
+			lt -> t_offset += do_n_bytes / sizeof(short);
+			if (lt -> t_offset == lt -> t_size)
+			{
+				// reset A & B buffers so that both have data when needed (hopefully)
+				lt -> n_A = lt -> n_B = 0;
+
+				dolog(LOG_INFO, "look-up table is filled");
+			}
+		}
+		else
+		{
+			int n = A_B_SIZE - lt -> n_A;
+
+			int do_n_bytes = min(n * sizeof(short), cur_n_bytes);
+			memcpy(lt -> A, buffer_out, do_n_bytes);
+
+			lt -> n_A += do_n_bytes / sizeof(short);
+		}
+	}
+	else
+	{
+		int n = A_B_SIZE - lt -> n_B;
+
+		int do_n_bytes = min(n * sizeof(short), cur_n_bytes);
+		memcpy(lt -> B, buffer_out, do_n_bytes);
+
+		lt -> n_B += do_n_bytes / sizeof(short);
+	}
 
 	return 0;
 }
 
-int handle_client(proxy_client_t *client, lookup_t *lt)
+int handle_client(proxy_client_t *client, lookup_t *lt, bool is_A)
 {
 	char cmd[4 + 1] = { 0 };
 
@@ -177,7 +225,7 @@ int handle_client(proxy_client_t *client, lookup_t *lt)
 	}
 	else if (memcmp(cmd, "0002", 4) == 0) // put data
 	{
-		return put_data(client, lt);
+		return put_data(client, lt, is_A);
 	}
 	else
 	{
@@ -322,9 +370,9 @@ int main(int argc, char *argv[])
 
 	signal(SIGPIPE, SIG_IGN);
 	signal(SIGCHLD, SIG_IGN);
-	signal(SIGTERM, sig_handler);
-	signal(SIGINT , sig_handler);
-	signal(SIGQUIT, sig_handler);
+//	signal(SIGTERM, sig_handler);
+//	signal(SIGINT , sig_handler);
+//	signal(SIGQUIT, sig_handler);
 
 	proxy_client_t *clients[2] = { new proxy_client_t, new proxy_client_t };
 	int listen_socket_fd = start_listen(listen_adapter, listen_port, 5);
@@ -332,15 +380,10 @@ int main(int argc, char *argv[])
 	clients[0] -> fd = -1;
 	clients[1] -> fd = -1;
 
-	lookup_t lt = { NULL, 0, 0, false };
-	load_knuth_file(knuth_file, &lt);
+	lookup_t lt;
+	memset(&lt, 0x00, sizeof lt);
 
-	if (lt.size == 0)
-	{
-		lt.size = KNUTH_SIZE;
-		lt.table = (short *)malloc(lt.size * sizeof(short));
-		lt.offset = 0;
-	}
+	load_knuth_file(knuth_file, &lt);
 
 	for(;;)
 	{
@@ -381,13 +424,18 @@ int main(int argc, char *argv[])
 		{
 			if (clients[client_index] -> fd != -1 && FD_ISSET(clients[client_index] -> fd, &rfds))
 			{
-				if (handle_client(clients[client_index], &lt) == -1)
+				if (handle_client(clients[client_index], &lt, client_index == 0) == -1)
 				{
 					close(clients[client_index] -> fd);
 
 					clients[client_index] -> fd = -1;
 				}
 			}
+		}
+
+		if (lt.n_A > 0 && lt.n_B > 0)
+		{
+			// FIXME transmit to broker
 		}
 
 		if (FD_ISSET(listen_socket_fd, &rfds))
