@@ -330,11 +330,11 @@ int do_client_put(pools *ppools, client_t *client, statistics_t *stats, config_t
 	BF_cfb64_encrypt(buffer_in, buffer_out, in_len, &client -> key, client -> ivec, &client -> ivec_offset, BF_DECRYPT);
 
 	unsigned char *entropy_data = &buffer_out[DATA_HASH_LEN];
-	int entropy_data_len = cur_n_bytes - DATA_HASH_LEN;
+	int entropy_data_len = cur_n_bytes;
 	unsigned char hash[DATA_HASH_LEN];
 	DATA_HASH_FUNC(entropy_data, entropy_data_len, hash);
 
-	if (memcmp(hash, buffer_in, DATA_HASH_LEN) != 0)
+	if (memcmp(hash, buffer_out, DATA_HASH_LEN) != 0)
 		dolog(LOG_WARNING, "Hash mismatch in retrieved entropy data!");
 	else
 	{

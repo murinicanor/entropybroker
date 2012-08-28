@@ -42,7 +42,6 @@ typedef struct
 {
 	int fd;
 	std::string host, type;
-	std::string password;
 
         unsigned char ivec[8]; // used for data encryption
         int ivec_offset;
@@ -126,12 +125,17 @@ int put_data(proxy_client_t *client, lookup_t *lt)
 	BF_cfb64_encrypt(buffer_in, buffer_out, in_len, &client -> key, client -> ivec, &client -> ivec_offset, BF_DECRYPT);
 
 	unsigned char *entropy_data = &buffer_out[DATA_HASH_LEN];
-	int entropy_data_len = cur_n_bytes - DATA_HASH_LEN;
+	int entropy_data_len = cur_n_bytes;
 	unsigned char hash[DATA_HASH_LEN];
 	DATA_HASH_FUNC(entropy_data, entropy_data_len, hash);
 
-	if (memcmp(hash, buffer_in, DATA_HASH_LEN) != 0)
+	if (memcmp(hash, buffer_out, DATA_HASH_LEN) != 0)
+	{
 		dolog(LOG_WARNING, "Hash mismatch in retrieved entropy data!");
+
+		return -1;
+	}
+
 	// FIXME process
 
 	return 0;
@@ -186,6 +190,8 @@ int handle_client(proxy_client_t *client, lookup_t *lt)
 
 void sig_handler(int sig)
 {
+	dolog(LOG_INFO, "Got signal %d", sig);
+
 	if (sig == SIGTERM || sig == SIGINT || sig == SIGQUIT)
 		sig_quit = true;
 	else
@@ -414,7 +420,6 @@ int main(int argc, char *argv[])
 					pcp = clients[1];
 
 				pcp -> fd = new_socket_fd;
-				pcp -> password = client_password;
 				pcp -> challenge = challenge;
 
 				char dummy_str[256];
@@ -423,9 +428,9 @@ int main(int argc, char *argv[])
 
 				pcp -> challenge = challenge;
 				pcp -> ivec_counter = 0;
+				pcp -> ivec_offset = 0;
 				calc_ivec((char *)client_password.c_str(), pcp -> challenge, pcp -> ivec_counter, pcp -> ivec);
 
-				pcp -> password = strdup(client_password.c_str());
 				BF_set_key(&pcp -> key, client_password.length(), (unsigned char *)client_password.c_str());
 			}
 			else

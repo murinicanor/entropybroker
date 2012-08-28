@@ -86,6 +86,7 @@ void calc_ivec(char *password, long long unsigned int rnd, long long unsigned in
 
 	memcpy(dummy, password, min(strlen(password), 8));
 
+	// FIXME needs same loop as below
 	rnd ^= counter;
 
 	// this loop could be replaced if I were sure what
