@@ -11,6 +11,7 @@
 #define DATA_HASH_FUNC(x, y, z) SHA256(x, y, z)
 #define DATA_HASH_LEN SHA256_DIGEST_LENGTH
 
+int recv_length_data(int fd, char **data, int *len);
 void make_msg(char *where_to, int code, int value);
 void calc_ivec(char *password, long long unsigned int rnd, long long unsigned int counter, unsigned char *dest);
 

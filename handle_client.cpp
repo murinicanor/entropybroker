@@ -366,35 +366,19 @@ int do_client_server_type(client_t *client, config_t *config)
 {
 	char *buffer;
 	int n_bytes;
-	char string_size[4 + 1];
 
-	if (READ_TO(client -> socket_fd, string_size, 4, config -> communication_timeout) != 4)	// flush number of bits
+	if (recv_length_data(client -> socket_fd, &buffer, &n_bytes) == -1)
 		return -1;
 
-	string_size[4] = 0x00;
-
-	n_bytes = atoi(string_size);
 	if (n_bytes <= 0)
 	{
 		dolog(LOG_WARNING, "%s sends 0003 msg with 0 bytes of contents", client -> host);
 		return -1;
 	}
 
-	buffer = (char *)malloc(n_bytes + 1);
-	if (!buffer)
-		error_exit("%s out of memory while allocating %d bytes", client -> host, n_bytes + 1);
-
-	if (READ_TO(client -> socket_fd, buffer, n_bytes, config -> communication_timeout) != n_bytes)
-	{
-		free(buffer);
-		dolog(LOG_INFO, "type|%s short read for 0003", client -> host);
-		return -1;
-	}
-
-	buffer[n_bytes] = 0x00;
-
 	strncpy(client -> type, buffer, sizeof(client -> type));
 	(client -> type)[sizeof(client -> type) - 1] = 0x00;
+
 	dolog(LOG_INFO, "type|%s is \"%s\"", client -> host, client -> type);
 
 	free(buffer);
@@ -423,12 +407,10 @@ int do_client_send_ping_request(client_t *client, config_t *config)
 
 int do_client_ping_reply(client_t *client, config_t *config)
 {
-	char buffer[4 + 1];
+	char buffer[4 + 1] = { 0 };
 
-	if (READ_TO(client -> socket_fd, buffer, 4, config -> communication_timeout) != 4)	// flush number of bits
+	if (READ_TO(client -> socket_fd, buffer, 4, config -> communication_timeout) != 4)
 		return -1;
-
-	buffer[4] = 0x00;
 
 	dolog(LOG_DEBUG, "ping|Got successfull ping reply from %s (%s): %s", client -> host, client -> type, buffer);
 
@@ -439,32 +421,15 @@ int do_client_kernelpoolfilled_reply(client_t *client, config_t *config)
 {
 	char *buffer;
 	int n_bytes;
-	char string_size[4 + 1];
 
-	if (READ_TO(client -> socket_fd, string_size, 4, config -> communication_timeout) != 4)	// flush number of bits
+	if (recv_length_data(client -> socket_fd, &buffer, &n_bytes) == -1)
 		return -1;
 
-	string_size[4] = 0x00;
-
-	n_bytes = atoi(string_size);
 	if (n_bytes <= 0)
 	{
 		dolog(LOG_WARNING, "%s sends 0008 msg with 0 bytes of contents", client -> host);
 		return -1;
 	}
-
-	buffer = (char *)malloc(n_bytes + 1);
-	if (!buffer)
-		error_exit("%s out of memory while allocating %d bytes", client -> host, n_bytes + 1);
-
-	if (READ_TO(client -> socket_fd, buffer, n_bytes, config -> communication_timeout) != n_bytes)
-	{
-		free(buffer);
-		dolog(LOG_INFO, "kernfill|%s short read for 0008", client -> host);
-		return -1;
-	}
-
-	buffer[n_bytes] = 0x00;
 
 	dolog(LOG_INFO, "kernfill|%s has %d bits", client -> host, atoi(buffer));
 

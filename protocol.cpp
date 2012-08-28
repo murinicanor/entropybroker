@@ -16,6 +16,35 @@
 #include "kernel_prng_io.h"
 #include "protocol.h"
 
+int recv_length_data(int fd, char **data, int *len)
+{
+	char len_buffer[4 + 1] = { 0 };
+
+	if (READ_TO(fd, len_buffer, 4) != 4)
+		return -1;
+
+	*len = atoi(len_buffer);
+
+	if (*len == 0)
+		*data = NULL;
+	else
+	{
+		*data = (char *)malloc(*len + 1);
+
+		if (READ_TO(fd, *data, *len, DEFAULT_COMM_TO) != *len)
+		{
+			free(*data);
+			*data = NULL;
+
+			return -1;
+		}
+
+		(*data)[*len] = 0x00;
+	}
+
+	return 0;
+}
+
 void make_msg(char *where_to, int code, int value)
 {
 	if (code < 0 || code > 9999)
