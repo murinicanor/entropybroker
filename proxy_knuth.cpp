@@ -45,7 +45,14 @@ typedef struct
 	long long unsigned int challenge;
 } proxy_client_t;
 
-void load_knuth_file(std::string file, short **table, int *size, int *n_set)
+typedef struct
+{
+	short *table;
+	int size, offset;
+	bool is_valid;
+} lookup_t;
+
+void load_knuth_file(std::string file, lookup_t *lt)
 {
 	FILE *fh = fopen(file.c_str(), "rb");
 	if (!fh)
@@ -65,12 +72,12 @@ void load_knuth_file(std::string file, short **table, int *size, int *n_set)
 	}
 }
 
-void write_knuth_file(std::string file, short *table, int size, int n_set)
+void write_knuth_file(std::string file, lookup_t *lt)
 {
 	// FIXME
 }
 
-bool handle_client(proxy_client_t *client)
+bool handle_client(proxy_client_t *client, lookup_t *lt)
 {
 	char cmd[4 + 1] = { 0 };
 
@@ -255,15 +262,14 @@ int main(int argc, char *argv[])
 	clients[0] -> fd = -1;
 	clients[1] -> fd = -1;
 
-	short *lookup_table = NULL;
-	int lookup_table_size = 0, lookup_table_nset = 0;
-	load_knuth_file(knuth_file, &lookup_table, &lookup_table_size, &lookup_table_nset);
+	lookup_t lt = { NULL, 0, 0, false };
+	load_knuth_file(knuth_file, &lt);
 
-	if (lookup_table_size == 0)
+	if (lt.size == 0)
 	{
-		lookup_table_size = KNUTH_SIZE;
-		lookup_table = (short *)malloc(lookup_table_size * sizeof(short));
-		lookup_table_nset = 0;
+		lt.size = KNUTH_SIZE;
+		lt.table = (short *)malloc(lt.size * sizeof(short));
+		lt.offset = 0;
 	}
 
 	for(;;)
@@ -305,7 +311,7 @@ int main(int argc, char *argv[])
 		{
 			if (clients[client_index] -> fd != -1 && FD_ISSET(clients[client_index] -> fd, &rfds))
 			{
-				if (handle_client(clients[client_index]) == false)
+				if (handle_client(clients[client_index], &lt) == false)
 				{
 					close(clients[client_index] -> fd);
 
@@ -360,7 +366,7 @@ int main(int argc, char *argv[])
 
 	delete p;
 
-	write_knuth_file(knuth_file, lookup_table, lookup_table_size, lookup_table_nset);
+	write_knuth_file(knuth_file, &lt);
 
 	unlink(pid_file);
 
