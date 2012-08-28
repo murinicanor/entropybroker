@@ -20,8 +20,8 @@ typedef struct
 
 	char *stats_file;
 
-	int communication_timeout;
-	int communication_session_timeout;
+	double communication_timeout;
+	double communication_session_timeout;
 	int default_sleep_time_when_pools_full;
 	int default_sleep_when_pools_empty;
 	int default_max_sleep_when_pools_empty;

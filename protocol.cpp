@@ -16,11 +16,11 @@
 #include "kernel_prng_io.h"
 #include "protocol.h"
 
-int recv_length_data(int fd, char **data, int *len)
+int recv_length_data(int fd, char **data, int *len, double to)
 {
 	char len_buffer[4 + 1] = { 0 };
 
-	if (READ_TO(fd, len_buffer, 4, DEFAULT_COMM_TO) != 4)
+	if (READ_TO(fd, len_buffer, 4, to) != 4)
 		return -1;
 
 	*len = atoi(len_buffer);
@@ -31,7 +31,7 @@ int recv_length_data(int fd, char **data, int *len)
 	{
 		*data = (char *)malloc(*len + 1);
 
-		if (READ_TO(fd, *data, *len, DEFAULT_COMM_TO) != *len)
+		if (READ_TO(fd, *data, *len, to) != *len)
 		{
 			free(*data);
 			*data = NULL;
@@ -41,6 +41,21 @@ int recv_length_data(int fd, char **data, int *len)
 
 		(*data)[*len] = 0x00;
 	}
+
+	return 0;
+}
+
+int send_length_data(int fd, char *data, int len, double to)
+{
+	char len_buffer[4 + 1] = { 0 };
+
+	snprintf(len_buffer, sizeof len_buffer, "%d", len);
+
+	if (WRITE_TO(fd, len_buffer, 4, to) != 4)
+		return -1;
+
+	if (len > 0 && WRITE_TO(fd, data, len, to) != len)
+		return -1;
 
 	return 0;
 }

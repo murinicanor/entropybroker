@@ -27,7 +27,7 @@ LINT=-Wshadow -Wall # -W -Wconversion -Wwrite-strings -Wunused
 CXXFLAGS+=-O3 -g3 -ggdb -march=native -mtune=native -DVERSION=\"${VERSION}\" $(LINT) $(DEBUG) -DCONFIG=\"${ETC}/entropy_broker.conf\" -DCACHE_DIR=\"${CACHE}\" -DPID_DIR=\"${PID}\" -DVAR_DIR=\"${VAR}\" -rdynamic
 LDFLAGS+=$(DEBUG) -lcrypto -lrt -lz -lutil -rdynamic
 
-BINARIES=entropy_broker eb_server_audio eb_server_timers eb_server_v4l eb_server_stream eb_client_linux_kernel eb_server_egd eb_client_egd eb_test_egd_speed eb_server_linux_kernel eb_client_file eb_server_push_file eb_server_ext_proc eb_server_usb plot eb_server_ComScire_R2000KU proxy_knuth
+BINARIES=entropy_broker eb_server_audio eb_server_timers eb_server_v4l eb_server_stream eb_client_linux_kernel eb_server_egd eb_client_egd eb_server_linux_kernel eb_client_file eb_server_push_file eb_server_ext_proc eb_server_usb plot eb_server_ComScire_R2000KU proxy_knuth
 
 OBJSeb=pools.o handle_client.o config.o error.o fips140.o kernel_prng_rw.o log.o protocol.o main.o math.o pool.o scc.o signals.o utils.o auth.o my_pty.o ivec.o kernel_prng_io.o hasher.o stirrer.o hasher_sha512.o stirrer_blowfish.o stirrer_aes.o hasher_md5.o hasher_ripemd160.o stirrer_3des.o stirrer_camellia.o hasher_whirlpool.o users.o
 OBJSsa=server_audio.o error.o utils.o kernel_prng_rw.o log.o protocol.o server_utils.o auth.o my_pty.o kernel_prng_io.o users.o
@@ -37,7 +37,6 @@ OBJSss=server_stream.o error.o log.o protocol.o kernel_prng_rw.o utils.o server_
 OBJSse=server_egd.o error.o log.o kernel_prng_rw.o protocol.o utils.o server_utils.o auth.o my_pty.o kernel_prng_io.o users.o
 OBJSclk=client_linux_kernel.o error.o kernel_prng_io.o kernel_prng_rw.o log.o protocol.o utils.o auth.o my_pty.o math.o users.o
 OBJScle=client_egd.o error.o log.o kernel_prng_io.o kernel_prng_rw.o math.o protocol.o utils.o auth.o my_pty.o users.o
-OBJSte=test_egd_speed.o utils.o kernel_prng_rw.o log.o error.o auth.o my_pty.o users.o
 OBJSsk=server_linux_kernel.o utils.o kernel_prng_rw.o kernel_prng_io.o log.o error.o protocol.o server_utils.o auth.o my_pty.o users.o
 OBJScf=client_file.o error.o log.o kernel_prng_io.o kernel_prng_rw.o math.o protocol.o utils.o auth.o my_pty.o users.o
 OBJSpf=server_push_file.o utils.o kernel_prng_rw.o kernel_prng_io.o log.o error.o protocol.o server_utils.o auth.o my_pty.o users.o
@@ -87,8 +86,6 @@ all:
 	@echo eb_server_ComScire_R2000KU - retrieves entropy data from a ComScire R2000KU
 	@echo                         = requires libftdi-dev
 	@echo
-	@echo eb_test_egd_speed
-	@echo
 	@echo OBJSpk
 	@echo
 	@echo plot                    - plot random data: patterns=bad. use with e.g. eb_client_file
@@ -127,9 +124,6 @@ eb_client_egd: $(OBJScle)
 
 eb_client_linux_kernel: $(OBJSclk)
 	$(CXX) $(LINT) $(OBJSclk) $(LDFLAGS) -o eb_client_linux_kernel
-
-eb_test_egd_speed: $(OBJSte)
-	$(CXX) $(LINT) $(OBJSte) $(LDFLAGS) -o eb_test_egd_speed
 
 eb_server_linux_kernel: $(OBJSsk)
 	$(CXX) $(LINT) $(OBJSsk) $(LDFLAGS) -o eb_server_linux_kernel

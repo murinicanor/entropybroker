@@ -1,4 +1,4 @@
-#define PROTOCOL_VERSION 4
+#define PROTOCOL_VERSION 5
 #define TCP_SILENT_FAIL_TEST_INTERVAL 120
 #define MAX_ERROR_SLEEP 12
 
@@ -11,7 +11,8 @@
 #define DATA_HASH_FUNC(x, y, z) SHA256(x, y, z)
 #define DATA_HASH_LEN SHA256_DIGEST_LENGTH
 
-int recv_length_data(int fd, char **data, int *len);
+int recv_length_data(int fd, char **data, int *len, double to);
+int send_length_data(int fd, char *data, int len, double to);
 void make_msg(char *where_to, int code, int value);
 void calc_ivec(char *password, long long unsigned int rnd, long long unsigned int counter, unsigned char *dest);
 

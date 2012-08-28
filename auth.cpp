@@ -34,39 +34,26 @@ int auth_eb_user(int fd, int to, users *user_map, std::string & password, long l
 	if (rnd_str_size == 0)
 		error_exit("INTERNAL ERROR: random string is 0 characters!");
 
-	if (WRITE_TO(fd, (char *)&rnd_str_size, 1, to) == -1)
+	if (send_length_data(fd, rnd_str, rnd_str_size, to) == -1)
 	{
-		dolog(LOG_INFO, "%s for fd %d closed (1)", ts, fd);
-		return -1;
-	}
-	if (WRITE_TO(fd, rnd_str, rnd_str_size, to) == -1)
-	{
-		dolog(LOG_INFO, "%s for fd %d closed (2)", ts, fd);
+		dolog(LOG_INFO, "%s failure sending random via %d", ts, fd);
 		return -1;
 	}
 
-	unsigned char username_length = 0;
-	if (READ_TO(fd, (char *)&username_length, 1, to) != 1)
+	char *username = NULL;
+	int username_length = 0;
+	if (recv_length_data(fd, &username, &username_length, to) == -1)
 	{
-		dolog(LOG_INFO, "%s for fd %d closed (u1)", ts, fd);
+		dolog(LOG_INFO, "%s receiving username via %d", ts, fd);
 		return -1;
 	}
-	char username[255 + 1] = { 0 };
-	if (username_length > 0)
-	{
-		if (READ_TO(fd, username, username_length, to) != username_length)
-		{
-			dolog(LOG_INFO, "%s for fd %d closed (u2)", ts, fd);
-			return -1;
-		}
 
-		username[username_length] = 0x00;
-	}
 	dolog(LOG_INFO, "User '%s' requesting access", username);
 
-	if (username[0] == 0x00)
+	if (username[0] == 0x00 || username_length == 0)
 	{
 		dolog(LOG_WARNING, "Empty username");
+		free(username);
 		return -1;
 	}
 
@@ -77,6 +64,7 @@ int auth_eb_user(int fd, int to, users *user_map, std::string & password, long l
 
 		user_known = false;
 	}
+	free(username);
 
 	char hash_cmp_str[256], hash_cmp[SHA512_DIGEST_LENGTH];
 	snprintf(hash_cmp_str, sizeof hash_cmp_str, "%s %s", rnd_str, password.c_str());
@@ -143,41 +131,32 @@ bool get_auth_from_file(char *filename, std::string & username, std::string & pa
 
 int auth_client_server_user(int fd, int to, std::string & username, std::string & password, long long unsigned int *challenge)
 {
-	char rnd_str[128];
-	unsigned char rnd_str_size;
-	if (READ_TO(fd, (char *)&rnd_str_size, 1, to) != 1)
+	char *rnd_str = NULL;
+	int rnd_str_size = 0;
+
+	if (recv_length_data(fd, &rnd_str, &rnd_str_size, to) == -1)
 	{
 		dolog(LOG_INFO, "Connection for fd %d closed (1)", fd);
 		return -1;
 	}
+
 	if (rnd_str_size == 0)
 		error_exit("INTERNAL ERROR: random string is 0 characters!");
-	if (rnd_str_size >= sizeof rnd_str)
-		error_exit("INTERNAL ERROR: random string too long!");
-	if (READ_TO(fd, rnd_str, rnd_str_size, to) != rnd_str_size)
-	{
-		dolog(LOG_INFO, "Connection for fd %d closed (2)", fd);
-		return -1;
-	}
-	rnd_str[rnd_str_size] = 0x00;
 
 	char *dummy = NULL;
 	*challenge = strtoull(rnd_str, &dummy, 10);
 
-	unsigned char username_length = username.length();
-	if (WRITE_TO(fd, (char *)&username_length, 1, to) != 1)
+	int username_length = username.length();
+	if (send_length_data(fd, (char *)username.c_str(), username_length, to) == -1)
 	{
 		dolog(LOG_INFO, "Connection for fd %d closed (u1)", fd);
-		return -1;
-	}
-	if (WRITE_TO(fd, (char *)username.c_str(), username_length, to) != username_length)
-	{
-		dolog(LOG_INFO, "Connection for fd %d closed (u1)", fd);
+		free(rnd_str);
 		return -1;
 	}
 
 	char hash_cmp_str[256], hash_cmp[SHA512_DIGEST_LENGTH];
 	snprintf(hash_cmp_str, sizeof hash_cmp_str, "%s %s", rnd_str, password.c_str());
+	free(rnd_str);
 
 	SHA512((const unsigned char *)hash_cmp_str, strlen(hash_cmp_str), (unsigned char *)hash_cmp);
 

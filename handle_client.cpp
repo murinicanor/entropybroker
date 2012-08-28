@@ -367,7 +367,7 @@ int do_client_server_type(client_t *client, config_t *config)
 	char *buffer;
 	int n_bytes;
 
-	if (recv_length_data(client -> socket_fd, &buffer, &n_bytes) == -1)
+	if (recv_length_data(client -> socket_fd, &buffer, &n_bytes, config -> communication_timeout) == -1)
 		return -1;
 
 	if (n_bytes <= 0)
@@ -422,7 +422,7 @@ int do_client_kernelpoolfilled_reply(client_t *client, config_t *config)
 	char *buffer;
 	int n_bytes;
 
-	if (recv_length_data(client -> socket_fd, &buffer, &n_bytes) == -1)
+	if (recv_length_data(client -> socket_fd, &buffer, &n_bytes, config -> communication_timeout) == -1)
 		return -1;
 
 	if (n_bytes <= 0)

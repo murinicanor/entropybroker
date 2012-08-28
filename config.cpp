@@ -59,8 +59,8 @@ void load_config(const char *config, config_t *pconfig)
 
 	pconfig -> stats_file = NULL;
 
-	pconfig -> communication_timeout              = 15;
-	pconfig -> communication_session_timeout      = 3600; /* 0 for no timeout */
+	pconfig -> communication_timeout              = 15.0;
+	pconfig -> communication_session_timeout      = 3600.0; /* 0 for no timeout */
 	pconfig -> default_sleep_time_when_pools_full = 10;
 	pconfig -> default_sleep_when_pools_empty     = 1;
 	pconfig -> default_max_sleep_when_pools_empty = 60;
@@ -178,9 +178,9 @@ void load_config(const char *config, config_t *pconfig)
 			pconfig -> prng_seed_file = p_file;
 		}
 		else if (strcmp(cmd, "communication_timeout") == 0)
-			pconfig -> communication_timeout = parval;
+			pconfig -> communication_timeout = parvald;
 		else if (strcmp(cmd, "communication_session_timeout") == 0)
-			pconfig -> communication_session_timeout = parval;
+			pconfig -> communication_session_timeout = parvald;
 		else if (strcmp(cmd, "default_sleep_time_when_pools_full") == 0)
 			pconfig -> default_sleep_time_when_pools_full = parval;
 		else if (strcmp(cmd, "default_sleep_when_pools_empty") == 0)
