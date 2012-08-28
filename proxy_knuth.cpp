@@ -52,10 +52,26 @@ bool handle_client(proxy_client_t *client)
 
 	if (memcmp(cmd, "0003", 4) == 0) // server info msg
 	{
+		char *info = NULL;
+		int info_len = 0;
+		if (recv_length_data(client -> fd, &info, &info_len, DEFAULT_COMM_TO) == -1)
+			return false;
+
+		client -> type = std::string(info);
+		dolog(LOG_WARNING, "Client %s is: %s", client -> host.c_str(), info);
+
+		free(info);
 	}
 	else if (memcmp(cmd, "0006", 4) == 0) // client info msg
 	{
-		dolog(LOG_WARNING, "Clients connecting to this proxy not supported!");
+		char *info = NULL;
+		int info_len = 0;
+		if (recv_length_data(client -> fd, &info, &info_len, DEFAULT_COMM_TO) == -1)
+			return false;
+
+		dolog(LOG_WARNING, "Clients (%s/%s) connecting to this proxy not supported!", client -> host.c_str(), info);
+		free(info);
+
 		return false;
 	}
 	else
@@ -84,8 +100,8 @@ void help()
 	printf("-s        log to syslog\n");
 	printf("-n        do not fork\n");
 	printf("-P file   write pid to file\n");
-	printf("-X file   read username+password from file\n");
-	printf("-U file   read u/p for clients from file\n");
+	printf("-X file   read username+password from file (to authenticate to broker)\n");
+	printf("-U file   read u/p for clients from file (to authenticate local clients)\n");
 }
 
 int main(int argc, char *argv[])
@@ -152,6 +168,7 @@ int main(int argc, char *argv[])
 				return 0;
 
 			default:
+				fprintf(stderr, "-%c not known\n", c);
 				help();
 				return 1;
 		}
@@ -271,6 +288,10 @@ int main(int argc, char *argv[])
 				pcp -> fd = new_socket_fd;
 				pcp -> password = client_password;
 				pcp -> challenge = challenge;
+
+				char dummy_str[256];
+				snprintf(dummy_str, sizeof dummy_str, "%s:%d", inet_ntoa(client_addr.sin_addr), client_addr.sin_port);
+				pcp -> host = dummy_str;
 			}
 			else
 			{
