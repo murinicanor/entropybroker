@@ -49,7 +49,7 @@ int send_length_data(int fd, char *data, int len, double to)
 {
 	char len_buffer[4 + 1] = { 0 };
 
-	snprintf(len_buffer, sizeof len_buffer, "%d", len);
+	snprintf(len_buffer, sizeof len_buffer, "%04d", len);
 
 	if (WRITE_TO(fd, len_buffer, 4, to) != 4)
 		return -1;
@@ -298,7 +298,7 @@ int protocol::message_transmit_entropy_data(unsigned char *bytes_in, int n_bytes
 		if ((n_bytes * 8) > 9999)
 			error_exit("internal error: too many bytes to transmit in 1 message (%d)", n_bytes);
 
-		snprintf(header, sizeof(header), "0002%04d", n_bytes * 8);
+		make_msg((char *)header, 2, n_bytes * 8); // 0002 xmit data request
 
 		// header
 		if (WRITE_TO(socket_fd, (char *)header, 8, DEFAULT_COMM_TO) != 8)

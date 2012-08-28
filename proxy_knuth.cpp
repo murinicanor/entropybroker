@@ -29,8 +29,13 @@
 #include "auth.h"
 #include "kernel_prng_io.h"
 
+#define KNUTH_SIZE 8192
+#define KNUTH_FILE "lookup.knuth"
+
 const char *pid_file = PID_DIR "/proxy_knuth.pid";
 const char *client_type = "proxy_knuth";
+
+bool sig_quit = false;
 
 typedef struct
 {
@@ -39,6 +44,31 @@ typedef struct
 	std::string password;
 	long long unsigned int challenge;
 } proxy_client_t;
+
+void load_knuth_file(std::string file, short **table, int *size, int *n_set)
+{
+	FILE *fh = fopen(file.c_str(), "rb");
+	if (!fh)
+	{
+		if (errno != ENOENT)
+			error_exit("Error accessing file %s", file.c_str());
+	}
+	else
+	{
+
+// FIXME
+// size
+// n_set
+// data
+// *setup = size == n_set;
+		fclose(fh);
+	}
+}
+
+void write_knuth_file(std::string file, short *table, int size, int n_set)
+{
+	// FIXME
+}
 
 bool handle_client(proxy_client_t *client)
 {
@@ -85,9 +115,14 @@ bool handle_client(proxy_client_t *client)
 
 void sig_handler(int sig)
 {
-	fprintf(stderr, "Exit due to signal %d\n", sig);
-	unlink(pid_file);
-	exit(0);
+	if (sig == SIGTERM || sig == SIGINT || sig == SIGQUIT)
+		sig_quit = true;
+	else
+	{
+		fprintf(stderr, "Exit due to signal %d\n", sig);
+		unlink(pid_file);
+		exit(0);
+	}
 }
 
 void help()
@@ -99,6 +134,7 @@ void help()
 	printf("-l file   log to file 'file'\n");
 	printf("-s        log to syslog\n");
 	printf("-n        do not fork\n");
+	printf("-V file   store buffers to this file (default: %s/%s)", CACHE_DIR, KNUTH_FILE);
 	printf("-P file   write pid to file\n");
 	printf("-X file   read username+password from file (to authenticate to broker)\n");
 	printf("-U file   read u/p for clients from file (to authenticate local clients)\n");
@@ -113,13 +149,18 @@ int main(int argc, char *argv[])
 	char *log_logfile = NULL;
 	std::string username, password;
 	std::string clients_auths;
+	std::string knuth_file = CACHE_DIR + std::string("/") + KNUTH_FILE;
 
 	printf("proxy_knuth, (C) 2009-2012 by folkert@vanheusden.com\n");
 
-	while((c = getopt(argc, argv, "x:j:p:U:hf:X:P:i:l:sn")) != -1)
+	while((c = getopt(argc, argv, "V:x:j:p:U:hf:X:P:i:l:sn")) != -1)
 	{
 		switch(c)
 		{
+			case 'V':
+				knuth_file = optarg;
+				break;
+
 			case 'x':
 				port = atoi(optarg);
 				if (port < 1)
@@ -214,6 +255,17 @@ int main(int argc, char *argv[])
 	clients[0] -> fd = -1;
 	clients[1] -> fd = -1;
 
+	short *lookup_table = NULL;
+	int lookup_table_size = 0, lookup_table_nset = 0;
+	load_knuth_file(knuth_file, &lookup_table, &lookup_table_size, &lookup_table_nset);
+
+	if (lookup_table_size == 0)
+	{
+		lookup_table_size = KNUTH_SIZE;
+		lookup_table = (short *)malloc(lookup_table_size * sizeof(short));
+		lookup_table_nset = 0;
+	}
+
 	for(;;)
 	{
 		fd_set rfds;
@@ -233,13 +285,21 @@ int main(int argc, char *argv[])
 			}
 		}
 
-		if (select(max_fd + 1, &rfds, NULL, NULL, NULL) == -1)
+		sigset_t sig_set;
+
+		if (sigemptyset(&sig_set) == -1)
+			error_exit("sigemptyset");
+
+		if (pselect(max_fd + 1, &rfds, NULL, NULL, NULL, &sig_set) == -1)
 		{
 			if (errno != EINTR)
 				error_exit("select failed");
 
 			continue;
 		}
+
+		if (sig_quit)
+			break;
 
 		for(int client_index=0; client_index<2; client_index++)
 		{
@@ -276,8 +336,6 @@ int main(int argc, char *argv[])
 			long long unsigned int challenge = 1;
 			if (auth_eb(new_socket_fd, DEFAULT_COMM_TO, user_map, client_password, &challenge) == 0)
 			{
-// do a handshake like a broker would do
-// broker-protocol also in a class
 				proxy_client_t *pcp = NULL;
 
 				if (clients[0] -> fd == -1)
@@ -301,6 +359,10 @@ int main(int argc, char *argv[])
 	}
 
 	delete p;
+
+	write_knuth_file(knuth_file, lookup_table, lookup_table_size, lookup_table_nset);
+
+	unlink(pid_file);
 
 	dolog(LOG_INFO, "Finished");
 
