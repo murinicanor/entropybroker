@@ -126,7 +126,9 @@ void main_loop(char *host, int port, char *bytes_file, char show_bps, std::strin
 	double start_ts, cur_start_ts;
 	long int total_byte_cnt = 0;
 
-	protocol *p = new protocol(host, port, username, password, true, server_type);
+	protocol *p = NULL;
+	if (host)
+		p = new protocol(host, port, username, password, true, server_type);
 
 	lock_mem(bytes, sizeof bytes);
 

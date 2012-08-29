@@ -20,12 +20,12 @@ users::~users()
 void users::reload()
 {
 	delete user_map;
+
 	load_usermap();
 }
 
 void users::load_usermap()
 {
-	delete user_map;
 	user_map = new std::map<std::string, std::string>();
 
 	std::ifstream fh(filename.c_str());

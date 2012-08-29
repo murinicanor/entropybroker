@@ -25,7 +25,12 @@ int recv_length_data(int fd, char **data, int *len, double to)
 
 	*len = atoi(len_buffer);
 
-	if (*len == 0)
+	if (*len < 0) // someone is fiddling or something is really wrong
+	{
+		dolog(LOG_WARNING, "recv_length_data: got negative (%d) length (%s)", *len, len_buffer);
+		return -1;
+	}
+	else if (*len == 0)
 		*data = NULL;
 	else
 	{

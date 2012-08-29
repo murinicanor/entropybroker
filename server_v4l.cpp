@@ -247,7 +247,9 @@ int main(int argc, char *argv[])
 
 	write_pid(pid_file);
 
-	protocol *p = new protocol(host, port, username, password, true, server_type);
+	protocol *p = NULL;
+	if (host)
+		p = new protocol(host, port, username, password, true, server_type);
 
 	/* open device */
 	int fd = -1;

@@ -499,37 +499,39 @@ int main(int argc, char *argv[])
 			struct sockaddr_in client_addr;
 			socklen_t client_addr_len = sizeof(client_addr);
 			int new_socket_fd = accept(listen_socket_fd, (struct sockaddr *)&client_addr, &client_addr_len);
-
-			dolog(LOG_INFO, "new client: %s:%d (fd: %d)", inet_ntoa(client_addr.sin_addr), client_addr.sin_port, new_socket_fd);
-
-			std::string client_password;
-			long long unsigned int challenge = 1;
-			if (auth_eb(new_socket_fd, DEFAULT_COMM_TO, user_map, client_password, &challenge) == 0)
+			if (new_socket_fd != -1)
 			{
-				proxy_client_t *pcp = NULL;
+				dolog(LOG_INFO, "new client: %s:%d (fd: %d)", inet_ntoa(client_addr.sin_addr), client_addr.sin_port, new_socket_fd);
 
-				if (clients[0] -> fd == -1)
-					pcp = clients[0];
-				else if (clients[1] -> fd == -1)
-					pcp = clients[1];
+				std::string client_password;
+				long long unsigned int challenge = 1;
+				if (auth_eb(new_socket_fd, DEFAULT_COMM_TO, user_map, client_password, &challenge) == 0)
+				{
+					proxy_client_t *pcp = NULL;
 
-				pcp -> fd = new_socket_fd;
-				pcp -> challenge = challenge;
+					if (clients[0] -> fd == -1)
+						pcp = clients[0];
+					else if (clients[1] -> fd == -1)
+						pcp = clients[1];
 
-				char dummy_str[256];
-				snprintf(dummy_str, sizeof dummy_str, "%s:%d", inet_ntoa(client_addr.sin_addr), client_addr.sin_port);
-				pcp -> host = dummy_str;
+					pcp -> fd = new_socket_fd;
+					pcp -> challenge = challenge;
 
-				pcp -> challenge = challenge;
-				pcp -> ivec_counter = 0;
-				pcp -> ivec_offset = 0;
-				calc_ivec((char *)client_password.c_str(), pcp -> challenge, pcp -> ivec_counter, pcp -> ivec);
+					char dummy_str[256];
+					snprintf(dummy_str, sizeof dummy_str, "%s:%d", inet_ntoa(client_addr.sin_addr), client_addr.sin_port);
+					pcp -> host = dummy_str;
 
-				BF_set_key(&pcp -> key, client_password.length(), (unsigned char *)client_password.c_str());
-			}
-			else
-			{
-				close(new_socket_fd);
+					pcp -> challenge = challenge;
+					pcp -> ivec_counter = 0;
+					pcp -> ivec_offset = 0;
+					calc_ivec((char *)client_password.c_str(), pcp -> challenge, pcp -> ivec_counter, pcp -> ivec);
+
+					BF_set_key(&pcp -> key, client_password.length(), (unsigned char *)client_password.c_str());
+				}
+				else
+				{
+					close(new_socket_fd);
+				}
 			}
 		}
 	}

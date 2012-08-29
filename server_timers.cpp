@@ -152,7 +152,9 @@ int main(int argc, char *argv[])
 	signal(SIGINT , sig_handler);
 	signal(SIGQUIT, sig_handler);
 
-	protocol *p = new protocol(host, port, username, password, true, server_type);
+	protocol *p = NULL;
+	if (host)
+		p = new protocol(host, port, username, password, true, server_type);
 
 	long int total_byte_cnt = 0;
 	double cur_start_ts = get_ts();

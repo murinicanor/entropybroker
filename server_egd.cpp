@@ -183,7 +183,9 @@ int main(int argc, char *argv[])
 
 	set_logging_parameters(log_console, log_logfile, log_syslog);
 
-	protocol *p = new protocol(host, port, username, password, true, server_type);
+	protocol *p = NULL;
+	if (host)
+		p = new protocol(host, port, username, password, true, server_type);
 
 	if (device)
 		read_fd = open_unixdomain_socket(device);

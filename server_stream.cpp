@@ -350,7 +350,9 @@ int main(int argc, char *argv[])
 			error_exit("fork failed");
 	}
 
-	protocol *p = new protocol(host, port, username, password, true, server_type);
+	protocol *p = NULL;
+	if (host)
+		p = new protocol(host, port, username, password, true, server_type);
 
 	write_pid(pid_file);
 
