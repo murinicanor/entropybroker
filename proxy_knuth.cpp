@@ -383,7 +383,7 @@ void help()
 	printf("-l file   log to file 'file'\n");
 	printf("-s        log to syslog\n");
 	printf("-n        do not fork\n");
-	printf("-V file   store buffers to this file (default: %s/%s)", CACHE_DIR, KNUTH_FILE);
+	printf("-V file   store buffers to this file (default: %s/%s)\n", CACHE_DIR, KNUTH_FILE);
 	printf("-P file   write pid to file\n");
 	printf("-X file   read username+password from file (to authenticate to broker)\n");
 	printf("-U file   read u/p for clients from file (to authenticate local clients)\n");
