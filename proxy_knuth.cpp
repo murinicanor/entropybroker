@@ -35,7 +35,7 @@
 #define KNUTH_FILE "lookup.knuth"
 
 const char *pid_file = PID_DIR "/proxy_knuth.pid";
-const char *client_type = "proxy_knuth";
+const char *client_type = "proxy_knuth v" VERSION;
 
 bool sig_quit = false;
 
@@ -54,13 +54,13 @@ typedef struct
 
 typedef struct
 {
-	short *table;
+	unsigned short *table;
 	int t_size, t_offset;
 	bool is_valid;
 
-	short *A;
+	unsigned short *A;
 	int n_A;
-	short *B;
+	unsigned short *B;
 	int n_B;
 } lookup_t;
 
@@ -73,10 +73,10 @@ void load_knuth_file(std::string file, lookup_t *lt)
 			error_exit("Error accessing file %s", file.c_str());
 
 		lt -> t_size = KNUTH_SIZE;
-		lt -> table = (short *)malloc(lt -> t_size * sizeof(short));
+		lt -> table = (unsigned short *)malloc(lt -> t_size * sizeof(unsigned short));
 
-		lt -> A = (short *)malloc(A_B_SIZE * sizeof(short));
-		lt -> B = (short *)malloc(A_B_SIZE * sizeof(short));
+		lt -> A = (unsigned short *)malloc(A_B_SIZE * sizeof(unsigned short));
+		lt -> B = (unsigned short *)malloc(A_B_SIZE * sizeof(unsigned short));
 	}
 	else
 	{
@@ -107,8 +107,15 @@ int put_data(proxy_client_t *client, lookup_t *lt, bool is_A)
 	if (cur_n_bits > 9992)
 		return -1;
 
+	bool full = false;
+	if (is_A && lt -> t_offset == lt -> t_size && lt -> n_A == A_B_SIZE)
+		full = true;
+	else if (!is_A && lt -> n_B == A_B_SIZE)
+		full = true;
+
 	char reply[4 + 4 + 1] = { 0 };
 	make_msg(reply, 1, cur_n_bits);
+	// make_msg(reply, full ? 9003 : 1, cur_n_bits);
 	if (WRITE_TO(client -> fd, reply, 8, DEFAULT_COMM_TO) != 8)
 		return -1;
 
@@ -154,36 +161,42 @@ int put_data(proxy_client_t *client, lookup_t *lt, bool is_A)
 		{
 			int n = lt -> t_size - lt -> t_offset;
 
-			int do_n_bytes = min(n * sizeof(short), cur_n_bytes);
+			int do_n_bytes = min(n * sizeof(unsigned short), cur_n_bytes);
 			memcpy(lt -> table, buffer_out, do_n_bytes);
 
-			lt -> t_offset += do_n_bytes / sizeof(short);
+			lt -> t_offset += do_n_bytes / sizeof(unsigned short);
 			if (lt -> t_offset == lt -> t_size)
 			{
-				// reset A & B buffers so that both have data when needed (hopefully)
-				lt -> n_A = lt -> n_B = 0;
+				// // reset A & B buffers so that both have data when needed (hopefully)
+				// lt -> n_A = lt -> n_B = 0;
 
 				dolog(LOG_INFO, "look-up table is filled");
+			}
+			else
+			{
+				dolog(LOG_DEBUG, "Look-up table fill: %.2f%%", double(lt -> t_offset * 100) / double(lt -> t_size));
 			}
 		}
 		else
 		{
 			int n = A_B_SIZE - lt -> n_A;
 
-			int do_n_bytes = min(n * sizeof(short), cur_n_bytes);
-			memcpy(lt -> A, buffer_out, do_n_bytes);
+			int do_n_bytes = min(n * sizeof(unsigned short), cur_n_bytes);
+			if (do_n_bytes > 0)
+				memcpy(&lt -> A[lt -> n_A], buffer_out, do_n_bytes);
 
-			lt -> n_A += do_n_bytes / sizeof(short);
+			lt -> n_A += do_n_bytes / sizeof(unsigned short);
 		}
 	}
 	else
 	{
 		int n = A_B_SIZE - lt -> n_B;
 
-		int do_n_bytes = min(n * sizeof(short), cur_n_bytes);
-		memcpy(lt -> B, buffer_out, do_n_bytes);
+		int do_n_bytes = min(n * sizeof(unsigned short), cur_n_bytes);
+		if (do_n_bytes > 0)
+			memcpy(&lt -> B[lt -> n_B], buffer_out, do_n_bytes);
 
-		lt -> n_B += do_n_bytes / sizeof(short);
+		lt -> n_B += do_n_bytes / sizeof(unsigned short);
 	}
 
 	return 0;
@@ -234,6 +247,37 @@ int handle_client(proxy_client_t *client, lookup_t *lt, bool is_A)
 	}
 
 	return 0;
+}
+
+int transmit_data(protocol *p, lookup_t *lt)
+{
+	int n_short = 1249 / sizeof(unsigned short);
+
+	int n = min(n_short, min(lt -> n_A, lt -> n_B));
+
+	int n_bytes = n * sizeof(unsigned short);
+	unsigned short *out = (unsigned short *)malloc(n_bytes);
+
+	dolog(LOG_DEBUG, "Processing %d shorts", n);
+	for(int loop=0; loop<n; loop++)
+	{
+		int A = lt -> A[lt -> n_A - 1];
+		lt -> n_A--;
+		int B = lt -> B[lt -> n_B - 1];
+		lt -> n_B--;
+
+		int j = B % lt -> t_size;
+		int v = lt -> table[j];
+		lt -> table[j] = A;
+
+		out[loop] = v;
+	}
+
+	int rc = p -> message_transmit_entropy_data((unsigned char *)out, n_bytes);
+
+	free(out);
+
+	return rc;
 }
 
 void sig_handler(int sig)
@@ -433,9 +477,11 @@ int main(int argc, char *argv[])
 			}
 		}
 
-		if (lt.n_A > 0 && lt.n_B > 0)
+		// transmit to broker
+		while (lt.n_A > 0 && lt.n_B > 0)
 		{
-			// FIXME transmit to broker
+			dolog(LOG_DEBUG, "buffered data: %d %d", lt.n_A, lt.n_B);
+			transmit_data(p, &lt);
 		}
 
 		if (FD_ISSET(listen_socket_fd, &rfds))

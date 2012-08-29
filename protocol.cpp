@@ -154,6 +154,9 @@ void protocol::set_password(std::string password_in)
 void protocol::init_ivec(std::string password_in, long long unsigned int rnd, long long unsigned int counter)
 {
 	calc_ivec((char *)password_in.c_str(), rnd, counter, ivec);
+
+	ivec_counter = 0;
+	ivec_offset = 0;
 }
 
 int protocol::reconnect_server_socket()
@@ -366,7 +369,12 @@ int protocol::message_transmit_entropy_data(unsigned char *bytes_in, int n_bytes
 			{
 				dolog(LOG_INFO, "error transmitting data");
 				free(bytes_out);
-				return -1;
+
+				close(socket_fd);
+				socket_fd = -1;
+
+				error_sleep(error_count);
+				continue;
 			}
 
 			free(bytes_out);
