@@ -37,7 +37,7 @@
 const char *pid_file = PID_DIR "/proxy_knuth.pid";
 const char *client_type = "proxy_knuth v" VERSION;
 
-bool sig_quit = false;
+volatile bool sig_quit = false;
 
 typedef struct
 {
@@ -64,6 +64,29 @@ typedef struct
 	int n_B;
 } lookup_t;
 
+int read_value(FILE *fh)
+{
+	unsigned char buffer[4];
+
+	if (fread(buffer, 1, 4, fh) != 4)
+		error_exit("short read on file, please delete cache file and retry");
+
+	return (buffer[3] << 24) + (buffer[2] << 16) + (buffer[1] << 8) + buffer[0];
+}
+
+void write_value(FILE *fh, int value)
+{
+	unsigned char buffer[4];
+
+	buffer[3] = (value >> 24) & 255;
+	buffer[2] = (value >> 16) & 255;
+	buffer[1] = (value >>  8) & 255;
+	buffer[0] = (value      ) & 255;
+
+	if (fwrite(buffer, 1, 4, fh) != 4)
+		error_exit("short write on file, please delete cache file");
+}
+
 void load_knuth_file(std::string file, lookup_t *lt)
 {
 	FILE *fh = fopen(file.c_str(), "rb");
@@ -71,6 +94,8 @@ void load_knuth_file(std::string file, lookup_t *lt)
 	{
 		if (errno != ENOENT)
 			error_exit("Error accessing file %s", file.c_str());
+
+		dolog(LOG_INFO, "No cache file '%s' exists, starting with fresh buffers", file.c_str());
 
 		lt -> t_size = KNUTH_SIZE;
 		lt -> table = (unsigned short *)malloc(lt -> t_size * sizeof(unsigned short));
@@ -80,19 +105,53 @@ void load_knuth_file(std::string file, lookup_t *lt)
 	}
 	else
 	{
-error_exit("unexpected");
-// FIXME
-// size
-// n_set
-// data
-// *setup = size == n_set;
+		dolog(LOG_INFO, "Reading cached data from %s", file.c_str());
+
+		lt -> t_size = read_value(fh);
+		lt -> t_offset = read_value(fh);
+		lt -> table = (unsigned short *)malloc(lt -> t_size * sizeof(unsigned short));
+		size_t bytes = lt -> t_size * sizeof(unsigned short);
+		if (fread(lt -> table, 1, bytes, fh) != bytes)
+			error_exit("Short read in file, please delete %s and retry", file.c_str());
+
+		int dummy = read_value(fh);
+		if (dummy != A_B_SIZE)
+			error_exit("Unexpected A/B size %d (expecting %d), please delete %s and retry", dummy, A_B_SIZE, file.c_str());
+
+		bytes = A_B_SIZE * sizeof(unsigned short);
+		lt -> A = (unsigned short *)malloc(A_B_SIZE * sizeof(unsigned short));
+		if (fread(lt -> A, 1, bytes, fh) != bytes)
+			error_exit("Short read in file, please delete %s and retry", file.c_str());
+		lt -> B = (unsigned short *)malloc(A_B_SIZE * sizeof(unsigned short));
+		if (fread(lt -> B, 1, bytes, fh) != bytes)
+			error_exit("Short read in file, please delete %s and retry", file.c_str());
+
 		fclose(fh);
 	}
 }
 
 void write_knuth_file(std::string file, lookup_t *lt)
 {
-	// FIXME
+	dolog(LOG_INFO, "Writing cached data to %s", file.c_str());
+
+	FILE *fh = fopen(file.c_str(), "wb");
+	if (!fh)
+		error_exit("Failed to create file %s", file.c_str());
+
+	write_value(fh, lt -> t_size);
+	write_value(fh, lt -> t_offset);
+	size_t bytes = lt -> t_size * sizeof(unsigned short);
+	if (fwrite(lt -> table, 1, bytes, fh) != bytes)
+		error_exit("Error writing to file %s", file.c_str());
+
+	write_value(fh, A_B_SIZE);
+	bytes = A_B_SIZE * sizeof(unsigned short);
+	if (fwrite(lt -> A, 1, bytes, fh) != bytes)
+		error_exit("Error writing to file %s", file.c_str());
+	if (fwrite(lt -> B, 1, bytes, fh) != bytes)
+		error_exit("Error writing to file %s", file.c_str());
+
+	fclose(fh);
 }
 
 int put_data(proxy_client_t *client, lookup_t *lt, bool is_A)
@@ -152,9 +211,13 @@ int put_data(proxy_client_t *client, lookup_t *lt, bool is_A)
 	{
 		dolog(LOG_WARNING, "Hash mismatch in retrieved entropy data!");
 
+		free(buffer_out);
+		free(buffer_in);
+
 		return -1;
 	}
 
+	bool use = false;
 	if (is_A)
 	{
 		if (lt -> t_offset < lt -> t_size)
@@ -176,6 +239,8 @@ int put_data(proxy_client_t *client, lookup_t *lt, bool is_A)
 			{
 				dolog(LOG_DEBUG, "Look-up table fill: %.2f%%", double(lt -> t_offset * 100) / double(lt -> t_size));
 			}
+
+			use = true;
 		}
 		else
 		{
@@ -183,7 +248,10 @@ int put_data(proxy_client_t *client, lookup_t *lt, bool is_A)
 
 			int do_n_bytes = min(n * sizeof(unsigned short), cur_n_bytes);
 			if (do_n_bytes > 0)
+			{
 				memcpy(&lt -> A[lt -> n_A], buffer_out, do_n_bytes);
+				use = true;
+			}
 
 			lt -> n_A += do_n_bytes / sizeof(unsigned short);
 		}
@@ -194,10 +262,22 @@ int put_data(proxy_client_t *client, lookup_t *lt, bool is_A)
 
 		int do_n_bytes = min(n * sizeof(unsigned short), cur_n_bytes);
 		if (do_n_bytes > 0)
+		{
 			memcpy(&lt -> B[lt -> n_B], buffer_out, do_n_bytes);
+			use = true;
+		}
 
 		lt -> n_B += do_n_bytes / sizeof(unsigned short);
 	}
+
+	if (use)
+		dolog(LOG_DEBUG, "storing %d bits from %s", cur_n_bits, client -> host.c_str());
+
+	// memset
+	// unlock
+	free(buffer_out);
+
+	free(buffer_in);
 
 	return 0;
 }
@@ -398,7 +478,7 @@ int main(int argc, char *argv[])
 
 	users *user_map = new users(clients_auths);
 
-	protocol *p = new protocol(host, port, username, password, false, client_type);
+	protocol *p = new protocol(host, port, username, password, true, client_type);
 
 	if (chdir("/") == -1)
 		error_exit("chdir(/) failed");
@@ -414,9 +494,9 @@ int main(int argc, char *argv[])
 
 	signal(SIGPIPE, SIG_IGN);
 	signal(SIGCHLD, SIG_IGN);
-//	signal(SIGTERM, sig_handler);
-//	signal(SIGINT , sig_handler);
-//	signal(SIGQUIT, sig_handler);
+	signal(SIGTERM, sig_handler);
+	signal(SIGINT , sig_handler);
+	signal(SIGQUIT, sig_handler);
 
 	proxy_client_t *clients[2] = { new proxy_client_t, new proxy_client_t };
 	int listen_socket_fd = start_listen(listen_adapter, listen_port, 5);
@@ -429,7 +509,7 @@ int main(int argc, char *argv[])
 
 	load_knuth_file(knuth_file, &lt);
 
-	for(;;)
+	for(;!sig_quit;)
 	{
 		fd_set rfds;
 		FD_ZERO(&rfds);
@@ -461,9 +541,6 @@ int main(int argc, char *argv[])
 			continue;
 		}
 
-		if (sig_quit)
-			break;
-
 		for(int client_index=0; client_index<2; client_index++)
 		{
 			if (clients[client_index] -> fd != -1 && FD_ISSET(clients[client_index] -> fd, &rfds))
@@ -478,13 +555,13 @@ int main(int argc, char *argv[])
 		}
 
 		// transmit to broker
-		while (lt.n_A > 0 && lt.n_B > 0)
+		while (lt.n_A > 0 && lt.n_B > 0 && !sig_quit)
 		{
 			dolog(LOG_DEBUG, "buffered data: %d %d", lt.n_A, lt.n_B);
 			transmit_data(p, &lt);
 		}
 
-		if (FD_ISSET(listen_socket_fd, &rfds))
+		if (!sig_quit && FD_ISSET(listen_socket_fd, &rfds))
 		{
 			if (clients[0] -> fd != -1 && clients[1] -> fd != -1)
 			{
