@@ -150,7 +150,7 @@ int main(int argc, char *argv[])
 		{
 			dolog(LOG_WARNING, "Problem reading from kernel entropy buffer!");
 
-			if (p -> sleep_interruptable(5) != 0)
+			if (p != NULL && p -> sleep_interruptable(5) != 0)
 			{
 				dolog(LOG_INFO, "connection closed");
 				p -> drop();
