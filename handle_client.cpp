@@ -388,37 +388,6 @@ int do_client_server_type(client_t *client, config_t *config)
 	return 0;
 }
 
-int do_client_send_ping_request(client_t *client, config_t *config)
-{
-	char buffer[8 + 1];
-
-	make_msg(buffer, 4, client -> ping_nr); // 0004
-
-	if (WRITE_TO(client -> socket_fd, buffer, 8, config -> communication_timeout) != 8)
-	{
-		dolog(LOG_INFO, "ping|Short write while sending ping request to %s", client -> host);
-		return -1;
-	}
-
-	dolog(LOG_DEBUG, "ping|Ping request %d sent to %s", client -> ping_nr, client -> host);
-
-	client -> ping_nr++;
-
-	return 0;
-}
-
-int do_client_ping_reply(client_t *client, config_t *config)
-{
-	char buffer[4 + 1] = { 0 };
-
-	if (READ_TO(client -> socket_fd, buffer, 4, config -> communication_timeout) != 4)
-		return -1;
-
-	dolog(LOG_DEBUG, "ping|Got successfull ping reply from %s (%s): %s", client -> host, client -> type, buffer);
-
-	return 0;
-}
-
 int do_client_kernelpoolfilled_reply(client_t *client, config_t *config)
 {
 	char *buffer;
@@ -487,10 +456,6 @@ int do_client(pools *ppools, client_t *client, statistics_t *stats, config_t *co
 		client -> is_server = 1;
 		return do_client_server_type(client, config);
 	}
-	else if (strcmp(cmd, "0005") == 0)	// ping reply (to 0004)
-	{
-		return do_client_ping_reply(client, config);
-	}
 	else if (strcmp(cmd, "0006") == 0)	// client type
 	{
 		client -> is_server = 0;
@@ -520,6 +485,7 @@ void forget_client(client_t *clients, int *n_clients, int nr)
 	int n_to_move;
 
 	close(clients[nr].socket_fd);
+
 	delete clients[nr].pfips140;
 	delete clients[nr].pscc;
 
@@ -629,6 +595,23 @@ int lookup_client_settings(struct sockaddr_in *client_addr, client_t *client, co
 	return 0;
 }
 
+void cleanup_idle_clients(client_t *clients, int *n_clients, statistics_t *stats)
+{
+	double now = get_ts();
+
+	for(int loop=*n_clients - 1; loop>=0; loop--)
+	{
+		if ((now - clients[loop].last_message) > MAX_IDLE_TIME)
+		{
+			dolog(LOG_INFO, "%s fell asleep, disconnecting", clients[loop].host);
+
+			stats -> disconnects++;
+
+			forget_client(clients, n_clients, loop);
+		}
+	}
+}
+
 void register_new_client(int listen_socket_fd, client_t **clients, int *n_clients, users *user_map, config_t *config)
 {
 	struct sockaddr_in client_addr;
@@ -714,22 +697,6 @@ void request_kp_filled(client_t *clients, int *n_clients, config_t *config, stat
 	}
 }
 
-void send_pings(client_t *clients, int *n_clients, config_t *config, statistics_t *stats)
-{
-	for(int loop=*n_clients - 1; loop>=0; loop--)
-	{
-		if (clients[loop].is_server)
-			continue;
-
-		if (do_client_send_ping_request(&clients[loop], config) == -1)
-		{
-			stats -> disconnects++;
-
-			forget_client(clients, n_clients, loop);
-		}
-	}
-}
-
 void emit_statistics_file(config_t *config, statistics_t *stats, int n_clients, pools *ppools, scc *eb_output_scc)
 {
 	if (config -> stats_file)
@@ -782,7 +749,6 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 	int n_clients = 0;
 	double last_counters_reset = get_ts();
 	double last_statistics_emit = get_ts();
-	double last_ping = get_ts() - double(config -> ping_interval) + 10.0;
 	double last_kp_filled = get_ts();
 	event_state_t event_state;
 	int listen_socket_fd = start_listen(config -> listen_adapter, config -> listen_port, config -> listen_queue_size);
@@ -816,8 +782,6 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 		dummy1_time = max(0, (last_statistics_emit + config -> statistics_interval) - now);
 		time_left = min(time_left, dummy1_time);
 		dummy1_time = max(0, (last_counters_reset + config -> reset_counters_interval) - now);
-		time_left = min(time_left, dummy1_time);
-		dummy1_time = max(0, (last_ping + config -> ping_interval) - now);
 		time_left = min(time_left, dummy1_time);
 		dummy1_time = max(0, (last_kp_filled  + config -> kernelpool_filled_interval) - now);
 		time_left = min(time_left, dummy1_time);
@@ -884,13 +848,6 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 			emit_statistics_file(config, &stats, n_clients, ppools, eb_output_scc);
 
 			last_statistics_emit = now;
-		}
-
-		if (config -> ping_interval != 0 && ((last_ping + (double)config -> ping_interval) - now) <= 0)
-		{
-			send_pings(clients, &n_clients, config, &stats);
-
-			last_ping = now;
 		}
 
 		if (config -> kernelpool_filled_interval !=0 && ((last_kp_filled + (double)config -> kernelpool_filled_interval) - now) <= 0)
@@ -972,6 +929,8 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 			if (FD_ISSET(listen_socket_fd, &rfds))
 			{
 				register_new_client(listen_socket_fd, &clients, &n_clients, user_map, config);
+
+				cleanup_idle_clients(clients, &n_clients, &stats);
 			}
 		}
 

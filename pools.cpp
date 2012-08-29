@@ -379,8 +379,8 @@ int pools::add_bits_to_pools(unsigned char *data, int n_bytes, bool ignore_rngte
 		if (space_available <= pool_vector.at(index) -> get_get_size_in_bits())
 			space_available = pool_vector.at(index) -> get_pool_size();
 
-		dolog(LOG_DEBUG, "Adding %d bits to pool %d", space_available, index);
 		unsigned int n_bytes_to_add = min(n_bytes, (space_available + 7) / 8);
+		dolog(LOG_DEBUG, "Adding %d bits to pool %d", n_bytes_to_add * 8, index);
 
 		if (verify_quality(data, n_bytes_to_add, ignore_rngtest_fips140, pfips, ignore_rngtest_scc, pscc))
 			n_bits_added += pool_vector.at(index) -> add_entropy_data(data, n_bytes_to_add);
