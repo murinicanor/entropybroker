@@ -4,7 +4,7 @@ private:
 	int size;
 	bit_count_estimator *bce;
 
-	void init(void);
+	void init();
 
 public:
 	ivec(int size, bit_count_estimator *bce);
@@ -16,5 +16,5 @@ public:
 	void get(unsigned char *where_to);
 	void seed(unsigned char *in, int n);
 
-	bool needs_seeding();
+	bool needs_seeding() const;
 };

@@ -58,7 +58,7 @@ void ivec::seed(unsigned char *in, int n)
 	RAND_add(in, n, byte_count);
 }
 
-bool ivec::needs_seeding()
+bool ivec::needs_seeding() const
 {
 	return false; // openssl rand takes care of that by itself
 }

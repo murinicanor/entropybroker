@@ -180,7 +180,7 @@ int pool::add_entropy_data(unsigned char *entropy_data, int n_bytes_in)
 	return n_added;
 }
 
-int pool::get_n_bits_in_pool(void)
+int pool::get_n_bits_in_pool() const
 {
 	return bits_in_pool;
 }
@@ -245,27 +245,27 @@ int pool::get_entropy_data(unsigned char *entropy_data, int n_bytes_requested, b
 	return n_given;
 }
 
-int pool::get_get_size()
+int pool::get_get_size() const
 {
 	return h -> get_hash_size() / 2;
 }
 
-int pool::get_get_size_in_bits()
+int pool::get_get_size_in_bits() const
 {
 	return get_get_size() * 8;
 }
 
-int pool::get_pool_size(void)
+int pool::get_pool_size() const
 {
 	return pool_size_bytes * 8;
 }
 
-bool pool::is_full(void)
+bool pool::is_full() const
 {
 	return bits_in_pool == (pool_size_bytes * 8);
 }
 
-bool pool::is_almost_full(void)
+bool pool::is_almost_full() const
 {
 	return ((pool_size_bytes * 8) - bits_in_pool) < get_get_size_in_bits();
 }

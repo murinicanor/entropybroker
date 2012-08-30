@@ -29,11 +29,11 @@ public:
 	int add_entropy_data(unsigned char *entropy_data, int n_bytes);
 	/* returns number of bytes returned, set prng_ok to also return data when pool empty */
 	int get_entropy_data(unsigned char *entropy_data, int n_bytes_requested, bool prng_ok);
-	int get_get_size(void);
-	int get_get_size_in_bits(void);
-	int get_n_bits_in_pool(void);
-	int get_pool_size(void);
-	bool is_full(void);
-	bool is_almost_full(void);
+	int get_get_size() const;
+	int get_get_size_in_bits() const;
+	int get_n_bits_in_pool() const;
+	int get_pool_size() const;
+	bool is_full() const;
+	bool is_almost_full() const;
 	int add_event(double ts, unsigned char *event_data, int n_event_data);
 };

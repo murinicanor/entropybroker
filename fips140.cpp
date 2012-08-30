@@ -123,7 +123,7 @@ void fips140::add(unsigned char newval)
 	fips140_pokerbuf[newval >> 4]++;
 }
 
-bool fips140::fips140_shorttest(void)
+bool fips140::fips140_shorttest()
 {
 	int loop;
 	int total=0;
@@ -174,7 +174,7 @@ bool fips140::fips140_shorttest(void)
 	 ? 0 : 1)
 
 /* warning; this one also invokes the short test(!) */
-bool fips140::fips140_longtest(void)
+bool fips140::fips140_longtest()
 {
 	int byteindex;
 	int lastbit=0;
@@ -287,7 +287,7 @@ bool fips140::fips140_longtest(void)
 	return true;
 }
 
-bool fips140::is_ok(void)
+bool fips140::is_ok()
 {
 	if (fips140_nnewbits >= 2495)
 	{
@@ -297,7 +297,7 @@ bool fips140::is_ok(void)
 	return fips140_shorttest();
 }
 
-char *fips140::stats(void)
+char *fips140::stats()
 {
 	static char stats_buffer[4096];
 

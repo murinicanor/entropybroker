@@ -17,7 +17,7 @@ private:
 	void load_caches(unsigned int load_n_bits);
 	void store_caches(unsigned int keep_n);
 	int select_pool_to_add_to();
-	int find_non_full_pool();
+	int find_non_full_pool() const;
 	void flush_empty_pools();
 	void merge_pools();
 
@@ -28,7 +28,7 @@ public:
 	int get_bits_from_pools(int n_bits_requested, unsigned char **buffer, bool allow_prng, bool ignore_rngtest_fips140, fips140 *prt, bool ignore_rngtest_scc, scc *pscc);
 	int add_bits_to_pools(unsigned char *data, int n_bytes, bool ignore_rngtest_fips140, fips140 *prt, bool ignore_rngtest_scc, scc *pscc);
 	bool verify_quality(unsigned char *data, int n, bool ignore_rngtest_fips140, fips140 *pfips, bool ignore_rngtest_scc, scc *pscc);
-	int get_bit_sum();
+	int get_bit_sum() const;
 	int add_event(long double event, unsigned char *event_data, int n_event_data);
-	bool all_pools_full();
+	bool all_pools_full() const;
 };

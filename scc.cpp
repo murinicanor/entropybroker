@@ -91,7 +91,7 @@ double scc::get_cur_scc()
 	return scc_val;
 }
 
-bool scc::is_ok(void)
+bool scc::is_ok()
 {
 	double cur_scc = fabs(get_cur_scc());
 	bool rc = cur_scc < threshold;
@@ -102,7 +102,7 @@ bool scc::is_ok(void)
 	return rc;
 }
 
-char *scc::stats(void)
+char *scc::stats()
 {
 	static char stats_buffer[4096];
 

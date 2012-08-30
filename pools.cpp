@@ -313,7 +313,7 @@ int pools::get_bits_from_pools(int n_bits_requested, unsigned char **buffer, boo
 	return n_bits_retrieved;
 }
 
-int pools::find_non_full_pool()
+int pools::find_non_full_pool() const
 {
 	int n = pool_vector.size();
 	if (n > 0)
@@ -392,7 +392,7 @@ int pools::add_bits_to_pools(unsigned char *data, int n_bytes, bool ignore_rngte
 	return n_bits_added;
 }
 
-int pools::get_bit_sum()
+int pools::get_bit_sum() const
 {
 	int bit_count = 0;
 
@@ -409,7 +409,7 @@ int pools::add_event(long double event, unsigned char *event_data, int n_event_d
 	return pool_vector.at(index) -> add_event(event, event_data, n_event_data);
 }
 
-bool pools::all_pools_full()
+bool pools::all_pools_full() const
 {
 	for(unsigned int loop=0; loop<pool_vector.size(); loop++)
 	{

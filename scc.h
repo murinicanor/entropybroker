@@ -7,7 +7,7 @@ class scc
 
 	char *user;
 
-	double get_cur_scc(void);
+	double get_cur_scc();
 
 public:
 	scc();
@@ -17,6 +17,6 @@ public:
 	void set_threshold(double t);
 
 	void add(unsigned char byte);
-	bool is_ok(void);
-	char *stats(void);
+	bool is_ok();
+	char *stats();
 };
