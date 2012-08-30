@@ -18,6 +18,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>
+#include <pthread.h>
 #include <openssl/blowfish.h>
 #include <openssl/sha.h>
 
@@ -58,6 +59,8 @@ typedef struct
 
 	unsigned short *A;
 	int n_A;
+
+	pthread_mutex_t lock;
 } lookup_t;
 
 int read_value(FILE *fh)
@@ -156,6 +159,10 @@ int put_data(proxy_client_t *client, lookup_t *lt)
 	if (cur_n_bits > 9992)
 		return -1;
 
+	bool full = false;
+	if (lt -> t_offset == lt -> t_size && lt -> n_A == KNUTH_SIZE)
+		full = true;
+
 	char reply[4 + 4 + 1] = { 0 };
 	make_msg(reply, 1, cur_n_bits);
 	// make_msg(reply, full ? 9003 : 1, cur_n_bits);
@@ -201,42 +208,46 @@ int put_data(proxy_client_t *client, lookup_t *lt)
 		return -1;
 	}
 
+	pthread_mutex_lock(&lt -> lock);
+
 	bool use = false;
-	if (lt -> t_offset < lt -> t_size)
-	{
-		int n = lt -> t_size - lt -> t_offset;
+        if (lt -> t_offset < lt -> t_size)
+        {
+                int n = lt -> t_size - lt -> t_offset;
 
-		int do_n_bytes = min(n * sizeof(unsigned short), cur_n_bytes);
-		memcpy(lt -> table, buffer_out, do_n_bytes);
+                int do_n_bytes = min(n * sizeof(unsigned short), cur_n_bytes);
+                memcpy(lt -> table, buffer_out, do_n_bytes);
 
-		lt -> t_offset += do_n_bytes / sizeof(unsigned short);
-		if (lt -> t_offset == lt -> t_size)
-			dolog(LOG_INFO, "look-up table is filled");
-		else
-			dolog(LOG_DEBUG, "Look-up table fill: %.2f%%", double(lt -> t_offset * 100) / double(lt -> t_size));
+                lt -> t_offset += do_n_bytes / sizeof(unsigned short);
+                if (lt -> t_offset == lt -> t_size)
+                        dolog(LOG_INFO, "look-up table is filled");
+                else
+                        dolog(LOG_DEBUG, "Look-up table fill: %.2f%%", double(lt -> t_offset * 100) / double(lt -> t_size));
 
-		use = true;
-	}
-	else
-	{
-		int n = KNUTH_SIZE - lt -> n_A;
+                use = true;
+        }
+        else
+        {
+                int n = KNUTH_SIZE - lt -> n_A;
 
-		int do_n_bytes = min(n * sizeof(unsigned short), cur_n_bytes);
-		if (do_n_bytes > 0)
-		{
-			memcpy(&lt -> A[lt -> n_A], buffer_out, do_n_bytes);
+                int do_n_bytes = min(n * sizeof(unsigned short), cur_n_bytes);
+                if (do_n_bytes > 0)
+                {
+                        memcpy(&lt -> A[lt -> n_A], buffer_out, do_n_bytes);
 
-			lt -> n_A += do_n_bytes / sizeof(unsigned short);
+                        lt -> n_A += do_n_bytes / sizeof(unsigned short);
 
-			use = true;
-		}
-	}
+                        use = true;
+                }
+        }
 
 	if (use)
 		dolog(LOG_DEBUG, "storing %d bits from %s", cur_n_bits, client -> host.c_str());
 
+	pthread_mutex_unlock(&lt -> lock);
+
 	// memset
-	// unlock
+	// unlock_mem
 	free(buffer_out);
 
 	free(buffer_in);
@@ -291,35 +302,67 @@ int handle_client(proxy_client_t *client, lookup_t *lt)
 	return 0;
 }
 
-int transmit_data(protocol *p, lookup_t *lt)
+typedef struct
 {
-	int n_short = 1249 / sizeof(unsigned short);
+	protocol *p;
+	lookup_t *lt;
+}
+thread_pars_t;
 
-	int n = min(n_short, lt -> n_A / 2);
+void * thread(void *pars)
+{
+	thread_pars_t *p = (thread_pars_t *)pars;
 
-	int n_bytes = n * sizeof(unsigned short);
-	unsigned short *out = (unsigned short *)malloc(n_bytes);
-
-	dolog(LOG_DEBUG, "Processing %d shorts", n);
-	for(int loop=0; loop<n; loop++)
+	for(;!sig_quit;)
 	{
-		int x = lt -> A[lt -> n_A - 1];
-		lt -> n_A--;
-		int y = lt -> A[lt -> n_A - 1];
-		lt -> n_A--;
+		pthread_mutex_lock(&p -> lt -> lock);
 
-		int j = x % lt -> t_size;
-		int v = lt -> table[j];
-		lt -> table[j] = y;
+		// transmit to broker
+		bool send = false;
+		if (p -> lt -> n_A >= 2)
+		{
+			send = true;
+			dolog(LOG_DEBUG, "buffered data: %d", p -> lt -> n_A);
+		}
 
-		out[loop] = v;
+		while (p -> lt -> n_A >= 2 && !sig_quit)
+		{
+			int n_short = 1249 / sizeof(unsigned short);
+
+			int n = min(n_short, p -> lt -> n_A / 2);
+
+			int n_bytes = n * sizeof(unsigned short);
+			unsigned short *out = (unsigned short *)malloc(n_bytes);
+
+			dolog(LOG_DEBUG, "Processing %d shorts", n);
+			for(int loop=0; loop<n; loop++)
+			{
+				int x = p -> lt -> A[p -> lt -> n_A - 1];
+				p -> lt -> n_A--;
+				int y = p -> lt -> A[p -> lt -> n_A - 1];
+				p -> lt -> n_A--;
+
+				int j = x % p -> lt -> t_size;
+				int v = p -> lt -> table[j];
+				p -> lt -> table[j] = y;
+
+				out[loop] = v;
+			}
+
+			pthread_mutex_unlock(&p -> lt -> lock);
+			(void)p -> p -> message_transmit_entropy_data((unsigned char *)out, n_bytes);
+			free(out);
+			pthread_mutex_lock(&p -> lt -> lock);
+		}
+		if (send)
+			dolog(LOG_DEBUG, "Finished transmitting");
+
+		pthread_mutex_unlock(&p -> lt -> lock);
+
+		usleep(250000); // FIXME condwait or so
 	}
 
-	int rc = p -> message_transmit_entropy_data((unsigned char *)out, n_bytes);
-
-	free(out);
-
-	return rc;
+	return NULL;
 }
 
 void sig_handler(int sig)
@@ -460,15 +503,23 @@ int main(int argc, char *argv[])
 	signal(SIGINT , sig_handler);
 	signal(SIGQUIT, sig_handler);
 
-	proxy_client_t *clients[1] = { new proxy_client_t };
+	proxy_client_t *clients[2] = { new proxy_client_t, new proxy_client_t };
+
 	int listen_socket_fd = start_listen(listen_adapter, listen_port, 5);
 
 	clients[0] -> fd = -1;
+	clients[1] -> fd = -1;
 
 	lookup_t lt;
 	memset(&lt, 0x00, sizeof lt);
 
 	load_knuth_file(knuth_file, &lt);
+
+	pthread_mutex_init(&lt.lock, NULL);
+
+	thread_pars_t tp = { p, &lt };
+	pthread_t th;
+	pthread_create(&th, NULL, thread, &tp);
 
 	for(;!sig_quit;)
 	{
@@ -480,7 +531,7 @@ int main(int argc, char *argv[])
 		FD_SET(listen_socket_fd, &rfds);
 		max_fd = max(max_fd, listen_socket_fd);
 
-		for(int client_index=0; client_index<1; client_index++)
+		for(int client_index=0; client_index<2; client_index++)
 		{
 			if (clients[client_index] -> fd != -1)
 			{
@@ -502,7 +553,7 @@ int main(int argc, char *argv[])
 			continue;
 		}
 
-		for(int client_index=0; client_index<1; client_index++)
+		for(int client_index=0; client_index<2; client_index++)
 		{
 			if (clients[client_index] -> fd != -1 && FD_ISSET(clients[client_index] -> fd, &rfds))
 			{
@@ -513,13 +564,6 @@ int main(int argc, char *argv[])
 					clients[client_index] -> fd = -1;
 				}
 			}
-		}
-
-		// transmit to broker
-		while (lt.n_A >= 2 && !sig_quit)
-		{
-			dolog(LOG_DEBUG, "buffered data: %d", lt.n_A);
-			transmit_data(p, &lt);
 		}
 
 		if (!sig_quit && FD_ISSET(listen_socket_fd, &rfds))
@@ -535,15 +579,22 @@ int main(int argc, char *argv[])
 				long long unsigned int challenge = 1;
 				if (auth_eb(new_socket_fd, DEFAULT_COMM_TO, user_map, client_password, &challenge) == 0)
 				{
-					if (clients[0] -> fd != -1)
+					if (clients[0] -> fd != -1 && clients[1] -> fd != -1)
 					{
-						dolog(LOG_WARNING, "New connection: dropping previous connection");
+						dolog(LOG_WARNING, "New connection with 2 clients connected: dropping all previous connections");
 
 						close(clients[0] -> fd);
+						close(clients[1] -> fd);
 						clients[0] -> fd = -1;
+						clients[1] -> fd = -1;
 					}
 
-					proxy_client_t *pcp = clients[0];
+					proxy_client_t *pcp = NULL;
+
+					if (clients[0] -> fd == -1)
+						pcp = clients[0];
+					else if (clients[1] -> fd == -1)
+						pcp = clients[1];
 
 					pcp -> fd = new_socket_fd;
 					pcp -> challenge = challenge;
@@ -566,6 +617,11 @@ int main(int argc, char *argv[])
 			}
 		}
 	}
+
+	dolog(LOG_INFO, "Terminating...");
+
+	pthread_join(th, NULL);
+// FIXME pthread_tryjoin_np en dan cancel
 
 	delete p;
 
