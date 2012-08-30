@@ -128,8 +128,7 @@ An IDQ Quantis has a device node /dev/qrandom0 available
 On systems with an EntropyKey (http://www.entropykey.co.uk/) or
 EGD, start server_egd.
 server_egd requires a read-interval and how many bytes to read in
-that interval. You can test with test_egd_speed how many bytes your
-EGD service can produce in an interval. E.g.:
+that interval. E.g.:
 eb_server_egd -i broker -d /tmp/egd.socket.ekey -a 1024 -b 5 -X password.txt
 This would require the following:
 	EGDUnixSocket "/tmp/egd.socket.ekey
