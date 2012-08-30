@@ -18,6 +18,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>
+#include <pthread.h>
 #include <openssl/blowfish.h>
 #include <openssl/sha.h>
 
@@ -61,6 +62,8 @@ typedef struct
 	int n_A;
 	unsigned short *B;
 	int n_B;
+
+	pthread_mutex_t lock;
 } lookup_t;
 
 int read_value(FILE *fh)
@@ -216,6 +219,8 @@ int put_data(proxy_client_t *client, lookup_t *lt, bool is_A)
 		return -1;
 	}
 
+	pthread_mutex_lock(&lt -> lock);
+
 	bool use = false;
 	if (is_A)
 	{
@@ -265,8 +270,10 @@ int put_data(proxy_client_t *client, lookup_t *lt, bool is_A)
 	if (use)
 		dolog(LOG_DEBUG, "storing %d bits from %s", cur_n_bits, client -> host.c_str());
 
+	pthread_mutex_unlock(&lt -> lock);
+
 	// memset
-	// unlock
+	// unlock_mem
 	free(buffer_out);
 
 	free(buffer_in);
@@ -321,35 +328,67 @@ int handle_client(proxy_client_t *client, lookup_t *lt, bool is_A)
 	return 0;
 }
 
-int transmit_data(protocol *p, lookup_t *lt)
+typedef struct
 {
-	int n_short = 1249 / sizeof(unsigned short);
+	protocol *p;
+	lookup_t *lt;
+}
+thread_pars_t;
 
-	int n = min(n_short, min(lt -> n_A, lt -> n_B));
+void * thread(void *pars)
+{
+	thread_pars_t *p = (thread_pars_t *)pars;
 
-	int n_bytes = n * sizeof(unsigned short);
-	unsigned short *out = (unsigned short *)malloc(n_bytes);
-
-	dolog(LOG_DEBUG, "Processing %d shorts", n);
-	for(int loop=0; loop<n; loop++)
+	for(;!sig_quit;)
 	{
-		int A = lt -> A[lt -> n_A - 1];
-		lt -> n_A--;
-		int B = lt -> B[lt -> n_B - 1];
-		lt -> n_B--;
+		pthread_mutex_lock(&p -> lt -> lock);
 
-		int j = B % lt -> t_size;
-		int v = lt -> table[j];
-		lt -> table[j] = A;
+		// transmit to broker
+		bool send = false;
+		if (p -> lt -> n_A > 0 && p -> lt -> n_B > 0)
+		{
+			send = true;
+			dolog(LOG_DEBUG, "buffered data: %d %d", p -> lt -> n_A, p -> lt -> n_B);
+		}
 
-		out[loop] = v;
+		while (p -> lt -> n_A > 0 && p -> lt -> n_B > 0 && !sig_quit)
+		{
+			int n_short = 1249 / sizeof(unsigned short);
+
+			int n = min(n_short, min(p -> lt -> n_A, p -> lt -> n_B));
+
+			int n_bytes = n * sizeof(unsigned short);
+			unsigned short *out = (unsigned short *)malloc(n_bytes);
+
+			dolog(LOG_DEBUG, "Processing %d shorts", n);
+			for(int loop=0; loop<n; loop++)
+			{
+				int A = p -> lt -> A[p -> lt -> n_A - 1];
+				p -> lt -> n_A--;
+				int B = p -> lt -> B[p -> lt -> n_B - 1];
+				p -> lt -> n_B--;
+
+				int j = B % p -> lt -> t_size;
+				int v = p -> lt -> table[j];
+				p -> lt -> table[j] = A;
+
+				out[loop] = v;
+			}
+
+			pthread_mutex_unlock(&p -> lt -> lock);
+			(void)p -> p -> message_transmit_entropy_data((unsigned char *)out, n_bytes);
+			free(out);
+			pthread_mutex_lock(&p -> lt -> lock);
+		}
+		if (send)
+			dolog(LOG_DEBUG, "Finished transmitting");
+
+		pthread_mutex_unlock(&p -> lt -> lock);
+
+		usleep(250000); // FIXME condwait or so
 	}
 
-	int rc = p -> message_transmit_entropy_data((unsigned char *)out, n_bytes);
-
-	free(out);
-
-	return rc;
+	return NULL;
 }
 
 void sig_handler(int sig)
@@ -491,6 +530,7 @@ int main(int argc, char *argv[])
 	signal(SIGQUIT, sig_handler);
 
 	proxy_client_t *clients[2] = { new proxy_client_t, new proxy_client_t };
+
 	int listen_socket_fd = start_listen(listen_adapter, listen_port, 5);
 
 	clients[0] -> fd = -1;
@@ -500,6 +540,12 @@ int main(int argc, char *argv[])
 	memset(&lt, 0x00, sizeof lt);
 
 	load_knuth_file(knuth_file, &lt);
+
+	pthread_mutex_init(&lt.lock, NULL);
+
+	thread_pars_t tp = { p, &lt };
+	pthread_t th;
+	pthread_create(&th, NULL, thread, &tp);
 
 	for(;!sig_quit;)
 	{
@@ -544,13 +590,6 @@ int main(int argc, char *argv[])
 					clients[client_index] -> fd = -1;
 				}
 			}
-		}
-
-		// transmit to broker
-		while (lt.n_A > 0 && lt.n_B > 0 && !sig_quit)
-		{
-			dolog(LOG_DEBUG, "buffered data: %d %d", lt.n_A, lt.n_B);
-			transmit_data(p, &lt);
 		}
 
 		if (!sig_quit && FD_ISSET(listen_socket_fd, &rfds))
@@ -604,6 +643,10 @@ int main(int argc, char *argv[])
 			}
 		}
 	}
+
+	dolog(LOG_INFO, "Terminating...");
+
+	pthread_join(th, NULL);
 
 	delete p;
 

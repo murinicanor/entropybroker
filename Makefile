@@ -147,10 +147,10 @@ eb_server_ComScire_R2000KU: $(OBJScsr2000ku)
 	$(CXX) $(LINT) $(OBJScsr2000ku) ComScire_R2000KU/qwqng.cpp $(LDFLAGS) -lftdi -o eb_server_ComScire_R2000KU
 
 eb_proxy_knuth_m: $(OBJSpkm)
-	$(CXX) $(LINT) $(OBJSpkm) $(LDFLAGS) -o eb_proxy_knuth_m
+	$(CXX) $(LINT) $(OBJSpkm) $(LDFLAGS) -pthread -o eb_proxy_knuth_m
 
 eb_proxy_knuth_b: $(OBJSpkb)
-	$(CXX) $(LINT) $(OBJSpkb) $(LDFLAGS) -o eb_proxy_knuth_b
+	$(CXX) $(LINT) $(OBJSpkb) $(LDFLAGS) -pthread -o eb_proxy_knuth_b
 
 plot: plot.o
 	$(CXX) $(LINT) plot.o $(LDFLAGS) -lpng -o plot
