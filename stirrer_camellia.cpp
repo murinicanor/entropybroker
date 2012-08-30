@@ -56,10 +56,7 @@ void stirrer_camellia::do_stir(unsigned char *ivec, unsigned char *target, int t
 	}
 
 	CAMELLIA_KEY key;
-	if (direction)
-		Camellia_set_key(temp_key, data_in_size * 8, &key);
-	else
-		Camellia_set_key(temp_key, data_in_size * 8, &key);
+	Camellia_set_key(temp_key, data_in_size * 8, &key);
 
 	int ivec_offset = 0;
 	Camellia_cfb8_encrypt(target, temp_buffer, target_size, &key, ivec, &ivec_offset, direction ? CAMELLIA_ENCRYPT : CAMELLIA_DECRYPT);

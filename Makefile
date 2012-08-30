@@ -188,4 +188,4 @@ coverity: clean
 	/home/folkert/.coverity-eb.sh
 
 check:
-	cppcheck -v --enable=all --std=c++11 --inconclusive . 2> err.txt
+	cppcheck -v --enable=all --std=c++11 --inconclusive -I. . 2> err.txt

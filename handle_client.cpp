@@ -245,7 +245,6 @@ int do_client_put(pools *ppools, client_t *client, statistics_t *stats, config_t
 {
 	char msg[4 + 4 + 1];
 	int cur_n_bits, cur_n_bytes;
-	int n_bits_added;
 	char n_bits[4 + 1];
 	double now = get_ts();
 	bool warn_all_full = false;
@@ -340,7 +339,7 @@ int do_client_put(pools *ppools, client_t *client, statistics_t *stats, config_t
 	{
 		client -> last_put_message = now;
 
-		n_bits_added = ppools -> add_bits_to_pools(entropy_data, entropy_data_len, client -> ignore_rngtest_fips140, client -> pfips140, client -> ignore_rngtest_scc, client -> pscc);
+		int n_bits_added = ppools -> add_bits_to_pools(entropy_data, entropy_data_len, client -> ignore_rngtest_fips140, client -> pfips140, client -> ignore_rngtest_scc, client -> pscc);
 		if (n_bits_added == -1)
 			dolog(LOG_CRIT, "put|%s error while adding data to pools", client -> host);
 		else
