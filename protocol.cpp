@@ -216,7 +216,7 @@ int protocol::reconnect_server_socket()
 				make_msg((char *)buffer, 3, len); // 0003 server type
 			else
 				make_msg((char *)buffer, 6, len); // 0006 client type
-			strcat((char *)buffer, type.c_str());
+			strcpy((char *)&buffer[8], type.c_str());
 
 			int msg_len = strlen(buffer);
 

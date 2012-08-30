@@ -366,8 +366,8 @@ int do_client_put(pools *ppools, client_t *client, statistics_t *stats, config_t
 
 int do_client_server_type(client_t *client, config_t *config)
 {
-	char *buffer;
-	int n_bytes;
+	char *buffer = NULL;
+	int n_bytes = 0;
 
 	if (recv_length_data(client -> socket_fd, &buffer, &n_bytes, config -> communication_timeout) == -1)
 		return -1;
@@ -661,6 +661,8 @@ void register_new_client(int listen_socket_fd, client_t **clients, int *n_client
 			p -> pfips140 -> set_user(p -> host);
 			p -> pscc     -> set_user(p -> host);
 			p -> pscc -> set_threshold(config -> scc_threshold);
+
+			strcpy(p -> type, "?");
 
 			p -> challenge = auth_rnd;
 			p -> ivec_counter = 0;

@@ -183,6 +183,8 @@ int main(int argc, char *argv[])
 
 	set_logging_parameters(log_console, log_logfile, log_syslog);
 
+	snprintf(server_type, sizeof(server_type), "server_egb v" VERSION " %s", device);
+
 	protocol *p = NULL;
 	if (host)
 		p = new protocol(host, port, username, password, true, server_type);
@@ -191,8 +193,6 @@ int main(int argc, char *argv[])
 		read_fd = open_unixdomain_socket(device);
 	if (read_fd == -1)
 		error_exit("error opening %s", device);
-
-	snprintf(server_type, sizeof(server_type), "server_egb v" VERSION " %s", device);
 
 	if (!do_not_fork)
 	{
