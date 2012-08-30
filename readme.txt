@@ -165,6 +165,16 @@ Use eb_server_ComScire_R2000KU when you have a ComSire R2000KU
 device connected via USB.
 
 
+Proxies
+=======
+eb_proxy_knuth_m: this proxy mixes to streams (of preferably the
+same bit-rate) and feeds it to the broker. For this, algorithm M
+(chapter 3.2.2 The Art of Computer Programming (Donald E. Knuth)
+Volume 2, Seminumerical Algorithms (3d edition)) is used (also
+described in Applied Cryptography by Bruce Schneier, second
+edition, chapter 16.11).
+
+
 client processes
 ================
 To keep the entropy buffer of the local linux kernel filled-up, start

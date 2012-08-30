@@ -32,10 +32,10 @@
 
 #define KNUTH_SIZE 8192
 #define A_B_SIZE 8192
-#define KNUTH_FILE "lookup.knuth"
+#define KNUTH_FILE "lookup.knuthm"
 
-const char *pid_file = PID_DIR "/proxy_knuth.pid";
-const char *client_type = "proxy_knuth v" VERSION;
+const char *pid_file = PID_DIR "/proxy_knuth_m.pid";
+const char *client_type = "proxy_knuth_m v" VERSION;
 
 volatile bool sig_quit = false;
 
@@ -56,7 +56,6 @@ typedef struct
 {
 	unsigned short *table;
 	int t_size, t_offset;
-	bool is_valid;
 
 	unsigned short *A;
 	int n_A;
@@ -229,16 +228,9 @@ int put_data(proxy_client_t *client, lookup_t *lt, bool is_A)
 
 			lt -> t_offset += do_n_bytes / sizeof(unsigned short);
 			if (lt -> t_offset == lt -> t_size)
-			{
-				// // reset A & B buffers so that both have data when needed (hopefully)
-				// lt -> n_A = lt -> n_B = 0;
-
 				dolog(LOG_INFO, "look-up table is filled");
-			}
 			else
-			{
 				dolog(LOG_DEBUG, "Look-up table fill: %.2f%%", double(lt -> t_offset * 100) / double(lt -> t_size));
-			}
 
 			use = true;
 		}
@@ -400,7 +392,7 @@ int main(int argc, char *argv[])
 	std::string clients_auths;
 	std::string knuth_file = CACHE_DIR + std::string("/") + KNUTH_FILE;
 
-	printf("proxy_knuth, (C) 2009-2012 by folkert@vanheusden.com\n");
+	printf("proxy_knuth_m, (C) 2009-2012 by folkert@vanheusden.com\n");
 
 	while((c = getopt(argc, argv, "V:x:j:p:U:hf:X:P:i:l:sn")) != -1)
 	{
@@ -563,16 +555,6 @@ int main(int argc, char *argv[])
 
 		if (!sig_quit && FD_ISSET(listen_socket_fd, &rfds))
 		{
-			if (clients[0] -> fd != -1 && clients[1] -> fd != -1)
-			{
-				dolog(LOG_WARNING, "New connection with 2 clients connected: dropping all previous connections");
-
-				close(clients[0] -> fd);
-				close(clients[1] -> fd);
-				clients[0] -> fd = -1;
-				clients[1] -> fd = -1;
-			}
-
 			struct sockaddr_in client_addr;
 			socklen_t client_addr_len = sizeof(client_addr);
 			int new_socket_fd = accept(listen_socket_fd, (struct sockaddr *)&client_addr, &client_addr_len);
@@ -584,6 +566,16 @@ int main(int argc, char *argv[])
 				long long unsigned int challenge = 1;
 				if (auth_eb(new_socket_fd, DEFAULT_COMM_TO, user_map, client_password, &challenge) == 0)
 				{
+					if (clients[0] -> fd != -1 && clients[1] -> fd != -1)
+					{
+						dolog(LOG_WARNING, "New connection with 2 clients connected: dropping all previous connections");
+
+						close(clients[0] -> fd);
+						close(clients[1] -> fd);
+						clients[0] -> fd = -1;
+						clients[1] -> fd = -1;
+					}
+
 					proxy_client_t *pcp = NULL;
 
 					if (clients[0] -> fd == -1)
