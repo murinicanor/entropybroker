@@ -137,7 +137,7 @@ int main(int argc, char *argv[])
 	signal(SIGTERM, sig_handler);
 	signal(SIGINT , sig_handler);
 	signal(SIGQUIT, sig_handler);
-	signal(SIGCHLD, sig_handler);
+	signal(SIGCHLD, SIG_IGN);
 
 	bool data = false;
 	int got_bytes = -1;
