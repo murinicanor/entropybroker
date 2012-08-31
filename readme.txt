@@ -152,6 +152,15 @@ execute any command (as long as it is supported by the shell) and
 feed its output to the broker. E.g.:
 eb_server_ext_proc -i localhost -c '(find /proc -type f -print0 | xargs -0 cat ; ps auwx ; sensors -u) | gzip -9' -n -X password.txt
 
+On x86 compatible systems (e.g. not a Sparc), one can use
+server_cycle_count. This program is a simplified copy of 
+http://www.issihosts.com/haveged/ with the following differences:
+- lower bit count
+- lower entropy count
+This version was implemented to have something that speaks either
+entropy_broker or EGD protocol.
+This program might work on virtual machines too.
+
 The server daemons that obtain data from hardware sources use
 von neumann software whitening.
 See: http://en.wikipedia.org/wiki/Hardware_random_number_generator#Software_whitening
