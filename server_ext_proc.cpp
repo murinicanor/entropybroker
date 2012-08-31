@@ -15,6 +15,8 @@
 
 #define SHELL "/bin/bash"
 
+#define DEFAULT_SLEEP 0
+
 const char *server_type = "server_ext_proc v" VERSION;
 const char *pid_file = PID_DIR "/server_ext_proc.pid";
 
@@ -39,6 +41,7 @@ void help(void)
 	printf("-x port   port to connect to (default: %d)\n", DEFAULT_BROKER_PORT);
 	printf("-c command   command to execute\n");
 	printf("-S shell  shell to use. default is " SHELL "\n");
+	printf("-b x      how long to sleep between invocations (default: %ds)\n", DEFAULT_SLEEP);
         printf("-l file   log to file 'file'\n");
         printf("-s        log to syslog\n");
         printf("-n        do not fork\n");
@@ -55,6 +58,7 @@ int main(int argc, char *argv[])
 	char *log_logfile = NULL;
 	char *cmd = NULL, *shell = (char *)SHELL;
 	std::string username, password;
+	int slp = DEFAULT_SLEEP;
 
 	fprintf(stderr, "%s, (C) 2009-2012 by folkert@vanheusden.com\n", server_type);
 
@@ -145,10 +149,16 @@ int main(int argc, char *argv[])
 	int child_fd = -1;
 	char buffer[32768];
 	lock_mem(buffer, sizeof buffer);
+	bool first = true;
 	for(;;)
 	{
 		if (child_fd == -1)
 		{
+			if (first)
+				first = false;
+			else if (sleep > 0)
+				sleep(slp);
+
 			dolog(LOG_DEBUG, "Starting %s", cmd);
 
 			start_process(shell, cmd, &child_fd, &child_pid);
