@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <signal.h>
 
 static __inline__ unsigned long long GetCC(void)
 {
@@ -19,10 +20,13 @@ typedef struct
 void fiddle(fiddle_state_t *p)
 {
 	// trigger cache misses etc
-	(p -> buffer)[p -> index++]++;
+	int a = (p -> buffer)[p -> index++]++;
 
 	if (p -> index == FIDDLE_N)
 		p -> index = 0;
+
+	// trigger an occasional exception
+	a /= (p -> buffer)[p -> index];
 }
 
 int main(int argc, char *argv[])
@@ -32,11 +36,15 @@ int main(int argc, char *argv[])
 	fs.buffer = (char *)malloc(FIDDLE_N);
 	fs.index = 0;
 
+	signal(SIGFPE, SIG_IGN);
+	signal(SIGSEGV, SIG_IGN);
+
 	unsigned char byte = 0;
 	int bits = 0;
 
 	for(;;)
 	{
+		fiddle(&fs);
 		unsigned long long int a = GetCC();
 		fiddle(&fs);
 		unsigned long long int b = GetCC();
@@ -44,7 +52,6 @@ int main(int argc, char *argv[])
 		unsigned long long int c = GetCC();
 		fiddle(&fs);
 		unsigned long long int d = GetCC();
-		fiddle(&fs);
 
 		int A = (int)(b - a);
 		int B = (int)(d - c);
