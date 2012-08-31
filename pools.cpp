@@ -307,7 +307,12 @@ int pools::get_bits_from_pools(int n_bits_requested, unsigned char **buffer, boo
 			index = 0;
 
 		if (index == offset)
+		{
 			round_two = true;
+
+			if (!allow_prng)
+				break;
+		}
 	}
 
 	return n_bits_retrieved;
