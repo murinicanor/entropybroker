@@ -11,7 +11,7 @@
 # do not wish to do so, delete this exception statement from your
 # version.  If you delete this exception statement from all source
 # files in the program, then also delete it here.
-VERSION=1.1-rc3
+VERSION=1.1
 
 PREFIX=/usr/local/entropybroker
 BIN=$(PREFIX)/bin
@@ -178,7 +178,7 @@ clean:
 
 package:
 	mkdir eb-$(VERSION) eb-$(VERSION)/ComScire_R2000KU
-	cp *.cpp *.h entropy_broker.conf Makefile Changes auth.txt network_protocol.txt users.txt readme.txt design.txt interfacing.txt license.* eb-$(VERSION)
+	cp *.cpp *.h entropy_broker.conf Makefile bin_to_values.pl do_fft.sh auth.txt network_protocol.txt users.txt readme.txt design.txt interfacing.txt license.* eb-$(VERSION)
 	cp ComScire_R2000KU/*.[ch]pp ComScire_R2000KU/LICENSE eb-$(VERSION)/ComScire_R2000KU
 	tar cf - doc --exclude=.svn  | tar xvf - -C eb-$(VERSION)
 	tar czf eb-$(VERSION).tgz eb-$(VERSION)
