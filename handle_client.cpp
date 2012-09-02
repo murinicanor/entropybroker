@@ -58,7 +58,7 @@ int send_denied_quota(int fd, statistics_t *stats, config_t *config)
 
 	stats -> n_times_quota++;
 
-	make_msg(buffer, 9002, config -> reset_counters_interval);
+	make_msg(buffer, 9002, config -> reset_counters_interval); // FIXME daadwerkelijke tijd want die interval kan al eerder getriggered zijn
 
 	return WRITE_TO(fd, buffer, 8, config -> communication_timeout) == 8 ? 0 : -1;
 }

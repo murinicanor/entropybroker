@@ -2,6 +2,8 @@ session setup:
 	- 4 bytes ascii value protocol version
 	- 4 bytes length of string:
 		- string containing a random used for authentication *1
+		- this random is the ascii representation of a 64 bit value
+		- this random is also used to initialize the IV for the blowfish cipher
 	- 4 bytes length of string:
 		- string containing username
 
@@ -14,8 +16,26 @@ session setup:
 loop:
 	- client/server send 4 bytes ascii containing a command-code:
 		0001: get bits
+			- 4 bytes ascii value containing the number of bits (not bytes) requested
+			  data is send in a multiple of bytes so this value is max 9992 (1249)
+			  - if there are not enought bits in the broker, a 9000 is end back with a 4-bytes
+			    value containing a suggestion for the number of seconds to delay a new get request
+			  - if there's a quota problem (not implemented in v1.1), then a 9002 is send
+			    with a 4-byte value containg the interval in which the counters will be reset
+			  - if data is available, a 0002 is returned with the data:
+			     - a hash of the data, using a SHA256 hash function so 32 bytes in size
+			     - the data
+                             - the data + hash are encrypted with blowfish
+				- the blowfish cipher is at start initialized with the user-password as the key
+				- the IV of the cipher is set to the password xored with the authentication
+				  random value: this value is stored as 8 bytes
+				- the cipher is used in "cipher feedback" mode ("cfb64")
 
 		0002: put bits
+			- see get bits
+			- a full pool will be notified using 9001 with a suggested number of seconds to sleep
+			- a full pool but still allowing the put will be signaled using 9003 (and number of bits)
+			- a regular ack is 0001 (and the number of bits allowed)
 
 		0003: server type (type of a process producing entropy data)
 			- 4 bytes ascii value length of string:
@@ -32,3 +52,13 @@ loop:
 		0011: proxy auth
 			- regular session setup
 			- then, a 0012 reply is send with 0 = ok (yes, that is correct) and 1 = fail
+
+	- if all pools are full, the broker sends a 9004 (with a 0 value) to all servers
+
+	- if there's data available (after a pools empty situation), the broker sends a 0009 with a
+	  value that can be ignored (= number of bits maxed at 9999)
+
+	- if all pools are empty, the broker send 0010 (with a 0 value) to all servers
+
+	- occasionally the kernel sends a 0007 (with a 0 value) to request the kernel filled amount,
+	  this request will be removed in the future
