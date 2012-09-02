@@ -1,1 +1,34 @@
-...
+session setup:
+	- 4 bytes ascii value protocol version
+	- 4 bytes length of string:
+		- string containing a random used for authentication *1
+	- 4 bytes length of string:
+		- string containing username
+
+	- broker then expects 64 bytes of data from the connecting party containing a SHA512 hash of:
+		random *1 concated with a space and then the password
+
+	If this hash equals to the one calculated by the broker, then the connection proceeds.
+	If not, the broker just closes the connection.
+
+loop:
+	- client/server send 4 bytes ascii containing a command-code:
+		0001: get bits
+
+		0002: put bits
+
+		0003: server type (type of a process producing entropy data)
+			- 4 bytes ascii value length of string:
+				- an ascii string describing the server. format is arbitrary
+
+		0006: client type
+			- 4 bytes ascii value length of string:
+				- an ascii string describing the client. format is arbitrary
+
+		0008: number of bits the kernel of the connected process has
+			- 4 bytes ascii value length of string:
+				- an ascii string describing the number of bits
+
+		0011: proxy auth
+			- regular session setup
+			- then, a 0012 reply is send with 0 = ok (yes, that is correct) and 1 = fail
