@@ -123,7 +123,7 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if (username.length() == 0 || password.length() == 0)
+	if (host && (username.length() == 0 || password.length() == 0))
 		error_exit("username + password cannot be empty");
 
 	if (!host && !bytes_file && !show_bps)
