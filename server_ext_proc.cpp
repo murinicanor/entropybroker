@@ -40,10 +40,12 @@ void help(void)
         printf("-i host   entropy_broker-host to connect to\n");
 	printf("-x port   port to connect to (default: %d)\n", DEFAULT_BROKER_PORT);
 	printf("-c command   command to execute\n");
-	printf("-S shell  shell to use. default is " SHELL "\n");
+	printf("-Z shell  shell to use. default is " SHELL "\n");
 	printf("-b x      how long to sleep between invocations (default: %ds)\n", DEFAULT_SLEEP);
+	printf("-o file   file to write entropy data to\n");
         printf("-l file   log to file 'file'\n");
         printf("-s        log to syslog\n");
+        printf("-S        show bps\n");
         printf("-n        do not fork\n");
 	printf("-P file   write pid to file\n");
 	printf("-X file   read username+password from file\n");
@@ -59,13 +61,19 @@ int main(int argc, char *argv[])
 	char *cmd = NULL, *shell = (char *)SHELL;
 	std::string username, password;
 	int slp = DEFAULT_SLEEP;
+	char *bytes_file = NULL;
+	bool show_bps = false;
 
 	fprintf(stderr, "%s, (C) 2009-2012 by folkert@vanheusden.com\n", server_type);
 
-	while((c = getopt(argc, argv, "x:hc:S:X:P:o:p:i:d:l:sn")) != -1)
+	while((c = getopt(argc, argv, "So:x:hc:Z:X:P:o:p:i:d:l:sn")) != -1)
 	{
 		switch(c)
 		{
+			case 'o':
+				bytes_file = optarg;
+				break;
+
 			case 'x':
 				port = atoi(optarg);
 				if (port < 1)
@@ -85,6 +93,10 @@ int main(int argc, char *argv[])
 				break;
 
 			case 'S':
+				show_bps = true;
+				break;
+
+			case 'Z':
 				shell = optarg;
 				break;
 
@@ -114,8 +126,8 @@ int main(int argc, char *argv[])
 	if (username.length() == 0 || password.length() == 0)
 		error_exit("username + password cannot be empty");
 
-	if (!host)
-		error_exit("no host to connect to given");
+	if (!host && !bytes_file && !show_bps)
+		error_exit("no host to connect to, to file to write to and no 'show bps' given");
 
 	if (!cmd)
 		error_exit("no command to execute");
@@ -150,6 +162,8 @@ int main(int argc, char *argv[])
 	char buffer[32768];
 	lock_mem(buffer, sizeof buffer);
 	bool first = true;
+	double cur_start_ts = get_ts();
+	long int total_byte_cnt = 0;
 	for(;;)
 	{
 		if (child_fd == -1)
@@ -186,20 +200,43 @@ int main(int argc, char *argv[])
 
 		if (data)
 		{
-			unsigned char *pnt = (unsigned char *)buffer;
-			while(got_bytes > 0)
+			if (bytes_file)
+				emit_buffer_to_file(bytes_file, (unsigned char *)buffer, got_bytes);
+
+			if (show_bps)
 			{
-				int cur_count = min(got_bytes, 1249);
+				double now_ts = get_ts();
 
-				if (p -> message_transmit_entropy_data(pnt, cur_count) == -1)
+				total_byte_cnt += got_bytes;
+
+				if ((now_ts - cur_start_ts) >= 1.0)
 				{
-					dolog(LOG_INFO, "connection closed");
-					p -> drop();
-					break;
-				}
+					int diff_t = now_ts - cur_start_ts;
 
-				pnt += cur_count;
-				got_bytes -= cur_count;
+					printf("Total number of bytes: %ld, avg/s: %f\n", total_byte_cnt, (double)total_byte_cnt / diff_t);
+
+					total_byte_cnt = 0;
+					cur_start_ts = now_ts;
+				}
+			}
+
+			if (host)
+			{
+				unsigned char *pnt = (unsigned char *)buffer;
+				while(got_bytes > 0)
+				{
+					int cur_count = min(got_bytes, 1249);
+
+					if (p -> message_transmit_entropy_data(pnt, cur_count) == -1)
+					{
+						dolog(LOG_INFO, "connection closed");
+
+						p -> drop();
+					}
+
+					pnt += cur_count;
+					got_bytes -= cur_count;
+				}
 			}
 
 			data = false;

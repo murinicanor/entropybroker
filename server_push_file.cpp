@@ -52,6 +52,8 @@ int main(int argc, char *argv[])
 	char *log_logfile = NULL;
 	char *file = NULL;
 	std::string username, password;
+	char *bytes_file = NULL;
+	bool show_bps = false;
 
 	fprintf(stderr, "%s, (C) 2009-2012 by folkert@vanheusden.com\n", server_type);
 
@@ -59,6 +61,10 @@ int main(int argc, char *argv[])
 	{
 		switch(c)
 		{
+			case 'o':
+				bytes_file = optarg;
+				break;
+
 			case 'x':
 				port = atoi(optarg);
 				if (port < 1)
@@ -103,8 +109,8 @@ int main(int argc, char *argv[])
 	if (username.length() == 0 || password.length() == 0)
 		error_exit("username + password cannot be empty");
 
-	if (!host)
-		error_exit("no host to connect to given");
+	if (!host && !bytes_file && !show_bps)
+		error_exit("no host to connect to, to file to write to and no 'show bps' given");
 
 	if (!file)
 		error_exit("no file to read from selected");
@@ -137,6 +143,8 @@ int main(int argc, char *argv[])
 
 	bool data = false;
 	int got_bytes = -1;
+	double cur_start_ts = get_ts();
+	long int total_byte_cnt = 0;
 	for(;!feof(fh);)
 	{
 		// gather random data
@@ -151,11 +159,31 @@ int main(int argc, char *argv[])
 
 		if (data)
 		{
-			if (p -> message_transmit_entropy_data(bytes, got_bytes) == -1)
+			if (bytes_file)
+				emit_buffer_to_file(bytes_file, bytes, got_bytes);
+
+			if (host && p -> message_transmit_entropy_data(bytes, got_bytes) == -1)
 			{
 				dolog(LOG_INFO, "connection closed");
+
 				p -> drop();
-				continue;
+			}
+
+			if (show_bps)
+			{
+				double now_ts = get_ts();
+
+				total_byte_cnt += got_bytes;
+
+				if ((now_ts - cur_start_ts) >= 1.0)
+				{
+					int diff_t = now_ts - cur_start_ts;
+
+					printf("Total number of bytes: %ld, avg/s: %f\n", total_byte_cnt, (double)total_byte_cnt / diff_t);
+
+					total_byte_cnt = 0;
+					cur_start_ts = now_ts;
+				}
 			}
 
 			data = false;

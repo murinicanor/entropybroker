@@ -100,7 +100,7 @@ void help(void)
 	printf("-i host   entropy_broker-host to connect to\n");
 	printf("-x port   port to connect to (default: %d)\n", DEFAULT_BROKER_PORT);
 	printf("-d dev    audio-device, default %s\n", cdevice);
-	printf("-o file   file to write entropy data to (mututal exclusive with -d)\n");
+	printf("-o file   file to write entropy data to\n");
 	printf("-S        show bps (mutual exclusive with -n)\n");
 	printf("-l file   log to file 'file'\n");
 	printf("-s        log to syslog\n");
@@ -259,10 +259,9 @@ void main_loop(char *host, int port, char *bytes_file, char show_bps, std::strin
 					if (bytes_out == sizeof(bytes))
 					{
 						if (bytes_file)
-						{
 							emit_buffer_to_file(bytes_file, bytes, bytes_out);
-						}
-						else if (p -> message_transmit_entropy_data(bytes, bytes_out) == -1)
+
+						if (host && p -> message_transmit_entropy_data(bytes, bytes_out) == -1)
 						{
 							dolog(LOG_INFO, "connection closed");
 							p -> drop();
@@ -377,11 +376,8 @@ int main(int argc, char *argv[])
 	if (username.length() == 0 || password.length() == 0)
 		error_exit("username + password cannot be empty");
 
-	if (!host && !bytes_file)
-		error_exit("no host to connect to given");
-
-	if (host != NULL && bytes_file != NULL)
-		error_exit("-o and -d are mutual exclusive");
+	if (!host && !bytes_file && !show_bps)
+		error_exit("no host to connect to, to file to write to and no 'show bps' given");
 
 	if (chdir("/") == -1)
 		error_exit("chdir(/) failed");

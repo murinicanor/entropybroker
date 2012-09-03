@@ -129,7 +129,7 @@ int main(int argc, char *argv[])
 		error_exit("username + password cannot be empty");
 
 	if (!host && !bytes_file && !show_bps)
-		error_exit("no host to connect to/file to write to given");
+		error_exit("no host to connect to, to file to write to and no 'show bps' given");
 
 	if (chdir("/") == -1)
 		error_exit("chdir(/) failed");
@@ -178,17 +178,13 @@ int main(int argc, char *argv[])
 			if (index == sizeof(bytes))
 			{
 				if (bytes_file)
-				{
 					emit_buffer_to_file(bytes_file, bytes, index);
-				}
-				if (host)
-				{
-					if (p -> message_transmit_entropy_data(bytes, index) == -1)
-					{
-						dolog(LOG_INFO, "connection closed");
 
-						p -> drop();
-					}
+				if (host && p -> message_transmit_entropy_data(bytes, index) == -1)
+				{
+					dolog(LOG_INFO, "connection closed");
+
+					p -> drop();
 				}
 
 				index = 0; // skip header
