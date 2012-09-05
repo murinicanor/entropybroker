@@ -132,8 +132,6 @@ int main(int argc, char *argv[])
 	if (!cmd)
 		error_exit("no command to execute");
 
-	if (chdir("/") == -1)
-		error_exit("chdir(/) failed");
 	(void)umask(0177);
 	no_core();
 

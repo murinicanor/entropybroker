@@ -223,8 +223,6 @@ int main(int argc, char *argv[])
 	if (!device)
 		error_exit("Please select a video4linux video device (e.g. a webcam, tv-card, etc.)");
 
-	if (chdir("/") == -1)
-		error_exit("chdir(/) failed");
 	(void)umask(0177);
 	no_core();
 
@@ -239,7 +237,7 @@ int main(int argc, char *argv[])
 	if (!do_not_fork)
 	{
 		if (daemon(0, 0) == -1)
-			error_exit("fork failed");
+			error_exit("fork failed - out of resources?");
 	}
 
 	write_pid(pid_file);

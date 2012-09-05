@@ -172,8 +172,6 @@ int main(int argc, char *argv[])
 	if (!host && !bytes_file && !show_bps)
 		error_exit("no host to connect to, to file to write to and no 'show bps' given");
 
-	if (chdir("/") == -1)
-		error_exit("chdir(/) failed");
 	(void)umask(0177);
 	no_core();
 	lock_mem(bytes, sizeof bytes);

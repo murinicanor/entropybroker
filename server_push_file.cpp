@@ -122,8 +122,7 @@ int main(int argc, char *argv[])
 	if (!fh)
 		error_exit("Failed to open file %s", file);
 
-	if (chdir("/") == -1)
-		error_exit("chdir(/) failed");
+	(void)umask(0177);
 	no_core();
 
 	if (!do_not_fork)
