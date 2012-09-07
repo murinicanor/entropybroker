@@ -224,35 +224,39 @@ int WRITE_TO(int fd, char *whereto, size_t len, double to)
 
 int start_listen(const char *adapter, int portnr, int listen_queue_size)
 {
-	int reuse_addr = 1;
-	struct sockaddr_in server_addr;
-	int	server_addr_len;
-	int fd = socket(AF_INET, SOCK_STREAM, 0);
-	if (fd == -1)
-		error_exit("failed creating socket");
+        int fd = socket(AF_INET6, SOCK_STREAM, 0);
+        if (fd == -1)
+                error_exit("failed creating socket");
 
-	if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (char *)&reuse_addr, sizeof(reuse_addr)) == -1)
-		error_exit("setsockopt(SO_REUSEADDR) failed");
+        int reuse_addr = 1;
+        if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (char *)&reuse_addr, sizeof(reuse_addr)) == -1)
+                error_exit("setsockopt(SO_REUSEADDR) failed");
 
-	server_addr_len = sizeof(server_addr);
-	memset((char *)&server_addr, 0x00, server_addr_len);
-	server_addr.sin_family = AF_INET;
-	if (!adapter)
+        struct sockaddr_in6 server_addr;
+
+        int server_addr_len = sizeof server_addr;
+
+        memset((char *)&server_addr, 0x00, server_addr_len);
+        server_addr.sin6_family = AF_INET6;
+        server_addr.sin6_port = htons(portnr);
+
+        if (!adapter || strcmp(adapter, "0.0.0.0") == 0)
+                server_addr.sin6_addr = in6addr_any;
+        else if (inet_pton(AF_INET6, adapter, &server_addr.sin6_addr) == 0)
 	{
-		server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+		fprintf(stderr, "\n");
+		fprintf(stderr, " * inet_pton(%s) failed: %s\n", adapter, strerror(errno));
+		fprintf(stderr, " * If you're trying to use an IPv4 address (e.g. 192.168.0.1 or so)\n");
+		fprintf(stderr, " * then do not forget to place ::FFFF: in front of the address,\n");
+		fprintf(stderr, " * e.g.: ::FFFF:192.168.0.1\n\n");
+		error_exit("listen socket initialisation failure: did you configure a correct listen adapter?");
 	}
-	else
-	{
-		if (inet_aton(adapter, &server_addr.sin_addr) == 0)
-			error_exit("inet_aton(%s) failed", adapter);
-	}
-	server_addr.sin_port = htons(portnr);
 
-	if (bind(fd, (struct sockaddr *)&server_addr, server_addr_len) == -1)
-		error_exit("bind() failed");
+        if (bind(fd, (struct sockaddr *)&server_addr, server_addr_len) == -1)
+                error_exit("bind() failed");
 
-	if (listen(fd, listen_queue_size) == -1)
-		error_exit("listen() failed");
+        if (listen(fd, listen_queue_size) == -1)
+                error_exit("listen() failed");
 
 	return fd;
 }
