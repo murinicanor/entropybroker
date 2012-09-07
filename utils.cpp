@@ -257,7 +257,7 @@ int start_listen(const char *adapter, int portnr, int listen_queue_size)
 	return fd;
 }
 
-int resolve_host(char *host, struct sockaddr_in *addr)
+struct hostent * resolve_host(char *host)
 {
 	struct hostent *hostdnsentries;
 
@@ -286,36 +286,35 @@ int resolve_host(char *host, struct sockaddr_in *addr)
 				error_exit("Could not resolve %s for an unknown reason (%d)\n", host, h_errno);
 		}
 
-		return -1;
+		return NULL;
 	}
 
-	/* create address structure */
-	addr -> sin_family = hostdnsentries -> h_addrtype;
-	addr -> sin_addr = incopy(hostdnsentries -> h_addr_list[0]);
-
-	return 0;
+	return hostdnsentries;
 }
 
 int connect_to(char *host, int portnr)
 {
-	int fd;
-	struct sockaddr_in addr;
-
 	/* resolve */
-	memset(&addr, 0x00, sizeof(addr));
-	resolve_host(host, &addr);
-	addr.sin_port = htons(portnr);
+	struct hostent *hostdnsentries = resolve_host(host);
 
 	/* connect */
-	fd = socket(AF_INET, SOCK_STREAM, 0);
+	int fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (fd == -1)
 		error_exit("connect_to: problem creating socket");
 
-	/* connect to peer */
-	if (connect(fd, (struct sockaddr *)&addr, sizeof(struct sockaddr)) == 0)
+	int h_index = 0;
+	while(hostdnsentries -> h_addr_list[h_index] != NULL)
 	{
-		/* connection made, return */
-		return fd;
+		struct sockaddr_in addr;
+		memset(&addr, 0x00, sizeof(addr));
+		addr.sin_family = hostdnsentries -> h_addrtype;
+		addr.sin_addr = incopy(hostdnsentries -> h_addr_list[h_index]);
+		addr.sin_port = htons(portnr);
+
+		if (connect(fd, (struct sockaddr *)&addr, sizeof(struct sockaddr)) == 0)
+			return fd;
+
+		h_index++;
 	}
 
 	close(fd);

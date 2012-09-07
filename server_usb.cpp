@@ -190,11 +190,10 @@ int main(int argc, char *argv[])
 	{
 		uint8_t bus_nr = libusb_get_bus_number(devs[index]);
 		uint8_t dev_nr = libusb_get_device_address(devs[index]);
-		int speed = libusb_get_device_speed(devs[index]);
 		struct libusb_device_descriptor desc;
 		libusb_get_device_descriptor(devs[index], &desc);
 
-		dolog(LOG_INFO, "Opening device %d: %d/%d (%d) %04x:%04x", index, bus_nr, dev_nr, speed, desc.idVendor, desc.idProduct);
+		dolog(LOG_INFO, "Opening device %d: %d/%d %04x:%04x", index, bus_nr, dev_nr, desc.idVendor, desc.idProduct);
 
 		if (desc.idVendor == 0x1d6b) // ignore
 			continue;
