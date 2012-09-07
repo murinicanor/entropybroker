@@ -18,4 +18,4 @@ http://en.wikipedia.org/wiki/Twofish <--
   - 2 streams mergen (algorithm m)
   - what else? xoren met prng van openssl?
 
-- client_egd: ook op tcp luisteren
+- multiple hosts
