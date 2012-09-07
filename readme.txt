@@ -175,6 +175,13 @@ the data only once.
 Use eb_server_ComScire_R2000KU when you have a ComSire R2000KU
 device connected via USB.
 
+If you have a ISO 7816 smartcard connected via a PCSC compatible
+reader, you can use eb_server_smartcard to use that smartcard
+to generate entropy data. This is obtained by sending the 0x84
+INS which means "GET CHALLENGE". Note that not all cards
+support this command. Two Dutch EMV cards I tried refuse this
+command with a 0x6e (class not supported) error.
+
 
 Proxies
 =======
