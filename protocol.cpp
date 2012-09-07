@@ -144,7 +144,7 @@ void protocol::error_sleep(int count)
 {
 	long int sleep_micro_seconds = myrand(count * 1000000) + 1;
 
-	dolog(LOG_WARNING, "Failed connecting, sleeping for %f seconds", (double)sleep_micro_seconds / 1000000.0);
+	dolog(LOG_WARNING, "Failed connecting (%s), sleeping for %f seconds", strerror(errno), (double)sleep_micro_seconds / 1000000.0);
 
 	usleep((long)sleep_micro_seconds);
 }
@@ -642,8 +642,8 @@ bool protocol::proxy_auth_user(std::string pa_username, std::string pa_password)
 		if (reconnect_server_socket() == -1)
 			error_exit("Failed to connect to %s:%d", host, port);
 
-		char *request = "0011";
-		if (ok == true && WRITE_TO(socket_fd, request, 4, DEFAULT_COMM_TO) != 4)
+		const char *request = "0011";
+		if (ok == true && WRITE_TO(socket_fd, (char *)request, 4, DEFAULT_COMM_TO) != 4)
 			ok = false;
 
 		long long unsigned int dummy_challenge = 123;

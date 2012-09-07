@@ -23,13 +23,18 @@
 #include "users.h"
 #include "auth.h"
 
-const char *pid_file = PID_DIR "/server_egb.pid";
+const char *pid_file = PID_DIR "/server_egd.pid";
 
 void sig_handler(int sig)
 {
 	fprintf(stderr, "Exit due to signal %d\n", sig);
 	unlink(pid_file);
 	exit(0);
+}
+
+int open_tcp_socket(char *host, int port)
+{
+	return connect_to(host, port);
 }
 
 int open_unixdomain_socket(char *path)
@@ -62,8 +67,10 @@ void help(void)
 {
         printf("-i host   entropy_broker-host to connect to\n");
 	printf("-x port   port to connect to (default: %d)\n", DEFAULT_BROKER_PORT);
-	printf("-d path   unix domain socket to read from\n");
-	printf("-o file   file to write entropy data to (mututal exclusive with -i)\n");
+	printf("-d path   egd unix domain socket to read from\n");
+	printf("-t host   egd tcp host to read from (mutually exclusive from width -d)\n");
+	printf("-T port   egd tcp port to read from\n");
+	printf("-o file   file to write entropy data to (mututally exclusive with -i)\n");
 	printf("-a x      bytes per interval to read from egd\n");
 	printf("-b x      interval for reading data\n");
         printf("-l file   log to file 'file'\n");
@@ -92,13 +99,25 @@ int main(int argc, char *argv[])
 	char server_type[128];
 	bool show_bps = false;
 	std::string username, password;
+	char *egd_host = NULL;
+	int egd_port = -1;
 
 	fprintf(stderr, "eb_server_egb v" VERSION ", (C) 2009-2012 by folkert@vanheusden.com\n");
 
-	while((c = getopt(argc, argv, "x:hSX:P:a:b:o:i:d:l:snv")) != -1)
+	while((c = getopt(argc, argv, "t:T:x:hSX:P:a:b:o:i:d:l:snv")) != -1)
 	{
 		switch(c)
 		{
+			case 't':
+				egd_host = optarg;
+				break;
+
+			case 'T':
+				egd_port =  atoi(optarg);
+				if (egd_port < 1)
+					error_exit("-T requires a value >= 1");
+				break;
+
 			case 'x':
 				port = atoi(optarg);
 				if (port < 1)
@@ -172,8 +191,11 @@ int main(int argc, char *argv[])
 	if (!host && !bytes_file)
 		error_exit("no host to connect to given");
 
-	if (host != NULL && bytes_file != NULL)
-		error_exit("-o and -d are mutual exclusive");
+	if (!device && !egd_host)
+		error_exit( "No egd source specified: use -d or -t (and -T)" );
+
+	if (device != NULL && egd_host != NULL)
+		error_exit("-d and -t are mutually exclusive");
 
 	if (chdir("/") == -1)
 		error_exit("chdir(/) failed");
@@ -190,9 +212,17 @@ int main(int argc, char *argv[])
 		p = new protocol(host, port, username, password, true, server_type);
 
 	if (device)
+	{
 		read_fd = open_unixdomain_socket(device);
-	if (read_fd == -1)
-		error_exit("error opening %s", device);
+		if (read_fd == -1)
+			error_exit("error opening %s", device);
+	}
+	else
+	{
+		read_fd = open_tcp_socket(egd_host, egd_port);
+		if (read_fd == -1)
+			error_exit("Failed to connect to %s:%d", egd_host, egd_port);
+	}
 
 	if (!do_not_fork)
 	{
