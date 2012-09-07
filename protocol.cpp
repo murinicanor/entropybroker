@@ -197,13 +197,19 @@ int protocol::reconnect_server_socket()
 
 				host_index++;
 				if (host_index == hosts -> size())
+				{
 					host_index = 0;
+
+					error_sleep(count);
+				}
+				else
+				{
+					dolog(LOG_WARNING, "Failed to connect to %s:%d (%s), continuing with next host", host.c_str(), port, strerror(errno));
+				}
 
 				host_try_count++;
 				if (host_try_count == hosts -> size())
 					dolog(LOG_WARNING, "All hosts are not reachable, still trying");
-
-				error_sleep(count);
 
 				if (count < 16)
 					count++;
