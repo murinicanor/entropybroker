@@ -257,76 +257,52 @@ int start_listen(const char *adapter, int portnr, int listen_queue_size)
 	return fd;
 }
 
-struct hostent * resolve_host(char *host)
-{
-	struct hostent *hostdnsentries;
-
-	hostdnsentries = gethostbyname(host);
-	if (hostdnsentries == NULL)
-	{
-		switch(h_errno)
-		{
-			case HOST_NOT_FOUND:
-				error_exit("The specified host is unknown.\n");
-				break;
-
-			case NO_ADDRESS:
-				error_exit("The requested name is valid but does not have an IP address.\n");
-				break;
-
-			case NO_RECOVERY:
-				error_exit("A non-recoverable name server error occurred.\n");
-				break;
-
-			case TRY_AGAIN:
-				error_exit("A temporary error occurred on an authoritative name server. Try again later.\n");
-				break;
-
-			default:
-				error_exit("Could not resolve %s for an unknown reason (%d)\n", host, h_errno);
-		}
-
-		return NULL;
-	}
-
-	return hostdnsentries;
-}
-
 int connect_to(char *host, int portnr)
 {
-	/* resolve */
-	struct hostent *hostdnsentries = resolve_host(host);
+	struct addrinfo hints;
+	memset(&hints, 0, sizeof(struct addrinfo));
+	hints.ai_family = AF_UNSPEC;    // Allow IPv4 or IPv6
+	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_flags = AI_PASSIVE;    // For wildcard IP address
+	hints.ai_protocol = 0;          // Any protocol
+	hints.ai_canonname = NULL;
+	hints.ai_addr = NULL;
+	hints.ai_next = NULL;
 
-	/* connect */
-	int fd = socket(AF_INET, SOCK_STREAM, 0);
-	if (fd == -1)
-		error_exit("connect_to: problem creating socket");
+	char portnr_str[8];
+	snprintf(portnr_str, sizeof portnr_str, "%d", portnr);
 
-	int h_index = 0;
-	while(hostdnsentries -> h_addr_list[h_index] != NULL)
+	struct addrinfo *result;
+	int rc = getaddrinfo(host, portnr_str, &hints, &result);
+	if (rc != 0)
+		error_exit("Problem resolving %s: %s\n", host, gai_strerror(rc));
+
+	for(struct addrinfo *rp = result; rp != NULL; rp = rp->ai_next)
 	{
-		struct sockaddr_in addr;
-		memset(&addr, 0x00, sizeof(addr));
-		addr.sin_family = hostdnsentries -> h_addrtype;
-		addr.sin_addr = incopy(hostdnsentries -> h_addr_list[h_index]);
-		addr.sin_port = htons(portnr);
+		int fd = socket(rp -> ai_family, rp -> ai_socktype, rp -> ai_protocol);
+		if (fd == -1)
+			continue;
 
-		if (connect(fd, (struct sockaddr *)&addr, sizeof(struct sockaddr)) == 0)
+		if (connect(fd, rp -> ai_addr, rp -> ai_addrlen) == 0)
+		{
+			freeaddrinfo(result);
+
 			return fd;
+		}
 
-		h_index++;
+		close(fd);
 	}
 
-	close(fd);
+	freeaddrinfo(result);
 
 	return -1;
 }
 
 void disable_nagle(int fd)
 {
-      int disable = 1;
+	int disable = 1;
 
-      if (setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, (char *)&disable, sizeof(disable)) == -1)
+	if (setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, (char *)&disable, sizeof(disable)) == -1)
 		error_exit("setsockopt(IPPROTO_TCP, TCP_NODELAY) failed");
 }
 
