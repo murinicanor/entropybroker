@@ -122,17 +122,12 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if (username.length() == 0 || password.length() == 0)
+	if (host && (username.length() == 0 || password.length() == 0))
 		error_exit("username + password cannot be empty");
 
-	if (!host && !bytes_file)
-		error_exit("no host to connect to given");
+	if (!host && !bytes_file && !show_bps)
+		error_exit("no host to connect to, to file to write to and no 'show bps' given");
 
-	if (host != NULL && bytes_file != NULL)
-		error_exit("-o and -d are mutual exclusive");
-
-	if (chdir("/") == -1)
-		error_exit("chdir(/) failed");
 	(void)umask(0177);
 	no_core();
 
@@ -167,8 +162,8 @@ int main(int argc, char *argv[])
 	signal(SIGINT , sig_handler);
 	signal(SIGQUIT, sig_handler);
 
-	double cur_start_ts = get_ts();
-	long int total_byte_cnt = 0;
+	init_showbps();
+
 	bool stats_error_reported = false;
 	for(;;)
 	{
@@ -198,37 +193,19 @@ int main(int argc, char *argv[])
 		if (index == sizeof(bytes))
 		{
 			if (bytes_file)
-			{
 				emit_buffer_to_file(bytes_file, bytes, index);
-			}
-			else
+
+			if (host && p -> message_transmit_entropy_data(bytes, index) == -1)
 			{
-				if (p -> message_transmit_entropy_data(bytes, index) == -1)
-				{
-					dolog(LOG_INFO, "connection closed");
-					p -> drop();
-				}
+				dolog(LOG_INFO, "connection closed");
+				p -> drop();
 			}
 
 			index = 0;
 		}
 
 		if (show_bps)
-		{
-			double now_ts = get_ts();
-
-			total_byte_cnt += 1249;
-
-			if ((now_ts - cur_start_ts) >= 1.0)
-			{
-				int diff_t = now_ts - cur_start_ts;
-
-				printf("Total number of bytes: %ld, avg/s: %f\n", total_byte_cnt, (double)total_byte_cnt / diff_t);
-
-				cur_start_ts = now_ts;
-				total_byte_cnt = 0;
-			}
-		}
+			update_showbps(1249);
 
 		if (index == 0)
 		{

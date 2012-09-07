@@ -165,14 +165,12 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if (username.length() == 0 || password.length() == 0)
+	if (host && (username.length() == 0 || password.length() == 0))
 		error_exit("username + password cannot be empty");
 
 	if (!host && !bytes_file && !show_bps)
-		error_exit("no host to connect to/file to write to given");
+		error_exit("no host to connect to, to file to write to and no 'show bps' given");
 
-	if (chdir("/") == -1)
-		error_exit("chdir(/) failed");
 	(void)umask(0177);
 	no_core();
 
@@ -203,9 +201,6 @@ int main(int argc, char *argv[])
 	if (host)
 		p = new protocol(host, port, username, password, true, server_type);
 
-	long int total_byte_cnt = 0;
-	double cur_start_ts = get_ts();
-
 	signal(SIGFPE, SIG_IGN);
 	signal(SIGSEGV, SIG_IGN);
 
@@ -216,6 +211,7 @@ int main(int argc, char *argv[])
 	int bits = 0;
 	int index = 0;
 
+	init_showbps();
 	for(;;)
 	{
 		fiddle(&fs);
@@ -230,12 +226,9 @@ int main(int argc, char *argv[])
 		int A = (int)(b - a);
 		int B = (int)(d - c);
 
-		if (A == B)
-			continue;
-
 		byte <<= 1;
 
-		if (A > B)
+		if (A >= B)
 			byte |= 1;
 			
 		bits++;
@@ -248,38 +241,20 @@ int main(int argc, char *argv[])
 			if (index == sizeof bytes)
 			{
 				if (bytes_file)
-				{
 					emit_buffer_to_file(bytes_file, bytes, index);
-				}
-				if (host)
-				{
-					if (p -> message_transmit_entropy_data(bytes, index) == -1)
-					{
-						dolog(LOG_INFO, "connection closed");
 
-						p -> drop();
-					}
+				if (host && p -> message_transmit_entropy_data(bytes, index) == -1)
+				{
+					dolog(LOG_INFO, "connection closed");
+
+					p -> drop();
 				}
 
 				index = 0;
 			}
 
 			if (show_bps)
-			{
-				double now_ts = get_ts();
-
-				total_byte_cnt++;
-
-				if ((now_ts - cur_start_ts) >= 1.0)
-				{
-					int diff_t = now_ts - cur_start_ts;
-
-					printf("Total number of bytes: %ld, avg/s: %f\n", total_byte_cnt, (double)total_byte_cnt / diff_t);
-
-					cur_start_ts = now_ts;
-					total_byte_cnt = 0;
-				}
-			}
+				update_showbps(sizeof bytes);
 		}
 	}
 

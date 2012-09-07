@@ -32,8 +32,6 @@ const char *pid_file = PID_DIR "/eb_server_audio.pid";
 
 #define DEFAULT_SAMPLE_RATE			11025
 #define DEFAULT_CLICK_READ			(1 * DEFAULT_SAMPLE_RATE)
-const char *cdevice = "hw:1";				/* capture device */
-const char *id = "capture";
 
 #define max(x, y)	((x)>(y)?(x):(y))
 
@@ -44,7 +42,7 @@ void sig_handler(int sig)
 	exit(0);
 }
 
-int setparams(snd_pcm_t *chandle, int sample_rate, snd_pcm_format_t *format)
+int setparams(snd_pcm_t *chandle, int sample_rate, snd_pcm_format_t *format, const char *cdevice)
 {
 	int err;
 	snd_pcm_hw_params_t *ct_params;		/* templates with rate, format and channels */
@@ -52,7 +50,7 @@ int setparams(snd_pcm_t *chandle, int sample_rate, snd_pcm_format_t *format)
 
 	err = snd_pcm_hw_params_any(chandle, ct_params);
 	if (err < 0)
-		error_exit("Broken configuration for %s PCM: no configurations available: %s", id, snd_strerror(err));
+		error_exit("Broken configuration for %s PCM: no configurations available: %s", cdevice, snd_strerror(err));
 
 	/* Disable rate resampling */
 	err = snd_pcm_hw_params_set_rate_resample(chandle, ct_params, 0);
@@ -67,7 +65,7 @@ int setparams(snd_pcm_t *chandle, int sample_rate, snd_pcm_format_t *format)
 	/* Restrict a configuration space to have rate nearest to our target rate */
 	err = snd_pcm_hw_params_set_rate_near(chandle, ct_params, (unsigned int *)&sample_rate, 0);
 	if (err < 0)
-		error_exit("Rate %iHz not available for %s: %s", sample_rate, id, snd_strerror(err));
+		error_exit("Rate %iHz not available for %s: %s", sample_rate, cdevice, snd_strerror(err));
 
 	/* Set sample format */
 	*format = SND_PCM_FORMAT_S16_BE;
@@ -78,12 +76,12 @@ int setparams(snd_pcm_t *chandle, int sample_rate, snd_pcm_format_t *format)
 		err = snd_pcm_hw_params_set_format(chandle, ct_params, *format);
 	}
 	if (err < 0)
-		error_exit("Sample format (SND_PCM_FORMAT_S16_BE and _LE) not available for %s: %s", id, snd_strerror(err));
+		error_exit("Sample format (SND_PCM_FORMAT_S16_BE and _LE) not available for %s: %s", cdevice, snd_strerror(err));
 
 	/* Set stereo */
 	err = snd_pcm_hw_params_set_channels(chandle, ct_params, 2);
 	if (err < 0)
-		error_exit("Channels count (%i) not available for %s: %s", 2, id, snd_strerror(err));
+		error_exit("Channels count (%i) not available for %s: %s", 2, cdevice, snd_strerror(err));
 
 	/* Apply settings to sound device */
 	err = snd_pcm_hw_params(chandle, ct_params);
@@ -95,12 +93,12 @@ int setparams(snd_pcm_t *chandle, int sample_rate, snd_pcm_format_t *format)
 
 #define order(a, b)     (((a) == (b)) ? -1 : (((a) > (b)) ? 1 : 0))
 
-void help(void)
+void help(const char *cdevice)
 {
 	printf("-i host   entropy_broker-host to connect to\n");
 	printf("-x port   port to connect to (default: %d)\n", DEFAULT_BROKER_PORT);
 	printf("-d dev    audio-device, default %s\n", cdevice);
-	printf("-o file   file to write entropy data to (mututal exclusive with -d)\n");
+	printf("-o file   file to write entropy data to\n");
 	printf("-S        show bps (mutual exclusive with -n)\n");
 	printf("-l file   log to file 'file'\n");
 	printf("-s        log to syslog\n");
@@ -109,7 +107,22 @@ void help(void)
 	printf("-X file   read username+password from file\n");
 }
 
-void main_loop(char *host, int port, char *bytes_file, char show_bps, std::string username, std::string password)
+void recover_sound_dev(snd_pcm_t **chandle, bool is_open, const char *cdevice, snd_pcm_format_t *format)
+{
+	if (is_open)
+		snd_pcm_close(*chandle);
+
+	int err = -1;
+	while ((err = snd_pcm_open(chandle, cdevice, SND_PCM_STREAM_CAPTURE, 0)) < 0)
+	{
+		dolog(LOG_WARNING, "snd_pcm_open open error: %s (retrying)", snd_strerror(err));
+		sleep(1);
+	}
+
+	setparams(*chandle, DEFAULT_SAMPLE_RATE, format, cdevice);
+}
+
+void main_loop(char *host, int port, char *bytes_file, char show_bps, std::string username, std::string password, const char *cdevice)
 {
 	int n_to_do, bits_out=0, loop;
 	char *dummy;
@@ -123,8 +136,6 @@ void main_loop(char *host, int port, char *bytes_file, char show_bps, std::strin
 	int err;
 	unsigned char bytes[1249]; // 1249 * 8: 9992, must be less then 9999
 	int bytes_out = 0;
-	double start_ts, cur_start_ts;
-	long int total_byte_cnt = 0;
 
 	protocol *p = NULL;
 	if (host)
@@ -132,14 +143,9 @@ void main_loop(char *host, int port, char *bytes_file, char show_bps, std::strin
 
 	lock_mem(bytes, sizeof bytes);
 
-	if ((err = snd_pcm_open(&chandle, cdevice, SND_PCM_STREAM_CAPTURE, 0)) < 0)
-		error_exit("Record open error: %s", snd_strerror(err));
+	recover_sound_dev(&chandle, false, cdevice, &format);
 
-	/* Open and set up ALSA device for reading */
-	setparams(chandle, DEFAULT_SAMPLE_RATE, &format);
-
-	start_ts = get_ts();
-	cur_start_ts = start_ts;
+	init_showbps();
 	for(;;)
 	{
 		char got_any = 0;
@@ -157,19 +163,17 @@ void main_loop(char *host, int port, char *bytes_file, char show_bps, std::strin
 		snd_pcm_sframes_t garbage_frames_read = snd_pcm_readi(chandle, input_buffer, DEFAULT_SAMPLE_RATE);
 		/* Make sure we aren't hitting a disconnect/suspend case */
 		if (garbage_frames_read < 0)
-			snd_pcm_recover(chandle, garbage_frames_read, 0);
-		/* Nope, something else is wrong. Bail. */
-		if (garbage_frames_read < 0)
 		{
-			dolog(LOG_INFO, "Get random data: read error: %m");
+			dolog(LOG_INFO, "snd_pcm_readi: failed retrieving audio", snd_strerror(garbage_frames_read)); // FIXME
 
-			snd_pcm_close(chandle);
+			if ((err = snd_pcm_recover(chandle, garbage_frames_read, 0)) < 0)
+			{
+				dolog(LOG_INFO, "snd_pcm_recover fail : %s", snd_strerror(err));
 
-			if ((err = snd_pcm_open(&chandle, cdevice, SND_PCM_STREAM_CAPTURE, 0)) < 0)
-				error_exit("Record open error: %s", snd_strerror(err));
+				dolog(LOG_INFO, "Failure retrieving sound from soundcard, re-opening device");
 
-			/* Open and set up ALSA device for reading */
-			setparams(chandle, DEFAULT_SAMPLE_RATE, &format);
+				recover_sound_dev(&chandle, true, cdevice, &format);
+			}
 		}
 
 		/* Read a buffer of audio */
@@ -182,12 +186,16 @@ void main_loop(char *host, int port, char *bytes_file, char show_bps, std::strin
 			if (frames_read < 0)
 				frames_read = snd_pcm_recover(chandle, frames_read, 0);
 			/* Nope, something else is wrong. Bail.	*/
-			if (frames_read < 0)
-				error_exit("Read error: %m");
 			if (frames_read == -1) 
 			{
-				if (errno != EINTR)
-					error_exit("Read error: %m");
+				if ((err = snd_pcm_recover(chandle, frames_read, 0)) < 0)
+				{
+					dolog(LOG_INFO, "snd_pcm_recover fail : %s", snd_strerror(err));
+
+					dolog(LOG_INFO, "Failure retrieving sound from soundcard, re-opening device");
+
+					recover_sound_dev(&chandle, true, cdevice, &format);
+				}
 			}
 			else
 			{
@@ -256,39 +264,24 @@ void main_loop(char *host, int port, char *bytes_file, char show_bps, std::strin
 				{
 					bytes[bytes_out++] = byte_out;
 
-					if (bytes_out == sizeof(bytes))
+					if (bytes_out == sizeof bytes)
 					{
 						if (bytes_file)
-						{
 							emit_buffer_to_file(bytes_file, bytes, bytes_out);
-						}
-						else if (p -> message_transmit_entropy_data(bytes, bytes_out) == -1)
+
+						if (host && p -> message_transmit_entropy_data(bytes, bytes_out) == -1)
 						{
 							dolog(LOG_INFO, "connection closed");
 							p -> drop();
 						}
 
 						bytes_out = 0;
+
+						if (show_bps)
+							update_showbps(sizeof bytes);
 					}
 
 					bits_out = 0;
-
-					if (show_bps)
-					{
-						double now_ts = get_ts();
-
-						total_byte_cnt++;
-
-						if ((now_ts - cur_start_ts) >= 1.0)
-						{
-							int diff_t = now_ts - cur_start_ts;
-
-							printf("Total number of bytes: %ld, avg/s: %f\n", total_byte_cnt, (double)total_byte_cnt / diff_t);
-
-							total_byte_cnt = 0;
-							cur_start_ts = now_ts;
-						}
-					}
 				}
 			}
 		}
@@ -318,6 +311,7 @@ int main(int argc, char *argv[])
 	char *bytes_file = NULL;
 	bool show_bps = false;
 	std::string username, password;
+	const char *cdevice = "hw:1";				/* capture device */
 
 	fprintf(stderr, "%s, (C) 2009-2012 by folkert@vanheusden.com\n", server_type);
 
@@ -369,22 +363,17 @@ int main(int argc, char *argv[])
 				break;
 
 			default:
-				help();
+				help(cdevice);
 				return 1;
 		}
 	}
 
-	if (username.length() == 0 || password.length() == 0)
+	if (host && (username.length() == 0 || password.length() == 0))
 		error_exit("username + password cannot be empty");
 
-	if (!host && !bytes_file)
-		error_exit("no host to connect to given");
+	if (!host && !bytes_file && !show_bps)
+		error_exit("no host to connect to, to file to write to and no 'show bps' given");
 
-	if (host != NULL && bytes_file != NULL)
-		error_exit("-o and -d are mutual exclusive");
-
-	if (chdir("/") == -1)
-		error_exit("chdir(/) failed");
 	(void)umask(0177);
 	no_core();
 
@@ -403,7 +392,7 @@ int main(int argc, char *argv[])
 	signal(SIGINT , sig_handler);
 	signal(SIGQUIT, sig_handler);
 
-	main_loop(host, port, bytes_file, show_bps, username, password);
+	main_loop(host, port, bytes_file, show_bps, username, password, cdevice);
 
 	unlink(pid_file);
 }

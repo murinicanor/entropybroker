@@ -140,14 +140,12 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if (username.length() == 0 || password.length() == 0)
+	if (host && (username.length() == 0 || password.length() == 0))
 		error_exit("username + password cannot be empty");
 
 	if (!host && !bytes_file && !show_bps)
-		error_exit("no host to connect to/file to write to given");
+		error_exit("no host to connect to, to file to write to and no 'show bps' given");
 
-	if (chdir("/") == -1)
-		error_exit("chdir(/) failed");
 	(void)umask(0177);
 	no_core();
 	lock_mem(bytes, sizeof bytes);
@@ -206,8 +204,8 @@ int main(int argc, char *argv[])
 	if (use_n == 0)
 		error_exit("no devices found which can be used");
 
-	long int total_byte_cnt = 0;
-	double cur_start_ts = get_ts();
+	init_showbps();
+
 	int dev_index = 0;
 	for(;;)
 	{
@@ -229,39 +227,21 @@ int main(int argc, char *argv[])
 			bytes[index++] = byte;
 			bits = 0;
 
-			if (index == sizeof(bytes))
+			if (index == sizeof bytes)
 			{
 				if (bytes_file)
-				{
 					emit_buffer_to_file(bytes_file, bytes, index);
-				}
-				if (host)
+
+				if (host && p -> message_transmit_entropy_data(bytes, index) == -1)
 				{
-					if (p -> message_transmit_entropy_data(bytes, index) == -1)
-					{
-						dolog(LOG_INFO, "connection closed");
-						p -> drop();
-					}
+					dolog(LOG_INFO, "connection closed");
+					p -> drop();
 				}
 
 				index = 0; // skip header
-			}
 
-			if (show_bps)
-			{
-				double now_ts = get_ts();
-
-				total_byte_cnt++;
-
-				if ((now_ts - cur_start_ts) >= 1.0)
-				{
-					int diff_t = now_ts - cur_start_ts;
-
-					printf("Number of bytes: %ld, avg/s: %f\n", total_byte_cnt, (double)total_byte_cnt / diff_t);
-
-					cur_start_ts = now_ts;
-					total_byte_cnt = 0;
-				}
+				if (show_bps)
+					update_showbps(sizeof bytes);
 			}
 		}
 	}

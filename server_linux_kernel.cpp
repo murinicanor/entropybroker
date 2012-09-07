@@ -52,7 +52,6 @@ int main(int argc, char *argv[])
 	char *log_logfile = NULL;
 	char *bytes_file = NULL;
 	bool show_bps = false;
-	long int total_byte_cnt = 0;
 	std::string username, password;
 
 	fprintf(stderr, "%s, (C) 2009-2012 by folkert@vanheusden.com\n", server_type);
@@ -108,14 +107,12 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if (username.length() == 0 || password.length() == 0)
+	if (host && (username.length() == 0 || password.length() == 0))
 		error_exit("username + password cannot be empty");
 
 	if (!host && !bytes_file && !show_bps)
-		error_exit("no host to connect to/file to write to given");
+		error_exit("no host to connect to, to file to write to and no 'show bps' given");
 
-	if (chdir("/") == -1)
-		error_exit("chdir(/) failed");
 	(void)umask(0177);
 	no_core();
 
@@ -141,7 +138,7 @@ int main(int argc, char *argv[])
 	unsigned char bytes[1249];
 	lock_mem(bytes, sizeof bytes);
 
-	double cur_start_ts = get_ts();
+	init_showbps();
 	for(;;)
 	{
 		dolog(LOG_DEBUG, "Bits available: %d", kernel_rng_get_entropy_count());
@@ -159,36 +156,17 @@ int main(int argc, char *argv[])
 		}
 
 		if (bytes_file)
-		{
 			emit_buffer_to_file(bytes_file, bytes, sizeof bytes);
-		}
 
-		if (host)
+		if (host && p -> message_transmit_entropy_data(bytes, sizeof bytes) == -1)
 		{
-			if (p -> message_transmit_entropy_data(bytes, sizeof bytes) == -1)
-			{
-				dolog(LOG_INFO, "connection closed");
-				p -> drop();
-				continue;
-			}
+			dolog(LOG_INFO, "connection closed");
+			p -> drop();
+			continue;
 		}
 
 		if (show_bps)
-		{
-			double now_ts = get_ts();
-
-			total_byte_cnt += sizeof bytes;
-
-			if ((now_ts - cur_start_ts) >= 1.0)
-			{
-				int diff_t = now_ts - cur_start_ts;
-
-				printf("Total number of bytes: %ld, avg/s: %f\n", total_byte_cnt, double(total_byte_cnt) / diff_t);
-
-				cur_start_ts = now_ts;
-				total_byte_cnt = 0;
-			}
-		}
+			update_showbps(sizeof bytes);
 	}
 
 	memset(bytes, 0x00, sizeof bytes);

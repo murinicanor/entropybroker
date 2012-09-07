@@ -319,14 +319,11 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if (username.length() == 0 || password.length() == 0)
+	if (host && (username.length() == 0 || password.length() == 0))
 		error_exit("username + password cannot be empty");
 
-	if (!host && !bytes_file)
-		error_exit("no host to connect to given");
-
-	if (host != NULL && bytes_file != NULL)
-		error_exit("-o and -d are mutual exclusive");
+	if (!host && !bytes_file && !show_bps)
+		error_exit("no host to connect to, to file to write to and no 'show bps' given");
 
 	set_logging_parameters(log_console, log_logfile, log_syslog);
 
@@ -338,8 +335,6 @@ int main(int argc, char *argv[])
 	if (serial)
 		set_serial_parameters(read_fd, serial);
 
-	if (chdir("/") == -1)
-		error_exit("chdir(/) failed");
 	(void)umask(0177);
 	no_core();
 	lock_mem(bytes, sizeof bytes);
@@ -361,42 +356,23 @@ int main(int argc, char *argv[])
 	signal(SIGINT , sig_handler);
 	signal(SIGQUIT, sig_handler);
 
-	double cur_start_ts = get_ts();
-	long int total_byte_cnt = 0;
+	init_showbps();
 	for(;;)
 	{
 		if (READ(read_fd, (char *)bytes, 1249) != 1249)
 			error_exit("error reading from input");
 
 		if (bytes_file)
-		{
 			emit_buffer_to_file(bytes_file, bytes, 1249);
-		}
-		else
+
+		if (host && p -> message_transmit_entropy_data(bytes, 1249) == -1)
 		{
-			if (p -> message_transmit_entropy_data(bytes, 1249) == -1)
-			{
-				dolog(LOG_INFO, "connection closed");
-				p -> drop();
-			}
+			dolog(LOG_INFO, "connection closed");
+			p -> drop();
 		}
 
 		if (show_bps)
-		{
-			double now_ts = get_ts();
-
-			total_byte_cnt += 1249;
-
-			if ((now_ts - cur_start_ts) >= 1.0)
-			{
-				int diff_t = now_ts - cur_start_ts;
-
-				printf("Total number of bytes: %ld, avg/s: %f\n", total_byte_cnt, double(total_byte_cnt) / diff_t);
-
-				total_byte_cnt = 0;
-				cur_start_ts = now_ts;
-			}
-		}
+			update_showbps(1249);
 	}
 
 	memset(bytes, 0x00, sizeof bytes);

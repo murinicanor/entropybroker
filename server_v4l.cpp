@@ -214,20 +214,15 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if (username.length() == 0 || password.length() == 0)
+	if (host && (username.length() == 0 || password.length() == 0))
 		error_exit("username + password cannot be empty");
 
-	if (!host && !bytes_file)
-		error_exit("no host to connect to given");
-
-	if (host != NULL && bytes_file != NULL)
-		error_exit("-o and -d are mutual exclusive");
+	if (!host && !bytes_file && !show_bps)
+		error_exit("no host to connect to, to file to write to and no 'show bps' given");
 
 	if (!device)
 		error_exit("Please select a video4linux video device (e.g. a webcam, tv-card, etc.)");
 
-	if (chdir("/") == -1)
-		error_exit("chdir(/) failed");
 	(void)umask(0177);
 	no_core();
 
@@ -242,7 +237,7 @@ int main(int argc, char *argv[])
 	if (!do_not_fork)
 	{
 		if (daemon(0, 0) == -1)
-			error_exit("fork failed");
+			error_exit("fork failed - out of resources?");
 	}
 
 	write_pid(pid_file);
@@ -272,8 +267,7 @@ int main(int argc, char *argv[])
 		untake_picture(fd, &buf);
 	}
 
-	double cur_start_ts = get_ts();
-	long int total_byte_cnt = 0;
+	init_showbps();
 	for(;;)
 	{
 		img1 = (unsigned char *)malloc(io_buffer_len);
@@ -344,10 +338,9 @@ int main(int argc, char *argv[])
 		if (nunbiased > 0)
 		{
 			if (bytes_file)
-			{
 				emit_buffer_to_file(bytes_file, unbiased, nunbiased);
-			}
-			else
+
+			if (host)
 			{
 				unsigned char *tempp = unbiased;
 				int count = nunbiased;
@@ -368,21 +361,7 @@ int main(int argc, char *argv[])
 			}
 
 			if (show_bps)
-			{
-				double now_ts = get_ts();
-
-				total_byte_cnt += nunbiased;
-
-				if ((now_ts - cur_start_ts) >= 1.0)
-				{
-					int diff_t = now_ts - cur_start_ts;
-
-					printf("Total number of bytes: %ld, avg/s: %f\n", total_byte_cnt, (double)total_byte_cnt / diff_t);
-
-					total_byte_cnt = 0;
-					cur_start_ts = now_ts;
-				}
-			}
+				update_showbps(nunbiased);
 		}
 
 		memset(unbiased, 0x00, io_buffer_len);
