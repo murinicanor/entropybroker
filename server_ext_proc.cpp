@@ -1,5 +1,6 @@
 #include <string>
 #include <map>
+#include <vector>
 #include <sys/time.h>
 #include <stdio.h>
 #include <signal.h>
@@ -37,8 +38,11 @@ void sig_handler(int sig)
 
 void help(void)
 {
-        printf("-i host   entropy_broker-host to connect to\n");
-	printf("-x port   port to connect to (default: %d)\n", DEFAULT_BROKER_PORT);
+        printf("-I host   entropy_broker host to connect to\n");
+        printf("          e.g. host\n");
+        printf("               host:port\n");
+        printf("               [ipv6 literal]:port\n");
+        printf("          you can have multiple entries of this\n");
 	printf("-c command   command to execute\n");
 	printf("-Z shell  shell to use. default is " SHELL "\n");
 	printf("-b x      how long to sleep between invocations (default: %ds)\n", DEFAULT_SLEEP);
@@ -53,8 +57,6 @@ void help(void)
 
 int main(int argc, char *argv[])
 {
-	char *host = NULL;
-	int port = DEFAULT_BROKER_PORT;
 	int c;
 	bool do_not_fork = false, log_console = false, log_syslog = false;
 	char *log_logfile = NULL;
@@ -63,21 +65,16 @@ int main(int argc, char *argv[])
 	int slp = DEFAULT_SLEEP;
 	char *bytes_file = NULL;
 	bool show_bps = false;
+	std::vector<std::string> hosts;
 
 	fprintf(stderr, "%s, (C) 2009-2012 by folkert@vanheusden.com\n", server_type);
 
-	while((c = getopt(argc, argv, "So:x:hc:Z:X:P:o:p:i:d:l:sn")) != -1)
+	while((c = getopt(argc, argv, "I:So:hc:Z:X:P:o:p:d:l:sn")) != -1)
 	{
 		switch(c)
 		{
 			case 'o':
 				bytes_file = optarg;
-				break;
-
-			case 'x':
-				port = atoi(optarg);
-				if (port < 1)
-					error_exit("-x requires a value >= 1");
 				break;
 
 			case 'X':
@@ -100,8 +97,8 @@ int main(int argc, char *argv[])
 				shell = optarg;
 				break;
 
-			case 'i':
-				host = optarg;
+			case 'I':
+				hosts.push_back(optarg);
 				break;
 
 			case 's':
@@ -123,10 +120,10 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if (host && (username.length() == 0 || password.length() == 0))
+	if (hosts.size() > 0 && (username.length() == 0 || password.length() == 0))
 		error_exit("username + password cannot be empty");
 
-	if (!host && !bytes_file && !show_bps)
+	if (hosts.size() == 0 && !bytes_file && !show_bps)
 		error_exit("no host to connect to, to file to write to and no 'show bps' given");
 
 	if (!cmd)
@@ -145,7 +142,9 @@ int main(int argc, char *argv[])
 
 	write_pid(pid_file);
 
-	protocol *p = new protocol(host, port, username, password, true, server_type);
+	protocol *p = NULL;
+	if (hosts.size() > 0)
+		p = new protocol(&hosts, username, password, true, server_type);
 
 	signal(SIGPIPE, SIG_IGN);
 	signal(SIGTERM, sig_handler);
@@ -204,7 +203,7 @@ int main(int argc, char *argv[])
 			if (show_bps)
 				update_showbps(got_bytes);
 
-			if (host)
+			if (p)
 			{
 				unsigned char *pnt = (unsigned char *)buffer;
 				while(got_bytes > 0)

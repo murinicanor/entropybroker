@@ -5,6 +5,7 @@
 #include <libgen.h>
 #include <string>
 #include <map>
+#include <vector>
 #include <openssl/blowfish.h>
 
 #include "error.h"

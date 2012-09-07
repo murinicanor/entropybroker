@@ -1,5 +1,6 @@
 #include <string>
 #include <map>
+#include <vector>
 #include <sys/time.h>
 #include <stdio.h>
 #include <signal.h>
@@ -32,8 +33,11 @@ void sig_handler(int sig)
 
 void help(void)
 {
-	printf("-i host   entropy_broker-host to connect to\n");
-	printf("-x port   port to connect to (default: %d)\n", DEFAULT_BROKER_PORT);
+        printf("-I host   entropy_broker host to connect to\n");
+        printf("          e.g. host\n");
+        printf("               host:port\n");
+        printf("               [ipv6 literal]:port\n");
+        printf("          you can have multiple entries of this\n");
 	printf("-o file   file to write entropy data to\n");
 	printf("-S        show bps (mutual exclusive with -n)\n");
 	printf("-l file   log to file 'file'\n");
@@ -45,27 +49,24 @@ void help(void)
 
 int main(int argc, char *argv[])
 {
-	char *host = NULL;
-	int port = DEFAULT_BROKER_PORT;
 	int c;
 	bool do_not_fork = false, log_console = false, log_syslog = false;
 	char *log_logfile = NULL;
 	char *bytes_file = NULL;
 	bool show_bps = false;
 	std::string username, password;
+	std::vector<std::string> hosts;
 
 	fprintf(stderr, "%s, (C) 2009-2012 by folkert@vanheusden.com\n", server_type);
 	printf("Please note: this program RETRIEVES entropy data from the kernel and feeds that to the entropybroker!\n");
 	printf("If you want to ADD data to the kernel entropy buffer instead (which is what you most likely want to do), then use eb_client_linux_kernel\n");
 
-	while((c = getopt(argc, argv, "x:hX:P:So:i:l:sn")) != -1)
+	while((c = getopt(argc, argv, "I:hX:P:So:l:sn")) != -1)
 	{
 		switch(c)
 		{
-			case 'x':
-				port = atoi(optarg);
-				if (port < 1)
-					error_exit("-x requires a value >= 1");
+			case 'I':
+				hosts.push_back(optarg);
 				break;
 
 			case 'X':
@@ -82,10 +83,6 @@ int main(int argc, char *argv[])
 
 			case 'o':
 				bytes_file = optarg;
-				break;
-
-			case 'i':
-				host = optarg;
 				break;
 
 			case 's':
@@ -107,10 +104,10 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if (host && (username.length() == 0 || password.length() == 0))
+	if (hosts.size() > 0 && (username.length() == 0 || password.length() == 0))
 		error_exit("username + password cannot be empty");
 
-	if (!host && !bytes_file && !show_bps)
+	if (hosts.size() == 0 && !bytes_file && !show_bps)
 		error_exit("no host to connect to, to file to write to and no 'show bps' given");
 
 	(void)umask(0177);
@@ -127,8 +124,8 @@ int main(int argc, char *argv[])
 	write_pid(pid_file);
 
 	protocol *p = NULL;
-	if (host)
-		p = new protocol(host, port, username, password, true, server_type);
+	if (hosts.size() > 0)
+		p = new protocol(&hosts, username, password, true, server_type);
 
 	signal(SIGPIPE, SIG_IGN);
 	signal(SIGTERM, sig_handler);
@@ -158,7 +155,7 @@ int main(int argc, char *argv[])
 		if (bytes_file)
 			emit_buffer_to_file(bytes_file, bytes, sizeof bytes);
 
-		if (host && p -> message_transmit_entropy_data(bytes, sizeof bytes) == -1)
+		if (p && p -> message_transmit_entropy_data(bytes, sizeof bytes) == -1)
 		{
 			dolog(LOG_INFO, "connection closed");
 			p -> drop();

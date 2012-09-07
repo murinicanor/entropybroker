@@ -1,5 +1,6 @@
 #include <string>
 #include <map>
+#include <vector>
 #include <sys/time.h>
 #include <stdio.h>
 #include <signal.h>
@@ -65,8 +66,11 @@ int open_unixdomain_socket(char *path)
 
 void help(void)
 {
-        printf("-i host   entropy_broker-host to connect to\n");
-	printf("-x port   port to connect to (default: %d)\n", DEFAULT_BROKER_PORT);
+	printf("-I host   entropy_broker host to connect to\n");
+	printf("          e.g. host\n");
+	printf("               host:port\n");
+	printf("               [ipv6 literal]:port\n");
+	printf("          you can have multiple entries of this\n");
 	printf("-d path   egd unix domain socket to read from\n");
 	printf("-t host   egd tcp host to read from (mutually exclusive from width -d)\n");
 	printf("-T port   egd tcp port to read from\n");
@@ -84,8 +88,6 @@ void help(void)
 int main(int argc, char *argv[])
 {
 	unsigned char bytes[1249];
-	char *host = NULL;
-	int port = DEFAULT_BROKER_PORT;
 	int read_fd = -1;
 	int c;
 	bool do_not_fork = false, log_console = false, log_syslog = false;
@@ -101,13 +103,18 @@ int main(int argc, char *argv[])
 	std::string username, password;
 	char *egd_host = NULL;
 	int egd_port = -1;
+	std::vector<std::string> hosts;
 
 	fprintf(stderr, "eb_server_egb v" VERSION ", (C) 2009-2012 by folkert@vanheusden.com\n");
 
-	while((c = getopt(argc, argv, "t:T:x:hSX:P:a:b:o:i:d:l:snv")) != -1)
+	while((c = getopt(argc, argv, "I:t:T:hSX:P:a:b:o:d:l:snv")) != -1)
 	{
 		switch(c)
 		{
+			case 'I':
+				hosts.push_back(optarg);
+				break;
+
 			case 't':
 				egd_host = optarg;
 				break;
@@ -116,12 +123,6 @@ int main(int argc, char *argv[])
 				egd_port =  atoi(optarg);
 				if (egd_port < 1)
 					error_exit("-T requires a value >= 1");
-				break;
-
-			case 'x':
-				port = atoi(optarg);
-				if (port < 1)
-					error_exit("-x requires a value >= 1");
 				break;
 
 			case 'S':
@@ -154,10 +155,6 @@ int main(int argc, char *argv[])
 				bytes_file = optarg;
 				break;
 
-			case 'i':
-				host = optarg;
-				break;
-
 			case 'd':
 				device = optarg;
 				break;
@@ -188,8 +185,8 @@ int main(int argc, char *argv[])
 	if (username.length() == 0 || password.length() == 0)
 		error_exit("username + password cannot be empty");
 
-	if (!host && !bytes_file)
-		error_exit("no host to connect to given");
+	if (hosts.size() == 0 && !bytes_file)
+		error_exit("no host to connect to given, also no file to write to given");
 
 	if (!device && !egd_host)
 		error_exit( "No egd source specified: use -d or -t (and -T)" );
@@ -197,8 +194,6 @@ int main(int argc, char *argv[])
 	if (device != NULL && egd_host != NULL)
 		error_exit("-d and -t are mutually exclusive");
 
-	if (chdir("/") == -1)
-		error_exit("chdir(/) failed");
 	(void)umask(0177);
 	no_core();
 	lock_mem(bytes, sizeof bytes);
@@ -208,8 +203,8 @@ int main(int argc, char *argv[])
 	snprintf(server_type, sizeof(server_type), "server_egb v" VERSION " %s", device);
 
 	protocol *p = NULL;
-	if (host)
-		p = new protocol(host, port, username, password, true, server_type);
+	if (hosts.size() > 0)
+		p = new protocol(&hosts, username, password, true, server_type);
 
 	if (device)
 	{
@@ -262,7 +257,7 @@ int main(int argc, char *argv[])
 			if (bytes_file)
 				emit_buffer_to_file(bytes_file, bytes, index);
 
-			if (host && p -> message_transmit_entropy_data(bytes, index) == -1)
+			if (p && p -> message_transmit_entropy_data(bytes, index) == -1)
 			{
 				dolog(LOG_INFO, "connection closed");
 
@@ -277,7 +272,7 @@ int main(int argc, char *argv[])
 
 		if (index == 0 || bytes_to_read == 0)
 		{
-			if (host && p -> sleep_interruptable(read_interval) != 0)
+			if (p && p -> sleep_interruptable(read_interval) != 0)
 			{
 				dolog(LOG_INFO, "connection closed");
 				p -> drop();

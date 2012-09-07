@@ -1,5 +1,6 @@
 #include <string>
 #include <map>
+#include <vector>
 #include <sys/time.h>
 #include <stdio.h>
 #include <signal.h>
@@ -61,25 +62,22 @@ int main(int argc, char *argv[])
 {
 	unsigned char bytes[1249];
 	int index = 0;
-	char *host = NULL;
-	int port = DEFAULT_BROKER_PORT;
 	int c;
 	bool do_not_fork = false, log_console = false, log_syslog = false;
 	char *log_logfile = NULL;
 	char *bytes_file = NULL;
 	bool show_bps = false;
 	std::string username, password;
+	std::vector<std::string> hosts;
 
 	fprintf(stderr, "%s, (C) 2009-2012 by folkert@vanheusden.com\n", server_type);
 
-	while((c = getopt(argc, argv, "x:hX:P:So:i:l:sn")) != -1)
+	while((c = getopt(argc, argv, "hX:P:So:I:l:sn")) != -1)
 	{
 		switch(c)
 		{
-			case 'x':
-				port = atoi(optarg);
-				if (port < 1)
-					error_exit("-x requires a value >= 1");
+			case 'I':
+				hosts.push_back(optarg);
 				break;
 
 			case 'X':
@@ -99,7 +97,7 @@ int main(int argc, char *argv[])
 				break;
 
 			case 'i':
-				host = optarg;
+				hosts.push_back(optarg);
 				break;
 
 			case 's':
@@ -125,10 +123,10 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if (host && (username.length() == 0 || password.length() == 0))
+	if (hosts.size() > 0 && (username.length() == 0 || password.length() == 0))
 		error_exit("username + password cannot be empty");
 
-	if (!host && !bytes_file && !show_bps)
+	if (hosts.size() == 0 && !bytes_file && !show_bps)
 		error_exit("no host to connect to, to file to write to and no 'show bps' given");
 
 	(void)umask(0177);
@@ -189,8 +187,8 @@ int main(int argc, char *argv[])
 	signal(SIGQUIT, sig_handler);
 
 	protocol *p = NULL;
-	if (host)
-		p = new protocol(host, port, username, password, true, server_type);
+	if (hosts.size() > 0)
+		p = new protocol(&hosts, username, password, true, server_type);
 
 	init_showbps();
 	for(;;)
@@ -235,7 +233,7 @@ int main(int argc, char *argv[])
 			if (show_bps)
 				update_showbps(sizeof bytes);
 
-			if (host && p -> message_transmit_entropy_data(bytes, index) == -1)
+			if (p && p -> message_transmit_entropy_data(bytes, index) == -1)
 			{
 				dolog(LOG_INFO, "connection closed");
 

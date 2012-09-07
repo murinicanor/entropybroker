@@ -1,5 +1,6 @@
 #include <string>
 #include <map>
+#include <vector>
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
@@ -95,8 +96,11 @@ int setparams(snd_pcm_t *chandle, int sample_rate, snd_pcm_format_t *format, con
 
 void help(const char *cdevice)
 {
-	printf("-i host   entropy_broker-host to connect to\n");
-	printf("-x port   port to connect to (default: %d)\n", DEFAULT_BROKER_PORT);
+	printf("-I host   entropy_broker host to connect to\n");
+	printf("          e.g. host\n");
+	printf("               host:port\n");
+	printf("               [ipv6 literal]:port\n");
+	printf("          you can have multiple entries of this\n");
 	printf("-d dev    audio-device, default %s\n", cdevice);
 	printf("-o file   file to write entropy data to\n");
 	printf("-S        show bps (mutual exclusive with -n)\n");
@@ -122,7 +126,7 @@ void recover_sound_dev(snd_pcm_t **chandle, bool is_open, const char *cdevice, s
 	setparams(*chandle, DEFAULT_SAMPLE_RATE, format, cdevice);
 }
 
-void main_loop(char *host, int port, char *bytes_file, char show_bps, std::string username, std::string password, const char *cdevice)
+void main_loop(std::vector<std::string> * hosts, char *bytes_file, char show_bps, std::string username, std::string password, const char *cdevice)
 {
 	int n_to_do, bits_out=0, loop;
 	char *dummy;
@@ -138,8 +142,8 @@ void main_loop(char *host, int port, char *bytes_file, char show_bps, std::strin
 	int bytes_out = 0;
 
 	protocol *p = NULL;
-	if (host)
-		p = new protocol(host, port, username, password, true, server_type);
+	if (hosts -> size() > 0)
+		p = new protocol(hosts, username, password, true, server_type);
 
 	lock_mem(bytes, sizeof bytes);
 
@@ -269,7 +273,7 @@ void main_loop(char *host, int port, char *bytes_file, char show_bps, std::strin
 						if (bytes_file)
 							emit_buffer_to_file(bytes_file, bytes, bytes_out);
 
-						if (host && p -> message_transmit_entropy_data(bytes, bytes_out) == -1)
+						if (hosts -> size() > 0 && p -> message_transmit_entropy_data(bytes, bytes_out) == -1)
 						{
 							dolog(LOG_INFO, "connection closed");
 							p -> drop();
@@ -303,8 +307,6 @@ void main_loop(char *host, int port, char *bytes_file, char show_bps, std::strin
 
 int main(int argc, char *argv[])
 {
-	char *host = NULL;
-	int port = DEFAULT_BROKER_PORT;
 	int c;
 	bool do_not_fork = false, log_console = false, log_syslog = false;
 	char *log_logfile = NULL;
@@ -312,17 +314,16 @@ int main(int argc, char *argv[])
 	bool show_bps = false;
 	std::string username, password;
 	const char *cdevice = "hw:1";				/* capture device */
+	std::vector<std::string> hosts;
 
 	fprintf(stderr, "%s, (C) 2009-2012 by folkert@vanheusden.com\n", server_type);
 
-	while((c = getopt(argc, argv, "x:hX:P:So:i:d:l:sn")) != -1)
+	while((c = getopt(argc, argv, "I:hX:P:So:d:l:sn")) != -1)
 	{
 		switch(c)
 		{
-			case 'x':
-				port = atoi(optarg);
-				if (port < 1)
-					error_exit("-x requires a value >= 1");
+			case 'I':
+				hosts.push_back(optarg);
 				break;
 
 			case 'X':
@@ -345,10 +346,6 @@ int main(int argc, char *argv[])
 				cdevice = optarg;
 				break;
 
-			case 'i':
-				host = optarg;
-				break;
-
 			case 's':
 				log_syslog = true;
 				break;
@@ -368,10 +365,10 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if (host && (username.length() == 0 || password.length() == 0))
+	if (hosts.size() > 0 && (username.length() == 0 || password.length() == 0))
 		error_exit("username + password cannot be empty");
 
-	if (!host && !bytes_file && !show_bps)
+	if (hosts.size() == 0 && !bytes_file && !show_bps)
 		error_exit("no host to connect to, to file to write to and no 'show bps' given");
 
 	(void)umask(0177);
@@ -392,7 +389,7 @@ int main(int argc, char *argv[])
 	signal(SIGINT , sig_handler);
 	signal(SIGQUIT, sig_handler);
 
-	main_loop(host, port, bytes_file, show_bps, username, password, cdevice);
+	main_loop(&hosts, bytes_file, show_bps, username, password, cdevice);
 
 	unlink(pid_file);
 }

@@ -19,3 +19,4 @@ http://en.wikipedia.org/wiki/Twofish <--
   - what else? xoren met prng van openssl?
 
 - multiple hosts
+  ^ load balance 'server' but also client

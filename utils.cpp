@@ -1,3 +1,6 @@
+#include <string>
+#include <openssl/blowfish.h>
+#include <vector>
 #include <unistd.h>
 #include <signal.h>
 #include <errno.h>
@@ -11,6 +14,7 @@
 #include <sys/time.h>
 #include <stdio.h>
 #include <time.h>
+#include <string>
 #include <sys/select.h>
 #include <netinet/tcp.h>
 #include <sys/mman.h>
@@ -20,6 +24,7 @@
 #include "log.h"
 #include "kernel_prng_rw.h"
 #include "my_pty.h"
+#include "protocol.h"
 
 #define MAX_LRAND48_GETS 250
 
@@ -261,7 +266,7 @@ int start_listen(const char *adapter, int portnr, int listen_queue_size)
 	return fd;
 }
 
-int connect_to(char *host, int portnr)
+int connect_to(const char *host, int portnr)
 {
 	struct addrinfo hints;
 	memset(&hints, 0, sizeof(struct addrinfo));
@@ -452,4 +457,38 @@ void hexdump(unsigned char *in, int n)
 		printf("%02x ", in[index]);
 
 	printf("\n");
+}
+
+void split_resource_location(std::string in, std::string & host, int & port)
+{
+	char *copy = strdup(in.c_str());
+
+	port = DEFAULT_BROKER_PORT;
+
+	if (copy[0] == '[')	// ipv6 literal address
+	{
+		char *end = strchr(copy, ']');
+		if (!end)
+			error_exit("'%s' is not a valid ipv6 literal (expecting closing ']')", in.c_str());
+
+		*end = 0x00;
+
+		host.assign(&copy[1]);
+
+		if (end[1] == ':') // port number following
+			port = atoi(&end[1]);
+	}
+	else
+	{
+		char *colon = strchr(copy, ':');
+		if (colon)
+		{
+			*colon = 0x00;
+			port = atoi(colon + 1);
+		}
+
+		host.assign(copy);
+	}
+
+	free(copy);
 }

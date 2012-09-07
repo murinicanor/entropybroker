@@ -1,4 +1,5 @@
 #include <string>
+#include <vector>
 #include <map>
 #include <sys/time.h>
 #include <stdio.h>
@@ -179,8 +180,11 @@ int open_tcp_socket(const char *adapter, int port, int nListen)
 
 void help(void)
 {
-	printf("-i host   entropy_broker-host to connect to\n");
-	printf("-x port   port to connect to (default: %d)\n", DEFAULT_BROKER_PORT);
+        printf("-I host   entropy_broker host to connect to\n");
+        printf("          e.g. host\n");
+        printf("               host:port\n");
+        printf("               [ipv6 literal]:port\n");
+        printf("          you can have multiple entries of this\n");
 	printf("-d file   egd unix domain socket\n");
 	printf("-t host   egd tcp host to listen on\n");
 	printf("-T port   egd tcp port to listen on\n");
@@ -216,8 +220,6 @@ void start_child(int fd, bool do_not_fork, struct sockaddr *ca, protocol *p)
 
 int main(int argc, char *argv[])
 {
-	char *host = NULL;
-	int port = DEFAULT_BROKER_PORT;
 	int c;
 	bool do_not_fork = false, log_console = false, log_syslog = false;
 	char *log_logfile = NULL;
@@ -227,10 +229,11 @@ int main(int argc, char *argv[])
 	const char *egd_host = "0.0.0.0";
 	int egd_port = -1;
 	int t_listen_fd = -1;
+	std::vector<std::string> hosts;
 
 	printf("eb_client_egd v" VERSION ", (C) 2009-2012 by folkert@vanheusden.com\n");
 
-	while((c = getopt(argc, argv, "t:T:x:hX:P:d:i:l:sn")) != -1)
+	while((c = getopt(argc, argv, "t:T:hX:P:d:I:l:sn")) != -1)
 	{
 		switch(c)
 		{
@@ -242,12 +245,6 @@ int main(int argc, char *argv[])
 				egd_port =  atoi(optarg);
 				if (egd_port < 1)
 					error_exit("-T requires a value >= 1");
-				break;
-
-			case 'x':
-				port = atoi(optarg);
-				if (port < 1)
-					error_exit("-x requires a value >= 1");
 				break;
 
 			case 'X':
@@ -262,8 +259,8 @@ int main(int argc, char *argv[])
 				uds = optarg;
 				break;
 
-			case 'i':
-				host = optarg;
+			case 'I':
+				hosts.push_back(optarg);
 				break;
 
 			case 's':
@@ -288,7 +285,7 @@ int main(int argc, char *argv[])
 	if (password.length() == 0 || username.length() == 0)
 		error_exit("please set a non-empty username + password");
 
-	if (!host)
+	if (hosts.size() == 0)
 		error_exit("no host to connect to selected");
 
 	if (!uds && egd_port == -1)
@@ -299,8 +296,8 @@ int main(int argc, char *argv[])
 
 	set_logging_parameters(log_console, log_logfile, log_syslog);
 
-	protocol *p1 = new protocol(host, port, username, password, false, client_type);
-	protocol *p2 = new protocol(host, port, username, password, false, client_type);
+	protocol *p1 = new protocol(&hosts, username, password, false, client_type);
+	protocol *p2 = new protocol(&hosts, username, password, false, client_type);
 
 	if (uds != NULL)
 		u_listen_fd = open_unixdomain_socket(uds, nListen);

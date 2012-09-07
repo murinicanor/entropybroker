@@ -21,8 +21,8 @@ void calc_ivec(char *password, long long unsigned int rnd, long long unsigned in
 class protocol
 {
 private:
-	char *host;
-	int port;
+	std::vector<std::string> *hosts;
+	int host_index;
 	std::string username, password;
 	bool is_server;
 	std::string type;
@@ -42,7 +42,7 @@ private:
 	void error_sleep(int count);
 
 public:
-	protocol(const char *host, int port, std::string username, std::string password, bool is_server, std::string type);
+	protocol(std::vector<std::string> * hosts_in, std::string username, std::string password, bool is_server, std::string type);
 	~protocol();
 
 	int sleep_interruptable(int how_long);

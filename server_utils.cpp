@@ -1,9 +1,15 @@
 #include <stdio.h>
 #include <unistd.h>
+#include <string>
+#include <vector>
+#include <stdlib.h>
+#include <openssl/blowfish.h>
+#include <string.h>
 
 #include "error.h"
 #include "utils.h"
 #include "log.h"
+#include "protocol.h"
 
 long int byte_cnt = -1, total_byte_cnt = -1;
 double cur_start_ts = -1.0, start_ts = -1.0;

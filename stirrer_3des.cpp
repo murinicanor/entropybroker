@@ -1,4 +1,5 @@
 #include <string.h>
+#include <string>
 #include <openssl/des.h>
 #include <openssl/rand.h>
 

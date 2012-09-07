@@ -1,4 +1,5 @@
 #include <string>
+#include <vector>
 #include <map>
 #include <sys/time.h>
 #include <stdio.h>
@@ -34,8 +35,11 @@ void sig_handler(int sig)
 
 void help(void)
 {
-	printf("-i host   entropy_broker-host to connect to\n");
-	printf("-x port   port to connect to (default: %d)\n", DEFAULT_BROKER_PORT);
+        printf("-I host   entropy_broker host to connect to\n");
+        printf("          e.g. host\n");
+        printf("               host:port\n");
+        printf("               [ipv6 literal]:port\n");
+        printf("          you can have multiple entries of this\n");
 	printf("-l file   log to file 'file'\n");
 	printf("-s        log to syslog\n");
 	printf("-b x      interval in which data will be seeded in a full(!) kernel entropy buffer (default is off)\n");
@@ -46,8 +50,6 @@ void help(void)
 
 int main(int argc, char *argv[])
 {
-	char *host = NULL;
-	int port = DEFAULT_BROKER_PORT;
 	int dev_random_fd = open(DEV_RANDOM, O_RDWR);
 	int max_bits_in_kernel_rng = kernel_rng_get_max_entropy_count();
 	int c;
@@ -55,19 +57,14 @@ int main(int argc, char *argv[])
 	char *log_logfile = NULL;
 	std::string username, password;
 	int interval = -1;
+	std::vector<std::string> hosts;
 
 	printf("eb_client_linux_kernel v" VERSION ", (C) 2009-2012 by folkert@vanheusden.com\n");
 
-	while((c = getopt(argc, argv, "x:b:hX:P:i:l:sn")) != -1)
+	while((c = getopt(argc, argv, "b:hX:P:I:l:sn")) != -1)
 	{
 		switch(c)
 		{
-			case 'x':
-				port = atoi(optarg);
-				if (port < 1)
-					error_exit("-x requires a value >= 1");
-				break;
-
 			case 'b':
 				interval = atoi(optarg);
 				if (interval < 1)
@@ -82,8 +79,8 @@ int main(int argc, char *argv[])
 				pid_file = optarg;
 				break;
 
-			case 'i':
-				host = optarg;
+			case 'I':
+				hosts.push_back(optarg);
 				break;
 
 			case 's':
@@ -108,7 +105,7 @@ int main(int argc, char *argv[])
 	if (username.length() == 0 || password.length() == 0)
 		error_exit("username + password cannot be empty");
 
-	if (!host)
+	if (hosts.size() == 0)
 		error_exit("no host to connect to selected");
 
 	set_logging_parameters(log_console, log_logfile, log_syslog);
@@ -119,7 +116,7 @@ int main(int argc, char *argv[])
 			error_exit("fork failed");
 	}
 
-	protocol *p = new protocol(host, port, username, password, false, client_type);
+	protocol *p = new protocol(&hosts, username, password, false, client_type);
 
 	(void)umask(0177);
 	no_core();
