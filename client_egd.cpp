@@ -56,7 +56,7 @@ void egd_get(int fd, protocol *p, bool blocking)
 
 	int n_bits_to_get = n_bytes_to_get * 8;
 
-	dolog(LOG_INFO, "will get %d bits", n_bits_to_get);
+	dolog(LOG_INFO, "will get %d bits (%sblocking)", n_bits_to_get, blocking?"":"non-");
 
 	char *buffer = (char *)malloc(n_bytes_to_get);
 	if (!buffer)
@@ -123,22 +123,26 @@ void egd_put(int fd, protocol *p)
 
 void handle_client(int fd, protocol *p)
 {
-	unsigned char egd_msg;
-
-	if (READ(fd, (char *)&egd_msg, 1) != 1)
+	for(;;)
 	{
-		dolog(LOG_INFO, "short read on EGD client");
-		return;
-	}
+		unsigned char egd_msg;
 
-	if (egd_msg == 0)	// get entropy count
-		egd_entropy_count(fd);
-	else if (egd_msg == 1)	// get data, non blocking
-		egd_get(fd, p, false);
-	else if (egd_msg == 2)	// get data, blocking
-		egd_get(fd, p, true);
-	else if (egd_msg == 3)	// put data
-		egd_put(fd, p);
+		if (READ(fd, (char *)&egd_msg, 1) != 1)
+		{
+			dolog(LOG_INFO, "EGD client disconnected");
+
+			return;
+		}
+
+		if (egd_msg == 0)	// get entropy count
+			egd_entropy_count(fd);
+		else if (egd_msg == 1)	// get data, non blocking
+			egd_get(fd, p, false);
+		else if (egd_msg == 2)	// get data, blocking
+			egd_get(fd, p, true);
+		else if (egd_msg == 3)	// put data
+			egd_put(fd, p);
+	}
 }
 
 int open_unixdomain_socket(char *path, int nListen)
@@ -168,16 +172,46 @@ int open_unixdomain_socket(char *path, int nListen)
 	return fd;
 }
 
+int open_tcp_socket(const char *adapter, int port, int nListen)
+{
+	return start_listen(adapter, port, nListen);
+}
+
 void help(void)
 {
 	printf("-i host   entropy_broker-host to connect to\n");
 	printf("-x port   port to connect to (default: %d)\n", DEFAULT_BROKER_PORT);
-	printf("-d file   unix domain socket\n");
+	printf("-d file   egd unix domain socket\n");
+	printf("-t host   egd tcp host to listen on\n");
+	printf("-T port   egd tcp port to listen on\n");
 	printf("-l file   log to file 'file'\n");
 	printf("-s        log to syslog\n");
 	printf("-n        do not fork\n");
 	printf("-P file   write pid to file\n");
 	printf("-X file   read username+password from file\n");
+}
+
+void start_child(int fd, bool do_not_fork, struct sockaddr *ca, protocol *p)
+{
+	if (fd != -1)
+	{
+		pid_t pid = 0;
+
+		if (!do_not_fork)
+			pid = fork();
+
+		if (pid == 0)
+		{
+			handle_client(fd, p);
+
+			if (!do_not_fork)
+				exit(0);
+		}
+		else if (pid == -1)
+			error_exit("failed to fork");
+
+		close(fd);
+	}
 }
 
 int main(int argc, char *argv[])
@@ -188,15 +222,28 @@ int main(int argc, char *argv[])
 	bool do_not_fork = false, log_console = false, log_syslog = false;
 	char *log_logfile = NULL;
 	char *uds = NULL;
-	int listen_fd, nListen = 5;
+	int u_listen_fd = -1, nListen = 5;
 	std::string username, password;
+	const char *egd_host = "0.0.0.0";
+	int egd_port = -1;
+	int t_listen_fd = -1;
 
 	printf("eb_client_egd v" VERSION ", (C) 2009-2012 by folkert@vanheusden.com\n");
 
-	while((c = getopt(argc, argv, "x:hX:P:d:i:l:sn")) != -1)
+	while((c = getopt(argc, argv, "t:T:x:hX:P:d:i:l:sn")) != -1)
 	{
 		switch(c)
 		{
+			case 't':
+				egd_host = optarg;
+				break;
+
+			case 'T':
+				egd_port =  atoi(optarg);
+				if (egd_port < 1)
+					error_exit("-T requires a value >= 1");
+				break;
+
 			case 'x':
 				port = atoi(optarg);
 				if (port < 1)
@@ -244,19 +291,22 @@ int main(int argc, char *argv[])
 	if (!host)
 		error_exit("no host to connect to selected");
 
-	if (!uds)
-		error_exit("no path for the unix domain socket selected");
+	if (!uds && egd_port == -1)
+		error_exit("no path for the unix domain socket selected, also no tcp listen port selected");
 
-	if (chdir("/") == -1)
-		error_exit("chdir(/) failed");
 	(void)umask(0177);
 	no_core();
 
 	set_logging_parameters(log_console, log_logfile, log_syslog);
 
-	protocol *p = new protocol(host, port, username, password, false, client_type);
+	protocol *p1 = new protocol(host, port, username, password, false, client_type);
+	protocol *p2 = new protocol(host, port, username, password, false, client_type);
 
-	listen_fd = open_unixdomain_socket(uds, nListen);
+	if (uds != NULL)
+		u_listen_fd = open_unixdomain_socket(uds, nListen);
+
+	if (egd_port != -1)
+		t_listen_fd = open_tcp_socket(egd_host, egd_port, nListen);
 
 	if (!do_not_fork)
 	{
@@ -274,29 +324,30 @@ int main(int argc, char *argv[])
 
 	for(;;)
 	{
+		fd_set a_fds;
+		FD_ZERO(&a_fds);
+
+		if (u_listen_fd != -1)
+			FD_SET(u_listen_fd, &a_fds);
+		if (t_listen_fd != -1)
+			FD_SET(t_listen_fd, &a_fds);
+
+		if (select(max(u_listen_fd, t_listen_fd) + 1, &a_fds, NULL, NULL, NULL) == -1)
+		{
+			if (errno != EINTR)
+				error_exit("select() failed");
+
+			continue;
+		}
+
 		struct sockaddr addr;
 		socklen_t addr_len = sizeof(addr);
-		int fd = accept(listen_fd, &addr, &addr_len);
 
-		if (fd != -1)
-		{
-			pid_t pid = 0;
+		if (u_listen_fd != -1 && FD_ISSET(u_listen_fd, &a_fds))
+			start_child(accept(u_listen_fd, &addr, &addr_len), do_not_fork, &addr, p1);
 
-			if (!do_not_fork)
-				pid = fork();
-
-			if (pid == 0)
-			{
-				handle_client(fd, p);
-
-				if (!do_not_fork)
-					exit(0);
-			}
-			else if (pid == -1)
-				error_exit("failed to fork");
-
-			close(fd);
-		}
+		if (t_listen_fd != -1 && FD_ISSET(t_listen_fd, &a_fds))
+			start_child(accept(t_listen_fd, &addr, &addr_len), do_not_fork, &addr, p2);
 	}
 
 	unlink(pid_file);
