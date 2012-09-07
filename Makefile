@@ -19,14 +19,16 @@ ETC=$(PREFIX)/etc
 VAR=$(PREFIX)/var
 CACHE=$(VAR)/cache
 PID=$(VAR)/run
+MAN=$(PREFIX)/share
 
 CXX=g++
 DEBUG= #-D_DEBUG #-fprofile-arcs -ftest-coverage # -pg
 LINT=-Wshadow -Wall # -W -Wconversion -Wwrite-strings -Wunused
-CXXFLAGS+=-O3 -g3 -ggdb -DVERSION=\"${VERSION}\" $(LINT) $(DEBUG) -DCONFIG=\"${ETC}/entropy_broker.conf\" -DCACHE_DIR=\"${CACHE}\" -DPID_DIR=\"${PID}\" -DVAR_DIR=\"${VAR}\" -rdynamic
+PCSC_CFLAGS=`pkg-config --cflags libpcsclite`
+CXXFLAGS+=-O3 -g3 -ggdb -DVERSION=\"${VERSION}\" $(LINT) $(DEBUG) -DCONFIG=\"${ETC}/entropy_broker.conf\" -DCACHE_DIR=\"${CACHE}\" -DPID_DIR=\"${PID}\" -DVAR_DIR=\"${VAR}\" -rdynamic $(PCSC_CFLAGS)
 LDFLAGS+=$(DEBUG) -lcrypto -lrt -lz -lutil -rdynamic
 
-BINARIES=entropy_broker eb_server_audio eb_server_timers eb_server_v4l eb_server_stream eb_client_linux_kernel eb_server_egd eb_client_egd eb_server_linux_kernel eb_client_file eb_server_push_file eb_server_ext_proc eb_server_usb plot eb_server_ComScire_R2000KU eb_proxy_knuth_m eb_proxy_knuth_b eb_server_cycle_count
+BINARIES=entropy_broker eb_server_audio eb_server_timers eb_server_v4l eb_server_stream eb_client_linux_kernel eb_server_egd eb_client_egd eb_server_linux_kernel eb_client_file eb_server_push_file eb_server_ext_proc eb_server_usb plot eb_server_ComScire_R2000KU eb_proxy_knuth_m eb_proxy_knuth_b eb_server_cycle_count eb_server_smartcard
 
 OBJSeb=pools.o handle_client.o config.o error.o fips140.o kernel_prng_rw.o log.o protocol.o main.o math.o pool.o scc.o signals.o utils.o auth.o my_pty.o ivec.o kernel_prng_io.o hasher.o stirrer.o hasher_sha512.o stirrer_blowfish.o stirrer_aes.o hasher_md5.o hasher_ripemd160.o stirrer_3des.o stirrer_camellia.o hasher_whirlpool.o users.o
 OBJSsa=server_audio.o error.o utils.o kernel_prng_rw.o log.o protocol.o server_utils.o auth.o my_pty.o kernel_prng_io.o users.o
@@ -45,6 +47,7 @@ OBJScsr2000ku=server_ComScire_R2000KU.o utils.o kernel_prng_rw.o kernel_prng_io.
 OBJSpkm=proxy_knuth_m.o utils.o kernel_prng_rw.o kernel_prng_io.o log.o error.o protocol.o server_utils.o auth.o my_pty.o users.o
 OBJSpkb=proxy_knuth_b.o utils.o kernel_prng_rw.o kernel_prng_io.o log.o error.o protocol.o server_utils.o auth.o my_pty.o users.o
 OBJSscc=server_cycle_count.o utils.o kernel_prng_rw.o kernel_prng_io.o log.o error.o protocol.o server_utils.o auth.o my_pty.o users.o
+OBJSpicc=server_smartcard.o utils.o kernel_prng_rw.o kernel_prng_io.o log.o error.o protocol.o server_utils.o auth.o my_pty.o users.o
 
 all:
 	@echo targets:
@@ -92,6 +95,9 @@ all:
 	@echo eb_proxy_knuth_b
 	@echo
 	@echo eb_server_cycle_count
+	@echo
+	@echo eb_server_smartcard     - gathers entropy by executing on an ISO 7816 card
+	@echo                         = requires 
 	@echo
 	@echo plot                    - plot random data: patterns=bad. use with e.g. eb_client_file
 	@echo                         = requires libpng-dev
@@ -157,6 +163,9 @@ eb_proxy_knuth_b: $(OBJSpkb)
 eb_server_cycle_count: $(OBJSscc)
 	$(CXX) $(LINT) $(OBJSscc) $(LDFLAGS) -o eb_server_cycle_count
 
+eb_server_smartcard: $(OBJSpicc)
+	$(CXX) $(LINT) $(OBJSpicc) $(LDFLAGS) `pkg-config --libs libpcsclite` -o eb_server_smartcard
+
 plot: plot.o
 	$(CXX) $(LINT) plot.o $(LDFLAGS) -lpng -o plot
 
@@ -171,6 +180,8 @@ install: everything
 	test -e $(ETC)/entropy_broker.conf || cp entropy_broker.conf $(ETC)
 	test -e $(ETC)/entropy_broker.conf && cp entropy_broker.conf $(ETC)/entropy_broker.conf.dist
 	test -e $(ETC)/users.txt || (cp users.txt $(ETC) ; chmod 600 $(ETC)/users.txt)
+	mkdir -p $(MAN)/man/man8
+	cp doc/man/* $(MAN)/man/man8
 
 clean:
 	rm -rf $(OBJSeb) $(OBJSsa) $(OBJSst) $(OBJSsv) $(OBJSss)$(OBJSse) $(OBJSclk) $(OBJSte) $(OBJSsk) $(OBJScf) $(OBJSpf) $(OBJSep) $(OBJSsu) $(OBJScsr2000ku) $(OBJScle) $(OBJSse) $(OBJSpkm) $(OBJSpkb) $(OBJSscc) plot.o core *.da *.gcov *.bb* $(BINARIES) cov-int
