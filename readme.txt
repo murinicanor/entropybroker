@@ -180,7 +180,8 @@ reader, you can use eb_server_smartcard to use that smartcard
 to generate entropy data. This is obtained by sending the 0x84
 INS which means "GET CHALLENGE". Note that not all cards
 support this command. Two Dutch EMV cards I tried refuse this
-command with a 0x6e (class not supported) error.
+command with a 0x6e (class not supported) error. Other cards
+return 0x6d (instruction code not supported or invalid).
 
 
 Proxies
