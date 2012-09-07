@@ -169,10 +169,11 @@ eb_server_smartcard: $(OBJSpicc)
 plot: plot.o
 	$(CXX) $(LINT) plot.o $(LDFLAGS) -lpng -o plot
 
-install: everything
+install:
 	mkdir -p $(BIN) $(ETC) $(VAR) $(PID) $(CACHE)
 	for file in $(BINARIES) ; do \
-		test -e $(file) && cp $$file $(BIN) ; \
+		test -e $$file && cp $$file $(BIN) ; \
+		test -e $$file || echo Skipping $$file which was not build ; \
 	done
 	test -e $(BIN)/eb_client_file && \
 		(test -e $(BIN)/eb_client_kernel_generic || \
