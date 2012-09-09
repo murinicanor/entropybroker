@@ -45,7 +45,7 @@ void update_showbps(int count)
 		double diff_t = now_ts - cur_start_ts;
 		double global_diff_t = now_ts - start_ts;
 
-		dolog(LOG_INFO, "Total # bytes: %ld, global avg/s: %f, run time: %fs, interval: %fs, avg/s: %f\n", total_byte_cnt, double(total_byte_cnt) / global_diff_t, global_diff_t, diff_t, double(byte_cnt) / diff_t);
+		dolog(LOG_INFO, "Total # bytes: %ld, global avg/s: %f, run time: %fs, interval: %fs, avg/s: %f", total_byte_cnt, double(total_byte_cnt) / global_diff_t, global_diff_t, diff_t, double(byte_cnt) / diff_t);
 
 		cur_start_ts = now_ts;
 

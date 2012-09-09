@@ -22,6 +22,8 @@ const char *pid_file = PID_DIR "/server_timers.pid";
 #include "users.h"
 #include "auth.h"
 
+#define SLEEP_CLOCK	CLOCK_MONOTONIC
+
 void sig_handler(int sig)
 {
 	fprintf(stderr, "Exit due to signal %d\n", sig);
@@ -45,20 +47,26 @@ void help(void)
 	printf("-X file   read username+password from file\n");
 }
 
-double gen_entropy_data(void)
+int get_clock_res()
 {
-	double start;
+	struct timespec ts;
 
-	start = get_ts();
+	if (clock_getres(SLEEP_CLOCK, &ts) == -1)
+		error_exit("clock_getres failed");
 
-	/* arbitrary value:
-	 * not too small so that there's room for noise
-	 * not too large so that we don't sleep unnecessary
-	 */
-	usleep(100);
-
-	return get_ts() - start;
+	return ts.tv_nsec;
 }
+
+inline double gen_entropy_data(int sl)
+{
+	double start = get_ts_ns();
+
+	const struct timespec ts = { 0, sl };
+	clock_nanosleep(SLEEP_CLOCK, 0, &ts, NULL);
+
+	return get_ts_ns() - start;
+}
+
 
 int main(int argc, char *argv[])
 {
@@ -152,16 +160,33 @@ int main(int argc, char *argv[])
 		p = new protocol(&hosts, username, password, true, server_type);
 
 	init_showbps();
+
+	int slp = get_clock_res() + 1;
+	dolog(LOG_INFO, "resolution of clock is %dns", slp);
+
+	int equal_cnt = 0;
 	for(;;)
 	{
 		// gather random data
-		double t1 = gen_entropy_data(), t2 = gen_entropy_data();
+		double t1 = gen_entropy_data(slp), t2 = gen_entropy_data(slp);
 
 		if (t1 == t2)
+		{
+			equal_cnt++;
+
+			if (equal_cnt > 5 && slp < 1000)
+			{
+				dolog(LOG_DEBUG, "increasing sleep to %dns", slp);
+
+				slp++;
+			}
+
 			continue;
+		}
+		equal_cnt = 0;
 
 		byte <<= 1;
-		if (t1 > t2)
+		if (t1 >= t2)
 			byte |= 1;
 
 		if (++bits == 8)
