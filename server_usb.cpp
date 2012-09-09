@@ -202,6 +202,7 @@ int main(int argc, char *argv[])
 		error_exit("no devices found which can be used");
 
 	init_showbps();
+	set_showbps_start_ts();
 
 	int dev_index = 0;
 	for(;;)
@@ -226,6 +227,9 @@ int main(int argc, char *argv[])
 
 			if (index == sizeof bytes)
 			{
+				if (show_bps)
+					update_showbps(sizeof bytes);
+
 				if (bytes_file)
 					emit_buffer_to_file(bytes_file, bytes, index);
 
@@ -235,10 +239,9 @@ int main(int argc, char *argv[])
 					p -> drop();
 				}
 
-				index = 0; // skip header
+				set_showbps_start_ts();
 
-				if (show_bps)
-					update_showbps(sizeof bytes);
+				index = 0; // skip header
 			}
 		}
 	}

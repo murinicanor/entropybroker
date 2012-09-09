@@ -209,6 +209,7 @@ int main(int argc, char *argv[])
 	int index = 0;
 
 	init_showbps();
+	set_showbps_start_ts();
 	for(;;)
 	{
 		fiddle(&fs);
@@ -237,6 +238,9 @@ int main(int argc, char *argv[])
 
 			if (index == sizeof bytes)
 			{
+				if (show_bps)
+					update_showbps(sizeof bytes);
+
 				if (bytes_file)
 					emit_buffer_to_file(bytes_file, bytes, index);
 
@@ -248,10 +252,9 @@ int main(int argc, char *argv[])
 				}
 
 				index = 0;
-			}
 
-			if (show_bps)
-				update_showbps(sizeof bytes);
+				set_showbps_start_ts();
+			}
 		}
 	}
 

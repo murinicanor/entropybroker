@@ -136,6 +136,7 @@ int main(int argc, char *argv[])
 	lock_mem(bytes, sizeof bytes);
 
 	init_showbps();
+	set_showbps_start_ts();
 	for(;;)
 	{
 		dolog(LOG_DEBUG, "Bits available: %d", kernel_rng_get_entropy_count());
@@ -152,6 +153,9 @@ int main(int argc, char *argv[])
 			}
 		}
 
+		if (show_bps)
+			update_showbps(sizeof bytes);
+
 		if (bytes_file)
 			emit_buffer_to_file(bytes_file, bytes, sizeof bytes);
 
@@ -162,8 +166,7 @@ int main(int argc, char *argv[])
 			continue;
 		}
 
-		if (show_bps)
-			update_showbps(sizeof bytes);
+		set_showbps_start_ts();
 	}
 
 	memset(bytes, 0x00, sizeof bytes);

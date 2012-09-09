@@ -265,6 +265,7 @@ int main(int argc, char *argv[])
 	}
 
 	init_showbps();
+	set_showbps_start_ts();
 	for(;;)
 	{
 		img1 = (unsigned char *)malloc(io_buffer_len);
@@ -334,6 +335,9 @@ int main(int argc, char *argv[])
 
 		if (nunbiased > 0)
 		{
+			if (show_bps)
+				update_showbps(nunbiased);
+
 			if (bytes_file)
 				emit_buffer_to_file(bytes_file, unbiased, nunbiased);
 
@@ -357,8 +361,7 @@ int main(int argc, char *argv[])
 				}
 			}
 
-			if (show_bps)
-				update_showbps(nunbiased);
+			set_showbps_start_ts();
 		}
 
 		memset(unbiased, 0x00, io_buffer_len);

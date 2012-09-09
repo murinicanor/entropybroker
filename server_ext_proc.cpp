@@ -161,6 +161,7 @@ int main(int argc, char *argv[])
 	bool first = true;
 
 	init_showbps();
+	set_showbps_start_ts();
 	for(;;)
 	{
 		if (child_fd == -1)
@@ -197,11 +198,11 @@ int main(int argc, char *argv[])
 
 		if (data)
 		{
-			if (bytes_file)
-				emit_buffer_to_file(bytes_file, (unsigned char *)buffer, got_bytes);
-
 			if (show_bps)
 				update_showbps(got_bytes);
+
+			if (bytes_file)
+				emit_buffer_to_file(bytes_file, (unsigned char *)buffer, got_bytes);
 
 			if (p)
 			{
@@ -221,6 +222,8 @@ int main(int argc, char *argv[])
 					got_bytes -= cur_count;
 				}
 			}
+
+			set_showbps_start_ts();
 
 			data = false;
 		}

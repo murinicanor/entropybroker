@@ -354,10 +354,14 @@ int main(int argc, char *argv[])
 	signal(SIGQUIT, sig_handler);
 
 	init_showbps();
+	set_showbps_start_ts();
 	for(;;)
 	{
 		if (READ(read_fd, (char *)bytes, 1249) != 1249)
 			error_exit("error reading from input");
+
+		if (show_bps)
+			update_showbps(1249);
 
 		if (bytes_file)
 			emit_buffer_to_file(bytes_file, bytes, 1249);
@@ -368,8 +372,7 @@ int main(int argc, char *argv[])
 			p -> drop();
 		}
 
-		if (show_bps)
-			update_showbps(1249);
+		set_showbps_start_ts();
 	}
 
 	memset(bytes, 0x00, sizeof bytes);

@@ -143,6 +143,7 @@ int main(int argc, char *argv[])
 	int got_bytes = -1;
 
 	init_showbps();
+	set_showbps_start_ts();
 	for(;!feof(fh);)
 	{
 		// gather random data
@@ -157,6 +158,9 @@ int main(int argc, char *argv[])
 
 		if (data)
 		{
+			if (show_bps)
+				update_showbps(got_bytes);
+
 			if (bytes_file)
 				emit_buffer_to_file(bytes_file, bytes, got_bytes);
 
@@ -167,8 +171,7 @@ int main(int argc, char *argv[])
 				p -> drop();
 			}
 
-			if (show_bps)
-				update_showbps(got_bytes);
+			set_showbps_start_ts();
 
 			data = false;
 		}

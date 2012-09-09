@@ -150,6 +150,7 @@ void main_loop(std::vector<std::string> * hosts, char *bytes_file, char show_bps
 	recover_sound_dev(&chandle, false, cdevice, &format);
 
 	init_showbps();
+	set_showbps_start_ts();
 	for(;;)
 	{
 		char got_any = 0;
@@ -270,19 +271,21 @@ void main_loop(std::vector<std::string> * hosts, char *bytes_file, char show_bps
 
 					if (bytes_out == sizeof bytes)
 					{
+						if (show_bps)
+							update_showbps(sizeof bytes);
+
 						if (bytes_file)
 							emit_buffer_to_file(bytes_file, bytes, bytes_out);
 
-						if (hosts -> size() > 0 && p -> message_transmit_entropy_data(bytes, bytes_out) == -1)
+						if (p && p -> message_transmit_entropy_data(bytes, bytes_out) == -1)
 						{
 							dolog(LOG_INFO, "connection closed");
 							p -> drop();
 						}
 
-						bytes_out = 0;
+						set_showbps_start_ts();
 
-						if (show_bps)
-							update_showbps(sizeof bytes);
+						bytes_out = 0;
 					}
 
 					bits_out = 0;

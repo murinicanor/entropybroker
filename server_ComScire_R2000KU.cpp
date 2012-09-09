@@ -160,6 +160,7 @@ int main(int argc, char *argv[])
 	signal(SIGQUIT, sig_handler);
 
 	init_showbps();
+	set_showbps_start_ts();
 
 	bool stats_error_reported = false;
 	for(;;)
@@ -189,6 +190,9 @@ int main(int argc, char *argv[])
 
 		if (index == sizeof(bytes))
 		{
+			if (show_bps)
+				update_showbps(1249);
+
 			if (bytes_file)
 				emit_buffer_to_file(bytes_file, bytes, index);
 
@@ -198,20 +202,9 @@ int main(int argc, char *argv[])
 				p -> drop();
 			}
 
+			set_showbps_start_ts();
+
 			index = 0;
-		}
-
-		if (show_bps)
-			update_showbps(1249);
-
-		if (index == 0)
-		{
-			if (p != NULL && p -> sleep_interruptable(5) != 0)
-			{
-				dolog(LOG_INFO, "connection closed");
-				p -> drop();
-				continue;
-			}
 		}
 	}
 

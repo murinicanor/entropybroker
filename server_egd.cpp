@@ -233,6 +233,7 @@ int main(int argc, char *argv[])
 	signal(SIGQUIT, sig_handler);
 
 	init_showbps();
+	set_showbps_start_ts();
 	for(;;)
 	{
 		unsigned char request[2], reply[1];
@@ -254,30 +255,36 @@ int main(int argc, char *argv[])
 
 		if (index == sizeof bytes)
 		{
+			if (show_bps)
+				update_showbps(sizeof bytes);
+
 			if (bytes_file)
 				emit_buffer_to_file(bytes_file, bytes, index);
 
-			if (p && p -> message_transmit_entropy_data(bytes, index) == -1)
+			if (p)
 			{
-				dolog(LOG_INFO, "connection closed");
+				if (p -> message_transmit_entropy_data(bytes, index) == -1)
+				{
+					dolog(LOG_INFO, "connection closed");
 
-				p -> drop();
+					p -> drop();
+				}
+
+				if (read_interval > 0 && p -> sleep_interruptable(read_interval) != 0)
+				{
+					dolog(LOG_INFO, "connection closed");
+
+					p -> drop();
+				}
 			}
+			else if (read_interval > 0)
+			{
+				sleep(read_interval);
+			}
+
+			set_showbps_start_ts();
 
 			index = 0;
-
-			if (show_bps)
-				update_showbps(sizeof bytes);
-		}
-
-		if (index == 0 || bytes_to_read == 0)
-		{
-			if (p && p -> sleep_interruptable(read_interval) != 0)
-			{
-				dolog(LOG_INFO, "connection closed");
-				p -> drop();
-				continue;
-			}
 		}
 	}
 

@@ -159,10 +159,11 @@ int main(int argc, char *argv[])
 	if (hosts.size() > 0)
 		p = new protocol(&hosts, username, password, true, server_type);
 
-	init_showbps();
-
 	int slp = get_clock_res();
 	dolog(LOG_INFO, "resolution of clock is %dns", slp);
+
+	init_showbps();
+	set_showbps_start_ts();
 
 	int equal_cnt = 0;
 	for(;;)
@@ -196,6 +197,9 @@ int main(int argc, char *argv[])
 
 			if (index == sizeof bytes)
 			{
+				if (show_bps)
+					update_showbps(sizeof bytes);
+
 				if (bytes_file)
 					emit_buffer_to_file(bytes_file, bytes, index);
 
@@ -206,10 +210,9 @@ int main(int argc, char *argv[])
 					p -> drop();
 				}
 
-				index = 0; // skip header
+				set_showbps_start_ts();
 
-				if (show_bps)
-					update_showbps(sizeof bytes);
+				index = 0; // skip header
 			}
 		}
 	}
