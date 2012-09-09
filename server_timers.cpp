@@ -161,7 +161,7 @@ int main(int argc, char *argv[])
 
 	init_showbps();
 
-	int slp = get_clock_res() + 1;
+	int slp = get_clock_res();
 	dolog(LOG_INFO, "resolution of clock is %dns", slp);
 
 	int equal_cnt = 0;
