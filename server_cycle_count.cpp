@@ -54,12 +54,14 @@ void fiddle(fiddle_state_t *p)
 
 int get_cache_size()
 {
-	FILE *fh = fopen("/sys/devices/system/cpu/cpu0/cache/index0/size", "r");
+	const char *cache_size_file = "/sys/devices/system/cpu/cpu0/cache/index0/size";
+	FILE *fh = fopen(cache_size_file, "r");
 	if (!fh)
 		return 1024*1024; // my laptop has 32KB data l1 cache
 
 	unsigned int s = 0;
-        fscanf(fh, "%d", &s);
+        if (fscanf(fh, "%d", &s) != 1)
+		error_exit("Tried to obtain 1 field from %s, failed doing that", cache_size_file);
 
         fclose(fh);
 
@@ -68,12 +70,14 @@ int get_cache_size()
 
 int get_cache_line_size()
 {
-	FILE *fh = fopen("/sys/devices/system/cpu/cpu0/cache/index0/coherency_line_size", "r");
+	const char *cache_line_size_file = "/sys/devices/system/cpu/cpu0/cache/index0/coherency_line_size";
+	FILE *fh = fopen(cache_line_size_file, "r");
 	if (!fh)
 		return 1;
 
 	unsigned int s = 0;
-        fscanf(fh, "%d", &s);
+        if (fscanf(fh, "%d", &s) != 1)
+		error_exit("Tried to obtain 1 field from %s, failed doing that", cache_line_size_file);
 
         fclose(fh);
 
