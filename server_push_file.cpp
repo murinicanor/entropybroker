@@ -42,6 +42,7 @@ void help(void)
         printf("-l file   log to file 'file'\n");
         printf("-s        log to syslog\n");
         printf("-n        do not fork\n");
+	printf("-S        show bps (mutual exclusive with -n)\n");
 	printf("-P file   write pid to file\n");
 	printf("-X file   read username+password from file\n");
 }
@@ -60,10 +61,14 @@ int main(int argc, char *argv[])
 
 	fprintf(stderr, "%s, (C) 2009-2012 by folkert@vanheusden.com\n", server_type);
 
-	while((c = getopt(argc, argv, "I:f:hX:P:o:p:d:l:sn")) != -1)
+	while((c = getopt(argc, argv, "S:I:f:hX:P:o:p:d:l:sn")) != -1)
 	{
 		switch(c)
 		{
+			case 'S':
+				show_bps = true;
+				break;
+
 			case 'o':
 				bytes_file = optarg;
 				break;

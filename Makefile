@@ -76,13 +76,14 @@ all:
 	@echo eb_server_smartcard       requires libpcsclite-dev
 	@echo plot                      requires libpng-dev
 	@echo
-	@echo invoke:
+	@echo to build all daemons and processes invoke:
 	@echo	make everything
-	@echo to build all daemons and processe
-	@echo invoke:
-	@echo	make install
-	@echo to install all daemons etc. under $(PREFIX)
 	@echo
+	@echo to install all daemons etc. under $(PREFIX) invoke:
+	@echo	make install
+	@echo
+	@echo to install the redhat startup-scripts, invoke:
+	@echo   make install_redhat_init
 
 everything: $(BINARIES)
 
@@ -160,6 +161,9 @@ install:
 	mkdir -p $(DOC)/entropy_broker
 	cp *txt license.* $(DOC)/entropy_broker
 
+install_redhat_init:
+	cp redhat/* /etc/init.d
+
 clean:
 	rm -rf $(OBJSeb) $(OBJSsa) $(OBJSst) $(OBJSsv) $(OBJSss)$(OBJSse) $(OBJSclk) $(OBJSte) $(OBJSsk) $(OBJScf) $(OBJSpf) $(OBJSep) $(OBJSsu) $(OBJScsr2000ku) $(OBJScle) $(OBJSse) $(OBJSpkm) $(OBJSpkb) $(OBJSscc) $(OBJSpicc) plot.o core *.da *.gcov *.bb* $(BINARIES) cov-int
 
@@ -168,6 +172,7 @@ package:
 	cp *.cpp *.h entropy_broker.conf Makefile bin_to_values.pl do_fft.sh auth.txt network_protocol.txt users.txt readme.txt design.txt interfacing.txt license.* eb-$(VERSION)
 	cp ComScire_R2000KU/*.[ch]pp ComScire_R2000KU/LICENSE eb-$(VERSION)/ComScire_R2000KU
 	tar cf - doc --exclude=.svn  | tar xvf - -C eb-$(VERSION)
+	tar cf - redhat --exclude=.svn  | tar xvf - -C eb-$(VERSION)
 	tar czf eb-$(VERSION).tgz eb-$(VERSION)
 	rm -rf eb-$(VERSION)
 	#
