@@ -20,6 +20,7 @@ VAR=$(PREFIX)/var
 CACHE=$(VAR)/cache
 PID=$(VAR)/run
 MAN=$(PREFIX)/share
+DOC=$(PREFIX)/doc
 
 CXX=g++
 DEBUG= #-D_DEBUG #-fprofile-arcs -ftest-coverage # -pg
@@ -183,6 +184,8 @@ install:
 	test -e $(ETC)/users.txt || (cp users.txt $(ETC) ; chmod 600 $(ETC)/users.txt)
 	mkdir -p $(MAN)/man/man8
 	cp doc/man/* $(MAN)/man/man8
+	mkdir -p $(DOC)/entropy_broker
+	cp *txt license.* $(DOC)/entropy_broker
 
 clean:
 	rm -rf $(OBJSeb) $(OBJSsa) $(OBJSst) $(OBJSsv) $(OBJSss)$(OBJSse) $(OBJSclk) $(OBJSte) $(OBJSsk) $(OBJScf) $(OBJSpf) $(OBJSep) $(OBJSsu) $(OBJScsr2000ku) $(OBJScle) $(OBJSse) $(OBJSpkm) $(OBJSpkb) $(OBJSscc) $(OBJSpicc) plot.o core *.da *.gcov *.bb* $(BINARIES) cov-int
