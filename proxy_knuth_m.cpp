@@ -111,6 +111,8 @@ void load_knuth_file(std::string file, lookup_t *lt)
 		dolog(LOG_INFO, "Reading cached data from %s", file.c_str());
 
 		lt -> t_size = read_value(fh);
+		if (lt -> t_size > 67108864)
+			error_exit("%s is probably corrupt (size > 128MB)", file.c_str());
 		lt -> t_offset = read_value(fh);
 		lt -> table = (unsigned short *)malloc(lt -> t_size * sizeof(unsigned short));
 		size_t bytes = lt -> t_size * sizeof(unsigned short);
