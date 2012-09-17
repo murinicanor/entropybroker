@@ -1,3 +1,4 @@
+#include <vector>
 #include <string>
 #include <map>
 #include <sys/time.h>
@@ -39,8 +40,11 @@ void sig_handler(int sig)
 
 void help(bool is_eb_client_file)
 {
-	printf("-i host   entropy_broker-host to connect to\n");
-	printf("-x port   port to connect to (default: %d)\n", DEFAULT_BROKER_PORT);
+        printf("-I host   entropy_broker host to connect to\n");
+        printf("          e.g. host\n");
+        printf("               host:port\n");
+        printf("               [ipv6 literal]:port\n");
+        printf("          you can have multiple entries of this\n");
 	if (is_eb_client_file)
 		printf("-c count  number of BYTES, 0=no limit\n");
 	if (is_eb_client_file)
@@ -59,8 +63,6 @@ void help(bool is_eb_client_file)
 
 int main(int argc, char *argv[])
 {
-	char *host = NULL;
-	int port = DEFAULT_BROKER_PORT;
 	int c;
 	bool do_not_fork = false, log_console = false, log_syslog = false;
 	char *log_logfile = NULL;
@@ -71,6 +73,7 @@ int main(int argc, char *argv[])
 	char *prog = basename(strdup(argv[0]));
 	std::string username, password;
 	bool is_eb_client_file = strcmp(prog, "eb_client_file") == 0;
+	std::vector<std::string> hosts;
 
 	if (!is_eb_client_file)
 		file = (char *)"/dev/random";
@@ -81,16 +84,10 @@ int main(int argc, char *argv[])
 		client_type = "eb_client_kernel_generic v" VERSION;
 	printf("%s, (C) 2009-2012 by folkert@vanheusden.com\n", client_type);
 
-	while((c = getopt(argc, argv, "x:b:S:hc:f:X:P:i:l:sn")) != -1)
+	while((c = getopt(argc, argv, "b:S:hc:f:X:P:I:l:sn")) != -1)
 	{
 		switch(c)
 		{
-			case 'x':
-				port = atoi(optarg);
-				if (port < 1)
-					error_exit("-x requires a value >= 1");
-				break;
-
 			case 'b':
 				block_size = atoi(optarg);
 				if (block_size < 1)
@@ -121,8 +118,8 @@ int main(int argc, char *argv[])
 				pid_file = optarg;
 				break;
 
-			case 'i':
-				host = optarg;
+			case 'I':
+				hosts.push_back(optarg);
 				break;
 
 			case 's':
@@ -151,7 +148,7 @@ int main(int argc, char *argv[])
 	if (username.length() == 0 || password.length() == 0)
 		error_exit("password + username cannot be empty");
 
-	if (!host)
+	if (hosts.empty())
 		error_exit("No host to connect to selected");
 
 	if (!file)
@@ -163,14 +160,12 @@ int main(int argc, char *argv[])
 	(void)umask(0177);
 	set_logging_parameters(log_console, log_logfile, log_syslog);
 
-	protocol *p = new protocol(host, port, username, password, false, client_type);
+	protocol *p = new protocol(&hosts, username, password, false, client_type);
 
 	FILE *fh = fopen(file, "wb");
 	if (!fh)
 		error_exit("Failed to create file %s", file);
 
-	if (chdir("/") == -1)
-		error_exit("chdir(/) failed");
 	no_core();
 
 	if (!do_not_fork)

@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <string>
 #include <map>
+#include <vector>
 #include <fstream>
 
 #include "error.h"

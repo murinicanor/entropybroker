@@ -1,5 +1,6 @@
 #include <string>
 #include <map>
+#include <vector>
 #include <sys/time.h>
 #include <stdio.h>
 #include <signal.h>
@@ -23,13 +24,18 @@
 #include "users.h"
 #include "auth.h"
 
-const char *pid_file = PID_DIR "/server_egb.pid";
+const char *pid_file = PID_DIR "/server_egd.pid";
 
 void sig_handler(int sig)
 {
 	fprintf(stderr, "Exit due to signal %d\n", sig);
 	unlink(pid_file);
 	exit(0);
+}
+
+int open_tcp_socket(char *host, int port)
+{
+	return connect_to(host, port);
 }
 
 int open_unixdomain_socket(char *path)
@@ -60,10 +66,15 @@ int open_unixdomain_socket(char *path)
 
 void help(void)
 {
-        printf("-i host   entropy_broker-host to connect to\n");
-	printf("-x port   port to connect to (default: %d)\n", DEFAULT_BROKER_PORT);
-	printf("-d path   unix domain socket to read from\n");
-	printf("-o file   file to write entropy data to (mututal exclusive with -i)\n");
+	printf("-I host   entropy_broker host to connect to\n");
+	printf("          e.g. host\n");
+	printf("               host:port\n");
+	printf("               [ipv6 literal]:port\n");
+	printf("          you can have multiple entries of this\n");
+	printf("-d path   egd unix domain socket to read from\n");
+	printf("-t host   egd tcp host to read from (mutually exclusive from width -d)\n");
+	printf("-T port   egd tcp port to read from\n");
+	printf("-o file   file to write entropy data to (mututally exclusive with -i)\n");
 	printf("-a x      bytes per interval to read from egd\n");
 	printf("-b x      interval for reading data\n");
         printf("-l file   log to file 'file'\n");
@@ -77,8 +88,6 @@ void help(void)
 int main(int argc, char *argv[])
 {
 	unsigned char bytes[1249];
-	char *host = NULL;
-	int port = DEFAULT_BROKER_PORT;
 	int read_fd = -1;
 	int c;
 	bool do_not_fork = false, log_console = false, log_syslog = false;
@@ -92,17 +101,28 @@ int main(int argc, char *argv[])
 	char server_type[128];
 	bool show_bps = false;
 	std::string username, password;
+	char *egd_host = NULL;
+	int egd_port = -1;
+	std::vector<std::string> hosts;
 
 	fprintf(stderr, "eb_server_egb v" VERSION ", (C) 2009-2012 by folkert@vanheusden.com\n");
 
-	while((c = getopt(argc, argv, "x:hSX:P:a:b:o:i:d:l:snv")) != -1)
+	while((c = getopt(argc, argv, "I:t:T:hSX:P:a:b:o:d:l:snv")) != -1)
 	{
 		switch(c)
 		{
-			case 'x':
-				port = atoi(optarg);
-				if (port < 1)
-					error_exit("-x requires a value >= 1");
+			case 'I':
+				hosts.push_back(optarg);
+				break;
+
+			case 't':
+				egd_host = optarg;
+				break;
+
+			case 'T':
+				egd_port =  atoi(optarg);
+				if (egd_port < 1)
+					error_exit("-T requires a value >= 1");
 				break;
 
 			case 'S':
@@ -135,10 +155,6 @@ int main(int argc, char *argv[])
 				bytes_file = optarg;
 				break;
 
-			case 'i':
-				host = optarg;
-				break;
-
 			case 'd':
 				device = optarg;
 				break;
@@ -166,11 +182,17 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if (host && (username.length() == 0 || password.length() == 0))
+	if (username.length() == 0 || password.length() == 0)
 		error_exit("username + password cannot be empty");
 
-	if (!host && !bytes_file && !show_bps)
-		error_exit("no host to connect to, to file to write to and no 'show bps' given");
+	if (hosts.empty() && !bytes_file)
+		error_exit("no host to connect to given, also no file to write to given");
+
+	if (!device && !egd_host)
+		error_exit( "No egd source specified: use -d or -t (and -T)" );
+
+	if (device != NULL && egd_host != NULL)
+		error_exit("-d and -t are mutually exclusive");
 
 	(void)umask(0177);
 	no_core();
@@ -181,13 +203,21 @@ int main(int argc, char *argv[])
 	snprintf(server_type, sizeof(server_type), "server_egb v" VERSION " %s", device);
 
 	protocol *p = NULL;
-	if (host)
-		p = new protocol(host, port, username, password, true, server_type);
+	if (!hosts.empty())
+		p = new protocol(&hosts, username, password, true, server_type);
 
 	if (device)
+	{
 		read_fd = open_unixdomain_socket(device);
-	if (read_fd == -1)
-		error_exit("error opening %s", device);
+		if (read_fd == -1)
+			error_exit("error opening %s", device);
+	}
+	else
+	{
+		read_fd = open_tcp_socket(egd_host, egd_port);
+		if (read_fd == -1)
+			error_exit("Failed to connect to %s:%d", egd_host, egd_port);
+	}
 
 	if (!do_not_fork)
 	{
@@ -202,8 +232,8 @@ int main(int argc, char *argv[])
 	signal(SIGINT , sig_handler);
 	signal(SIGQUIT, sig_handler);
 
-	double cur_start_ts = get_ts();
-	long int total_byte_cnt = 0;
+	init_showbps();
+	set_showbps_start_ts();
 	for(;;)
 	{
 		unsigned char request[2], reply[1];
@@ -223,45 +253,38 @@ int main(int argc, char *argv[])
 		dolog(LOG_DEBUG, "Got %d bytes from EGD", bytes_to_read);
 		////////
 
-		if (index == sizeof(bytes))
+		if (index == sizeof bytes)
 		{
+			if (show_bps)
+				update_showbps(sizeof bytes);
+
 			if (bytes_file)
 				emit_buffer_to_file(bytes_file, bytes, index);
 
-			if (host && p -> message_transmit_entropy_data(bytes, index) == -1)
+			if (p)
 			{
-				dolog(LOG_INFO, "connection closed");
-				p -> drop();
+				if (p -> message_transmit_entropy_data(bytes, index) == -1)
+				{
+					dolog(LOG_INFO, "connection closed");
+
+					p -> drop();
+				}
+
+				if (read_interval > 0 && p -> sleep_interruptable(read_interval) != 0)
+				{
+					dolog(LOG_INFO, "connection closed");
+
+					p -> drop();
+				}
 			}
+			else if (read_interval > 0)
+			{
+				sleep(read_interval);
+			}
+
+			set_showbps_start_ts();
 
 			index = 0;
-		}
-
-		if (show_bps)
-		{
-			double now_ts = get_ts();
-
-			total_byte_cnt += bytes_to_read;
-
-			if ((now_ts - cur_start_ts) >= 1.0)
-			{
-				int diff_t = now_ts - cur_start_ts;
-
-				printf("Total number of bytes: %ld, avg/s: %f\n", total_byte_cnt, (double)total_byte_cnt / diff_t);
-
-				cur_start_ts = now_ts;
-				total_byte_cnt = 0;
-			}
-		}
-
-		if (index == 0 || bytes_to_read == 0)
-		{
-			if (p -> sleep_interruptable(read_interval) != 0)
-			{
-				dolog(LOG_INFO, "connection closed");
-				p -> drop();
-				continue;
-			}
 		}
 	}
 

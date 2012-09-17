@@ -7,6 +7,7 @@
 #include <openssl/sha.h>
 #include <string>
 #include <map>
+#include <vector>
 
 #include "error.h"
 #include "log.h"
@@ -14,6 +15,7 @@
 #include "users.h"
 #include "auth.h"
 #include "kernel_prng_io.h"
+#include "server_utils.h"
 #include "protocol.h"
 
 int recv_length_data(int fd, char **data, int *len, double to)
@@ -110,9 +112,9 @@ void calc_ivec(char *password, long long unsigned int rnd, long long unsigned in
 	memcpy(dest, dummy, 8);
 }
 
-protocol::protocol(const char *host_in, int port_in, std::string username_in, std::string password_in, bool is_server_in, std::string type_in) : port(port_in), username(username_in), password(password_in), is_server(is_server_in), type(type_in)
+protocol::protocol(std::vector<std::string> *hosts_in, std::string username_in, std::string password_in, bool is_server_in, std::string type_in) : hosts(hosts_in), username(username_in), password(password_in), is_server(is_server_in), type(type_in)
 {
-	host = strdup(host_in);
+	host_index = 0;
 
         socket_fd = -1;
         sleep_9003 = 300;
@@ -124,8 +126,6 @@ protocol::protocol(const char *host_in, int port_in, std::string username_in, st
 
 protocol::~protocol()
 {
-	free(host);
-
 	if (socket_fd != -1)
 		close(socket_fd);
 }
@@ -144,7 +144,7 @@ void protocol::error_sleep(int count)
 {
 	long int sleep_micro_seconds = myrand(count * 1000000) + 1;
 
-	dolog(LOG_WARNING, "Failed connecting, sleeping for %f seconds", (double)sleep_micro_seconds / 1000000.0);
+	dolog(LOG_WARNING, "Failed connecting (%s), sleeping for %f seconds", strerror(errno), (double)sleep_micro_seconds / 1000000.0);
 
 	usleep((long)sleep_micro_seconds);
 }
@@ -169,17 +169,23 @@ int protocol::reconnect_server_socket()
 	char connect_msg = 0;
 	int count = 1;
 
+	int host_try_count = 0;
 	for(;;)
 	{
 		// connect to server
 		if (socket_fd == -1)
 		{
-			dolog(LOG_INFO, "Connecting to %s:%d", host, port);
 			connect_msg = 1;
 
 			for(;;)
 			{
-				socket_fd = connect_to(host, port);
+				std::string host;
+				int port = DEFAULT_BROKER_PORT;
+				split_resource_location(hosts -> at(host_index), host, port);
+
+				dolog(LOG_INFO, "Connecting to %s:%d", host.c_str(), port);
+
+				socket_fd = connect_to(host.c_str(), port);
 				if (socket_fd != -1)
 				{
 					if (auth_client_server(socket_fd, 10, username, password, &challenge) == 0)
@@ -189,7 +195,21 @@ int protocol::reconnect_server_socket()
 					socket_fd = -1;
 				}
 
-				error_sleep(count);
+				host_index++;
+				if (host_index == hosts -> size())
+				{
+					host_index = 0;
+
+					error_sleep(count);
+				}
+				else
+				{
+					dolog(LOG_WARNING, "Failed to connect to %s:%d (%s), continuing with next host", host.c_str(), port, strerror(errno));
+				}
+
+				host_try_count++;
+				if (host_try_count == hosts -> size())
+					dolog(LOG_WARNING, "All hosts are not reachable, still trying");
 
 				if (count < 16)
 					count++;
@@ -450,7 +470,7 @@ int protocol::request_bytes(char *where_to, int n_bits, bool fail_on_no_bits)
 			request_sent = false;
 
                 if (reconnect_server_socket() == -1)
-                        error_exit("Failed to connect to %s:%d", host, port);
+                        error_exit("Failed to connect");
 
 		if (!request_sent || (sleep_trigger > 0.0 && get_ts() >= sleep_trigger))
 		{
@@ -640,10 +660,10 @@ bool protocol::proxy_auth_user(std::string pa_username, std::string pa_password)
 		bool ok = true;
 
 		if (reconnect_server_socket() == -1)
-			error_exit("Failed to connect to %s:%d", host, port);
+			error_exit("Failed to connect");
 
-		char *request = "0011";
-		if (ok == true && WRITE_TO(socket_fd, request, 4, DEFAULT_COMM_TO) != 4)
+		const char *request = "0011";
+		if (ok == true && WRITE_TO(socket_fd, (char *)request, 4, DEFAULT_COMM_TO) != 4)
 			ok = false;
 
 		long long unsigned int dummy_challenge = 123;

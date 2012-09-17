@@ -23,6 +23,7 @@
 #include <unistd.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <string>
 #include <sys/mman.h>
 #include <openssl/rand.h>
 

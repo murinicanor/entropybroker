@@ -1,5 +1,6 @@
 #include <string>
 #include <map>
+#include <vector>
 #include <errno.h>
 #include <fcntl.h>
 #include <linux/videodev2.h>
@@ -123,8 +124,11 @@ void untake_picture(int fd, struct v4l2_buffer *buf)
 
 void help(void)
 {
-	printf("-i host   entropy_broker-host to connect to\n");
-	printf("-x port   port to connect to (default: %d)\n", DEFAULT_BROKER_PORT);
+	printf("-I host   entropy_broker host to connect to\n");
+        printf("          e.g. host\n");
+        printf("               host:port\n");
+        printf("               [ipv6 literal]:port\n");
+        printf("          you can have multiple entries of this\n");
 	printf("-d x   device to use\n");
 	printf("-o file   file to write entropy data to (mututal exclusive with -d)\n");
 	printf("-f x   skip x frames before processing images (in case the device\n");
@@ -141,8 +145,6 @@ int main(int argc, char *argv[])
 {
 	int device_settle = 25;
 	int c;
-	char *host = NULL;
-	int port = DEFAULT_BROKER_PORT;
 	unsigned char *img1, *img2, *unbiased;
 	bool do_not_fork = false, log_console = false, log_syslog = false;
 	char *log_logfile = NULL;
@@ -152,19 +154,14 @@ int main(int argc, char *argv[])
 	int loop;
 	bool show_bps = false;
 	std::string username, password;
+	std::vector<std::string> hosts;
 
 	fprintf(stderr, "%s, (C) 2009-2012 by folkert@vanheusden.com\n", server_type);
 
-	while((c = getopt(argc, argv, "x:hSX:P:f:o:i:d:l:sn")) != -1)
+	while((c = getopt(argc, argv, "hSX:P:f:o:I:d:l:sn")) != -1)
 	{
 		switch(c)
 		{
-			case 'x':
-				port = atoi(optarg);
-				if (port < 1)
-					error_exit("-x requires a value >= 1");
-				break;
-
 			case 'S':
 				show_bps = true;
 				break;
@@ -187,8 +184,8 @@ int main(int argc, char *argv[])
 				bytes_file = optarg;
 				break;
 
-			case 'i':
-				host = optarg;
+			case 'I':
+				hosts.push_back(optarg);
 				break;
 
 			case 'd':
@@ -214,11 +211,11 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if (host && (username.length() == 0 || password.length() == 0))
+	if (!hosts.empty() && (username.length() == 0 || password.length() == 0))
 		error_exit("username + password cannot be empty");
 
-	if (!host && !bytes_file && !show_bps)
-		error_exit("no host to connect to, to file to write to and no 'show bps' given");
+	if (hosts.empty() && !bytes_file)
+		error_exit("no host to connect to or file to write to given");
 
 	if (!device)
 		error_exit("Please select a video4linux video device (e.g. a webcam, tv-card, etc.)");
@@ -243,8 +240,8 @@ int main(int argc, char *argv[])
 	write_pid(pid_file);
 
 	protocol *p = NULL;
-	if (host)
-		p = new protocol(host, port, username, password, true, server_type);
+	if (!hosts.empty())
+		p = new protocol(&hosts, username, password, true, server_type);
 
 	/* open device */
 	int fd = -1;
@@ -267,8 +264,8 @@ int main(int argc, char *argv[])
 		untake_picture(fd, &buf);
 	}
 
-	double cur_start_ts = get_ts();
-	long int total_byte_cnt = 0;
+	init_showbps();
+	set_showbps_start_ts();
 	for(;;)
 	{
 		img1 = (unsigned char *)malloc(io_buffer_len);
@@ -338,10 +335,13 @@ int main(int argc, char *argv[])
 
 		if (nunbiased > 0)
 		{
+			if (show_bps)
+				update_showbps(nunbiased);
+
 			if (bytes_file)
 				emit_buffer_to_file(bytes_file, unbiased, nunbiased);
 
-			if (host)
+			if (p)
 			{
 				unsigned char *tempp = unbiased;
 				int count = nunbiased;
@@ -361,22 +361,7 @@ int main(int argc, char *argv[])
 				}
 			}
 
-			if (show_bps)
-			{
-				double now_ts = get_ts();
-
-				total_byte_cnt += nunbiased;
-
-				if ((now_ts - cur_start_ts) >= 1.0)
-				{
-					int diff_t = now_ts - cur_start_ts;
-
-					printf("Total number of bytes: %ld, avg/s: %f\n", total_byte_cnt, (double)total_byte_cnt / diff_t);
-
-					total_byte_cnt = 0;
-					cur_start_ts = now_ts;
-				}
-			}
+			set_showbps_start_ts();
 		}
 
 		memset(unbiased, 0x00, io_buffer_len);

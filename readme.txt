@@ -39,6 +39,7 @@ Files will be installed in  /usr/local/entropybroker
 You need the OpenSSL and zlib development libraries.
 asound2 is for eb_server_audio
 libusb-1.0-0-dev is for eb_server_usb
+libftdi-dev is for eb_server_ComScire_R2000KU
 
 
 Usage
@@ -64,6 +65,17 @@ user|password
 some user|my password
 If you change the password and want to reload the user-file
 without restarting the complete broker, sent SIGHUP to it.
+
+All clients and servers need a '-I' commandline parameter.
+This parameter can be used 1 or more times. It selects one
+(or more) entrop broker instance(s). If one is not reachable,
+the other(s) are tried. Examples:
+	-I 192.168.0.1
+	-I 192.168.0.1:12341   with portnumber
+	-I hostname.bla.com
+	-I hostname.bla.com:55225
+	-I [2001:888:13b3:172:a80a:1111:fe0e:daaa]       ipv6
+	-I [2001:888:13b3:172:a80a:1111:fe0e:daaa]:1400  with port
 
 
 server processes
@@ -93,7 +105,7 @@ parameters. For example:
 In this example there are 3 audio cards (0, 1 and 2, see first column
 between [ and ]). If we want to take the audio from card 2 (see line 10)
 it would look like this:
-eb_server_audio -d hw:2,0 -s -i broker -X 
+eb_server_audio -d hw:2,0 -s -I broker -X 
 This program is Linux-only (due to the ALSA requirement).
 This program should work with the Johnson Noise 1* produced by the
 electronic parts of the sound-card. So it is best, maybe not obvious,
@@ -101,7 +113,7 @@ to turn the volume as low as possible.
 1* http://en.wikipedia.org/wiki/Johnson%E2%80%93Nyquist_noise
 
 On systems with a spare tv-card/webcam, start server_v4l. E.g.:
-eb_server_v4l -i broker -d /dev/video0 -s -X password.txt
+eb_server_v4l -I broker -d /dev/video0 -s -X password.txt
 This program is Linux-only (due to the video4linux2 requirement).
 The same note regarding Johnson Noise (see the audio driver) applies
 to this program. On the other hand: LavaRnd (http://www.lavarnd.org/)
@@ -112,7 +124,7 @@ only noise or put a cap in front of the lense.
 
 On systems that are mostly idle, start server_timers. Check
 http://vanheusden.com/te/#bps to see some expected bitrates.
-eb_server_timers -i broker -s -X password.txt
+eb_server_timers -I broker -s -X password.txt
 This program compares timers. Due to jitter in their frequency, noise
 can be measured.
 
@@ -120,7 +132,7 @@ On systems with an random generator connected to e.g. a serial
 port, or with a rng in the motherboard chipset, use server_stream
 to feed its data to entropy_broker. For example a rng in the system
 would be used like this:
-eb_server_stream -i entropy_broker -d /dev/hwrng -s -X password.txt
+eb_server_stream -I entropy_broker -d /dev/hwrng -s -X password.txt
 For example an Orion RNG can be processed at 19200 bps via /dev/ttyS*
 An IDQ Quantis has a device node /dev/qrandom0 available
 (http://www.idquantique.com/true-random-number-generator/products-overview.html).
@@ -129,11 +141,13 @@ On systems with an EntropyKey (http://www.entropykey.co.uk/) or
 EGD, start server_egd.
 server_egd requires a read-interval and how many bytes to read in
 that interval. E.g.:
-eb_server_egd -i broker -d /tmp/egd.socket.ekey -a 1024 -b 5 -X password.txt
+eb_server_egd -I broker -d /tmp/egd.socket.ekey -a 1024 -b 5 -X password.txt
 This would require the following:
 	EGDUnixSocket "/tmp/egd.socket.ekey
 in the entropy-key daemons configuration (which is
 /etc/entropykey/ekeyd.conf on Debian systems).
+This program can also connect to EGD servers which listen on a TCP
+port.
 
 On systems with a RNG in the chipset that automatically gets send
 to the linux kernel entropy buffer, use server_linux_kernel.
@@ -150,7 +164,7 @@ On systems without any hardware available for retrieving data, one
 can, as a last resort, using eb_server_ext_proc. This command can
 execute any command (as long as it is supported by the shell) and
 feed its output to the broker. E.g.:
-eb_server_ext_proc -i localhost -c '(find /proc -type f -print0 | xargs -0 cat ; ps auwx ; sensors -u) | gzip -9' -n -X password.txt
+eb_server_ext_proc -I localhost -c '(find /proc -type f -print0 | xargs -0 cat ; ps auwx ; sensors -u) | gzip -9' -n -X password.txt
 
 On x86 compatible systems (e.g. not a Sparc), one can use
 server_cycle_count. This program is a simplified copy of 
@@ -171,6 +185,14 @@ the data only once.
 
 Use eb_server_ComScire_R2000KU when you have a ComSire R2000KU
 device connected via USB.
+
+If you have a ISO 7816 smartcard connected via a PCSC compatible
+reader, you can use eb_server_smartcard to use that smartcard
+to generate entropy data. This is obtained by sending the 0x84
+INS which means "GET CHALLENGE". Note that not all cards
+support this command. Two Dutch EMV cards I tried refuse this
+command with a 0x6e (class not supported) error. Other cards
+return 0x6d (instruction code not supported or invalid).
 
 
 Proxies
@@ -202,7 +224,7 @@ and the number of seconds to sleep between each write.
 
 To server entropy data like as if it was an EGD-server, start
 client_egd. E.g.:
-	eb_client_egd -d /tmp/egd.sock -i entropy_broker-server.test.com
+	eb_client_egd -d /tmp/egd.sock -I entropy_broker-server.test.com
 You may need to delete the socket before starting eb_client_egd.
 Now egd-clients can use the /tmp/egd.sock unix domain socket. This
 should work with at least OpenSSL: start client_egd with one of the
@@ -214,6 +236,7 @@ It should return something like
   255 semi-random bytes loaded
 where '255' should be > 0. If it is zero, check if the current
 user has enough rights to access /var/run/egd-pool
+This program can also service via a TCP socket.
 
 
 Problem resolving
@@ -232,7 +255,7 @@ Also note: if not a full path is given for the password-file
 the directory from the current configuration file.
 
 Please invoke these commands first with -h to see a list of
-options. You probably need to use '-i' to select the server
+options. You probably need to use '-I' to select the server(s)
 on which 'entropy_broker' runs. Also adding '-s' is usefull as
 it'll make the servers/clients/entropy_broker log to syslog.
 

@@ -1,6 +1,7 @@
 #include "ComScire_R2000KU/qwqng.hpp"
 
 #include <string>
+#include <vector>
 #include <map>
 #include <sys/time.h>
 #include <stdio.h>
@@ -36,8 +37,11 @@ void sig_handler(int sig)
 
 void help(void)
 {
-        printf("-i host   entropy_broker-host to connect to\n");
-	printf("-x port   port to connect to (default: %d)\n", DEFAULT_BROKER_PORT);
+	printf("-I host   entropy_broker host to connect to\n");
+	printf("          e.g. host\n");
+	printf("               host:port\n");
+	printf("               [ipv6 literal]:port\n");
+	printf("          you can have multiple entries of this\n");
 	printf("-o file   file to write entropy data to (mututal exclusive with -i)\n");
         printf("-l file   log to file 'file'\n");
         printf("-s        log to syslog\n");
@@ -50,8 +54,6 @@ void help(void)
 int main(int argc, char *argv[])
 {
 	unsigned char bytes[1249];
-	char *host = NULL;
-	int port = DEFAULT_BROKER_PORT;
 	int read_fd = -1;
 	int c;
 	bool do_not_fork = false, log_console = false, log_syslog = false;
@@ -62,17 +64,16 @@ int main(int argc, char *argv[])
 	char server_type[128];
 	bool show_bps = false;
 	std::string username, password;
+	std::vector<std::string> hosts;
 
 	fprintf(stderr, "eb_server_ComScire_R2000KU v" VERSION ", (C) 2009-2012 by folkert@vanheusden.com\n");
 
-	while((c = getopt(argc, argv, "x:hSX:P:o:i:l:snv")) != -1)
+	while((c = getopt(argc, argv, "I:hSX:P:o:l:snv")) != -1)
 	{
 		switch(c)
 		{
-			case 'x':
-				port = atoi(optarg);
-				if (port < 1)
-					error_exit("-x requires a value >= 1");
+			case 'I':
+				hosts.push_back(optarg);
 				break;
 
 			case 'S':
@@ -93,10 +94,6 @@ int main(int argc, char *argv[])
 
 			case 'o':
 				bytes_file = optarg;
-				break;
-
-			case 'i':
-				host = optarg;
 				break;
 
 			case 's':
@@ -122,11 +119,11 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if (host && (username.length() == 0 || password.length() == 0))
+	if (!hosts.empty() && (username.length() == 0 || password.length() == 0))
 		error_exit("username + password cannot be empty");
 
-	if (!host && !bytes_file && !show_bps)
-		error_exit("no host to connect to, to file to write to and no 'show bps' given");
+	if (hosts.empty() && !bytes_file)
+		error_exit("no host to connect to or file to write to given");
 
 	(void)umask(0177);
 	no_core();
@@ -154,16 +151,17 @@ int main(int argc, char *argv[])
 	write_pid(pid_file);
 
 	protocol *p = NULL;
-	if (host)
-		p = new protocol(host, port, username, password, true, server_type);
+	if (!hosts.empty())
+		p = new protocol(&hosts, username, password, true, server_type);
 
 	signal(SIGPIPE, SIG_IGN);
 	signal(SIGTERM, sig_handler);
 	signal(SIGINT , sig_handler);
 	signal(SIGQUIT, sig_handler);
 
-	double cur_start_ts = get_ts();
-	long int total_byte_cnt = 0;
+	init_showbps();
+	set_showbps_start_ts();
+
 	bool stats_error_reported = false;
 	for(;;)
 	{
@@ -192,43 +190,21 @@ int main(int argc, char *argv[])
 
 		if (index == sizeof(bytes))
 		{
+			if (show_bps)
+				update_showbps(1249);
+
 			if (bytes_file)
 				emit_buffer_to_file(bytes_file, bytes, index);
 
-			if (host && p -> message_transmit_entropy_data(bytes, index) == -1)
+			if (!hosts.empty() && p -> message_transmit_entropy_data(bytes, index) == -1)
 			{
 				dolog(LOG_INFO, "connection closed");
 				p -> drop();
 			}
+
+			set_showbps_start_ts();
 
 			index = 0;
-		}
-
-		if (show_bps)
-		{
-			double now_ts = get_ts();
-
-			total_byte_cnt += 1249;
-
-			if ((now_ts - cur_start_ts) >= 1.0)
-			{
-				int diff_t = now_ts - cur_start_ts;
-
-				printf("Total number of bytes: %ld, avg/s: %f\n", total_byte_cnt, (double)total_byte_cnt / diff_t);
-
-				cur_start_ts = now_ts;
-				total_byte_cnt = 0;
-			}
-		}
-
-		if (index == 0)
-		{
-			if (p != NULL && p -> sleep_interruptable(5) != 0)
-			{
-				dolog(LOG_INFO, "connection closed");
-				p -> drop();
-				continue;
-			}
 		}
 	}
 

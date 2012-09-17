@@ -1,5 +1,6 @@
 #include <string>
 #include <map>
+#include <vector>
 #include <time.h>
 #include <sys/time.h>
 #include <stdio.h>
@@ -60,8 +61,11 @@ void sig_handler(int sig)
 
 void help(void)
 {
-	printf("-i host   entropy_broker-host to connect to\n");
-	printf("-x port   port to connect to (default: %d)\n", DEFAULT_BROKER_PORT);
+        printf("-I host   entropy_broker host to connect to\n");
+        printf("          e.g. host\n");
+        printf("               host:port\n");
+        printf("               [ipv6 literal]:port\n");
+        printf("          you can have multiple entries of this\n");
 	printf("-o file   file to write entropy data to\n");
 	printf("-S        show bps (mutual exclusive with -n)\n");
 	printf("-l file   log to file 'file'\n");
@@ -76,27 +80,20 @@ int main(int argc, char *argv[])
 	unsigned char bytes[1249];
 	unsigned char byte = 0;
 	int bits = 0;
-	char *host = NULL;
-	int port = DEFAULT_BROKER_PORT;
 	int c;
 	bool do_not_fork = false, log_console = false, log_syslog = false;
 	char *log_logfile = NULL;
 	char *bytes_file = NULL;
 	bool show_bps = false;
 	std::string username, password;
+	std::vector<std::string> hosts;
 
 	fprintf(stderr, "%s, (C) 2009-2012 by folkert@vanheusden.com\n", server_type);
 
-	while((c = getopt(argc, argv, "x:hX:P:So:i:l:sn")) != -1)
+	while((c = getopt(argc, argv, "hX:P:So:I:l:sn")) != -1)
 	{
 		switch(c)
 		{
-			case 'x':
-				port = atoi(optarg);
-				if (port < 1)
-					error_exit("-x requires a value >= 1");
-				break;
-
 			case 'X':
 				get_auth_from_file(optarg, username, password);
 				break;
@@ -113,8 +110,8 @@ int main(int argc, char *argv[])
 				bytes_file = optarg;
 				break;
 
-			case 'i':
-				host = optarg;
+			case 'I':
+				hosts.push_back(optarg);
 				break;
 
 			case 's':
@@ -140,11 +137,11 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if (host && (username.length() == 0 || password.length() == 0))
+	if (!hosts.empty() && (username.length() == 0 || password.length() == 0))
 		error_exit("username + password cannot be empty");
 
-	if (!host && !bytes_file && !show_bps)
-		error_exit("no host to connect to, to file to write to and no 'show bps' given");
+	if (hosts.empty() && !bytes_file)
+		error_exit("no host to connect to or file to write to given");
 
 	(void)umask(0177);
 	no_core();
@@ -161,8 +158,8 @@ int main(int argc, char *argv[])
 	write_pid(pid_file);
 
 	protocol *p = NULL;
-	if (host)
-		p = new protocol(host, port, username, password, true, server_type);
+	if (!hosts.empty())
+		p = new protocol(&hosts, username, password, true, server_type);
 
 	signal(SIGPIPE, SIG_IGN);
 	signal(SIGTERM, sig_handler);
@@ -188,11 +185,10 @@ int main(int argc, char *argv[])
 	{
 		uint8_t bus_nr = libusb_get_bus_number(devs[index]);
 		uint8_t dev_nr = libusb_get_device_address(devs[index]);
-		int speed = libusb_get_device_speed(devs[index]);
 		struct libusb_device_descriptor desc;
 		libusb_get_device_descriptor(devs[index], &desc);
 
-		dolog(LOG_INFO, "Opening device %d: %d/%d (%d) %04x:%04x", index, bus_nr, dev_nr, speed, desc.idVendor, desc.idProduct);
+		dolog(LOG_INFO, "Opening device %d: %d/%d %04x:%04x", index, bus_nr, dev_nr, desc.idVendor, desc.idProduct);
 
 		if (desc.idVendor == 0x1d6b) // ignore
 			continue;
@@ -205,8 +201,9 @@ int main(int argc, char *argv[])
 	if (use_n == 0)
 		error_exit("no devices found which can be used");
 
-	long int total_byte_cnt = 0;
-	double cur_start_ts = get_ts();
+	init_showbps();
+	set_showbps_start_ts();
+
 	int dev_index = 0;
 	for(;;)
 	{
@@ -228,35 +225,23 @@ int main(int argc, char *argv[])
 			bytes[index++] = byte;
 			bits = 0;
 
-			if (index == sizeof(bytes))
+			if (index == sizeof bytes)
 			{
+				if (show_bps)
+					update_showbps(sizeof bytes);
+
 				if (bytes_file)
 					emit_buffer_to_file(bytes_file, bytes, index);
 
-				if (host && p -> message_transmit_entropy_data(bytes, index) == -1)
+				if (p && p -> message_transmit_entropy_data(bytes, index) == -1)
 				{
 					dolog(LOG_INFO, "connection closed");
 					p -> drop();
 				}
 
+				set_showbps_start_ts();
+
 				index = 0; // skip header
-			}
-
-			if (show_bps)
-			{
-				double now_ts = get_ts();
-
-				total_byte_cnt++;
-
-				if ((now_ts - cur_start_ts) >= 1.0)
-				{
-					int diff_t = now_ts - cur_start_ts;
-
-					printf("Number of bytes: %ld, avg/s: %f\n", total_byte_cnt, (double)total_byte_cnt / diff_t);
-
-					cur_start_ts = now_ts;
-					total_byte_cnt = 0;
-				}
 			}
 		}
 	}

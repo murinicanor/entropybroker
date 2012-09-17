@@ -1,5 +1,6 @@
 #include <string>
 #include <map>
+#include <vector>
 #include <sys/time.h>
 #include <stdio.h>
 #include <signal.h>
@@ -53,12 +54,14 @@ void fiddle(fiddle_state_t *p)
 
 int get_cache_size()
 {
-	FILE *fh = fopen("/sys/devices/system/cpu/cpu0/cache/index0/size", "r");
+	const char *cache_size_file = "/sys/devices/system/cpu/cpu0/cache/index0/size";
+	FILE *fh = fopen(cache_size_file, "r");
 	if (!fh)
 		return 1024*1024; // my laptop has 32KB data l1 cache
 
 	unsigned int s = 0;
-        fscanf(fh, "%d", &s);
+        if (fscanf(fh, "%d", &s) != 1)
+		error_exit("Tried to obtain 1 field from %s, failed doing that", cache_size_file);
 
         fclose(fh);
 
@@ -67,12 +70,14 @@ int get_cache_size()
 
 int get_cache_line_size()
 {
-	FILE *fh = fopen("/sys/devices/system/cpu/cpu0/cache/index0/coherency_line_size", "r");
+	const char *cache_line_size_file = "/sys/devices/system/cpu/cpu0/cache/index0/coherency_line_size";
+	FILE *fh = fopen(cache_line_size_file, "r");
 	if (!fh)
 		return 1;
 
 	unsigned int s = 0;
-        fscanf(fh, "%d", &s);
+        if (fscanf(fh, "%d", &s) != 1)
+		error_exit("Tried to obtain 1 field from %s, failed doing that", cache_line_size_file);
 
         fclose(fh);
 
@@ -88,8 +93,11 @@ void sig_handler(int sig)
 
 void help(void)
 {
-	printf("-i host   entropy_broker-host to connect to\n");
-	printf("-x port   port to connect to (default: %d)\n", DEFAULT_BROKER_PORT);
+	printf("-I host   entropy_broker host to connect to\n");
+	printf("          e.g. host\n");
+	printf("               host:port\n");
+	printf("               [ipv6 literal]:port\n");
+	printf("          you can have multiple entries of this\n");
 	printf("-o file   file to write entropy data to\n");
 	printf("-S        show bps (mutual exclusive with -n)\n");
 	printf("-l file   log to file 'file'\n");
@@ -101,25 +109,22 @@ void help(void)
 
 int main(int argc, char *argv[])
 {
-	char *host = NULL;
-	int port = DEFAULT_BROKER_PORT;
 	int sw;
 	bool do_not_fork = false, log_console = false, log_syslog = false;
 	char *log_logfile = NULL;
 	char *bytes_file = NULL;
 	bool show_bps = false;
 	std::string username, password;
+	std::vector<std::string> hosts;
 
 	fprintf(stderr, "%s, (C) 2009-2012 by folkert@vanheusden.com\n", server_type);
 
-	while((sw = getopt(argc, argv, "x:hX:P:So:i:l:sn")) != -1)
+	while((sw = getopt(argc, argv, "I:hX:P:So:l:sn")) != -1)
 	{
 		switch(sw)
 		{
-			case 'x':
-				port = atoi(optarg);
-				if (port < 1)
-					error_exit("-x requires a value >= 1");
+			case 'I':
+				hosts.push_back(optarg);
 				break;
 
 			case 'X':
@@ -136,10 +141,6 @@ int main(int argc, char *argv[])
 
 			case 'o':
 				bytes_file = optarg;
-				break;
-
-			case 'i':
-				host = optarg;
 				break;
 
 			case 's':
@@ -165,11 +166,11 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if (username.length() == 0 || password.length() == 0)
+	if (!hosts.empty() && (username.length() == 0 || password.length() == 0))
 		error_exit("username + password cannot be empty");
 
-	if (!host && !bytes_file && !show_bps)
-		error_exit("no host to connect to, to file to write to and no 'show bps' given");
+	if (hosts.empty() && !bytes_file)
+		error_exit("no host to connect to or file to write to given");
 
 	(void)umask(0177);
 	no_core();
@@ -198,11 +199,8 @@ int main(int argc, char *argv[])
 	signal(SIGQUIT, sig_handler);
 
 	protocol *p = NULL;
-	if (host)
-		p = new protocol(host, port, username, password, true, server_type);
-
-	long int total_byte_cnt = 0;
-	double cur_start_ts = get_ts();
+	if (!hosts.empty())
+		p = new protocol(&hosts, username, password, true, server_type);
 
 	signal(SIGFPE, SIG_IGN);
 	signal(SIGSEGV, SIG_IGN);
@@ -214,6 +212,8 @@ int main(int argc, char *argv[])
 	int bits = 0;
 	int index = 0;
 
+	init_showbps();
+	set_showbps_start_ts();
 	for(;;)
 	{
 		fiddle(&fs);
@@ -228,12 +228,9 @@ int main(int argc, char *argv[])
 		int A = (int)(b - a);
 		int B = (int)(d - c);
 
-		if (A == B)
-			continue;
-
 		byte <<= 1;
 
-		if (A > B)
+		if (A >= B)
 			byte |= 1;
 			
 		bits++;
@@ -245,37 +242,22 @@ int main(int argc, char *argv[])
 
 			if (index == sizeof bytes)
 			{
+				if (show_bps)
+					update_showbps(sizeof bytes);
+
 				if (bytes_file)
 					emit_buffer_to_file(bytes_file, bytes, index);
 
-				if (host)
+				if (p && p -> message_transmit_entropy_data(bytes, index) == -1)
 				{
-					if (p -> message_transmit_entropy_data(bytes, index) == -1)
-					{
-						dolog(LOG_INFO, "connection closed");
+					dolog(LOG_INFO, "connection closed");
 
-						p -> drop();
-					}
+					p -> drop();
 				}
 
 				index = 0;
-			}
 
-			if (show_bps)
-			{
-				double now_ts = get_ts();
-
-				total_byte_cnt++;
-
-				if ((now_ts - cur_start_ts) >= 1.0)
-				{
-					int diff_t = now_ts - cur_start_ts;
-
-					printf("Total number of bytes: %ld, avg/s: %f\n", total_byte_cnt, (double)total_byte_cnt / diff_t);
-
-					cur_start_ts = now_ts;
-					total_byte_cnt = 0;
-				}
+				set_showbps_start_ts();
 			}
 		}
 	}

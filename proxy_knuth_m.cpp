@@ -1,3 +1,4 @@
+#include <vector>
 #include <string>
 #include <map>
 #include <sys/time.h>
@@ -110,6 +111,8 @@ void load_knuth_file(std::string file, lookup_t *lt)
 		dolog(LOG_INFO, "Reading cached data from %s", file.c_str());
 
 		lt -> t_size = read_value(fh);
+		if (lt -> t_size > 67108864)
+			error_exit("%s is probably corrupt (size > 128MB)", file.c_str());
 		lt -> t_offset = read_value(fh);
 		lt -> table = (unsigned short *)malloc(lt -> t_size * sizeof(unsigned short));
 		size_t bytes = lt -> t_size * sizeof(unsigned short);
@@ -407,8 +410,11 @@ void sig_handler(int sig)
 
 void help()
 {
-	printf("-i host   entropy_broker-host to connect to\n");
-	printf("-x port   port to connect to (default: %d)\n", DEFAULT_BROKER_PORT);
+        printf("-I host   entropy_broker host to connect to\n");
+        printf("          e.g. host\n");
+        printf("               host:port\n");
+        printf("               [ipv6 literal]:port\n");
+        printf("          you can have multiple entries of this\n");
 	printf("-j adapter  adapter to listen on\n");
 	printf("-p port   port to listen on (default: %d)\n", DEFAULT_PROXY_LISTEN_PORT);
 	printf("-l file   log to file 'file'\n");
@@ -422,29 +428,24 @@ void help()
 
 int main(int argc, char *argv[])
 {
-	const char *host = NULL, *listen_adapter = "0.0.0.0";
-	int port = DEFAULT_BROKER_PORT, listen_port = DEFAULT_PROXY_LISTEN_PORT;
+	const char *listen_adapter = "0.0.0.0";
+	int listen_port = DEFAULT_PROXY_LISTEN_PORT;
 	int c;
 	bool do_not_fork = false, log_console = false, log_syslog = false;
 	char *log_logfile = NULL;
 	std::string username, password;
 	std::string clients_auths;
 	std::string knuth_file = CACHE_DIR + std::string("/") + KNUTH_FILE;
+	std::vector<std::string> hosts;
 
 	printf("proxy_knuth_m, (C) 2009-2012 by folkert@vanheusden.com\n");
 
-	while((c = getopt(argc, argv, "V:x:j:p:U:hf:X:P:i:l:sn")) != -1)
+	while((c = getopt(argc, argv, "V:j:p:U:hf:X:P:I:l:sn")) != -1)
 	{
 		switch(c)
 		{
 			case 'V':
 				knuth_file = optarg;
-				break;
-
-			case 'x':
-				port = atoi(optarg);
-				if (port < 1)
-					error_exit("-x requires a value >= 1");
 				break;
 
 			case 'j':
@@ -467,8 +468,8 @@ int main(int argc, char *argv[])
 				pid_file = optarg;
 				break;
 
-			case 'i':
-				host = optarg;
+			case 'I':
+				hosts.push_back(optarg);
 				break;
 
 			case 's':
@@ -501,7 +502,7 @@ int main(int argc, char *argv[])
 	if (clients_auths.length() == 0)
 		error_exit("No file with usernames + passwords selected for client authentication");
 
-	if (!host)
+	if (hosts.empty())
 		error_exit("No host to connect to selected");
 
 	(void)umask(0177);
@@ -509,10 +510,8 @@ int main(int argc, char *argv[])
 
 	users *user_map = new users(clients_auths);
 
-	protocol *p = new protocol(host, port, username, password, true, client_type);
+	protocol *p = new protocol(&hosts, username, password, true, client_type);
 
-	if (chdir("/") == -1)
-		error_exit("chdir(/) failed");
 	no_core();
 
 	if (!do_not_fork)

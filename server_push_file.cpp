@@ -1,5 +1,6 @@
 #include <string>
 #include <map>
+#include <vector>
 #include <sys/time.h>
 #include <stdio.h>
 #include <signal.h>
@@ -32,12 +33,16 @@ void sig_handler(int sig)
 
 void help(void)
 {
-        printf("-i host   entropy_broker-host to connect to\n");
-	printf("-x port   port to connect to (default: %d)\n", DEFAULT_BROKER_PORT);
+        printf("-I host   entropy_broker host to connect to\n");
+        printf("          e.g. host\n");
+        printf("               host:port\n");
+        printf("               [ipv6 literal]:port\n");
+        printf("          you can have multiple entries of this\n");
 	printf("-f file   file to read from\n");
         printf("-l file   log to file 'file'\n");
         printf("-s        log to syslog\n");
         printf("-n        do not fork\n");
+	printf("-S        show bps (mutual exclusive with -n)\n");
 	printf("-P file   write pid to file\n");
 	printf("-X file   read username+password from file\n");
 }
@@ -45,8 +50,6 @@ void help(void)
 int main(int argc, char *argv[])
 {
 	unsigned char bytes[1249];
-	char *host = NULL;
-	int port = DEFAULT_BROKER_PORT;
 	int c;
 	bool do_not_fork = false, log_console = false, log_syslog = false;
 	char *log_logfile = NULL;
@@ -54,21 +57,20 @@ int main(int argc, char *argv[])
 	std::string username, password;
 	char *bytes_file = NULL;
 	bool show_bps = false;
+	std::vector<std::string> hosts;
 
 	fprintf(stderr, "%s, (C) 2009-2012 by folkert@vanheusden.com\n", server_type);
 
-	while((c = getopt(argc, argv, "x:f:hX:P:o:p:i:d:l:sn")) != -1)
+	while((c = getopt(argc, argv, "S:I:f:hX:P:o:p:d:l:sn")) != -1)
 	{
 		switch(c)
 		{
-			case 'o':
-				bytes_file = optarg;
+			case 'S':
+				show_bps = true;
 				break;
 
-			case 'x':
-				port = atoi(optarg);
-				if (port < 1)
-					error_exit("-x requires a value >= 1");
+			case 'o':
+				bytes_file = optarg;
 				break;
 
 			case 'X':
@@ -83,8 +85,8 @@ int main(int argc, char *argv[])
 				file = optarg;
 				break;
 
-			case 'i':
-				host = optarg;
+			case 'I':
+				hosts.push_back(optarg);
 				break;
 
 			case 's':
@@ -106,11 +108,11 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if (host && (username.length() == 0 || password.length() == 0))
+	if (!hosts.empty() && (username.length() == 0 || password.length() == 0))
 		error_exit("username + password cannot be empty");
 
-	if (!host && !bytes_file && !show_bps)
-		error_exit("no host to connect to, to file to write to and no 'show bps' given");
+	if (hosts.empty() && !bytes_file)
+		error_exit("no host to connect to or file to write to given");
 
 	if (!file)
 		error_exit("no file to read from selected");
@@ -133,7 +135,9 @@ int main(int argc, char *argv[])
 
 	write_pid(pid_file);
 
-	protocol *p = new protocol(host, port, username, password, true, server_type);
+	protocol *p = NULL;
+	if (!hosts.empty())
+		p = new protocol(&hosts, username, password, true, server_type);
 
 	signal(SIGPIPE, SIG_IGN);
 	signal(SIGTERM, sig_handler);
@@ -142,8 +146,9 @@ int main(int argc, char *argv[])
 
 	bool data = false;
 	int got_bytes = -1;
-	double cur_start_ts = get_ts();
-	long int total_byte_cnt = 0;
+
+	init_showbps();
+	set_showbps_start_ts();
 	for(;!feof(fh);)
 	{
 		// gather random data
@@ -158,32 +163,20 @@ int main(int argc, char *argv[])
 
 		if (data)
 		{
+			if (show_bps)
+				update_showbps(got_bytes);
+
 			if (bytes_file)
 				emit_buffer_to_file(bytes_file, bytes, got_bytes);
 
-			if (host && p -> message_transmit_entropy_data(bytes, got_bytes) == -1)
+			if (p && p -> message_transmit_entropy_data(bytes, got_bytes) == -1)
 			{
 				dolog(LOG_INFO, "connection closed");
 
 				p -> drop();
 			}
 
-			if (show_bps)
-			{
-				double now_ts = get_ts();
-
-				total_byte_cnt += got_bytes;
-
-				if ((now_ts - cur_start_ts) >= 1.0)
-				{
-					int diff_t = now_ts - cur_start_ts;
-
-					printf("Total number of bytes: %ld, avg/s: %f\n", total_byte_cnt, (double)total_byte_cnt / diff_t);
-
-					total_byte_cnt = 0;
-					cur_start_ts = now_ts;
-				}
-			}
+			set_showbps_start_ts();
 
 			data = false;
 		}

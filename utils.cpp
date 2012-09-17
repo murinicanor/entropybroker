@@ -1,3 +1,6 @@
+#include <string>
+#include <openssl/blowfish.h>
+#include <vector>
 #include <unistd.h>
 #include <signal.h>
 #include <errno.h>
@@ -11,6 +14,7 @@
 #include <sys/time.h>
 #include <stdio.h>
 #include <time.h>
+#include <string>
 #include <sys/select.h>
 #include <netinet/tcp.h>
 #include <sys/mman.h>
@@ -20,6 +24,7 @@
 #include "log.h"
 #include "kernel_prng_rw.h"
 #include "my_pty.h"
+#include "protocol.h"
 
 #define MAX_LRAND48_GETS 250
 
@@ -224,110 +229,89 @@ int WRITE_TO(int fd, char *whereto, size_t len, double to)
 
 int start_listen(const char *adapter, int portnr, int listen_queue_size)
 {
-	int reuse_addr = 1;
-	struct sockaddr_in server_addr;
-	int	server_addr_len;
-	int fd = socket(AF_INET, SOCK_STREAM, 0);
-	if (fd == -1)
-		error_exit("failed creating socket");
+        int fd = socket(AF_INET6, SOCK_STREAM, 0);
+        if (fd == -1)
+                error_exit("failed creating socket");
 
-	if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (char *)&reuse_addr, sizeof(reuse_addr)) == -1)
-		error_exit("setsockopt(SO_REUSEADDR) failed");
+        int reuse_addr = 1;
+        if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (char *)&reuse_addr, sizeof(reuse_addr)) == -1)
+                error_exit("setsockopt(SO_REUSEADDR) failed");
 
-	server_addr_len = sizeof(server_addr);
-	memset((char *)&server_addr, 0x00, server_addr_len);
-	server_addr.sin_family = AF_INET;
-	if (!adapter)
+        struct sockaddr_in6 server_addr;
+
+        int server_addr_len = sizeof server_addr;
+
+        memset((char *)&server_addr, 0x00, server_addr_len);
+        server_addr.sin6_family = AF_INET6;
+        server_addr.sin6_port = htons(portnr);
+
+        if (!adapter || strcmp(adapter, "0.0.0.0") == 0)
+                server_addr.sin6_addr = in6addr_any;
+        else if (inet_pton(AF_INET6, adapter, &server_addr.sin6_addr) == 0)
 	{
-		server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+		fprintf(stderr, "\n");
+		fprintf(stderr, " * inet_pton(%s) failed: %s\n", adapter, strerror(errno));
+		fprintf(stderr, " * If you're trying to use an IPv4 address (e.g. 192.168.0.1 or so)\n");
+		fprintf(stderr, " * then do not forget to place ::FFFF: in front of the address,\n");
+		fprintf(stderr, " * e.g.: ::FFFF:192.168.0.1\n\n");
+		error_exit("listen socket initialisation failure: did you configure a correct listen adapter?");
 	}
-	else
-	{
-		if (inet_aton(adapter, &server_addr.sin_addr) == 0)
-			error_exit("inet_aton(%s) failed", adapter);
-	}
-	server_addr.sin_port = htons(portnr);
 
-	if (bind(fd, (struct sockaddr *)&server_addr, server_addr_len) == -1)
-		error_exit("bind() failed");
+        if (bind(fd, (struct sockaddr *)&server_addr, server_addr_len) == -1)
+                error_exit("bind() failed");
 
-	if (listen(fd, listen_queue_size) == -1)
-		error_exit("listen() failed");
+        if (listen(fd, listen_queue_size) == -1)
+                error_exit("listen() failed");
 
 	return fd;
 }
 
-int resolve_host(char *host, struct sockaddr_in *addr)
+int connect_to(const char *host, int portnr)
 {
-	struct hostent *hostdnsentries;
+	struct addrinfo hints;
+	memset(&hints, 0, sizeof(struct addrinfo));
+	hints.ai_family = AF_UNSPEC;    // Allow IPv4 or IPv6
+	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_flags = AI_PASSIVE;    // For wildcard IP address
+	hints.ai_protocol = 0;          // Any protocol
+	hints.ai_canonname = NULL;
+	hints.ai_addr = NULL;
+	hints.ai_next = NULL;
 
-	hostdnsentries = gethostbyname(host);
-	if (hostdnsentries == NULL)
+	char portnr_str[8];
+	snprintf(portnr_str, sizeof portnr_str, "%d", portnr);
+
+	struct addrinfo *result;
+	int rc = getaddrinfo(host, portnr_str, &hints, &result);
+	if (rc != 0)
+		error_exit("Problem resolving %s: %s\n", host, gai_strerror(rc));
+
+	for(struct addrinfo *rp = result; rp != NULL; rp = rp->ai_next)
 	{
-		switch(h_errno)
+		int fd = socket(rp -> ai_family, rp -> ai_socktype, rp -> ai_protocol);
+		if (fd == -1)
+			continue;
+
+		if (connect(fd, rp -> ai_addr, rp -> ai_addrlen) == 0)
 		{
-			case HOST_NOT_FOUND:
-				error_exit("The specified host is unknown.\n");
-				break;
+			freeaddrinfo(result);
 
-			case NO_ADDRESS:
-				error_exit("The requested name is valid but does not have an IP address.\n");
-				break;
-
-			case NO_RECOVERY:
-				error_exit("A non-recoverable name server error occurred.\n");
-				break;
-
-			case TRY_AGAIN:
-				error_exit("A temporary error occurred on an authoritative name server. Try again later.\n");
-				break;
-
-			default:
-				error_exit("Could not resolve %s for an unknown reason (%d)\n", host, h_errno);
+			return fd;
 		}
 
-		return -1;
+		close(fd);
 	}
 
-	/* create address structure */
-	addr -> sin_family = hostdnsentries -> h_addrtype;
-	addr -> sin_addr = incopy(hostdnsentries -> h_addr_list[0]);
-
-	return 0;
-}
-
-int connect_to(char *host, int portnr)
-{
-	int fd;
-	struct sockaddr_in addr;
-
-	/* resolve */
-	memset(&addr, 0x00, sizeof(addr));
-	resolve_host(host, &addr);
-	addr.sin_port = htons(portnr);
-
-	/* connect */
-	fd = socket(AF_INET, SOCK_STREAM, 0);
-	if (fd == -1)
-		error_exit("connect_to: problem creating socket");
-
-	/* connect to peer */
-	if (connect(fd, (struct sockaddr *)&addr, sizeof(struct sockaddr)) == 0)
-	{
-		/* connection made, return */
-		return fd;
-	}
-
-	close(fd);
+	freeaddrinfo(result);
 
 	return -1;
 }
 
 void disable_nagle(int fd)
 {
-      int disable = 1;
+	int disable = 1;
 
-      if (setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, (char *)&disable, sizeof(disable)) == -1)
+	if (setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, (char *)&disable, sizeof(disable)) == -1)
 		error_exit("setsockopt(IPPROTO_TCP, TCP_NODELAY) failed");
 }
 
@@ -473,4 +457,38 @@ void hexdump(unsigned char *in, int n)
 		printf("%02x ", in[index]);
 
 	printf("\n");
+}
+
+void split_resource_location(std::string in, std::string & host, int & port)
+{
+	char *copy = strdup(in.c_str());
+
+	port = DEFAULT_BROKER_PORT;
+
+	if (copy[0] == '[')	// ipv6 literal address
+	{
+		char *end = strchr(copy, ']');
+		if (!end)
+			error_exit("'%s' is not a valid ipv6 literal (expecting closing ']')", in.c_str());
+
+		*end = 0x00;
+
+		host.assign(&copy[1]);
+
+		if (end[1] == ':') // port number following
+			port = atoi(&end[1]);
+	}
+	else
+	{
+		char *colon = strchr(copy, ':');
+		if (colon)
+		{
+			*colon = 0x00;
+			port = atoi(colon + 1);
+		}
+
+		host.assign(copy);
+	}
+
+	free(copy);
 }
