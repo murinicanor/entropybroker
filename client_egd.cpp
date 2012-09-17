@@ -285,7 +285,7 @@ int main(int argc, char *argv[])
 	if (password.length() == 0 || username.length() == 0)
 		error_exit("please set a non-empty username + password");
 
-	if (hosts.size() == 0)
+	if (hosts.empty())
 		error_exit("no host to connect to selected");
 
 	if (!uds && egd_port == -1)

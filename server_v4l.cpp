@@ -211,10 +211,10 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if (hosts.size() > 0 && (username.length() == 0 || password.length() == 0))
+	if (!hosts.empty() && (username.length() == 0 || password.length() == 0))
 		error_exit("username + password cannot be empty");
 
-	if (hosts.size() == 0 && !bytes_file)
+	if (hosts.empty() && !bytes_file)
 		error_exit("no host to connect to or file to write to given");
 
 	if (!device)
@@ -240,7 +240,7 @@ int main(int argc, char *argv[])
 	write_pid(pid_file);
 
 	protocol *p = NULL;
-	if (hosts.size() > 0)
+	if (!hosts.empty())
 		p = new protocol(&hosts, username, password, true, server_type);
 
 	/* open device */

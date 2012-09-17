@@ -148,7 +148,7 @@ int main(int argc, char *argv[])
 	if (username.length() == 0 || password.length() == 0)
 		error_exit("password + username cannot be empty");
 
-	if (hosts.size() == 0)
+	if (hosts.empty())
 		error_exit("No host to connect to selected");
 
 	if (!file)

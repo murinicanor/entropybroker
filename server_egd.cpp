@@ -185,7 +185,7 @@ int main(int argc, char *argv[])
 	if (username.length() == 0 || password.length() == 0)
 		error_exit("username + password cannot be empty");
 
-	if (hosts.size() == 0 && !bytes_file)
+	if (hosts.empty() && !bytes_file)
 		error_exit("no host to connect to given, also no file to write to given");
 
 	if (!device && !egd_host)
@@ -203,7 +203,7 @@ int main(int argc, char *argv[])
 	snprintf(server_type, sizeof(server_type), "server_egb v" VERSION " %s", device);
 
 	protocol *p = NULL;
-	if (hosts.size() > 0)
+	if (!hosts.empty())
 		p = new protocol(&hosts, username, password, true, server_type);
 
 	if (device)

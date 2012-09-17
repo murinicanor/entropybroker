@@ -474,7 +474,7 @@ int main(int argc, char *argv[])
 	if (clients_auths.length() == 0)
 		error_exit("No file with usernames + passwords selected for client authentication");
 
-	if (hosts.size() == 0)
+	if (hosts.empty())
 		error_exit("No host to connect to selected");
 
 	(void)umask(0177);

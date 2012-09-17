@@ -105,7 +105,7 @@ int main(int argc, char *argv[])
 	if (username.length() == 0 || password.length() == 0)
 		error_exit("username + password cannot be empty");
 
-	if (hosts.size() == 0)
+	if (hosts.empty())
 		error_exit("no host to connect to selected");
 
 	set_logging_parameters(log_console, log_logfile, log_syslog);
