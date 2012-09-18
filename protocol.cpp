@@ -293,8 +293,12 @@ int protocol::sleep_interruptable(int how_long)
 
 		if (memcmp(buffer, "0010", 4) == 0)
 			dolog(LOG_INFO, "Broker requests for data");
+		if (memcmp(buffer, "0009", 4) == 0)
+			dolog(LOG_INFO, "Broker informs about data being available");
 		else if (memcmp(buffer, "9004", 4) != 0)
-			dolog(LOG_WARNING, "Unexpected message '%s' received from broker!", buffer);
+			dolog(LOG_WARNING, "Unexpected message '%s' received from broker! (1)", buffer);
+		else
+			dolog(LOG_WARNING, "Unexpected message '%s' received from broker! (2)", buffer);
 	}
 
 	return 0;
