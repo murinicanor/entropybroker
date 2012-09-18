@@ -32,11 +32,11 @@
 #include "config.h"
 #include "scc.h"
 #include "pools.h"
+#include "statistics.h"
 #include "handle_client.h"
 #include "utils.h"
 #include "signals.h"
 #include "auth.h"
-#include "statistics.h"
 #include "protocol.h"
 #include "hc_protocol.h"
 
@@ -235,7 +235,7 @@ void * thread(void *data)
 				break;
 			}
 
-			if (FD_ISSET(p -> socket, &rfds))
+			if (FD_ISSET(p -> socket_fd, &rfds))
 			{
 				bool no_bits = false, new_bits = false, is_full = false;
 
@@ -446,7 +446,7 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 			continue;
 
 		if (FD_ISSET(listen_socket_fd, &rfds))
-			register_new_client(listen_socket_fd, &clients, user_map, config, ppools, &stats);
+			register_new_client(listen_socket_fd, &clients, user_map, config, ppools, &stats, eb_output_fips140, eb_output_scc);
 	}
 
 	dolog(LOG_WARNING, "main|end of main loop");
