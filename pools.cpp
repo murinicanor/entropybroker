@@ -271,7 +271,7 @@ int pools::get_bits_from_pools(int n_bits_requested, unsigned char **buffer, boo
 	lock_mem(buffer, n_to_do_bytes);
 
 	// load bits from disk if needed
-	int bits_needed_to_load = n_bits_requested - get_bit_sum();
+	int bits_needed_to_load = n_bits_requested - get_bit_sum_unlocked();
 	if (bits_needed_to_load > 0)
 	{
 		flush_empty_pools();
@@ -410,14 +410,21 @@ int pools::add_bits_to_pools(unsigned char *data, int n_bytes, bool ignore_rngte
 	return n_bits_added;
 }
 
-int pools::get_bit_sum()
+int pools::get_bit_sum_unlocked()
 {
 	int bit_count = 0;
 
-	pthread_mutex_lock(&lck);
-
 	for(unsigned int loop=0; loop<pool_vector.size(); loop++)
 		bit_count += pool_vector.at(loop) -> get_n_bits_in_pool();
+
+	return bit_count;
+}
+
+int pools::get_bit_sum()
+{
+	pthread_mutex_lock(&lck);
+
+	int bit_count = get_bit_sum_unlocked();
 
 	pthread_mutex_unlock(&lck);
 

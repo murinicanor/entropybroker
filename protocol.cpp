@@ -631,7 +631,7 @@ int protocol::request_bytes(char *where_to, int n_bits, bool fail_on_no_bits)
 		}
 		else
 		{
-			dolog(LOG_WARNING, "Unknown message %s received", reply);
+			dolog(LOG_WARNING, "Unknown message %s received (disconnecting)", reply);
 
 			close(socket_fd);
 			socket_fd = -1;

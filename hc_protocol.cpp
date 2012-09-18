@@ -461,11 +461,7 @@ int do_client(client_t *client, bool *no_bits, bool *new_bits, bool *is_full)
 		return -1;
 	}
 
-	pthread_mutex_lock(&client -> stats_lck);
-	dolog(LOG_DEBUG, "client|finished %s command for %s, pool bits: %d, client sent/recv: %d/%d", cmd, client -> host, client -> ppools -> get_bit_sum(), client -> bits_sent, client -> bits_recv);
-	pthread_mutex_unlock(&client -> stats_lck);
-
-	return 0;
+	return -1;
 }
 
 int notify_server_full(int socket_fd, statistics *stats, config_t *config)

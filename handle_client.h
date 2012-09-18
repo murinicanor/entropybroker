@@ -40,4 +40,10 @@ typedef struct
 	scc *output_scc;
 } client_t;
 
+typedef struct
+{
+	int fd_sender;
+	unsigned char cmd;
+} msg_pair_t;
+
 void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc *eb_output_scc);

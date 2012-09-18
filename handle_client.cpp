@@ -158,6 +158,8 @@ void * thread(void *data)
 
 			int max_fd = -1;
 			fd_set rfds;
+			FD_ZERO(&rfds);
+
 			FD_SET(p -> socket_fd, &rfds);
 			max_fd = max(max_fd, p -> socket_fd);
 			FD_SET(p -> to_thread[0], &rfds);
@@ -242,7 +244,9 @@ void * thread(void *data)
 					{
 						need_data = false;
 						have_data = true;
-						is_full = cmd == PIPE_CMD_IS_FULL;
+
+						if (cmd == PIPE_CMD_IS_FULL)
+							is_full = true;
 					}
 					else
 					{
@@ -349,7 +353,7 @@ void register_new_client(int listen_socket_fd, std::vector<client_t *> *clients,
 	}
 }
 
-int process_client(client_t *p, std::vector<unsigned char> *msgs_clients, std::vector<unsigned char> *msgs_servers)
+int process_client(client_t *p, std::vector<msg_pair_t> *msgs_clients, std::vector<msg_pair_t> *msgs_servers)
 {
 	int rc = 0;
 
@@ -373,12 +377,14 @@ int process_client(client_t *p, std::vector<unsigned char> *msgs_clients, std::v
 			break;
 		}
 
+		msg_pair_t queue_entry = { p -> socket_fd, cmd };
+
 		if (cmd == PIPE_CMD_HAVE_DATA)
-			msgs_clients -> push_back(cmd);
+			msgs_clients -> push_back(queue_entry);
 		else if (cmd == PIPE_CMD_NEED_DATA)
-			msgs_servers -> push_back(cmd);
+			msgs_servers -> push_back(queue_entry);
 		else if (cmd == PIPE_CMD_IS_FULL)
-			msgs_servers -> push_back(cmd);
+			msgs_servers -> push_back(queue_entry);
 		else
 			error_exit("Message %02x from thread %s/%s is not known", cmd, p -> host, p -> type);
 	}
@@ -386,14 +392,14 @@ int process_client(client_t *p, std::vector<unsigned char> *msgs_clients, std::v
 	return rc;
 }
 
-void send_to_clients_servers(std::vector<client_t *> *clients, std::vector<unsigned char> *msgs, bool is_server)
+void send_to_clients_servers(std::vector<client_t *> *clients, std::vector<msg_pair_t> *msgs, bool is_server)
 {
 	for(unsigned int loop=0; loop<msgs -> size(); loop++)
 	{
 		for(unsigned int index=0; index<clients -> size(); index++)
 		{
-			if (clients -> at(index) -> is_server == is_server)
-				(void)send_pipe_command(clients -> at(index) -> socket_fd, msgs -> at(loop));
+			if (clients -> at(index) -> is_server == is_server && clients -> at(index) -> socket_fd != msgs -> at(loop).fd_sender)
+				(void)send_pipe_command(clients -> at(index) -> to_thread[1], msgs -> at(loop).cmd);
 		}
 	}
 }
@@ -473,13 +479,6 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 
 		now = get_ts();
 
-		if (config -> allow_event_entropy_addition)
-		{
-			int event_bits = ppools -> add_event(now, (unsigned char *)&rfds, sizeof(rfds));
-
-			dolog(LOG_DEBUG, "main|added %d bits of event-entropy to pool", event_bits);
-		}
-
 		if (((last_counters_reset + (double)config -> reset_counters_interval) - now) <= 0 || force_stats)
 		{
 			stats.emit_statistics_log(clients.size(), force_stats, config -> reset_counters_interval);
@@ -523,9 +522,16 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 		if (rc == 0)
 			continue;
 
+		if (config -> allow_event_entropy_addition)
+		{
+			int event_bits = ppools -> add_event(now, (unsigned char *)&rfds, sizeof(rfds));
+
+			dolog(LOG_DEBUG, "main|added %d bits of event-entropy to pool", event_bits);
+		}
+
 		std::vector<pthread_t *> delete_ids;
-		std::vector<unsigned char> msgs_clients;
-		std::vector<unsigned char> msgs_servers;
+		std::vector<msg_pair_t> msgs_clients;
+		std::vector<msg_pair_t> msgs_servers;
 		for(unsigned int loop=0; loop<clients.size(); loop++)
 		{
 			if (!FD_ISSET(clients.at(loop) -> to_main[0], &rfds))
