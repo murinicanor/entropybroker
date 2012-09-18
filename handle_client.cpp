@@ -315,7 +315,7 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 	double last_statistics_emit = get_ts();
 	event_state_t event_state;
 	int listen_socket_fd = start_listen(config -> listen_adapter, config -> listen_port, config -> listen_queue_size);
-	statistics stats(config -> stats_file);
+	statistics stats(config -> stats_file, eb_output_fips140, eb_output_scc, ppools);
 	double start_ts = get_ts();
 
 	memset(&event_state, 0x00, sizeof(event_state));
