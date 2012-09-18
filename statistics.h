@@ -31,5 +31,5 @@ public:
 	void track_sents(int cur_n_bits);
 	void track_recvs(int n_bits_added);
 	void emit_statistics_file(int n_clients);
-	void emit_statistics_log(std::vector<client_t *> *clients, bool force_stats, int reset_counters_interval);
+	void emit_statistics_log(int n_clients, bool force_stats, int reset_counters_interval);
 };

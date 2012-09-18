@@ -42,57 +42,6 @@
 
 extern const char *pid_file;
 
-int do_client(pools *ppools, client_t *client, statistics *stats, config_t *config, fips140 *eb_output_fips140, scc *eb_output_scc, bool *no_bits, bool *new_bits, bool *is_full, users *user_map)
-{
-	char cmd[4 + 1];
-	cmd[4] = 0x00;
-
-	int rc = READ_TO(client -> socket_fd, cmd, 4, config -> communication_timeout);
-	if (rc != 4)
-	{
-		dolog(LOG_INFO, "client|%s short read while retrieving command (%d)", client -> host, rc);
-		return -1;
-	}
-
-	if (strcmp(cmd, "0001") == 0)		// GET bits
-	{
-		return do_client_get(ppools, client, stats, config, eb_output_fips140, eb_output_scc, no_bits);
-	}
-	else if (strcmp(cmd, "0002") == 0)	// PUT bits
-	{
-		return do_client_put(ppools, client, stats, config, new_bits, is_full);
-	}
-	else if (strcmp(cmd, "0003") == 0)	// server type
-	{
-		client -> is_server = true;
-		return do_client_server_type(client, config);
-	}
-	else if (strcmp(cmd, "0006") == 0)	// client type
-	{
-		client -> is_server = false;
-		return do_client_server_type(client, config);
-	}
-	else if (strcmp(cmd, "0008") == 0)	// # bits in kernel reply (to 0007)
-	{
-		return do_client_kernelpoolfilled_reply(client, config);
-	}
-	else if (strcmp(cmd, "0011") == 0)	// proxy auth
-	{
-		return do_proxy_auth(client, config, user_map);
-	}
-	else
-	{
-		dolog(LOG_INFO, "client|%s command '%s' unknown", client -> host, cmd);
-		return -1;
-	}
-
-	pthread_mutex_lock(&client -> stats_lck);
-	dolog(LOG_DEBUG, "client|finished %s command for %s, pool bits: %d, client sent/recv: %d/%d", cmd, client -> host, ppools -> get_bit_sum(), client -> bits_sent, client -> bits_recv);
-	pthread_mutex_unlock(&client -> stats_lck);
-
-	return 0;
-}
-
 void forget_client_index(std::vector<client_t *> *clients, int nr)
 {
 	pthread_mutex_destroy(&clients -> at(nr) -> stats_lck);
@@ -257,6 +206,51 @@ void * thread(void *data)
 		// FIXME
 // SELECT met timeout
 
+		for(;;)
+		{
+			struct timeval tv;
+
+			tv.tv_sec = p -> config -> communication_session_timeout;
+			tv.tv_usec = (p -> config -> communication_session_timeout - double(tv.tv_sec)) * 1000000;
+
+			int max_fd = -1;
+			fd_set rfds;
+			FD_SET(p -> socket_fd, &rfds);
+			max_fd = max(max_fd, p -> socket_fd);
+			FD_SET(p -> to_thread[0], &rfds);
+			max_fd = max(max_fd, p -> to_thread[0]);
+
+			int rc = select(max_fd + 1, &rfds, NULL, NULL, &tv);
+			if (rc == -1)
+			{
+				if (errno == EINTR)
+					continue;
+
+				dolog(LOG_CRIT, "select() failed for thread %s", p -> host);
+				break;
+			}
+			else if (rc == 0)
+			{
+				dolog(LOG_CRIT, "host %s fell asleep", p -> host);
+				break;
+			}
+
+			if (FD_ISSET(p -> socket, &rfds))
+			{
+				bool no_bits = false, new_bits = false, is_full = false;
+
+				if (do_client(p, &no_bits, &new_bits, &is_full) == -1)
+				{
+					dolog(LOG_INFO, "Terminating connection with %s", p -> host);
+					break;
+				}
+
+				// FIXME eval de bools
+			}
+
+			// FIXME process pipe
+		}
+
 		break;
 	}
 
@@ -269,7 +263,7 @@ void * thread(void *data)
 	return NULL;
 }
 
-void register_new_client(int listen_socket_fd, std::vector<client_t *> *clients, users *user_map, config_t *config, pools *ppools)
+void register_new_client(int listen_socket_fd, std::vector<client_t *> *clients, users *user_map, config_t *config, pools *ppools, statistics *stats, fips140 *output_fips140, scc *output_scc)
 {
 	struct sockaddr_in client_addr;
 	socklen_t client_addr_len = sizeof(client_addr);
@@ -310,6 +304,9 @@ void register_new_client(int listen_socket_fd, std::vector<client_t *> *clients,
 		p -> pu = user_map;
 		p -> config = config;
 		p -> ppools = ppools;
+		p -> stats = stats;
+		p -> output_fips140 = output_fips140;
+		p -> output_scc = output_scc;
 
 		if (pipe(p -> to_thread) == -1)
 			error_exit("Error creating pipes");
@@ -407,7 +404,19 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 
 		if (((last_counters_reset + (double)config -> reset_counters_interval) - now) <= 0 || force_stats)
 		{
-			stats.emit_statistics_log(&clients, force_stats, config -> reset_counters_interval);
+			stats.emit_statistics_log(clients.size(), force_stats, config -> reset_counters_interval);
+
+			if (!force_stats)
+			{
+				for(unsigned int loop=0; loop<clients.size(); loop++)
+				{
+					client_t *p = clients.at(loop);
+
+					pthread_mutex_lock(&p -> stats_lck);
+					p -> bits_recv = p -> bits_sent = 0;
+					pthread_mutex_unlock(&p -> stats_lck);
+				}
+			}
 
 			last_counters_reset = now;
 		}
@@ -437,7 +446,7 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 			continue;
 
 		if (FD_ISSET(listen_socket_fd, &rfds))
-			register_new_client(listen_socket_fd, &clients, user_map, config, ppools);
+			register_new_client(listen_socket_fd, &clients, user_map, config, ppools, &stats);
 	}
 
 	dolog(LOG_WARNING, "main|end of main loop");

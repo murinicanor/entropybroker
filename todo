@@ -20,3 +20,5 @@ http://en.wikipedia.org/wiki/Twofish <--
 
 - multiple hosts
   ^ load balance 'server' but also client
+
+- fips140 & scc in een wrapper 'verify_entropy'-class proppen

@@ -21,12 +21,13 @@
 #include "config.h"
 #include "scc.h"
 #include "pools.h"
-#include "handle_client.h"
 #include "utils.h"
 #include "signals.h"
 #include "auth.h"
 #include "protocol.h"
 #include "statistics.h"
+#include "handle_client.h"
+#include "hc_protocol.h"
 
 int send_denied_empty(int fd, statistics *stats, config_t *config)
 {
@@ -51,7 +52,7 @@ int send_denied_quota(int fd, statistics *stats, config_t *config)
 	return WRITE_TO(fd, buffer, 8, config -> communication_timeout) == 8 ? 0 : -1;
 }
 
-int send_denied_full(client_t *client, pools *ppools, statistics *stats, config_t *config)
+int send_denied_full(client_t *client)
 {
 	char buffer[4 + 4 + 1];
 	int seconds = config -> default_sleep_time_when_pools_full;
@@ -68,7 +69,7 @@ int send_denied_full(client_t *client, pools *ppools, statistics *stats, config_
 	return 0;
 }
 
-int send_accepted_while_full(client_t *client, config_t *config)
+int send_accepted_while_full(client_t *client)
 {
 	char buffer[4 + 4 + 1];
 
@@ -92,7 +93,7 @@ int send_got_data(int fd, pools *ppools, config_t *config)
 	return WRITE_TO(fd, buffer, 8, config -> communication_timeout) == 8 ? 0 : -1;
 }
 
-int send_need_data(int fd, config_t *config)
+int send_need_data(int fd)
 {
 	char buffer[4 + 4 + 1];
 
@@ -101,7 +102,7 @@ int send_need_data(int fd, config_t *config)
 	return WRITE_TO(fd, buffer, 8, config -> communication_timeout) == 8 ? 0 : -1;
 }
 
-int do_proxy_auth(client_t *client, config_t *config, users *user_map)
+int do_proxy_auth(client_t *client)
 {
 	char reply[4 + 4 + 1];
 
@@ -117,7 +118,7 @@ int do_proxy_auth(client_t *client, config_t *config, users *user_map)
 	return WRITE_TO(client -> socket_fd, reply, 8, config -> communication_timeout) == 8 ? 0 : -1;
 }
 
-int do_client_get(pools *ppools, client_t *client, statistics *stats, config_t *config, fips140 *eb_output_fips140, scc *eb_output_scc, bool *no_bits)
+int do_client_get(client_t *client, bool *no_bits)
 {
 	int cur_n_bits, cur_n_bytes;
 	int transmit_size;
@@ -232,7 +233,7 @@ int do_client_get(pools *ppools, client_t *client, statistics *stats, config_t *
 	return rc;
 }
 
-int do_client_put(pools *ppools, client_t *client, statistics *stats, config_t *config, bool *new_bits, bool *is_full)
+int do_client_put(client_t *client, bool *new_bits, bool *is_full)
 {
 	char msg[4 + 4 + 1];
 	int cur_n_bits, cur_n_bytes;
@@ -242,21 +243,21 @@ int do_client_put(pools *ppools, client_t *client, statistics *stats, config_t *
 
 	*new_bits = false;
 
-	if (ppools -> all_pools_full())
+	if (client -> ppools -> all_pools_full())
 	{
 		*is_full = true;
 
 		double last_submit_ago = now - client -> last_put_message;
-		char full_allow_interval_submit = last_submit_ago >= config -> when_pools_full_allow_submit_interval;
+		char full_allow_interval_submit = last_submit_ago >= client -> config -> when_pools_full_allow_submit_interval;
 
-		if (!(config -> add_entropy_even_if_all_full || full_allow_interval_submit))
+		if (!(client -> config -> add_entropy_even_if_all_full || full_allow_interval_submit))
 		{
 			char dummy_buffer[4];
 
-			if (READ_TO(client -> socket_fd, dummy_buffer, 4, config -> communication_timeout) != 4)	// flush number of bits
+			if (READ_TO(client -> socket_fd, dummy_buffer, 4, client -> config -> communication_timeout) != 4)	// flush number of bits
 				return -1;
 
-			return send_denied_full(client, ppools, stats, config);
+			return send_denied_full(client, client -> ppools, stats, client -> config);
 		}
 
 		if (full_allow_interval_submit)
@@ -267,7 +268,7 @@ int do_client_put(pools *ppools, client_t *client, statistics *stats, config_t *
 
 	n_bits[4] = 0x00;
 
-	if (READ_TO(client -> socket_fd, n_bits, 4, config -> communication_timeout) != 4)
+	if (READ_TO(client -> socket_fd, n_bits, 4, client -> config -> communication_timeout) != 4)
 	{
 		dolog(LOG_INFO, "put|%s(%s) short read while retrieving number of bits to recv", client -> host, client -> type);
 		return -1;
@@ -289,7 +290,7 @@ int do_client_put(pools *ppools, client_t *client, statistics *stats, config_t *
 		make_msg(msg, 9003, cur_n_bits);
 	else
 		make_msg(msg, 1, cur_n_bits); // 0001
-	if (WRITE_TO(client -> socket_fd, msg, 8, config -> communication_timeout) != 8)
+	if (WRITE_TO(client -> socket_fd, msg, 8, client -> config -> communication_timeout) != 8)
 	{
 		dolog(LOG_INFO, "put|%s short write while sending ack", client -> host);
 		return -1;
@@ -302,7 +303,7 @@ int do_client_put(pools *ppools, client_t *client, statistics *stats, config_t *
 	if (!buffer_in)
 		error_exit("%s error allocating %d bytes of memory", client -> host, in_len);
 
-	if (READ_TO(client -> socket_fd, (char *)buffer_in, in_len, config -> communication_timeout) != in_len)
+	if (READ_TO(client -> socket_fd, (char *)buffer_in, in_len, client -> config -> communication_timeout) != in_len)
 	{
 		dolog(LOG_INFO, "put|%s short read while retrieving entropy data", client -> host);
 
@@ -330,7 +331,7 @@ int do_client_put(pools *ppools, client_t *client, statistics *stats, config_t *
 	{
 		client -> last_put_message = now;
 
-		int n_bits_added = ppools -> add_bits_to_pools(entropy_data, entropy_data_len, client -> ignore_rngtest_fips140, client -> pfips140, client -> ignore_rngtest_scc, client -> pscc);
+		int n_bits_added = client -> ppools -> add_bits_to_pools(entropy_data, entropy_data_len, client -> ignore_rngtest_fips140, client -> pfips140, client -> ignore_rngtest_scc, client -> pscc);
 		if (n_bits_added == -1)
 			dolog(LOG_CRIT, "put|%s error while adding data to pools", client -> host);
 		else
@@ -351,18 +352,15 @@ int do_client_put(pools *ppools, client_t *client, statistics *stats, config_t *
 
 	free(buffer_in);
 
-//	if (warn_all_full)
-//		return send_accepted_while_full(client, config);
-
 	return 0;
 }
 
-int do_client_server_type(client_t *client, config_t *config)
+int do_client_server_type(client_t *client)
 {
 	char *buffer = NULL;
 	int n_bytes = 0;
 
-	if (recv_length_data(client -> socket_fd, &buffer, &n_bytes, config -> communication_timeout) == -1)
+	if (recv_length_data(client -> socket_fd, &buffer, &n_bytes, client -> config -> communication_timeout) == -1)
 		return -1;
 
 	if (n_bytes <= 0)
@@ -381,12 +379,12 @@ int do_client_server_type(client_t *client, config_t *config)
 	return 0;
 }
 
-int do_client_kernelpoolfilled_reply(client_t *client, config_t *config)
+int do_client_kernelpoolfilled_reply(client_t *client)
 {
 	char *buffer;
 	int n_bytes;
 
-	if (recv_length_data(client -> socket_fd, &buffer, &n_bytes, config -> communication_timeout) == -1)
+	if (recv_length_data(client -> socket_fd, &buffer, &n_bytes, client -> config -> communication_timeout) == -1)
 		return -1;
 
 	if (n_bytes <= 0)
@@ -402,13 +400,13 @@ int do_client_kernelpoolfilled_reply(client_t *client, config_t *config)
 	return 0;
 }
 
-int do_client_kernelpoolfilled_request(client_t *client, config_t *config)
+int do_client_kernelpoolfilled_request(client_t *client)
 {
 	char buffer[8 + 1];
 
 	make_msg(buffer, 7, 0); // 0007
 
-	if (WRITE_TO(client -> socket_fd, buffer, 8, config -> communication_timeout) != 8)
+	if (WRITE_TO(client -> socket_fd, buffer, 8, client -> config -> communication_timeout) != 8)
 	{
 		dolog(LOG_INFO, "kernfill|Short write while sending kernel pool fill status request to %s", client -> host);
 		return -1;
@@ -417,6 +415,57 @@ int do_client_kernelpoolfilled_request(client_t *client, config_t *config)
 	dolog(LOG_DEBUG, "kernfill|Client kernel pool filled request sent to %s", client -> host);
 
 	client -> ping_nr++;
+
+	return 0;
+}
+
+int do_client(client_t *client, bool *no_bits, bool *new_bits, bool *is_full);
+{
+	char cmd[4 + 1];
+	cmd[4] = 0x00;
+
+	int rc = READ_TO(client -> socket_fd, cmd, 4, client -> config -> communication_timeout);
+	if (rc != 4)
+	{
+		dolog(LOG_INFO, "client|%s short read while retrieving command (%d)", client -> host, rc);
+		return -1;
+	}
+
+	if (strcmp(cmd, "0001") == 0)		// GET bits
+	{
+		return do_client_get(client, no_bits);
+	}
+	else if (strcmp(cmd, "0002") == 0)	// PUT bits
+	{
+		return do_client_put(client, new_bits, is_full);
+	}
+	else if (strcmp(cmd, "0003") == 0)	// server type
+	{
+		client -> is_server = true;
+		return do_client_server_type(client);
+	}
+	else if (strcmp(cmd, "0006") == 0)	// client type
+	{
+		client -> is_server = false;
+		return do_client_server_type(client);
+	}
+	else if (strcmp(cmd, "0008") == 0)	// # bits in kernel reply (to 0007)
+	{
+		return do_client_kernelpoolfilled_reply(client);
+	}
+	else if (strcmp(cmd, "0011") == 0)	// proxy auth
+	{
+		return do_proxy_auth(client);
+	}
+	else
+	{
+		dolog(LOG_INFO, "client|%s command '%s' unknown", client -> host, cmd);
+		return -1;
+	}
+
+	pthread_mutex_lock(&client -> stats_lck);
+	dolog(LOG_DEBUG, "client|finished %s command for %s, pool bits: %d, client sent/recv: %d/%d", cmd, client -> host, client -> ppools -> get_bit_sum(), client -> bits_sent, client -> bits_recv);
+	pthread_mutex_unlock(&client -> stats_lck);
 
 	return 0;
 }

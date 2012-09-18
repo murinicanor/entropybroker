@@ -31,6 +31,9 @@ typedef struct
 	users *pu;
 	config_t *config;
 	pools *ppools;
+	statistics *stats;
+	fips140 *output_fips140;
+	scc *output_scc;
 } client_t;
 
 void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc *eb_output_scc);
