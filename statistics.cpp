@@ -128,7 +128,7 @@ void statistics::emit_statistics_file(int n_clients)
 	fclose(fh);
 }
 
-void statistics::emit_statistics_log(client_t *clients, int n_clients, bool force_stats, int reset_counters_interval)
+void statistics::emit_statistics_log(std::vector<client_t *> *clients, bool force_stats, int reset_counters_interval)
 {
 	pthread_mutex_lock(&lck);
 	int total_n_bits = ppools -> get_bit_sum();
@@ -137,11 +137,13 @@ void statistics::emit_statistics_log(client_t *clients, int n_clients, bool forc
 
 	if (!force_stats)
 	{
-		for(int loop=0; loop<n_clients; loop++)
+		for(unsigned int loop=0; loop<clients -> size(); loop++)
 		{
-			pthread_mutex_lock(&clients[loop].stats_lck);
-			clients[loop].bits_recv = clients[loop].bits_sent = 0;
-			pthread_mutex_unlock(&clients[loop].stats_lck);
+			client_t *p = clients -> at(loop);
+
+			pthread_mutex_lock(&p -> stats_lck);
+			p -> bits_recv = p -> bits_sent = 0;
+			pthread_mutex_unlock(&p -> stats_lck);
 		}
 	}
 
@@ -150,7 +152,7 @@ void statistics::emit_statistics_log(client_t *clients, int n_clients, bool forc
 
 	dolog(LOG_DEBUG, "stats|client bps: %d (in last %ds interval), disconnects: %d", bps, reset_counters_interval, disconnects);
 	dolog(LOG_DEBUG, "stats|total recv: %ld (%fbps), total sent: %ld (%fbps), run time: %f", total_recv, double(total_recv) / runtime, total_sent, double(total_sent) / runtime, runtime);
-	dolog(LOG_DEBUG, "stats|recv requests: %d, sent: %d, clients/servers: %d, bits: %d", total_recv_requests, total_sent_requests, n_clients, total_n_bits);
+	dolog(LOG_DEBUG, "stats|recv requests: %d, sent: %d, clients/servers: %u, bits: %d", total_recv_requests, total_sent_requests, clients -> size(), total_n_bits);
 	dolog(LOG_DEBUG, "stats|%s, scc: %s", pfips140, pscc);
 	pthread_mutex_unlock(&lck);
 }

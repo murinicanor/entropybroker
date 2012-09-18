@@ -93,26 +93,50 @@ int do_client(pools *ppools, client_t *client, statistics *stats, config_t *conf
 	return 0;
 }
 
-void forget_client(client_t *clients, int *n_clients, int nr)
+void forget_client_index(std::vector<client_t *> *clients, int nr)
 {
-	int n_to_move;
+	pthread_mutex_destroy(&clients -> at(nr) -> stats_lck);
 
-	pthread_mutex_destroy(&clients[nr].stats_lck);
+	close(clients -> at(nr) -> socket_fd);
 
-	close(clients[nr].socket_fd);
+	delete clients -> at(nr) -> pfips140;
+	delete clients -> at(nr) -> pscc;
 
-	delete clients[nr].pfips140;
-	delete clients[nr].pscc;
+	free(clients -> at(nr) -> password);
 
-	free(clients[nr].password);
+	delete clients -> at(nr);
 
-	n_to_move = (*n_clients - nr) - 1;
-	if (n_to_move > 0)
-		memmove(&clients[nr], &clients[nr + 1], sizeof(client_t) * n_to_move);
-	(*n_clients)--;
+	clients -> erase(clients -> begin() + nr);
 }
 
-void notify_servers_full(client_t *clients, int *n_clients, statistics *stats, config_t *config)
+void forget_client_socket_fd(std::vector<client_t *> *clients, int socket_fd)
+{
+	for(unsigned int index=0; index<clients -> size(); index++)
+	{
+		if (clients -> at(index) -> socket_fd == socket_fd)
+		{
+			forget_client_index(clients, index);
+
+			break;
+		}
+	}
+}
+
+void forget_client_thread_id(std::vector<client_t *> *clients, pthread_t *tid)
+{
+	for(unsigned int index=0; index<clients -> size(); index++)
+	{
+		if (pthread_equal(clients -> at(index) -> th, *tid) != 0)
+		{
+			forget_client_index(clients, index);
+
+			break;
+		}
+	}
+}
+
+/*
+void notify_servers_full(std::vector<client_t *> *clients, statistics *stats, config_t *config)
 {
 	char buffer[8 + 1];
 
@@ -194,6 +218,7 @@ void process_timed_out_cs(config_t *config, client_t *clients, int *n_clients, s
 		}
 	}
 }
+*/
 
 int send_pipe_command(int fd, unsigned char command)
 {
@@ -244,7 +269,7 @@ void * thread(void *data)
 	return NULL;
 }
 
-void register_new_client(int listen_socket_fd, client_t **clients, int *n_clients, users *user_map, config_t *config, pools *ppools)
+void register_new_client(int listen_socket_fd, std::vector<client_t *> *clients, users *user_map, config_t *config, pools *ppools)
 {
 	struct sockaddr_in client_addr;
 	socklen_t client_addr_len = sizeof(client_addr);
@@ -254,14 +279,9 @@ void register_new_client(int listen_socket_fd, client_t **clients, int *n_client
 	{
 		dolog(LOG_INFO, "main|new client: %s:%d (fd: %d)", inet_ntoa(client_addr.sin_addr), client_addr.sin_port, new_socket_fd);
 
-		(*n_clients)++;
-
-		*clients = (client_t *)realloc(*clients, *n_clients * sizeof(client_t));
-		if (!*clients)
+		client_t *p = new client_t;
+		if (!p)
 			error_exit("memory allocation error");
-
-		int nr = *n_clients - 1;
-		client_t *p = &(*clients)[nr];
 
 		memset(p, 0x00, sizeof(client_t));
 		p -> socket_fd = new_socket_fd;
@@ -298,13 +318,14 @@ void register_new_client(int listen_socket_fd, client_t **clients, int *n_client
 
 		if (pthread_create(&p -> th, NULL, thread, p) != 0)
 			error_exit("Error creating thread");
+
+		clients -> push_back(p);
 	}
 }
 
 void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc *eb_output_scc)
 {
-	client_t *clients = NULL;
-	int n_clients = 0;
+	std::vector<client_t *> clients;
 	double last_counters_reset = get_ts();
 	double last_statistics_emit = get_ts();
 	event_state_t event_state;
@@ -319,7 +340,6 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 
 	for(;;)
 	{
-		int loop, rc;
 		fd_set rfds;
 		double now = get_ts();
 		struct timespec tv;
@@ -338,10 +358,10 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 		dummy1_time = max(0, (last_counters_reset + config -> reset_counters_interval) - now);
 		time_left = min(time_left, dummy1_time);
 
-		for(loop=0; loop<n_clients; loop++)
+		for(unsigned int loop =0; loop<clients.size(); loop++)
 		{
-			FD_SET(clients[loop].socket_fd, &rfds);
-			max_fd = max(max_fd, clients[loop].socket_fd);
+			FD_SET(clients.at(loop) -> socket_fd, &rfds);
+			max_fd = max(max_fd, clients.at(loop) -> socket_fd);
 		}
 
 		FD_SET(listen_socket_fd, &rfds);
@@ -350,7 +370,7 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 		tv.tv_sec = time_left;
 		tv.tv_nsec = (time_left - (double)tv.tv_sec) * 1000000000.0;
 
-		rc = pselect(max_fd + 1, &rfds, NULL, NULL, &tv, &sig_set);
+		int rc = pselect(max_fd + 1, &rfds, NULL, NULL, &tv, &sig_set);
 
 		if (is_SIGHUP())
 		{
@@ -387,28 +407,29 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 
 		if (((last_counters_reset + (double)config -> reset_counters_interval) - now) <= 0 || force_stats)
 		{
-			stats.emit_statistics_log(clients, n_clients, force_stats, config -> reset_counters_interval);
+			stats.emit_statistics_log(&clients, force_stats, config -> reset_counters_interval);
 
 			last_counters_reset = now;
 		}
 
 		if ((config -> statistics_interval != 0 && ((last_statistics_emit + (double)config -> statistics_interval) - now) <= 0) || force_stats)
 		{
-			stats.emit_statistics_file(n_clients);
+			stats.emit_statistics_file(clients.size());
 
 			last_statistics_emit = now;
 		}
 
 		if (force_stats)
 		{
-			for(loop=0; loop<n_clients; loop++)
+			for(unsigned int loop=0; loop<clients.size(); loop++)
 			{
-				pthread_mutex_lock(&clients[loop].stats_lck);
+				client_t *p = clients.at(loop);
+				pthread_mutex_lock(&p -> stats_lck);
 				dolog(LOG_DEBUG, "stats|%s (%s): %s, scc: %s | sent: %d, recv: %d | last msg: %ld seconds ago, %lds connected",
-						clients[loop].host, clients[loop].type, clients[loop].pfips140 -> stats(),
-						clients[loop].pscc -> stats(),
-						clients[loop].bits_sent, clients[loop].bits_recv, (long int)(now - clients[loop].last_message), (long int)(now - clients[loop].connected_since));
-				pthread_mutex_unlock(&clients[loop].stats_lck);
+						p -> host, p -> type, p -> pfips140 -> stats(),
+						p -> pscc -> stats(),
+						p -> bits_sent, p -> bits_recv, (long int)(now - p -> last_message), (long int)(now - p -> connected_since));
+				pthread_mutex_unlock(&p -> stats_lck);
 			}
 		}
 
@@ -416,7 +437,7 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 			continue;
 
 		if (FD_ISSET(listen_socket_fd, &rfds))
-			register_new_client(listen_socket_fd, &clients, &n_clients, user_map, config, ppools);
+			register_new_client(listen_socket_fd, &clients, user_map, config, ppools);
 	}
 
 	dolog(LOG_WARNING, "main|end of main loop");
