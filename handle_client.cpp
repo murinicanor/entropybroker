@@ -264,17 +264,17 @@ void * thread(void *data)
 				break;
 
 			int rc_client = 0;
-if (need_data && !p -> is_server)
+if (need_data && !p -> is_server && p -> type_set)
 error_exit("if (need_data && p -> is_client) %s", p -> type);
 			if (need_data)
 				rc_client |= notify_server_data_needed(p -> socket_fd, p -> stats, p -> config);
 
-if (have_data && p -> is_server)
+if (have_data && p -> is_server && p -> type_set)
 error_exit("if (have_data && p -> is_server) %s", p -> type);
 			if (have_data)
 				rc_client |= notify_client_data_available(p -> socket_fd, p -> ppools, p -> stats, p -> config);
 
-if (is_full && !p -> is_server)
+if (is_full && !p -> is_server && p -> type_set)
 error_exit("if (is_full && p -> is_client) %s", p -> type);
 			if (is_full)
 				rc_client |= notify_server_full(p -> socket_fd, p -> stats, p -> config);

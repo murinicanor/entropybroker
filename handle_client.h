@@ -9,7 +9,7 @@ typedef struct
 
 	int socket_fd;
 	char host[128], type[128];
-	bool is_server;
+	bool is_server, type_set;
 	int max_bits_per_interval;
 	bool allow_prng;
 	bool ignore_rngtest_fips140, ignore_rngtest_scc;
