@@ -36,6 +36,7 @@
 #include "utils.h"
 #include "signals.h"
 #include "auth.h"
+#include "statistics.h"
 #include "protocol.h"
 #include "hc_protocol.h"
 
@@ -55,9 +56,6 @@ int do_client(pools *ppools, client_t *client, statistics *stats, config_t *conf
 
 	if (strcmp(cmd, "0001") == 0)		// GET bits
 	{
-		// this flag could also be named 'is_interested_to_know_if_there_is_data'
-		client -> data_avail_signaled = false;
-
 		return do_client_get(ppools, client, stats, config, eb_output_fips140, eb_output_scc, no_bits);
 	}
 	else if (strcmp(cmd, "0002") == 0)	// PUT bits
@@ -66,12 +64,12 @@ int do_client(pools *ppools, client_t *client, statistics *stats, config_t *conf
 	}
 	else if (strcmp(cmd, "0003") == 0)	// server type
 	{
-		client -> is_server = 1;
+		client -> is_server = true;
 		return do_client_server_type(client, config);
 	}
 	else if (strcmp(cmd, "0006") == 0)	// client type
 	{
-		client -> is_server = 0;
+		client -> is_server = false;
 		return do_client_server_type(client, config);
 	}
 	else if (strcmp(cmd, "0008") == 0)	// # bits in kernel reply (to 0007)
@@ -88,7 +86,9 @@ int do_client(pools *ppools, client_t *client, statistics *stats, config_t *conf
 		return -1;
 	}
 
+	pthread_mutex_lock(&client -> stats_lck);
 	dolog(LOG_DEBUG, "client|finished %s command for %s, pool bits: %d, client sent/recv: %d/%d", cmd, client -> host, ppools -> get_bit_sum(), client -> bits_sent, client -> bits_recv);
+	pthread_mutex_unlock(&client -> stats_lck);
 
 	return 0;
 }
@@ -96,6 +96,8 @@ int do_client(pools *ppools, client_t *client, statistics *stats, config_t *conf
 void forget_client(client_t *clients, int *n_clients, int nr)
 {
 	int n_to_move;
+
+	pthread_mutex_destroy(&clients[nr].stats_lck);
 
 	close(clients[nr].socket_fd);
 
@@ -139,10 +141,6 @@ void notify_clients_data_available(client_t *clients, int *n_clients, statistics
 		if (clients[loop].is_server)
 			continue;
 
-		if (clients[loop].data_avail_signaled)
-			continue;
-
-		clients[loop].data_avail_signaled = true;
 		if (send_got_data(clients[loop].socket_fd, ppools, config) == -1)
 		{
 			dolog(LOG_INFO, "main|connection closed, removing client %s from list", clients[loop].host);
@@ -197,15 +195,9 @@ void process_timed_out_cs(config_t *config, client_t *clients, int *n_clients, s
 	}
 }
 
-int lookup_client_settings(struct sockaddr_in *client_addr, client_t *client, config_t *config)
-{
-	// FIXME
-
-	return 0;
-}
-
 int send_pipe_command(int fd, unsigned char command)
 {
+	return -1;
 }
 
 void * thread(void *data)
@@ -215,19 +207,19 @@ void * thread(void *data)
 	{
 		long long unsigned int auth_rnd = 1;
 		std::string password;
-		bool ok = auth_eb(socket_fd, p -> config -> communication_timeout, user_map, password, &auth_rnd) == 0;
+		bool ok = auth_eb(p -> socket_fd, p -> config -> communication_timeout, p -> pu, password, &auth_rnd) == 0;
 
 		if (!ok)
 		{
-			dolog(LOG_WARNING, "main|client: %s/fd %d authentication failed", p -> host, socket_fd);
+			dolog(LOG_WARNING, "main|client: %s/fd %d authentication failed", p -> host, p -> socket_fd);
 			break;
 		}
 
 		if (p -> config -> disable_nagle)
-			disable_nagle(new_socket_fd);
+			disable_nagle(p -> socket_fd);
 
 		if (p -> config -> enable_keepalive)
-			enable_tcp_keepalive(new_socket_fd);
+			enable_tcp_keepalive(p -> socket_fd);
 
 		p -> challenge = auth_rnd;
 		p -> ivec_counter = 0;
@@ -243,11 +235,11 @@ void * thread(void *data)
 		break;
 	}
 
-	close(new_socket_fd);
-	close(to_thread[0]);
-	close(to_thread[1]);
-	close(to_main[0]);
-	close(to_main[1]);
+	close(p -> socket_fd);
+	close(p -> to_thread[0]);
+	close(p -> to_thread[1]);
+	close(p -> to_main[0]);
+	close(p -> to_main[1]);
 
 	return NULL;
 }
@@ -292,6 +284,8 @@ void register_new_client(int listen_socket_fd, client_t **clients, int *n_client
 		p -> ignore_rngtest_scc = config -> ignore_rngtest_scc;
 		p -> allow_prng = config -> allow_prng;
 
+		pthread_mutex_init(&p -> stats_lck, NULL);
+
 		// globals
 		p -> pu = user_map;
 		p -> config = config;
@@ -316,7 +310,6 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 	event_state_t event_state;
 	int listen_socket_fd = start_listen(config -> listen_adapter, config -> listen_port, config -> listen_queue_size);
 	statistics stats(config -> stats_file, eb_output_fips140, eb_output_scc, ppools);
-	double start_ts = get_ts();
 
 	memset(&event_state, 0x00, sizeof(event_state));
 
@@ -324,7 +317,6 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 
 	users *user_map = new users(*config -> user_map);
 
-	bool no_bits = false, new_bits = false, prev_is_full = false;
 	for(;;)
 	{
 		int loop, rc;
@@ -395,14 +387,14 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 
 		if (((last_counters_reset + (double)config -> reset_counters_interval) - now) <= 0 || force_stats)
 		{
-			emit_statistics_log(config, &stats, ppools, clients, n_clients, force_stats, eb_output_fips140, eb_output_scc, start_ts);
+			stats.emit_statistics_log(clients, n_clients, force_stats, config -> reset_counters_interval);
 
 			last_counters_reset = now;
 		}
 
 		if ((config -> statistics_interval != 0 && ((last_statistics_emit + (double)config -> statistics_interval) - now) <= 0) || force_stats)
 		{
-			emit_statistics_file(config, &stats, n_clients, ppools, eb_output_scc);
+			stats.emit_statistics_file(n_clients);
 
 			last_statistics_emit = now;
 		}
@@ -410,17 +402,21 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 		if (force_stats)
 		{
 			for(loop=0; loop<n_clients; loop++)
+			{
+				pthread_mutex_lock(&clients[loop].stats_lck);
 				dolog(LOG_DEBUG, "stats|%s (%s): %s, scc: %s | sent: %d, recv: %d | last msg: %ld seconds ago, %lds connected",
 						clients[loop].host, clients[loop].type, clients[loop].pfips140 -> stats(),
 						clients[loop].pscc -> stats(),
 						clients[loop].bits_sent, clients[loop].bits_recv, (long int)(now - clients[loop].last_message), (long int)(now - clients[loop].connected_since));
+				pthread_mutex_unlock(&clients[loop].stats_lck);
+			}
 		}
 
 		if (rc == 0)
 			continue;
 
 		if (FD_ISSET(listen_socket_fd, &rfds))
-			register_new_client(listen_socket_fd, &clients, &n_clients, user_map, config);
+			register_new_client(listen_socket_fd, &clients, &n_clients, user_map, config, ppools);
 	}
 
 	dolog(LOG_WARNING, "main|end of main loop");

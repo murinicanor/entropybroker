@@ -31,5 +31,5 @@ public:
 	void track_sents(int cur_n_bits);
 	void track_recvs(int n_bits_added);
 	void emit_statistics_file(int n_clients);
-	void emit_statistics_log(client_t *clients, int n_clients, bool force_stats);
+	void emit_statistics_log(client_t *clients, int n_clients, bool force_stats, int reset_counters_interval);
 };

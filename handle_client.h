@@ -6,7 +6,6 @@ typedef struct
 	int socket_fd;
 	char host[128], type[128];
 	bool is_server;
-	int bits_sent, bits_recv;
 	int max_bits_per_interval;
 	bool allow_prng;
 	bool ignore_rngtest_fips140, ignore_rngtest_scc;
@@ -21,8 +20,10 @@ typedef struct
 	int ivec_offset;
 	long long unsigned int challenge;
 	long long unsigned int ivec_counter; // required for CFB
-
 	BF_KEY key;
+
+	int bits_sent, bits_recv;
+	pthread_mutex_t stats_lck;
 
 	int ping_nr;
 

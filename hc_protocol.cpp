@@ -26,36 +26,37 @@
 #include "signals.h"
 #include "auth.h"
 #include "protocol.h"
+#include "statistics.h"
 
-int send_denied_empty(int fd, statistics_t *stats, config_t *config)
+int send_denied_empty(int fd, statistics *stats, config_t *config)
 {
 	int seconds = config -> default_sleep_when_pools_empty; // & default_max_sleep_when_pools_empty
 	char buffer[4 + 4 + 1];
 
-	stats -> n_times_empty++;
+	stats -> inc_n_times_empty();
 
 	make_msg(buffer, 9000, seconds);
 
 	return WRITE_TO(fd, buffer, 8, config -> communication_timeout) == 8 ? 0 : -1;
 }
 
-int send_denied_quota(int fd, statistics_t *stats, config_t *config)
+int send_denied_quota(int fd, statistics *stats, config_t *config)
 {
 	char buffer[4 + 4 + 1];
 
-	stats -> n_times_quota++;
+	stats -> inc_n_times_quota();
 
 	make_msg(buffer, 9002, config -> reset_counters_interval); // FIXME daadwerkelijke tijd want die interval kan al eerder getriggered zijn
 
 	return WRITE_TO(fd, buffer, 8, config -> communication_timeout) == 8 ? 0 : -1;
 }
 
-int send_denied_full(client_t *client, pools *ppools, statistics_t *stats, config_t *config)
+int send_denied_full(client_t *client, pools *ppools, statistics *stats, config_t *config)
 {
 	char buffer[4 + 4 + 1];
 	int seconds = config -> default_sleep_time_when_pools_full;
 
-	stats -> n_times_full++;
+	stats -> inc_n_times_full();
 
 	make_msg(buffer, 9001, seconds);
 
@@ -116,7 +117,7 @@ int do_proxy_auth(client_t *client, config_t *config, users *user_map)
 	return WRITE_TO(client -> socket_fd, reply, 8, config -> communication_timeout) == 8 ? 0 : -1;
 }
 
-int do_client_get(pools *ppools, client_t *client, statistics_t *stats, config_t *config, fips140 *eb_output_fips140, scc *eb_output_scc, bool *no_bits)
+int do_client_get(pools *ppools, client_t *client, statistics *stats, config_t *config, fips140 *eb_output_fips140, scc *eb_output_scc, bool *no_bits)
 {
 	int cur_n_bits, cur_n_bytes;
 	int transmit_size;
@@ -145,7 +146,9 @@ int do_client_get(pools *ppools, client_t *client, statistics_t *stats, config_t
 
 	dolog(LOG_DEBUG, "get|%s requested %d bits", client -> host, cur_n_bits);
 
+	pthread_mutex_lock(&client -> stats_lck);
 	cur_n_bits = min(cur_n_bits, client -> max_bits_per_interval - client -> bits_sent);
+	pthread_mutex_unlock(&client -> stats_lck);
 	dolog(LOG_DEBUG, "get|%s is allowed to now receive %d bits", client -> host, cur_n_bits);
 	if (cur_n_bits == 0)
 		return send_denied_quota(client -> socket_fd, stats, config);
@@ -194,10 +197,11 @@ int do_client_get(pools *ppools, client_t *client, statistics_t *stats, config_t
 	free(temp_buffer);
 
 	// update statistics for accounting
+	pthread_mutex_lock(&client -> stats_lck);
 	client -> bits_sent += cur_n_bits;
-	stats -> bps_cur += cur_n_bits;
-	stats -> total_sent += cur_n_bits;
-	stats -> total_sent_requests++;
+	pthread_mutex_unlock(&client -> stats_lck);
+
+	stats -> track_sents(cur_n_bits);
 
 	transmit_size = 4 + 4 + out_len;
 	unsigned char *output_buffer = (unsigned char *)malloc(transmit_size);
@@ -228,7 +232,7 @@ int do_client_get(pools *ppools, client_t *client, statistics_t *stats, config_t
 	return rc;
 }
 
-int do_client_put(pools *ppools, client_t *client, statistics_t *stats, config_t *config, bool *new_bits, bool *is_full)
+int do_client_put(pools *ppools, client_t *client, statistics *stats, config_t *config, bool *new_bits, bool *is_full)
 {
 	char msg[4 + 4 + 1];
 	int cur_n_bits, cur_n_bytes;
@@ -332,9 +336,12 @@ int do_client_put(pools *ppools, client_t *client, statistics_t *stats, config_t
 		else
 			dolog(LOG_DEBUG, "put|%s %d bits mixed into pools", client -> host, n_bits_added);
 
+		pthread_mutex_lock(&client -> stats_lck);
 		client -> bits_recv += n_bits_added;
-		stats -> total_recv += n_bits_added;
-		stats -> total_recv_requests++;
+		pthread_mutex_unlock(&client -> stats_lck);
+
+		stats -> track_recvs(n_bits_added);
+
 		*new_bits = true;
 	}
 

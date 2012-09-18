@@ -1,8 +1,11 @@
+#include <stdio.h>
 #include <openssl/blowfish.h>
 #include <openssl/sha.h>
 #include <vector>
 #include <string>
 #include <map>
+#include <sys/time.h>
+#include <sys/resource.h>
 
 #include "error.h"
 #include "log.h"
@@ -51,40 +54,54 @@ statistics::~statistics()
 
 void statistics::inc_disconnects()
 {
+	pthread_mutex_lock(&lck);
 	disconnects++;
+	pthread_mutex_unlock(&lck);
 }
 
 void statistics::inc_timeouts()
 {
+	pthread_mutex_lock(&lck);
 	timeouts++;
+	pthread_mutex_unlock(&lck);
 }
 
 void statistics::inc_n_times_empty()
 {
+	pthread_mutex_lock(&lck);
 	n_times_empty++;
+	pthread_mutex_unlock(&lck);
 }
 
 void statistics::inc_n_times_quota()
 {
+	pthread_mutex_lock(&lck);
 	n_times_quota++;
+	pthread_mutex_unlock(&lck);
 }
 
 void statistics::inc_n_times_full()
 {
+	pthread_mutex_lock(&lck);
 	n_times_full++;
+	pthread_mutex_unlock(&lck);
 }
 
 void statistics::track_sents(int cur_n_bits)
 {
+	pthread_mutex_lock(&lck);
 	bps_cur += cur_n_bits;
 	total_sent += cur_n_bits;
 	total_sent_requests++;
+	pthread_mutex_unlock(&lck);
 }
 
 void statistics::track_recvs(int n_bits_added)
 {
+	pthread_mutex_lock(&lck);
 	total_recv += n_bits_added;
 	total_recv_requests++;
+	pthread_mutex_unlock(&lck);
 }
 
 void statistics::emit_statistics_file(int n_clients)
@@ -100,33 +117,40 @@ void statistics::emit_statistics_file(int n_clients)
 	double proc_usage = (double)usage.ru_utime.tv_sec + (double)usage.ru_utime.tv_usec / 1000000.0 +
 		(double)usage.ru_stime.tv_sec + (double)usage.ru_stime.tv_usec / 1000000.0;
 
+	pthread_mutex_lock(&lck);
 	double now = get_ts();
 	int total_n_bits = ppools -> get_bit_sum();
-	fprintf(fh, "%f %lld %lld %d %d %d %d %f %s\n", now, stats -> total_recv, stats -> total_sent,
-			stats -> total_recv_requests, stats -> total_sent_requests,
-			n_clients, total_n_bits, proc_usage, scc -> stats());
+	fprintf(fh, "%f %lld %lld %d %d %d %d %f %s\n", now, total_recv, total_sent,
+			total_recv_requests, total_sent_requests,
+			n_clients, total_n_bits, proc_usage, pscc -> stats());
+	pthread_mutex_unlock(&lck);
 
 	fclose(fh);
 }
 
-void statistics::emit_statistics_log(client_t *clients, int n_clients, bool force_stats)
+void statistics::emit_statistics_log(client_t *clients, int n_clients, bool force_stats, int reset_counters_interval)
 {
+	pthread_mutex_lock(&lck);
 	int total_n_bits = ppools -> get_bit_sum();
 	double now = get_ts();
 	double runtime = now - start_ts;
 
 	if (!force_stats)
 	{
-		// FIXME locking
 		for(int loop=0; loop<n_clients; loop++)
+		{
+			pthread_mutex_lock(&clients[loop].stats_lck);
 			clients[loop].bits_recv = clients[loop].bits_sent = 0;
+			pthread_mutex_unlock(&clients[loop].stats_lck);
+		}
 	}
 
-	bps = bps_cur / config -> reset_counters_interval;
+	bps = bps_cur / reset_counters_interval;
 	bps_cur = 0;
 
-	dolog(LOG_DEBUG, "stats|client bps: %d (in last %ds interval), disconnects: %d", bps, config -> reset_counters_interval, disconnects);
+	dolog(LOG_DEBUG, "stats|client bps: %d (in last %ds interval), disconnects: %d", bps, reset_counters_interval, disconnects);
 	dolog(LOG_DEBUG, "stats|total recv: %ld (%fbps), total sent: %ld (%fbps), run time: %f", total_recv, double(total_recv) / runtime, total_sent, double(total_sent) / runtime, runtime);
 	dolog(LOG_DEBUG, "stats|recv requests: %d, sent: %d, clients/servers: %d, bits: %d", total_recv_requests, total_sent_requests, n_clients, total_n_bits);
 	dolog(LOG_DEBUG, "stats|%s, scc: %s", pfips140, pscc);
+	pthread_mutex_unlock(&lck);
 }
