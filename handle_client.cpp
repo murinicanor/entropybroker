@@ -44,16 +44,21 @@ extern const char *pid_file;
 
 void forget_client_index(std::vector<client_t *> *clients, int nr)
 {
-	pthread_mutex_destroy(&clients -> at(nr) -> stats_lck);
+	client_t *p = clients -> at(nr);
 
-	close(clients -> at(nr) -> socket_fd);
+	pthread_mutex_destroy(&p -> stats_lck);
 
-	delete clients -> at(nr) -> pfips140;
-	delete clients -> at(nr) -> pscc;
+	close(p -> socket_fd);
 
-	free(clients -> at(nr) -> password);
+	close(p -> to_thread[1]);
+	close(p -> to_main[0]);
 
-	delete clients -> at(nr);
+	delete p -> pfips140;
+	delete p -> pscc;
+
+	free(p -> password);
+
+	delete p;
 
 	clients -> erase(clients -> begin() + nr);
 }
@@ -256,8 +261,6 @@ void * thread(void *data)
 
 	close(p -> socket_fd);
 	close(p -> to_thread[0]);
-	close(p -> to_thread[1]);
-	close(p -> to_main[0]);
 	close(p -> to_main[1]);
 
 	return NULL;
@@ -357,8 +360,8 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 
 		for(unsigned int loop =0; loop<clients.size(); loop++)
 		{
-			FD_SET(clients.at(loop) -> socket_fd, &rfds);
-			max_fd = max(max_fd, clients.at(loop) -> socket_fd);
+			FD_SET(clients.at(loop) -> to_main[0], &rfds);
+			max_fd = max(max_fd, clients.at(loop) -> to_main[0]);
 		}
 
 		FD_SET(listen_socket_fd, &rfds);
@@ -444,6 +447,23 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 
 		if (rc == 0)
 			continue;
+
+		std::vector<pthread_t *> delete_ids;
+		std::vector<unsigned char *> msgs_clients;
+		std::vector<unsigned char *> msgs_servers;
+		for(unsigned int loop=0; loop<clients.size(); loop++)
+		{
+			if (!FD_ISSET(clients.at(loop) -> to_main[0], &rfds))
+				continue;
+
+			if (process_client(clients.at(loop), &msgs_clients, &msgs_servers) == -1)
+				delete_ids.push_back(&clients.at(loop) -> th);
+		}
+
+		for(unsigned int loop=0; loop<delete_ids.size(); loop++)
+			forget_client_thread_id(&clients, delete_ids.at(loop));
+
+// FIXME process msgs_*
 
 		if (FD_ISSET(listen_socket_fd, &rfds))
 			register_new_client(listen_socket_fd, &clients, user_map, config, ppools, &stats, eb_output_fips140, eb_output_scc);
