@@ -40,7 +40,7 @@ You need the OpenSSL and zlib development libraries.
 asound2 is for eb_server_audio
 libusb-1.0-0-dev is for eb_server_usb
 libftdi-dev is for eb_server_ComScire_R2000KU
-
+libpcsclite-dev is for eb_server_smartcard
 
 Usage
 -----
