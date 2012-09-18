@@ -426,10 +426,9 @@ int pools::get_bit_sum()
 
 int pools::add_event(long double event, unsigned char *event_data, int n_event_data)
 {
-	unsigned int index = select_pool_to_add_to();
-
 	pthread_mutex_lock(&lck);
 
+	unsigned int index = select_pool_to_add_to();
 	int rc = pool_vector.at(index) -> add_event(event, event_data, n_event_data);
 
 	pthread_mutex_unlock(&lck);

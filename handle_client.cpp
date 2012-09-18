@@ -273,12 +273,16 @@ void * thread(void *data)
 			}
 		}
 
+		dolog(LOG_DEBUG, "End of thread imminent");
+
 		break;
 	}
 
 	close(p -> socket_fd);
 	close(p -> to_thread[0]);
 	close(p -> to_main[1]);
+
+	dolog(LOG_DEBUG, "End of thread");
 
 	return NULL;
 }
@@ -353,7 +357,7 @@ int process_client(client_t *p, std::vector<unsigned char> *msgs_clients, std::v
 	{
 		unsigned char cmd = 0;
 
-		int rc_pipe = read(p -> to_thread[0], &cmd, 1);
+		int rc_pipe = read(p -> to_main[0], &cmd, 1);
 		if (rc_pipe == 0)
 			break;
 		if (rc_pipe == -1)
@@ -414,8 +418,8 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 		fd_set rfds;
 		double now = get_ts();
 		struct timespec tv;
-		int max_fd = 0;
-		double time_left = 300.0, dummy1_time;
+		int max_fd = -1;
+		double time_left = 300.0, dummy1_time = -1.0;
 		bool force_stats = false;
 		sigset_t sig_set;
 
