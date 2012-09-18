@@ -58,8 +58,16 @@ void forget_client_index(std::vector<client_t *> *clients, int nr)
 
 	free(p -> password);
 
-	delete p;
+	if (pthread_yield() != 0)
+		error_exit("pthread_yield failed");
 
+	pthread_cancel(p -> th);
+
+	void *value_ptr = NULL;
+	if (pthread_join(p -> th, &value_ptr) != 0)
+		error_exit("pthread_join failed");
+
+	delete p;
 	clients -> erase(clients -> begin() + nr);
 }
 
