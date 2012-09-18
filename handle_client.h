@@ -1,15 +1,20 @@
 typedef struct
 {
+	int pipe_thread, pipe_main;
+
 	int socket_fd;
 	char host[128], type[128];
-	char is_server;
+	bool is_server;
 	int bits_sent, bits_recv;
 	int max_bits_per_interval;
-	char allow_prng;
-	char ignore_rngtest_fips140, ignore_rngtest_scc;
+	bool allow_prng;
+	bool ignore_rngtest_fips140, ignore_rngtest_scc;
 	double last_message, last_put_message;
 	double connected_since;
 	char *password;
+
+	fips140 *pfips140;
+	scc *pscc;
 
 	unsigned char ivec[8]; // used for data encryption
 	int ivec_offset;
@@ -17,12 +22,12 @@ typedef struct
 	long long unsigned int ivec_counter; // required for CFB
 
 	BF_KEY key;
-	bool data_avail_signaled;
-
-	fips140 *pfips140;
-	scc *pscc;
 
 	int ping_nr;
+
+	// globals
+	users *pu;
+	config_t *config;
 } client_t;
 
 typedef struct

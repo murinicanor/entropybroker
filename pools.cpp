@@ -26,6 +26,8 @@
 
 pools::pools(std::string cache_dir_in, unsigned int max_n_mem_pools_in, unsigned int max_n_disk_pools_in, unsigned int min_store_on_disk_n_in, bit_count_estimator *bce_in, int new_pool_size_in_bytes, hasher *hclass, stirrer *sclass) : cache_dir(cache_dir_in), max_n_mem_pools(max_n_mem_pools_in), max_n_disk_pools(max_n_disk_pools_in), min_store_on_disk_n(min_store_on_disk_n_in), disk_limit_reached_notified(false), bce(bce_in), h(hclass), s(sclass)
 {
+	pthread_mutex_init(&lock, NULL);
+
 	new_pool_size = new_pool_size_in_bytes;
 
 	if (min_store_on_disk_n >= max_n_mem_pools)
@@ -45,6 +47,8 @@ pools::pools(std::string cache_dir_in, unsigned int max_n_mem_pools_in, unsigned
 pools::~pools()
 {
 	store_caches(0);
+
+	pthread_mutex_destroy(&lock);
 }
 
 void pools::store_caches(unsigned int keep_n)
@@ -252,6 +256,8 @@ bool pools::verify_quality(unsigned char *data, int n, bool ignore_rngtest_fips1
 
 int pools::get_bits_from_pools(int n_bits_requested, unsigned char **buffer, bool allow_prng, bool ignore_rngtest_fips140, fips140 *pfips, bool ignore_rngtest_scc, scc *pscc)
 {
+	pthread_mutex_lock(&lock);
+
 	int n_to_do_bytes = (n_bits_requested + 7) / 8;
 	int n_to_do_bits = n_to_do_bytes * 8;
 	int n_bits_retrieved = 0;
@@ -315,6 +321,8 @@ int pools::get_bits_from_pools(int n_bits_requested, unsigned char **buffer, boo
 		}
 	}
 
+	pthread_mutex_unlock(&lock);
+
 	return n_bits_retrieved;
 }
 
@@ -371,6 +379,8 @@ int pools::select_pool_to_add_to()
 
 int pools::add_bits_to_pools(unsigned char *data, int n_bytes, bool ignore_rngtest_fips140, fips140 *pfips, bool ignore_rngtest_scc, scc *pscc)
 {
+	pthread_mutex_lock(&lock);
+
 	int n_bits_added = 0;
 	int index = -1;
 
@@ -394,6 +404,8 @@ int pools::add_bits_to_pools(unsigned char *data, int n_bytes, bool ignore_rngte
 		data += n_bytes_to_add;
 	}
 
+	pthread_mutex_unlock(&lock);
+
 	return n_bits_added;
 }
 
@@ -401,8 +413,12 @@ int pools::get_bit_sum() const
 {
 	int bit_count = 0;
 
+	pthread_mutex_lock(&lock);
+
 	for(unsigned int loop=0; loop<pool_vector.size(); loop++)
 		bit_count += pool_vector.at(loop) -> get_n_bits_in_pool();
+
+	pthread_mutex_unlock(&lock);
 
 	return bit_count;
 }
@@ -411,16 +427,30 @@ int pools::add_event(long double event, unsigned char *event_data, int n_event_d
 {
 	unsigned int index = select_pool_to_add_to();
 
-	return pool_vector.at(index) -> add_event(event, event_data, n_event_data);
+	pthread_mutex_lock(&lock);
+
+	int rc = pool_vector.at(index) -> add_event(event, event_data, n_event_data);
+
+	pthread_mutex_unlock(&lock);
+
+	return rc;
 }
 
 bool pools::all_pools_full() const
 {
+	pthread_mutex_lock(&lock);
+
 	for(unsigned int loop=0; loop<pool_vector.size(); loop++)
 	{
 		if (!pool_vector.at(loop) -> is_almost_full())
+		{
+			pthread_mutex_unlock(&lock);
+
 			return false;
+		}
 	}
+
+	pthread_mutex_unlock(&lock);
 
 	return true;
 }

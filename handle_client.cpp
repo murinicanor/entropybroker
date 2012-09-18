@@ -586,10 +586,6 @@ void process_timed_out_cs(config_t *config, client_t *clients, int *n_clients, s
 int lookup_client_settings(struct sockaddr_in *client_addr, client_t *client, config_t *config)
 {
 	// FIXME
-	client -> max_bits_per_interval = config -> default_max_bits_per_interval;
-	client -> ignore_rngtest_fips140 = config -> ignore_rngtest_fips140;
-	client -> ignore_rngtest_scc = config -> ignore_rngtest_scc;
-	client -> allow_prng = config -> allow_prng;
 
 	return 0;
 }
@@ -611,6 +607,40 @@ void cleanup_idle_clients(client_t *clients, int *n_clients, statistics_t *stats
 	}
 }
 
+int send_pipe_command(int fd, unsigned char command)
+{
+}
+
+int thread(void *data)
+{
+	long long unsigned int auth_rnd = 1;
+	std::string password;
+	bool ok = auth_eb(new_socket_fd, config -> communication_timeout, user_map, password, &auth_rnd) == 0;
+
+	if (!ok)
+	{
+	// FIXME close pipe
+		close(new_socket_fd);
+		dolog(LOG_WARNING, "main|client: %s:%d (fd: %d) authentication failed", inet_ntoa(client_addr.sin_addr), client_addr.sin_port, new_socket_fd);
+		return -1;
+	}
+
+	if (config -> disable_nagle)
+		disable_nagle(new_socket_fd);
+
+	if (config -> enable_keepalive)
+		enable_tcp_keepalive(new_socket_fd);
+
+	p -> challenge = auth_rnd;
+	p -> ivec_counter = 0;
+	calc_ivec((char *)password.c_str(), p -> challenge, p -> ivec_counter, p -> ivec);
+
+	p -> password = strdup(password.c_str());
+	BF_set_key(&p -> key, password.length(), (unsigned char *)password.c_str());
+
+	return -1;
+}
+
 void register_new_client(int listen_socket_fd, client_t **clients, int *n_clients, users *user_map, config_t *config)
 {
 	struct sockaddr_in client_addr;
@@ -621,67 +651,42 @@ void register_new_client(int listen_socket_fd, client_t **clients, int *n_client
 	{
 		dolog(LOG_INFO, "main|new client: %s:%d (fd: %d)", inet_ntoa(client_addr.sin_addr), client_addr.sin_port, new_socket_fd);
 
-		if (config -> disable_nagle)
-			disable_nagle(new_socket_fd);
+		(*n_clients)++;
 
-		if (config -> enable_keepalive)
-			enable_tcp_keepalive(new_socket_fd);
+		*clients = (client_t *)realloc(*clients, *n_clients * sizeof(client_t));
+		if (!*clients)
+			error_exit("memory allocation error");
 
-		long long unsigned int auth_rnd = 1;
-		std::string password;
-		bool ok = auth_eb(new_socket_fd, config -> communication_timeout, user_map, password, &auth_rnd) == 0;
+		int nr = *n_clients - 1;
+		client_t *p = &(*clients)[nr];
 
-		if (!ok)
-		{
-			close(new_socket_fd);
-			dolog(LOG_WARNING, "main|client: %s:%d (fd: %d) authentication failed", inet_ntoa(client_addr.sin_addr), client_addr.sin_port, new_socket_fd);
-		}
-		else
-		{
-			(*n_clients)++;
+		memset(p, 0x00, sizeof(client_t));
+		p -> socket_fd = new_socket_fd;
+		int dummy = sizeof(p -> host);
+		snprintf(p -> host, dummy, "%s:%d", inet_ntoa(client_addr.sin_addr), client_addr.sin_port);
+		p -> pfips140 = new fips140();
+		p -> pscc = new scc();
+		double now = get_ts();
+		p -> last_message = now;
+		p -> connected_since = now;
+		p -> last_put_message = now;
+		p -> pfips140 -> set_user(p -> host);
+		p -> pscc     -> set_user(p -> host);
+		p -> pscc -> set_threshold(config -> scc_threshold);
 
-			*clients = (client_t *)realloc(*clients, *n_clients * sizeof(client_t));
-			if (!*clients)
-				error_exit("memory allocation error");
+		strcpy(p -> type, "?");
 
-			int nr = *n_clients - 1;
-			client_t *p = &(*clients)[nr];
+		p -> max_bits_per_interval = config -> default_max_bits_per_interval;
+		p -> ignore_rngtest_fips140 = config -> ignore_rngtest_fips140;
+		p -> ignore_rngtest_scc = config -> ignore_rngtest_scc;
+		p -> allow_prng = config -> allow_prng;
 
-			memset(p, 0x00, sizeof(client_t));
-			p -> socket_fd = new_socket_fd;
-			int dummy = sizeof(p -> host);
-			snprintf(p -> host, dummy, "%s:%d", inet_ntoa(client_addr.sin_addr), client_addr.sin_port);
-			p -> pfips140 = new fips140();
-			p -> pscc = new scc();
-			double now = get_ts();
-			p -> last_message = now;
-			p -> connected_since = now;
-			p -> last_put_message = now;
-			p -> pfips140 -> set_user(p -> host);
-			p -> pscc     -> set_user(p -> host);
-			p -> pscc -> set_threshold(config -> scc_threshold);
+		// globals
+		p -> pu = user_map;
+		p -> config = config;
+		// FIXME create pipes
 
-			strcpy(p -> type, "?");
-
-			p -> challenge = auth_rnd;
-			p -> ivec_counter = 0;
-			calc_ivec((char *)password.c_str(), p -> challenge, p -> ivec_counter, p -> ivec);
-
-			p -> password = strdup(password.c_str());
-			BF_set_key(&p -> key, password.length(), (unsigned char *)password.c_str());
-
-			if (lookup_client_settings(&client_addr, p, config) == -1)
-			{
-				dolog(LOG_INFO, "main|client %s not found, terminating connection", p -> host);
-
-				delete p -> pfips140;
-				delete p -> pscc;
-
-				(*n_clients)--;
-
-				close(new_socket_fd);
-			}
-		}
+		// FIXME start thread
 	}
 }
 

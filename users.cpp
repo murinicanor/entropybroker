@@ -1,6 +1,7 @@
 #include <string>
 #include <map>
 #include <fstream>
+#include <pthread.h>
 
 #include "error.h"
 #include "log.h"
@@ -8,6 +9,8 @@
 
 users::users(std::string filename_in) : filename(filename_in)
 {
+	pthread_mutex_init(&lock, NULL);
+
 	user_map = NULL;
 	load_usermap();
 }
@@ -15,13 +18,19 @@ users::users(std::string filename_in) : filename(filename_in)
 users::~users()
 {
 	delete user_map;
+
+	pthread_mutex_destroy(&lock);
 }
 
 void users::reload()
 {
+	pthread_mutex_lock(&lock);
+
 	delete user_map;
 
 	load_usermap();
+
+	pthread_mutex_unlock(&lock);
 }
 
 void users::load_usermap()
@@ -60,13 +69,20 @@ void users::load_usermap()
 
 bool users::find_user(std::string username, std::string & password)
 {
+	pthread_mutex_lock(&lock);
+
 	password.assign("INVALID PASSWORd");
 
 	std::map<std::string, std::string>::iterator it = user_map -> find(username);
 	if (it == user_map -> end())
+	{
+		pthread_mutex_unlock(&lock);
 		return false;
+	}
 
 	password.assign(it -> second);
+
+	pthread_mutex_unlock(&lock);
 
 	return true;
 }

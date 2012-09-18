@@ -22,14 +22,12 @@
 #include "stirrer.h"
 #include "pool.h"
 
-char config_yes_no(char *what)
+bool config_yes_no(char *what)
 {
         if (what[0] == '1' || strcasecmp(what, "yes") == 0 || strcasecmp(what, "on") == 0)
-        {
-                return 1;
-        }
+                return true;
 
-        return 0;
+        return false;
 }
 
 void load_config(const char *config, config_t *pconfig)
@@ -54,8 +52,8 @@ void load_config(const char *config, config_t *pconfig)
 	pconfig -> listen_adapter    = (char *)"0.0.0.0";
 	pconfig -> listen_port       = DEFAULT_BROKER_PORT;
 	pconfig -> listen_queue_size = 5;
-	pconfig -> disable_nagle     = 0;
-	pconfig -> enable_keepalive  = 1;
+	pconfig -> disable_nagle     = false;
+	pconfig -> enable_keepalive  = true;
 
 	pconfig -> reset_counters_interval    = 60;
 	pconfig -> statistics_interval        = 300;
@@ -73,13 +71,13 @@ void load_config(const char *config, config_t *pconfig)
 
 	pconfig -> default_max_bits_per_interval = 16000000;
 
-	pconfig -> ignore_rngtest_fips140 = 0;
-	pconfig -> ignore_rngtest_scc = 0;
+	pconfig -> ignore_rngtest_fips140 = false;
+	pconfig -> ignore_rngtest_scc = false;
 	pconfig -> scc_threshold = 0.2;
 
-	pconfig -> allow_event_entropy_addition = 1;
-	pconfig -> add_entropy_even_if_all_full = 0;
-	pconfig -> allow_prng = 0;
+	pconfig -> allow_event_entropy_addition = true;
+	pconfig -> add_entropy_even_if_all_full = false;
+	pconfig -> allow_prng = false;
 
 	pconfig -> user_map = new std::string("usermap.txt");
 

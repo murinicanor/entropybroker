@@ -12,6 +12,7 @@ private:
 	int new_pool_size;
 	hasher *h;
 	stirrer *s;
+	pthread_mutex_t lock;
 
 	void load_cachefiles_list();
 	void load_caches(unsigned int load_n_bits);
@@ -20,6 +21,7 @@ private:
 	int find_non_full_pool() const;
 	void flush_empty_pools();
 	void merge_pools();
+	bool verify_quality(unsigned char *data, int n, bool ignore_rngtest_fips140, fips140 *pfips, bool ignore_rngtest_scc, scc *pscc);
 
 public:
 	pools(std::string cache_dir, unsigned int max_n_mem_pools, unsigned int max_n_disk_pools, unsigned int min_store_on_disk_n, bit_count_estimator *bce_in, int new_pool_size_in_bytes, hasher *hclass, stirrer *sclass);
@@ -27,7 +29,6 @@ public:
 
 	int get_bits_from_pools(int n_bits_requested, unsigned char **buffer, bool allow_prng, bool ignore_rngtest_fips140, fips140 *prt, bool ignore_rngtest_scc, scc *pscc);
 	int add_bits_to_pools(unsigned char *data, int n_bytes, bool ignore_rngtest_fips140, fips140 *prt, bool ignore_rngtest_scc, scc *pscc);
-	bool verify_quality(unsigned char *data, int n, bool ignore_rngtest_fips140, fips140 *pfips, bool ignore_rngtest_scc, scc *pscc);
 	int get_bit_sum() const;
 	int add_event(long double event, unsigned char *event_data, int n_event_data);
 	bool all_pools_full() const;

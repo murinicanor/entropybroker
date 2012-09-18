@@ -8,8 +8,8 @@ typedef struct
 	char *listen_adapter;
 	int listen_port;
 	int listen_queue_size;
-	char disable_nagle;
-	char enable_keepalive;
+	bool disable_nagle;
+	bool enable_keepalive;
 
 	int reset_counters_interval;
 	int statistics_interval;
@@ -29,12 +29,12 @@ typedef struct
 
 	int default_max_bits_per_interval;
 
-	char ignore_rngtest_fips140, ignore_rngtest_scc;
+	bool ignore_rngtest_fips140, ignore_rngtest_scc;
 	double scc_threshold;
 
-	char allow_event_entropy_addition;
-	char add_entropy_even_if_all_full;
-	char allow_prng;
+	bool allow_event_entropy_addition;
+	bool add_entropy_even_if_all_full;
+	bool allow_prng;
 
 	char *prng_seed_file;
 

@@ -3,6 +3,7 @@ class users
 private:
 	std::string filename;
 	std::map<std::string, std::string> *user_map;
+	pthread_mutex_t lock;
 
 	void load_usermap();
 
