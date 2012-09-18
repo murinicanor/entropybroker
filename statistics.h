@@ -1,6 +1,8 @@
 class statistics
 {
 private:
+	char *file;
+
 	int bps, bps_cur;
 
 	long long int total_recv, total_sent;
@@ -14,4 +16,7 @@ private:
 public:
 	statistics();
 	~statistics();
+
+	void inc_disconnects();
+	void inc_timeouts();
 };

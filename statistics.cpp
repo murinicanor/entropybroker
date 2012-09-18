@@ -1,6 +1,6 @@
 #include "statistics.h"
 
-statistics::statistics()
+statistics::statistics(char *file_in) : file(file_in)
 {
 	pthread_mutex_init(&lck, NULL);
 
@@ -23,6 +23,16 @@ statistics::statistics()
 statistics::~statistics()
 {
 	pthread_mutex_destroy(&lck);
+}
+
+void statistics::inc_disconnects()
+{
+	disconnects++;
+}
+
+void statistics::inc_timeouts()
+{
+	timeouts++;
 }
 
 void emit_statistics_file(config_t *config, statistics_t *stats, int n_clients, pools *ppools, scc *eb_output_scc)

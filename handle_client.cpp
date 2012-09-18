@@ -41,7 +41,7 @@
 
 extern const char *pid_file;
 
-int do_client(pools *ppools, client_t *client, statistics_t *stats, config_t *config, fips140 *eb_output_fips140, scc *eb_output_scc, bool *no_bits, bool *new_bits, bool *is_full, users *user_map)
+int do_client(pools *ppools, client_t *client, statistics *stats, config_t *config, fips140 *eb_output_fips140, scc *eb_output_scc, bool *no_bits, bool *new_bits, bool *is_full, users *user_map)
 {
 	char cmd[4 + 1];
 	cmd[4] = 0x00;
@@ -110,7 +110,7 @@ void forget_client(client_t *clients, int *n_clients, int nr)
 	(*n_clients)--;
 }
 
-void notify_servers_full(client_t *clients, int *n_clients, statistics_t *stats, config_t *config)
+void notify_servers_full(client_t *clients, int *n_clients, statistics *stats, config_t *config)
 {
 	char buffer[8 + 1];
 
@@ -125,14 +125,14 @@ void notify_servers_full(client_t *clients, int *n_clients, statistics_t *stats,
 		{
 			dolog(LOG_INFO, "kernfill|Short write while sending full notification request to %s", clients[loop].host);
 
-			stats -> disconnects++;
+			stats -> inc_disconnects();
 
 			forget_client(clients, n_clients, loop);
 		}
 	}
 }
 
-void notify_clients_data_available(client_t *clients, int *n_clients, statistics_t *stats, pools *ppools, config_t *config)
+void notify_clients_data_available(client_t *clients, int *n_clients, statistics *stats, pools *ppools, config_t *config)
 {
 	for(int loop=*n_clients - 1; loop>=0; loop--)
 	{
@@ -148,14 +148,14 @@ void notify_clients_data_available(client_t *clients, int *n_clients, statistics
 			dolog(LOG_INFO, "main|connection closed, removing client %s from list", clients[loop].host);
 			dolog(LOG_DEBUG, "main|%s: %s, scc: %s", clients[loop].host, clients[loop].pfips140 -> stats(), clients[loop].pscc -> stats());
 
-			stats -> disconnects++;
+			stats -> inc_disconnects();
 
 			forget_client(clients, n_clients, loop);
 		}
 	}
 }
 
-void notify_servers_data_needed(client_t *clients, int *n_clients, statistics_t *stats, config_t *config)
+void notify_servers_data_needed(client_t *clients, int *n_clients, statistics *stats, config_t *config)
 {
 	for(int loop=*n_clients - 1; loop>=0; loop--)
 	{
@@ -167,14 +167,14 @@ void notify_servers_data_needed(client_t *clients, int *n_clients, statistics_t 
 			dolog(LOG_INFO, "main|connection closed, removing client %s from list", clients[loop].host);
 			dolog(LOG_DEBUG, "main|%s: %s, scc: %s", clients[loop].host, clients[loop].pfips140 -> stats(), clients[loop].pscc -> stats());
 
-			stats -> disconnects++;
+			stats -> inc_disconnects();
 
 			forget_client(clients, n_clients, loop);
 		}
 	}
 }
 
-void process_timed_out_cs(config_t *config, client_t *clients, int *n_clients, statistics_t *stats)
+void process_timed_out_cs(config_t *config, client_t *clients, int *n_clients, statistics *stats)
 {
 	if (config -> communication_session_timeout > 0)
 	{
@@ -189,7 +189,7 @@ void process_timed_out_cs(config_t *config, client_t *clients, int *n_clients, s
 				dolog(LOG_INFO, "main|connection timeout, removing client %s from list", clients[loop].host);
 				dolog(LOG_DEBUG, "%s: %s", clients[loop].host, clients[loop].pfips140 -> stats());
 
-				stats -> timeouts++;
+				stats -> inc_timeouts();
 
 				forget_client(clients, n_clients, loop);
 			}
@@ -315,11 +315,10 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 	double last_statistics_emit = get_ts();
 	event_state_t event_state;
 	int listen_socket_fd = start_listen(config -> listen_adapter, config -> listen_port, config -> listen_queue_size);
-	statistics_t	stats;
+	statistics stats(config -> stats_file);
 	double start_ts = get_ts();
 
 	memset(&event_state, 0x00, sizeof(event_state));
-	memset(&stats, 0x00, sizeof(stats));
 
 	dolog(LOG_INFO, "main|main-loop started");
 
@@ -334,7 +333,7 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 		struct timespec tv;
 		int max_fd = 0;
 		double time_left = 300.0, dummy1_time;
-		char force_stats = 0;
+		bool force_stats = false;
 		sigset_t sig_set;
 
 		if (sigemptyset(&sig_set) == -1)
@@ -366,7 +365,7 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 			dolog(LOG_DEBUG, "Got SIGHUP");
 			reset_SIGHUP();
 			user_map -> reload();
-			force_stats = 1;
+			force_stats = true;
 		}
 
 		if (is_SIGEXIT())
