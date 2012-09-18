@@ -32,15 +32,4 @@ typedef struct
 	pools *ppools;
 } client_t;
 
-typedef struct
-{
-	int bps, bps_cur;
-
-	long long int total_recv, total_sent;
-	int total_recv_requests, total_sent_requests;
-	int n_times_empty, n_times_not_allowed, n_times_full, n_times_quota;
-
-	int disconnects, timeouts;
-} statistics_t;
-
 void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc *eb_output_scc);
