@@ -70,8 +70,8 @@ All clients and servers need a '-I' commandline parameter.
 This parameter can be used 1 or more times. It selects one
 (or more) entrop broker instance(s). If one is not reachable,
 the other(s) are tried. Examples:
-	-I 192.168.0.1
-	-I 192.168.0.1:12341   with portnumber
+	-I ::ffff:192.168.0.1
+	-I [::ffff:192.168.0.1]:12341   with portnumber
 	-I hostname.bla.com
 	-I hostname.bla.com:55225
 	-I [2001:888:13b3:172:a80a:1111:fe0e:daaa]       ipv6

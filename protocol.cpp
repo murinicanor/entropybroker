@@ -438,6 +438,8 @@ int protocol::message_transmit_entropy_data(unsigned char *bytes_in, int n_bytes
 		}
 		else if (strcmp(reply, "9004") == 0)            // all pools full, only for provies
 			goto ignore_unsollicited_msg;
+		else if (strcmp(reply, "0009") == 0)            // got data
+			goto ignore_unsollicited_msg;
 		else
 		{
 			dolog(LOG_CRIT, "garbage received: %s", reply);
