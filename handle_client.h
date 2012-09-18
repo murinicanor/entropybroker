@@ -1,6 +1,7 @@
 typedef struct
 {
-	int pipe_thread, pipe_main;
+	int to_thread[2], to_main[2];
+	pthread_t th;
 
 	int socket_fd;
 	char host[128], type[128];
@@ -28,6 +29,7 @@ typedef struct
 	// globals
 	users *pu;
 	config_t *config;
+	pools *ppools;
 } client_t;
 
 typedef struct
