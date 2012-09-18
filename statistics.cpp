@@ -106,26 +106,29 @@ void statistics::track_recvs(int n_bits_added)
 
 void statistics::emit_statistics_file(int n_clients)
 {
-	FILE *fh = fopen(file, "a+");
-	if (!fh)
-		error_exit("cannot access file %s", file);
+	if (file)
+	{
+		FILE *fh = fopen(file, "a+");
+		if (!fh)
+			error_exit("cannot access file %s", file);
 
-	struct rusage usage;
-	if (getrusage(RUSAGE_SELF, &usage) == -1)
-		error_exit("getrusage() failed");
+		struct rusage usage;
+		if (getrusage(RUSAGE_SELF, &usage) == -1)
+			error_exit("getrusage() failed");
 
-	double proc_usage = (double)usage.ru_utime.tv_sec + (double)usage.ru_utime.tv_usec / 1000000.0 +
-		(double)usage.ru_stime.tv_sec + (double)usage.ru_stime.tv_usec / 1000000.0;
+		double proc_usage = (double)usage.ru_utime.tv_sec + (double)usage.ru_utime.tv_usec / 1000000.0 +
+			(double)usage.ru_stime.tv_sec + (double)usage.ru_stime.tv_usec / 1000000.0;
 
-	pthread_mutex_lock(&lck);
-	double now = get_ts();
-	int total_n_bits = ppools -> get_bit_sum();
-	fprintf(fh, "%f %lld %lld %d %d %d %d %f %s\n", now, total_recv, total_sent,
-			total_recv_requests, total_sent_requests,
-			n_clients, total_n_bits, proc_usage, pscc -> stats());
-	pthread_mutex_unlock(&lck);
+		pthread_mutex_lock(&lck);
+		double now = get_ts();
+		int total_n_bits = ppools -> get_bit_sum();
+		fprintf(fh, "%f %lld %lld %d %d %d %d %f %s\n", now, total_recv, total_sent,
+				total_recv_requests, total_sent_requests,
+				n_clients, total_n_bits, proc_usage, pscc -> stats());
+		pthread_mutex_unlock(&lck);
 
-	fclose(fh);
+		fclose(fh);
+	}
 }
 
 void statistics::emit_statistics_log(int n_clients, bool force_stats, int reset_counters_interval)
