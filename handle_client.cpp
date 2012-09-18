@@ -205,7 +205,7 @@ void * thread(void *data)
 
 				if (rc_pipe)
 				{
-					dolog(LOG_CRIT, "Thread connection to main thread lost");
+					dolog(LOG_CRIT, "Thread connection to main thread lost (1)");
 					break;
 				}
 			}
@@ -224,7 +224,10 @@ void * thread(void *data)
 					if (errno == EINTR)
 						continue;
 
-					dolog(LOG_CRIT, "Thread connection to main thread lost");
+					if (errno == EAGAIN || errno == EWOULDBLOCK)
+						break;
+
+					dolog(LOG_CRIT, "Thread connection to main thread lost (2)");
 					abort = true;
 				}
 				else
@@ -357,6 +360,9 @@ int process_client(client_t *p, std::vector<unsigned char> *msgs_clients, std::v
 		{
 			if (errno == EINTR)
 				continue;
+
+			if (errno == EAGAIN || errno == EWOULDBLOCK)
+				break;
 
 			rc = -1;
 
