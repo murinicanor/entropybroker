@@ -19,6 +19,7 @@
 #include <netinet/tcp.h>
 #include <sys/mman.h>
 #include <sys/resource.h>
+#include <fcntl.h>
 
 #include "error.h"
 #include "log.h"
@@ -491,4 +492,10 @@ void split_resource_location(std::string in, std::string & host, int & port)
 	}
 
 	free(copy);
+}
+
+void set_fd_nonblocking(int fd)
+{
+	if (fcntl(fd, F_SETFL, O_NONBLOCK) == -1)
+		error_exit("problem setting fd %d non-blocking");
 }

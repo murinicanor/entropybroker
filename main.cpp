@@ -34,6 +34,7 @@
 #include "users.h"
 #include "config.h"
 #include "pools.h"
+#include "statistics.h"
 #include "handle_client.h"
 #include "utils.h"
 #include "log.h"

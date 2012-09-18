@@ -97,99 +97,33 @@ void forget_client_thread_id(std::vector<client_t *> *clients, pthread_t *tid)
 	}
 }
 
-/*
-void notify_servers_full(std::vector<client_t *> *clients, statistics *stats, config_t *config)
-{
-	char buffer[8 + 1];
-
-	make_msg(buffer, 9004, 0); // 9004
-
-	for(int loop=*n_clients - 1; loop>=0; loop--)
-	{
-		if (!clients[loop].is_server)
-			continue;
-
-		if (WRITE_TO(clients[loop].socket_fd, buffer, 8, config -> communication_timeout) != 8)
-		{
-			dolog(LOG_INFO, "kernfill|Short write while sending full notification request to %s", clients[loop].host);
-
-			stats -> inc_disconnects();
-
-			forget_client(clients, n_clients, loop);
-		}
-	}
-}
-
-void notify_clients_data_available(client_t *clients, int *n_clients, statistics *stats, pools *ppools, config_t *config)
-{
-	for(int loop=*n_clients - 1; loop>=0; loop--)
-	{
-		if (clients[loop].is_server)
-			continue;
-
-		if (send_got_data(clients[loop].socket_fd, ppools, config) == -1)
-		{
-			dolog(LOG_INFO, "main|connection closed, removing client %s from list", clients[loop].host);
-			dolog(LOG_DEBUG, "main|%s: %s, scc: %s", clients[loop].host, clients[loop].pfips140 -> stats(), clients[loop].pscc -> stats());
-
-			stats -> inc_disconnects();
-
-			forget_client(clients, n_clients, loop);
-		}
-	}
-}
-
-void notify_servers_data_needed(client_t *clients, int *n_clients, statistics *stats, config_t *config)
-{
-	for(int loop=*n_clients - 1; loop>=0; loop--)
-	{
-		if (!clients[loop].is_server)
-			continue;
-
-		if (send_need_data(clients[loop].socket_fd, config) == -1)
-		{
-			dolog(LOG_INFO, "main|connection closed, removing client %s from list", clients[loop].host);
-			dolog(LOG_DEBUG, "main|%s: %s, scc: %s", clients[loop].host, clients[loop].pfips140 -> stats(), clients[loop].pscc -> stats());
-
-			stats -> inc_disconnects();
-
-			forget_client(clients, n_clients, loop);
-		}
-	}
-}
-
-void process_timed_out_cs(config_t *config, client_t *clients, int *n_clients, statistics *stats)
-{
-	if (config -> communication_session_timeout > 0)
-	{
-		double now = get_ts();
-
-		for(int loop=*n_clients - 1; loop>=0; loop--)
-		{
-			double time_left_in_session = (clients[loop].last_message + (double)config -> communication_session_timeout) - now;
-
-			if (time_left_in_session <= 0.0)
-			{
-				dolog(LOG_INFO, "main|connection timeout, removing client %s from list", clients[loop].host);
-				dolog(LOG_DEBUG, "%s: %s", clients[loop].host, clients[loop].pfips140 -> stats());
-
-				stats -> inc_timeouts();
-
-				forget_client(clients, n_clients, loop);
-			}
-		}
-	}
-}
-*/
-
 int send_pipe_command(int fd, unsigned char command)
 {
-	return -1;
+	for(;;)
+	{
+		int rc = write(fd, &command, 1);
+
+		if (rc == 0)
+			return -1;
+
+		if (rc == -1)
+		{
+			if (errno == EINTR)
+				continue;
+
+			return -1;
+		}
+
+		break;
+	}
+
+	return 0;
 }
 
 void * thread(void *data)
 {
 	client_t *p = (client_t *)data;
+
 	for(;;)
 	{
 		long long unsigned int auth_rnd = 1;
@@ -214,10 +148,6 @@ void * thread(void *data)
 
 		p -> password = strdup(password.c_str());
 		BF_set_key(&p -> key, password.length(), (unsigned char *)password.c_str());
-
-
-		// FIXME
-// SELECT met timeout
 
 		for(;;)
 		{
@@ -258,10 +188,86 @@ void * thread(void *data)
 					break;
 				}
 
-				// FIXME eval de bools
+				int rc_pipe = 0;
+				if (p -> is_server)
+				{
+
+					if (new_bits)
+						rc_pipe |= send_pipe_command(p -> to_main[1], PIPE_CMD_HAVE_DATA);
+					if (is_full)
+						rc_pipe |= send_pipe_command(p -> to_main[1], PIPE_CMD_IS_FULL);
+				}
+				else
+				{
+					if (no_bits)
+						rc_pipe |= send_pipe_command(p -> to_main[1], PIPE_CMD_NEED_DATA);
+				}
+
+				if (rc_pipe)
+				{
+					dolog(LOG_CRIT, "Thread connection to main thread lost");
+					break;
+				}
 			}
 
-			// FIXME process pipe
+			bool abort = false;
+			bool need_data = false, have_data = false, is_full = false;
+			do
+			{
+				unsigned char cmd = 0;
+
+				int rc_pipe = read(p -> to_thread[0], &cmd, 1);
+				if (rc_pipe == 0)
+					break;
+				if (rc_pipe == -1)
+				{
+					if (errno == EINTR)
+						continue;
+
+					dolog(LOG_CRIT, "Thread connection to main thread lost");
+					abort = true;
+				}
+				else
+				{
+					if (cmd == PIPE_CMD_NEED_DATA)
+					{
+						need_data = true;
+						have_data = false;
+						is_full = false;
+					}
+					else if (cmd == PIPE_CMD_HAVE_DATA || cmd == PIPE_CMD_IS_FULL)
+					{
+						need_data = false;
+						have_data = true;
+						is_full = cmd == PIPE_CMD_IS_FULL;
+					}
+					else
+					{
+						error_exit("Unknown interprocess command %02x", cmd);
+					}
+				}
+			}
+			while(!abort);
+
+			if (abort)
+				break;
+
+			int rc_client = 0;
+			if (need_data)
+				rc_client |= notify_server_data_needed(p -> socket_fd, p -> stats, p -> config);
+
+			if (have_data)
+				rc_client |= notify_client_data_available(p -> socket_fd, p -> ppools, p -> stats, p -> config);
+
+			if (is_full)
+				rc_client |= notify_server_full(p -> socket_fd, p -> stats, p -> config);
+
+			if (rc_client)
+			{
+				dolog(LOG_INFO, "Connection with %s lost", p -> host);
+
+				break;
+			}
 		}
 
 		break;
@@ -321,13 +327,64 @@ void register_new_client(int listen_socket_fd, std::vector<client_t *> *clients,
 
 		if (pipe(p -> to_thread) == -1)
 			error_exit("Error creating pipes");
+
+		set_fd_nonblocking(p -> to_thread[0]);
+
 		if (pipe(p -> to_main) == -1)
 			error_exit("Error creating pipes");
+
+		set_fd_nonblocking(p -> to_main[0]);
 
 		if (pthread_create(&p -> th, NULL, thread, p) != 0)
 			error_exit("Error creating thread");
 
 		clients -> push_back(p);
+	}
+}
+
+int process_client(client_t *p, std::vector<unsigned char> *msgs_clients, std::vector<unsigned char> *msgs_servers)
+{
+	int rc = 0;
+
+	for(;;)
+	{
+		unsigned char cmd = 0;
+
+		int rc_pipe = read(p -> to_thread[0], &cmd, 1);
+		if (rc_pipe == 0)
+			break;
+		if (rc_pipe == -1)
+		{
+			if (errno == EINTR)
+				continue;
+
+			rc = -1;
+
+			break;
+		}
+
+		if (cmd == PIPE_CMD_HAVE_DATA)
+			msgs_clients -> push_back(cmd);
+		else if (cmd == PIPE_CMD_NEED_DATA)
+			msgs_servers -> push_back(cmd);
+		else if (cmd == PIPE_CMD_IS_FULL)
+			msgs_servers -> push_back(cmd);
+		else
+			error_exit("Message %02x from thread %s/%s is not known", cmd, p -> host, p -> type);
+	}
+
+	return rc;
+}
+
+void send_to_clients_servers(std::vector<client_t *> *clients, std::vector<unsigned char> *msgs, bool is_server)
+{
+	for(unsigned int loop=0; loop<msgs -> size(); loop++)
+	{
+		for(unsigned int index=0; index<clients -> size(); index++)
+		{
+			if (clients -> at(index) -> is_server == is_server)
+				(void)send_pipe_command(clients -> at(index) -> socket_fd, msgs -> at(loop));
+		}
 	}
 }
 
@@ -457,8 +514,8 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 			continue;
 
 		std::vector<pthread_t *> delete_ids;
-		std::vector<unsigned char *> msgs_clients;
-		std::vector<unsigned char *> msgs_servers;
+		std::vector<unsigned char> msgs_clients;
+		std::vector<unsigned char> msgs_servers;
 		for(unsigned int loop=0; loop<clients.size(); loop++)
 		{
 			if (!FD_ISSET(clients.at(loop) -> to_main[0], &rfds))
@@ -471,7 +528,8 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 		for(unsigned int loop=0; loop<delete_ids.size(); loop++)
 			forget_client_thread_id(&clients, delete_ids.at(loop));
 
-// FIXME process msgs_*
+		send_to_clients_servers(&clients, &msgs_clients, false);
+		send_to_clients_servers(&clients, &msgs_servers, true);
 
 		if (FD_ISSET(listen_socket_fd, &rfds))
 			register_new_client(listen_socket_fd, &clients, user_map, config, ppools, &stats, eb_output_fips140, eb_output_scc);
