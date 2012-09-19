@@ -499,3 +499,13 @@ void set_fd_nonblocking(int fd)
 	if (fcntl(fd, F_SETFL, O_NONBLOCK) == -1)
 		error_exit("problem setting fd %d non-blocking");
 }
+
+std::string get_endpoint_name(sockaddr_in *p)
+{
+	char buffer[4096];
+
+	if (inet_ntop(AF_INET6, p, buffer, sizeof buffer) == NULL)
+		return std::string("CANNOT CONVERT ADDRESS") + std::string(strerror(errno));
+
+	return std::string(buffer);
+}

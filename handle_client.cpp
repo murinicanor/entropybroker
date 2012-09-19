@@ -99,6 +99,7 @@ void forget_client_thread_id(std::vector<client_t *> *clients, pthread_t *tid)
 
 int send_pipe_command(int fd, unsigned char command)
 {
+	printf("SEND TO MAIN %02x\n", command);
 	for(;;)
 	{
 		int rc = write(fd, &command, 1);
@@ -115,6 +116,105 @@ int send_pipe_command(int fd, unsigned char command)
 		}
 
 		break;
+	}
+
+	return 0;
+}
+
+int send_request_result_to_main_thread(bool is_server, int fd, bool no_bits, bool new_bits, bool is_full, bool need_data)
+{
+	int rc_pipe = 0;
+
+	if (is_server)
+	{
+		if (new_bits && need_data)
+			rc_pipe |= send_pipe_command(fd, PIPE_CMD_HAVE_DATA);
+
+		if (is_full)
+			rc_pipe |= send_pipe_command(fd, PIPE_CMD_IS_FULL);
+	}
+	else
+	{
+		if (no_bits)
+			rc_pipe |= send_pipe_command(fd, PIPE_CMD_NEED_DATA);
+	}
+
+	return rc_pipe != 0 ? -1 : 0;
+}
+
+int send_request_from_main_to_clients(client_t *p, bool *need_data)
+{
+	bool have_data = false, is_full = false;
+
+	*need_data = false;
+
+	for(;;)
+	{
+		unsigned char cmd = 0;
+
+		int rc_pipe = read(p -> to_thread[0], &cmd, 1);
+		if (rc_pipe == 0)
+			break;
+		if (rc_pipe == -1)
+		{
+			if (errno == EINTR)
+				continue;
+
+			if (errno == EAGAIN || errno == EWOULDBLOCK)
+				break;
+
+			dolog(LOG_CRIT, "Thread connection to main thread lost (2)");
+
+			return -1;
+		}
+		else
+		{
+			if (cmd == PIPE_CMD_NEED_DATA)
+			{
+				*need_data = true;
+				have_data = false;
+				is_full = false;
+			}
+			else if (cmd == PIPE_CMD_HAVE_DATA)
+			{
+				*need_data = false;
+				have_data = true;
+				is_full = false;
+			}
+			else if (cmd == PIPE_CMD_IS_FULL)
+			{
+				*need_data = false;
+				have_data = false;
+				is_full = true;
+			}
+			else
+			{
+				error_exit("Unknown interprocess command %02x", cmd);
+			}
+		}
+	}
+
+	int rc_client = 0;
+	if (*need_data && !p -> is_server && p -> type_set)
+		error_exit("if (need_data && p -> is_client) %s", p -> type);
+	if (*need_data)
+		rc_client |= notify_server_data_needed(p -> socket_fd, p -> stats, p -> config);
+
+	if (have_data && p -> is_server && p -> type_set)
+		error_exit("if (have_data && p -> is_server) %s", p -> type);
+	if (have_data)
+		rc_client |= notify_client_data_available(p -> socket_fd, p -> ppools, p -> stats, p -> config);
+
+	if (is_full && !p -> is_server && p -> type_set)
+		error_exit("if (is_full && p -> is_client) %s", p -> type);
+	if (is_full)
+		rc_client |= notify_server_full(p -> socket_fd, p -> stats, p -> config);
+
+	if (rc_client)
+	{
+		dolog(LOG_INFO, "Connection with %s lost", p -> host);
+
+		return -1;
 	}
 
 	return 0;
@@ -190,100 +290,18 @@ void * thread(void *data)
 					break;
 				}
 
-				int rc_pipe = 0;
-				if (p -> is_server)
+				bool need_data = false;
+				if (FD_ISSET(p -> to_thread[0], &rfds))
 				{
-
-					if (new_bits)
-						rc_pipe |= send_pipe_command(p -> to_main[1], PIPE_CMD_HAVE_DATA);
-					if (is_full)
-						rc_pipe |= send_pipe_command(p -> to_main[1], PIPE_CMD_IS_FULL);
-				}
-				else
-				{
-					if (no_bits)
-						rc_pipe |= send_pipe_command(p -> to_main[1], PIPE_CMD_NEED_DATA);
+					if (send_request_from_main_to_clients(p, &need_data) != 0)
+						break;
 				}
 
-				if (rc_pipe)
+				if (send_request_result_to_main_thread(p -> is_server, p -> to_main[1], no_bits, new_bits, is_full, need_data) != 0)
 				{
 					dolog(LOG_CRIT, "Thread connection to main thread lost (1)");
 					break;
 				}
-			}
-
-			bool abort = false;
-			bool need_data = false, have_data = false, is_full = false;
-			do
-			{
-				unsigned char cmd = 0;
-
-				int rc_pipe = read(p -> to_thread[0], &cmd, 1);
-				if (rc_pipe == 0)
-					break;
-				if (rc_pipe == -1)
-				{
-					if (errno == EINTR)
-						continue;
-
-					if (errno == EAGAIN || errno == EWOULDBLOCK)
-						break;
-
-					dolog(LOG_CRIT, "Thread connection to main thread lost (2)");
-					abort = true;
-				}
-				else
-				{
-					if (cmd == PIPE_CMD_NEED_DATA)
-					{
-						need_data = true;
-						have_data = false;
-						is_full = false;
-					}
-					else if (cmd == PIPE_CMD_HAVE_DATA)
-					{
-						need_data = false;
-						have_data = true;
-						is_full = false;
-					}
-					else if (cmd == PIPE_CMD_IS_FULL)
-					{
-						need_data = false;
-						have_data = false;
-						is_full = true;
-					}
-					else
-					{
-						error_exit("Unknown interprocess command %02x", cmd);
-					}
-				}
-			}
-			while(!abort);
-
-			if (abort)
-				break;
-
-			int rc_client = 0;
-if (need_data && !p -> is_server && p -> type_set)
-error_exit("if (need_data && p -> is_client) %s", p -> type);
-			if (need_data)
-				rc_client |= notify_server_data_needed(p -> socket_fd, p -> stats, p -> config);
-
-if (have_data && p -> is_server && p -> type_set)
-error_exit("if (have_data && p -> is_server) %s", p -> type);
-			if (have_data)
-				rc_client |= notify_client_data_available(p -> socket_fd, p -> ppools, p -> stats, p -> config);
-
-if (is_full && !p -> is_server && p -> type_set)
-error_exit("if (is_full && p -> is_client) %s", p -> type);
-			if (is_full)
-				rc_client |= notify_server_full(p -> socket_fd, p -> stats, p -> config);
-
-			if (rc_client)
-			{
-				dolog(LOG_INFO, "Connection with %s lost", p -> host);
-
-				break;
 			}
 		}
 
@@ -309,7 +327,8 @@ void register_new_client(int listen_socket_fd, std::vector<client_t *> *clients,
 
 	if (new_socket_fd != -1)
 	{
-		dolog(LOG_INFO, "main|new client: %s:%d (fd: %d)", inet_ntoa(client_addr.sin_addr), client_addr.sin_port, new_socket_fd);
+		std::string host = get_endpoint_name(&client_addr);
+		dolog(LOG_INFO, "main|new client: %s:%d (fd: %d)", host.c_str(), client_addr.sin_port, new_socket_fd);
 
 		client_t *p = new client_t;
 		if (!p)
@@ -318,7 +337,7 @@ void register_new_client(int listen_socket_fd, std::vector<client_t *> *clients,
 		memset(p, 0x00, sizeof(client_t));
 		p -> socket_fd = new_socket_fd;
 		int dummy = sizeof(p -> host);
-		snprintf(p -> host, dummy, "%s:%d", inet_ntoa(client_addr.sin_addr), client_addr.sin_port);
+		snprintf(p -> host, dummy, "%s:%d", host.c_str(), client_addr.sin_port);
 		p -> pfips140 = new fips140();
 		p -> pscc = new scc();
 		double now = get_ts();
@@ -363,7 +382,7 @@ void register_new_client(int listen_socket_fd, std::vector<client_t *> *clients,
 	}
 }
 
-int process_client(client_t *p, std::vector<msg_pair_t> *msgs_clients, std::vector<msg_pair_t> *msgs_servers)
+int process_pipe_from_client_thread(client_t *p, std::vector<msg_pair_t> *msgs_clients, std::vector<msg_pair_t> *msgs_servers)
 {
 	int rc = 0;
 
@@ -372,8 +391,8 @@ int process_client(client_t *p, std::vector<msg_pair_t> *msgs_clients, std::vect
 		unsigned char cmd = 0;
 
 		int rc_pipe = read(p -> to_main[0], &cmd, 1);
-		if (rc_pipe == 0)
-			break;
+		if (rc_pipe == 0) // means closed!
+			return -1;
 		if (rc_pipe == -1)
 		{
 			if (errno == EINTR)
@@ -402,14 +421,20 @@ int process_client(client_t *p, std::vector<msg_pair_t> *msgs_clients, std::vect
 	return rc;
 }
 
-void send_to_clients_servers(std::vector<client_t *> *clients, std::vector<msg_pair_t> *msgs, bool is_server)
+void send_to_client_threads(std::vector<client_t *> *clients, std::vector<msg_pair_t> *msgs, bool is_server_in)
 {
 	for(unsigned int loop=0; loop<msgs -> size(); loop++)
 	{
+		msg_pair_t *cur_msg = &msgs -> at(loop);
+
+printf("SEND TO thread: %02x\n", cur_msg -> cmd);
+
 		for(unsigned int index=0; index<clients -> size(); index++)
 		{
-			if (clients -> at(index) -> is_server == is_server && clients -> at(index) -> socket_fd != msgs -> at(loop).fd_sender)
-				(void)send_pipe_command(clients -> at(index) -> to_thread[1], msgs -> at(loop).cmd);
+			client_t *cur_cl = clients -> at(index);
+
+			if (cur_cl -> is_server == is_server_in && cur_cl -> socket_fd != cur_msg -> fd_sender)
+				(void)send_pipe_command(cur_cl -> to_thread[1], cur_msg -> cmd);
 		}
 	}
 }
@@ -547,15 +572,19 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 			if (!FD_ISSET(clients.at(loop) -> to_main[0], &rfds))
 				continue;
 
-			if (process_client(clients.at(loop), &msgs_clients, &msgs_servers) == -1)
+			if (process_pipe_from_client_thread(clients.at(loop), &msgs_clients, &msgs_servers) == -1)
+			{
+				dolog(LOG_INFO, "main|connection with %s/%s lost", clients.at(loop) -> host, clients.at(loop) -> type);
+
 				delete_ids.push_back(&clients.at(loop) -> th);
+			}
 		}
 
 		for(unsigned int loop=0; loop<delete_ids.size(); loop++)
 			forget_client_thread_id(&clients, delete_ids.at(loop));
 
-		send_to_clients_servers(&clients, &msgs_clients, false);
-		send_to_clients_servers(&clients, &msgs_servers, true);
+		send_to_client_threads(&clients, &msgs_clients, false);
+		send_to_client_threads(&clients, &msgs_servers, true);
 
 		if (FD_ISSET(listen_socket_fd, &rfds))
 			register_new_client(listen_socket_fd, &clients, user_map, config, ppools, &stats, eb_output_fips140, eb_output_scc);

@@ -169,7 +169,7 @@ int protocol::reconnect_server_socket()
 	char connect_msg = 0;
 	int count = 1;
 
-	int host_try_count = 0;
+	unsigned int host_try_count = 0;
 	for(;;)
 	{
 		// connect to server

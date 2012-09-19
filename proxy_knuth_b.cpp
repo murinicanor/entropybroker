@@ -570,7 +570,9 @@ int main(int argc, char *argv[])
 			int new_socket_fd = accept(listen_socket_fd, (struct sockaddr *)&client_addr, &client_addr_len);
 			if (new_socket_fd != -1)
 			{
-				dolog(LOG_INFO, "new client: %s:%d (fd: %d)", inet_ntoa(client_addr.sin_addr), client_addr.sin_port, new_socket_fd);
+				std::string host = get_endpoint_name(&client_addr);
+
+				dolog(LOG_INFO, "new client: %s:%d (fd: %d)", host.c_str(), client_addr.sin_port, new_socket_fd);
 
 				std::string client_password;
 				long long unsigned int challenge = 1;
@@ -597,7 +599,7 @@ int main(int argc, char *argv[])
 					pcp -> challenge = challenge;
 
 					char dummy_str[256];
-					snprintf(dummy_str, sizeof dummy_str, "%s:%d", inet_ntoa(client_addr.sin_addr), client_addr.sin_port);
+					snprintf(dummy_str, sizeof dummy_str, "%s:%d", host.c_str(), client_addr.sin_port);
 					pcp -> host = dummy_str;
 
 					pcp -> challenge = challenge;

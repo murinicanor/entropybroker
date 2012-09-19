@@ -22,7 +22,7 @@ class protocol
 {
 private:
 	std::vector<std::string> *hosts;
-	int host_index;
+	unsigned int host_index;
 	std::string username, password;
 	bool is_server;
 	std::string type;
