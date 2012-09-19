@@ -65,7 +65,7 @@ void load_config(const char *config, config_t *pconfig)
 	pconfig -> communication_timeout              = 15.0;
 	pconfig -> communication_session_timeout      = 3600.0; /* 0 for no timeout */
 	pconfig -> default_sleep_time_when_pools_full = 10;
-	pconfig -> default_sleep_when_pools_empty     = 1;
+	pconfig -> default_sleep_when_pools_empty     = 16;
 	pconfig -> default_max_sleep_when_pools_empty = 60;
 	pconfig -> when_pools_full_allow_submit_interval = 15;
 

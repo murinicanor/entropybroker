@@ -598,7 +598,7 @@ int main(int argc, char *argv[])
 			{
 				std::string host = get_endpoint_name(new_socket_fd);
 
-				dolog(LOG_INFO, "new client: %s:%d (fd: %d)", host.c_str(), client_addr.sin_port, new_socket_fd);
+				dolog(LOG_INFO, "new client: %s (fd: %d)", host.c_str(), new_socket_fd);
 
 				std::string client_password;
 				long long unsigned int challenge = 1;
@@ -625,7 +625,7 @@ int main(int argc, char *argv[])
 					pcp -> challenge = challenge;
 
 					char dummy_str[256];
-					snprintf(dummy_str, sizeof dummy_str, "%s:%d", host.c_str(), client_addr.sin_port);
+					snprintf(dummy_str, sizeof dummy_str, "%s", host.c_str());
 					pcp -> host = dummy_str;
 
 					pcp -> challenge = challenge;

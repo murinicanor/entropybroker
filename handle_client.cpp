@@ -99,7 +99,7 @@ void forget_client_thread_id(std::vector<client_t *> *clients, pthread_t *tid)
 
 int send_pipe_command(int fd, unsigned char command)
 {
-	printf("SEND TO MAIN %02x\n", command);
+	printf("SEND TO MAIN %s\n", pipe_cmd_str[command]);
 	for(;;)
 	{
 		int rc = write(fd, &command, 1);
@@ -121,13 +121,13 @@ int send_pipe_command(int fd, unsigned char command)
 	return 0;
 }
 
-int send_request_result_to_main_thread(bool is_server, int fd, bool no_bits, bool new_bits, bool is_full, bool need_data)
+int send_request_result_to_main_thread(bool is_server, int fd, bool no_bits, bool new_bits, bool is_full)
 {
 	int rc_pipe = 0;
 
 	if (is_server)
 	{
-		if (new_bits && need_data)
+		if (new_bits)
 			rc_pipe |= send_pipe_command(fd, PIPE_CMD_HAVE_DATA);
 
 		if (is_full)
@@ -142,11 +142,9 @@ int send_request_result_to_main_thread(bool is_server, int fd, bool no_bits, boo
 	return rc_pipe != 0 ? -1 : 0;
 }
 
-int send_request_from_main_to_clients(client_t *p, bool *need_data)
+int send_request_from_main_to_clients(client_t *p)
 {
-	bool have_data = false, is_full = false;
-
-	*need_data = false;
+	bool need_data = false, have_data = false, is_full = false;
 
 	for(;;)
 	{
@@ -171,19 +169,19 @@ int send_request_from_main_to_clients(client_t *p, bool *need_data)
 		{
 			if (cmd == PIPE_CMD_NEED_DATA)
 			{
-				*need_data = true;
+				need_data = true;
 				have_data = false;
 				is_full = false;
 			}
 			else if (cmd == PIPE_CMD_HAVE_DATA)
 			{
-				*need_data = false;
+				need_data = false;
 				have_data = true;
 				is_full = false;
 			}
 			else if (cmd == PIPE_CMD_IS_FULL)
 			{
-				*need_data = false;
+				need_data = false;
 				have_data = false;
 				is_full = true;
 			}
@@ -195,9 +193,9 @@ int send_request_from_main_to_clients(client_t *p, bool *need_data)
 	}
 
 	int rc_client = 0;
-	if (*need_data && !p -> is_server && p -> type_set)
+	if (need_data && !p -> is_server && p -> type_set)
 		error_exit("if (need_data && p -> is_client) %s", p -> type);
-	if (*need_data)
+	if (need_data)
 		rc_client |= notify_server_data_needed(p -> socket_fd, p -> stats, p -> config);
 
 	if (have_data && p -> is_server && p -> type_set)
@@ -286,22 +284,21 @@ void * thread(void *data)
 
 				if (do_client(p, &no_bits, &new_bits, &is_full) == -1)
 				{
-					dolog(LOG_INFO, "Terminating connection with %s", p -> host);
+					dolog(LOG_INFO, "Terminating connection with %s (%p)", p -> host, p -> socket_fd);
 					break;
 				}
 
-				bool need_data = false;
-				if (FD_ISSET(p -> to_thread[0], &rfds))
-				{
-					if (send_request_from_main_to_clients(p, &need_data) != 0)
-						break;
-				}
-
-				if (send_request_result_to_main_thread(p -> is_server, p -> to_main[1], no_bits, new_bits, is_full, need_data) != 0)
+				if (send_request_result_to_main_thread(p -> is_server, p -> to_main[1], no_bits, new_bits, is_full) != 0)
 				{
 					dolog(LOG_CRIT, "Thread connection to main thread lost (1)");
 					break;
 				}
+			}
+
+			if (FD_ISSET(p -> to_thread[0], &rfds))
+			{
+				if (send_request_from_main_to_clients(p) != 0)
+					break;
 			}
 		}
 
@@ -403,6 +400,8 @@ int process_pipe_from_client_thread(client_t *p, std::vector<msg_pair_t> *msgs_c
 			break;
 		}
 
+printf("RECV %s FROM %d\n", pipe_cmd_str[cmd], p -> socket_fd);
+
 		msg_pair_t queue_entry = { p -> socket_fd, cmd };
 
 		if (cmd == PIPE_CMD_HAVE_DATA)
@@ -420,18 +419,20 @@ int process_pipe_from_client_thread(client_t *p, std::vector<msg_pair_t> *msgs_c
 
 void send_to_client_threads(std::vector<client_t *> *clients, std::vector<msg_pair_t> *msgs, bool is_server_in)
 {
+printf("send_to_client_threads\n");
 	for(unsigned int loop=0; loop<msgs -> size(); loop++)
 	{
 		msg_pair_t *cur_msg = &msgs -> at(loop);
-
-printf("SEND TO thread: %02x\n", cur_msg -> cmd);
 
 		for(unsigned int index=0; index<clients -> size(); index++)
 		{
 			client_t *cur_cl = clients -> at(index);
 
 			if (cur_cl -> is_server == is_server_in && cur_cl -> socket_fd != cur_msg -> fd_sender)
+{
+printf("SEND TO thread: %s to %d\n", pipe_cmd_str[cur_msg -> cmd], cur_cl -> socket_fd);
 				(void)send_pipe_command(cur_cl -> to_thread[1], cur_msg -> cmd);
+}
 		}
 	}
 }
