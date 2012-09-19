@@ -1,5 +1,7 @@
 #include <string.h>
+#include <arpa/inet.h>
 #include <string>
+#include <arpa/inet.h>
 #include <openssl/blowfish.h>
 #include <openssl/rand.h>
 

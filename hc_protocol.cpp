@@ -3,6 +3,7 @@
 #include <openssl/sha.h>
 #include <stdlib.h>
 #include <string.h>
+#include <arpa/inet.h>
 #include <vector>
 #include <string>
 #include <map>

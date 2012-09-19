@@ -565,12 +565,10 @@ int main(int argc, char *argv[])
 
 		if (!sig_quit && FD_ISSET(listen_socket_fd, &rfds))
 		{
-			struct sockaddr_in client_addr;
-			socklen_t client_addr_len = sizeof(client_addr);
-			int new_socket_fd = accept(listen_socket_fd, (struct sockaddr *)&client_addr, &client_addr_len);
+			int new_socket_fd = accept(listen_socket_fd, NULL, NULL);
 			if (new_socket_fd != -1)
 			{
-				std::string host = get_endpoint_name(&client_addr);
+				std::string host = get_endpoint_name(new_socket_fd);
 
 				dolog(LOG_INFO, "new client: %s:%d (fd: %d)", host.c_str(), client_addr.sin_port, new_socket_fd);
 

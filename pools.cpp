@@ -12,6 +12,7 @@
 #include <unistd.h>
 #include <sys/file.h>
 #include <pthread.h>
+#include <arpa/inet.h>
 
 #include "error.h"
 #include "log.h"

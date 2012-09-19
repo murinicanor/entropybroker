@@ -6,6 +6,7 @@
 #include <map>
 #include <sys/time.h>
 #include <sys/resource.h>
+#include <arpa/inet.h>
 
 #include "error.h"
 #include "log.h"

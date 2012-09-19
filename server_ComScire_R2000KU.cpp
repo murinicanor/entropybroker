@@ -1,5 +1,6 @@
 #include "ComScire_R2000KU/qwqng.hpp"
 
+#include <arpa/inet.h>
 #include <string>
 #include <vector>
 #include <map>

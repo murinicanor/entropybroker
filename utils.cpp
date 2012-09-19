@@ -500,12 +500,23 @@ void set_fd_nonblocking(int fd)
 		error_exit("problem setting fd %d non-blocking");
 }
 
-std::string get_endpoint_name(sockaddr_in *p)
+std::string get_endpoint_name(int fd)
 {
-	char buffer[4096];
+	char buffer[4096] = { "?" };
+	struct sockaddr_in6 addr;
+	socklen_t addr_len = sizeof addr;
 
-	if (inet_ntop(AF_INET6, p, buffer, sizeof buffer) == NULL)
-		return std::string("CANNOT CONVERT ADDRESS") + std::string(strerror(errno));
+	if (getpeername(fd, (struct sockaddr *)&addr, &addr_len) == -1)
+		snprintf(buffer, sizeof buffer, "[FAILED TO FIND NAME OF %d: %s (1)]", fd, strerror(errno));
+	else
+	{
+		char buffer2[4096];
+
+		if (inet_ntop(AF_INET6, &addr.sin6_addr, buffer2, sizeof buffer2))
+			snprintf(buffer, sizeof buffer, "[%s]:%d", buffer2, ntohs(addr.sin6_port));
+		else
+			snprintf(buffer, sizeof buffer, "[FAILED TO FIND NAME OF %d: %s (1)]", fd, strerror(errno));
+	}
 
 	return std::string(buffer);
 }

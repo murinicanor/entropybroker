@@ -1,6 +1,7 @@
 #include <string.h>
 #include <math.h>
 #include <stdlib.h>
+#include <arpa/inet.h>
 #include <string>
 
 #include "error.h"

@@ -25,6 +25,7 @@
 #include <stdio.h>
 #include <string>
 #include <sys/mman.h>
+#include <arpa/inet.h>
 #include <openssl/rand.h>
 
 #include "math.h"

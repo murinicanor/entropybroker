@@ -5,6 +5,7 @@
 #include <errno.h>
 #include <openssl/blowfish.h>
 #include <openssl/sha.h>
+#include <arpa/inet.h>
 #include <string>
 #include <map>
 #include <vector>

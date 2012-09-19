@@ -22,4 +22,4 @@ void unlock_mem(void *p, int size);
 void hexdump(unsigned char *in, int n);
 void split_resource_location(std::string in, std::string & host, int & port);
 void set_fd_nonblocking(int fd);
-std::string get_endpoint_name(sockaddr_in *p);
+std::string get_endpoint_name(int fd);

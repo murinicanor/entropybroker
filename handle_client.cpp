@@ -321,14 +321,12 @@ void * thread(void *data)
 
 void register_new_client(int listen_socket_fd, std::vector<client_t *> *clients, users *user_map, config_t *config, pools *ppools, statistics *stats, fips140 *output_fips140, scc *output_scc)
 {
-	struct sockaddr_in client_addr;
-	socklen_t client_addr_len = sizeof(client_addr);
-	int new_socket_fd = accept(listen_socket_fd, (struct sockaddr *)&client_addr, &client_addr_len);
+	int new_socket_fd = accept(listen_socket_fd, NULL, NULL);
 
 	if (new_socket_fd != -1)
 	{
-		std::string host = get_endpoint_name(&client_addr);
-		dolog(LOG_INFO, "main|new client: %s:%d (fd: %d)", host.c_str(), client_addr.sin_port, new_socket_fd);
+		std::string host = get_endpoint_name(new_socket_fd);
+		dolog(LOG_INFO, "main|new client: %s (fd: %d)", host.c_str(), new_socket_fd);
 
 		client_t *p = new client_t;
 		if (!p)
@@ -336,8 +334,7 @@ void register_new_client(int listen_socket_fd, std::vector<client_t *> *clients,
 
 		memset(p, 0x00, sizeof(client_t));
 		p -> socket_fd = new_socket_fd;
-		int dummy = sizeof(p -> host);
-		snprintf(p -> host, dummy, "%s:%d", host.c_str(), client_addr.sin_port);
+		snprintf(p -> host, sizeof p -> host, "%s", host.c_str());
 		p -> pfips140 = new fips140();
 		p -> pscc = new scc();
 		double now = get_ts();

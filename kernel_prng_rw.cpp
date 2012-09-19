@@ -9,6 +9,7 @@
 #include <sys/ioctl.h>
 #include <stdlib.h>
 #include <asm/types.h>
+#include <arpa/inet.h>
 #include <linux/random.h>
 
 #include "error.h"

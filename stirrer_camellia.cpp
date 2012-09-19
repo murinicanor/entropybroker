@@ -1,4 +1,5 @@
 #include <string.h>
+#include <arpa/inet.h>
 #include <string>
 #include <openssl/camellia.h>
 #include <openssl/rand.h>
