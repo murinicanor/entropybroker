@@ -19,11 +19,21 @@ private:
 	stirrer *s;
 	ivec *iv;
 
+	pthread_mutex_t lck;
+	bool is_locked;
+	pthread_cond_t cond;
+
 public:
 	pool(int new_pool_size_bytes, bit_count_estimator *bce, hasher *hclass, stirrer *sclass);
 	pool(int pool_nr, FILE *fh, bit_count_estimator *bce, hasher *hclass, stirrer *sclass);
 	~pool();
 	void dump(FILE *fh);
+
+	// this method returns a condition variable if this object
+	// was already(!) locked and NULL if it is was not locked
+	// and you're now the owner of the lock(!)
+	pthread_cond_t * lock_object();
+	void unlock_object();
 
 	/* -1 if not full, 0 if full */
 	int add_entropy_data(unsigned char *entropy_data, int n_bytes);

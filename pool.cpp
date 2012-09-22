@@ -23,6 +23,8 @@
 #include <unistd.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <errno.h>
+#include <assert.h>
 #include <string>
 #include <sys/mman.h>
 #include <arpa/inet.h>
@@ -40,6 +42,11 @@
 
 pool::pool(int new_pool_size_bytes, bit_count_estimator *bce_in, hasher *hclass, stirrer *sclass) : bce(bce_in), h(hclass), s(sclass)
 {
+	pthread_mutex_init(&lck, NULL);
+	is_locked = false;
+is_locked = true; // FIXME
+	pthread_cond_init(&cond, NULL);
+
 	memset(&state, 0x00, sizeof(state));
 
 	pool_size_bytes = new_pool_size_bytes;
@@ -57,6 +64,11 @@ pool::pool(int new_pool_size_bytes, bit_count_estimator *bce_in, hasher *hclass,
 
 pool::pool(int pool_nr, FILE *fh, bit_count_estimator *bce_in, hasher *hclass, stirrer *sclass) : bce(bce_in), h(hclass), s(sclass)
 {
+	pthread_mutex_init(&lck, NULL);
+	is_locked = false;
+	pthread_cond_init(&cond, NULL);
+is_locked = true; // FIXME
+
 	unsigned char val_buffer[8];
 
 	if (fread(val_buffer, 1, 8, fh) <= 0)
@@ -100,10 +112,39 @@ pool::~pool()
 	free(entropy_pool);
 
 	delete iv;
+
+	pthread_mutex_destroy(&lck);
+	pthread_cond_destroy(&cond);
+}
+
+pthread_cond_t * pool::lock_object()
+{
+	if (pthread_mutex_trylock(&lck))
+	{
+		if (errno == EBUSY)
+			return &cond;
+
+		error_exit("pthread_mutex_trylock failed");
+	}
+
+	is_locked = true;
+
+	return NULL;
+}
+
+void pool::unlock_object()
+{
+	is_locked = true;
+
+	pthread_mutex_unlock(&lck);
+
+	pthread_cond_signal(&cond);
 }
 
 void pool::dump(FILE *fh)
 {
+	assert(is_locked);
+
 	if (bits_in_pool > 0)
 	{
 		unsigned char val_buffer[8];
@@ -129,6 +170,8 @@ void pool::dump(FILE *fh)
 
 int pool::add_entropy_data(unsigned char *entropy_data, int n_bytes_in)
 {
+	assert(is_locked);
+
 	int ivec_size = s -> get_ivec_size();
 	unsigned char *cur_ivec = (unsigned char *)malloc(ivec_size);
 	lock_mem(cur_ivec, ivec_size);
@@ -184,11 +227,15 @@ int pool::add_entropy_data(unsigned char *entropy_data, int n_bytes_in)
 
 int pool::get_n_bits_in_pool() const
 {
+	assert(is_locked);
+
 	return bits_in_pool;
 }
 
 int pool::get_entropy_data(unsigned char *entropy_data, int n_bytes_requested, bool prng_ok)
 {
+	assert(is_locked);
+
 	unsigned char *temp_buffer = (unsigned char *)malloc(pool_size_bytes);
 	lock_mem(temp_buffer, pool_size_bytes);
 
@@ -264,17 +311,23 @@ int pool::get_pool_size() const
 
 bool pool::is_full() const
 {
+	assert(is_locked);
+
 	return bits_in_pool == (pool_size_bytes * 8);
 }
 
 bool pool::is_almost_full() const
 {
+	assert(is_locked);
+
 	return ((pool_size_bytes * 8) - bits_in_pool) < get_get_size_in_bits();
 }
 
 /* taken from random driver from linux-kernel */
 int pool::add_event(double ts, unsigned char *event_data, int n_event_data)
 {
+	assert(is_locked);
+
 	unsigned char *temp_buffer = (unsigned char *)malloc(pool_size_bytes);
 	lock_mem(temp_buffer, pool_size_bytes);
 

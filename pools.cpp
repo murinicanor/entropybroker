@@ -1,4 +1,5 @@
 #include <math.h>
+#include <assert.h>
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
@@ -28,7 +29,7 @@
 
 pools::pools(std::string cache_dir_in, unsigned int max_n_mem_pools_in, unsigned int max_n_disk_pools_in, unsigned int min_store_on_disk_n_in, bit_count_estimator *bce_in, int new_pool_size_in_bytes, hasher *hclass, stirrer *sclass) : cache_dir(cache_dir_in), max_n_mem_pools(max_n_mem_pools_in), max_n_disk_pools(max_n_disk_pools_in), min_store_on_disk_n(min_store_on_disk_n_in), disk_limit_reached_notified(false), bce(bce_in), h(hclass), s(sclass)
 {
-	pthread_mutex_init(&lck, NULL);
+	pthread_rwlock_init(&list_lck, NULL);
 
 	new_pool_size = new_pool_size_in_bytes;
 
@@ -48,13 +49,34 @@ pools::pools(std::string cache_dir_in, unsigned int max_n_mem_pools_in, unsigned
 
 pools::~pools()
 {
+	list_wlock();
 	store_caches(0);
+	list_unlock();
 
-	pthread_mutex_destroy(&lck);
+	pthread_rwlock_destroy(&list_lck);
+}
+
+void pools::list_wlock()
+{
+	pthread_rwlock_wrlock(&list_lck);
+	is_w_locked = true;
+}
+
+void pools::list_unlock()
+{
+	is_w_locked = false;
+	pthread_rwlock_unlock(&list_lck);
+}
+
+void pools::list_rlock()
+{
+	pthread_rwlock_rdlock(&list_lck);
 }
 
 void pools::store_caches(unsigned int keep_n)
 {
+	assert(is_w_locked);
+
 	if (cache_list.size() >= max_n_disk_pools)
 	{
 		if (!disk_limit_reached_notified)
@@ -101,6 +123,7 @@ void pools::store_caches(unsigned int keep_n)
 
 void pools::load_caches(unsigned int load_n_bits)
 {
+	assert(is_w_locked);
 	dolog(LOG_DEBUG, "Loading %d bits from pools", load_n_bits);
 
 	unsigned int bits_loaded = 0;
@@ -140,6 +163,7 @@ void pools::load_caches(unsigned int load_n_bits)
 
 void pools::flush_empty_pools()
 {
+	assert(is_w_locked);
 	unsigned int deleted = 0;
 	for(int index=pool_vector.size() - 1; index >= 0; index--)
 	{
@@ -158,6 +182,8 @@ void pools::flush_empty_pools()
 
 void pools::merge_pools()
 {
+	assert(is_w_locked);
+
 	if (pool_vector.empty())
 		return;
 
@@ -256,10 +282,79 @@ bool pools::verify_quality(unsigned char *data, int n, bool ignore_rngtest_fips1
 	return rc_fips140 == true && rc_scc == true;
 }
 
+int pools::find_non_full_pool() const
+{
+	int n = pool_vector.size();
+	if (n > 0)
+	{
+		int offset = myrand() % n;
+
+		for(int loop=0; loop<n; loop++)
+		{
+			int index = (offset + loop) % n;
+
+			if (!pool_vector.at(index) -> is_almost_full())
+				return index;
+		}
+	}
+
+	return -1;
+}
+
+int pools::select_pool_to_add_to()
+{
+	list_rlock();
+
+	int index = find_non_full_pool();
+
+	if (index == -1 || pool_vector.at(index) -> is_almost_full())
+	{
+		list_unlock();
+		list_wlock();
+		// at this point (due to context switching between the unlock and the
+		// wlock), there may already be a non-empty pool: that is not a problem
+
+		flush_empty_pools();
+		merge_pools();
+
+		if (pool_vector.size() >= max_n_mem_pools)
+			store_caches(max(0, int(pool_vector.size()) - int(min_store_on_disk_n)));
+
+		// see if the number of in-memory pools is reduced after the call to store_caches
+		// it might have not stored any on disk if the limit on the number of files has been reached
+		if (pool_vector.size() < max_n_mem_pools)
+		{
+			dolog(LOG_DEBUG, "Adding empty pool to queue (new number of pools: %d)", pool_vector.size() + 1);
+			pool_vector.push_back(new pool(new_pool_size, bce, h, s));
+		}
+
+		list_unlock();
+
+		list_rlock();
+		index = find_non_full_pool();
+		if (index == -1)
+		{
+			// this can happen if 1. the number of in-memory-pools limit has been reached and
+			// 2. the number of on-disk-pools limit has been reached
+			index = myrand(pool_vector.size());
+		}
+	}
+
+	return index;
+}
+
+int pools::get_bit_sum_unlocked()
+{
+	int bit_count = 0;
+
+	for(unsigned int loop=0; loop<pool_vector.size(); loop++)
+		bit_count += pool_vector.at(loop) -> get_n_bits_in_pool();
+
+	return bit_count;
+}
+
 int pools::get_bits_from_pools(int n_bits_requested, unsigned char **buffer, bool allow_prng, bool ignore_rngtest_fips140, fips140 *pfips, bool ignore_rngtest_scc, scc *pscc)
 {
-	pthread_mutex_lock(&lck);
-
 	int n_to_do_bytes = (n_bits_requested + 7) / 8;
 	int n_to_do_bits = n_to_do_bytes * 8;
 	int n_bits_retrieved = 0;
@@ -272,14 +367,22 @@ int pools::get_bits_from_pools(int n_bits_requested, unsigned char **buffer, boo
 	lock_mem(buffer, n_to_do_bytes);
 
 	// load bits from disk if needed
-	int bits_needed_to_load = n_bits_requested - get_bit_sum_unlocked();
-	if (bits_needed_to_load > 0)
+	for(;;)
 	{
+		list_rlock();
+		int bits_needed_to_load = n_bits_requested - get_bit_sum_unlocked();
+
+		if (bits_needed_to_load <= 0)
+			break;
+		list_unlock();
+
+		list_wlock();
 		flush_empty_pools();
 		merge_pools();
-
 		load_caches(bits_needed_to_load);
+		list_unlock();
 	}
+	// at this point the list is read locked
 
 	int n = pool_vector.size();
 	int offset = myrand() % n;
@@ -323,72 +426,26 @@ int pools::get_bits_from_pools(int n_bits_requested, unsigned char **buffer, boo
 		}
 	}
 
-	pthread_mutex_unlock(&lck);
+	list_unlock();
 
 	return n_bits_retrieved;
 }
 
-int pools::find_non_full_pool() const
-{
-	int n = pool_vector.size();
-	if (n > 0)
-	{
-		int offset = myrand() % n;
-
-		for(int loop=0; loop<n; loop++)
-		{
-			int index = (offset + loop) % n;
-
-			if (!pool_vector.at(index) -> is_almost_full())
-				return index;
-		}
-	}
-
-	return -1;
-}
-
-int pools::select_pool_to_add_to()
-{
-	int index = find_non_full_pool();
-
-	if (index == -1 || pool_vector.at(index) -> is_almost_full())
-	{
-		flush_empty_pools();
-		merge_pools();
-
-		if (pool_vector.size() >= max_n_mem_pools)
-			store_caches(max(0, int(pool_vector.size()) - int(min_store_on_disk_n)));
-
-		// see if the number of in-memory pools is reduced after the call to store_caches
-		// it might have not stored any on disk if the limit on the number of files has been reached
-		if (pool_vector.size() < max_n_mem_pools)
-		{
-			dolog(LOG_DEBUG, "Adding empty pool to queue (new number of pools: %d)", pool_vector.size() + 1);
-			pool_vector.push_back(new pool(new_pool_size, bce, h, s));
-		}
-
-		index = find_non_full_pool();
-		if (index == -1)
-		{
-			// this can happen if 1. the number of in-memory-pools limit has been reached and
-			// 2. the number of on-disk-pools limit has been reached
-			index = myrand(pool_vector.size());
-		}
-	}
-
-	return index;
-}
-
 int pools::add_bits_to_pools(unsigned char *data, int n_bytes, bool ignore_rngtest_fips140, fips140 *pfips, bool ignore_rngtest_scc, scc *pscc)
 {
-	pthread_mutex_lock(&lck);
-
 	int n_bits_added = 0;
 	int index = -1;
 
+	bool first = true;
 	while(n_bytes > 0)
 	{
+		if (first)
+			first = false;
+		else
+			list_unlock();
+
 		index = select_pool_to_add_to();
+		// the list is now read-locked
 
 		int space_available = pool_vector.at(index) -> get_pool_size() - pool_vector.at(index) -> get_n_bits_in_pool();
 		// in that case we're already mixing in so we can change all data anyway
@@ -406,59 +463,48 @@ int pools::add_bits_to_pools(unsigned char *data, int n_bytes, bool ignore_rngte
 		data += n_bytes_to_add;
 	}
 
-	pthread_mutex_unlock(&lck);
+	list_unlock();
 
 	return n_bits_added;
 }
 
-int pools::get_bit_sum_unlocked()
-{
-	int bit_count = 0;
-
-	for(unsigned int loop=0; loop<pool_vector.size(); loop++)
-		bit_count += pool_vector.at(loop) -> get_n_bits_in_pool();
-
-	return bit_count;
-}
-
 int pools::get_bit_sum()
 {
-	pthread_mutex_lock(&lck);
-
+	list_rlock();
 	int bit_count = get_bit_sum_unlocked();
-
-	pthread_mutex_unlock(&lck);
+	list_unlock();
 
 	return bit_count;
 }
 
 int pools::add_event(long double event, unsigned char *event_data, int n_event_data)
 {
-	pthread_mutex_lock(&lck);
-
 	unsigned int index = select_pool_to_add_to();
+	// the list is now read-locked
+
 	int rc = pool_vector.at(index) -> add_event(event, event_data, n_event_data);
 
-	pthread_mutex_unlock(&lck);
+	list_unlock();
 
 	return rc;
 }
 
 bool pools::all_pools_full()
 {
-	pthread_mutex_lock(&lck);
+	bool rc = true;
+
+	list_rlock();
 
 	for(unsigned int loop=0; loop<pool_vector.size(); loop++)
 	{
 		if (!pool_vector.at(loop) -> is_almost_full())
 		{
-			pthread_mutex_unlock(&lck);
-
-			return false;
+			rc = false;
+			break;
 		}
 	}
 
-	pthread_mutex_unlock(&lck);
+	list_unlock();
 
-	return true;
+	return rc;
 }
