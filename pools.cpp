@@ -30,6 +30,8 @@
 pools::pools(std::string cache_dir_in, unsigned int max_n_mem_pools_in, unsigned int max_n_disk_pools_in, unsigned int min_store_on_disk_n_in, bit_count_estimator *bce_in, int new_pool_size_in_bytes, hasher *hclass, stirrer *sclass) : cache_dir(cache_dir_in), max_n_mem_pools(max_n_mem_pools_in), max_n_disk_pools(max_n_disk_pools_in), min_store_on_disk_n(min_store_on_disk_n_in), disk_limit_reached_notified(false), bce(bce_in), h(hclass), s(sclass)
 {
 	pthread_rwlock_init(&list_lck, NULL);
+	is_w_locked = false;
+	is_r_locked = 0;
 
 	new_pool_size = new_pool_size_in_bytes;
 
@@ -64,13 +66,23 @@ void pools::list_wlock()
 
 void pools::list_unlock()
 {
-	is_w_locked = false;
+	assert(is_w_locked || is_r_locked > 0);
+
+	if (is_w_locked)
+		is_w_locked = false;
+	else
+		is_r_locked--;
+
+	assert(is_r_locked >= 0);
+
 	pthread_rwlock_unlock(&list_lck);
 }
 
 void pools::list_rlock()
 {
 	pthread_rwlock_rdlock(&list_lck);
+	assert(is_r_locked >= 0);
+	is_r_locked++;
 }
 
 void pools::store_caches(unsigned int keep_n)
@@ -284,6 +296,8 @@ bool pools::verify_quality(unsigned char *data, int n, bool ignore_rngtest_fips1
 
 int pools::find_non_full_pool() const
 {
+	assert(is_w_locked || is_r_locked > 0);
+
 	int n = pool_vector.size();
 	if (n > 0)
 	{
@@ -345,6 +359,8 @@ int pools::select_pool_to_add_to()
 
 int pools::get_bit_sum_unlocked()
 {
+	assert(is_w_locked || is_r_locked > 0);
+
 	int bit_count = 0;
 
 	for(unsigned int loop=0; loop<pool_vector.size(); loop++)
@@ -358,9 +374,8 @@ int pools::get_bits_from_pools(int n_bits_requested, unsigned char **buffer, boo
 	int n_to_do_bytes = (n_bits_requested + 7) / 8;
 	int n_to_do_bits = n_to_do_bytes * 8;
 	int n_bits_retrieved = 0;
-	unsigned char *cur_p;
 
-	cur_p = *buffer = (unsigned char *)malloc(n_to_do_bytes + 1);
+	unsigned char *cur_p = *buffer = (unsigned char *)malloc(n_to_do_bytes + 1);
 	if (!cur_p)
 		error_exit("transmit_bits_to_client memory allocation failure");
 
@@ -445,6 +460,7 @@ int pools::add_bits_to_pools(unsigned char *data, int n_bytes, bool ignore_rngte
 			list_unlock();
 
 		index = select_pool_to_add_to();
+		assert(!is_w_locked);
 		// the list is now read-locked
 
 		int space_available = pool_vector.at(index) -> get_pool_size() - pool_vector.at(index) -> get_n_bits_in_pool();
@@ -480,6 +496,7 @@ int pools::get_bit_sum()
 int pools::add_event(long double event, unsigned char *event_data, int n_event_data)
 {
 	unsigned int index = select_pool_to_add_to();
+	assert(!is_w_locked);
 	// the list is now read-locked
 
 	int rc = pool_vector.at(index) -> add_event(event, event_data, n_event_data);
