@@ -160,7 +160,7 @@ int do_client_get(client_t *client, bool *no_bits)
 	dolog(LOG_DEBUG, "get|%s memory allocated, retrieving bits", client -> host);
 
 	unsigned char *temp_buffer = NULL;
-	cur_n_bits = client -> ppools -> get_bits_from_pools(cur_n_bits, &temp_buffer, client -> allow_prng, client -> ignore_rngtest_fips140, client -> output_fips140, client -> ignore_rngtest_scc, client -> output_scc);
+	cur_n_bits = client -> ppools -> get_bits_from_pools(cur_n_bits, &temp_buffer, client -> allow_prng, client -> ignore_rngtest_fips140, client -> output_fips140, client -> ignore_rngtest_scc, client -> output_scc, double(DEFAULT_COMM_TO) * 0.9);
 	if (cur_n_bits == 0)
 	{
 		dolog(LOG_WARNING, "get|%s no bits in pools, sending deny", client -> host);

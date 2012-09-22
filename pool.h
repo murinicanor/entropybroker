@@ -33,6 +33,7 @@ public:
 	// was already(!) locked and NULL if it is was not locked
 	// and you're now the owner of the lock(!)
 	pthread_cond_t * lock_object();
+	pthread_cond_t * timed_lock_object(double max_time);
 	void unlock_object();
 
 	/* -1 if not full, 0 if full */

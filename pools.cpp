@@ -369,7 +369,7 @@ int pools::get_bit_sum_unlocked()
 	return bit_count;
 }
 
-int pools::get_bits_from_pools(int n_bits_requested, unsigned char **buffer, bool allow_prng, bool ignore_rngtest_fips140, fips140 *pfips, bool ignore_rngtest_scc, scc *pscc)
+int pools::get_bits_from_pools(int n_bits_requested, unsigned char **buffer, bool allow_prng, bool ignore_rngtest_fips140, fips140 *pfips, bool ignore_rngtest_scc, scc *pscc, double max_duration)
 {
 	int n_to_do_bytes = (n_bits_requested + 7) / 8;
 	int n_to_do_bits = n_to_do_bytes * 8;
@@ -399,32 +399,84 @@ int pools::get_bits_from_pools(int n_bits_requested, unsigned char **buffer, boo
 	}
 	// at this point the list is read locked
 
-	int n = pool_vector.size();
+	unsigned int n = pool_vector.size();
+	int pool_block_size = pool_vector.at(0) -> get_get_size();
+
+	std::vector<unsigned int> available;
+	int dummy = n_to_do_bits;
+	double start_ts = get_ts();
+
+	unsigned int index = 0;
+	for(;available.size() < n;)
+	{
+		double now_ts = get_ts();
+		double time_left = (max_duration * 0.9) - (now_ts - start_ts);
+
+		if (time_left <= 0.0)
+			break;
+
+		bool found = false;
+		for(unsigned int search=0; search<available.size(); search++)
+		{
+			if (available.at(search) == index)
+			{
+				found = true;
+				break;
+			}
+		}
+
+		if (!found)
+		{
+			pthread_cond_t *cond = pool_vector.at(index) -> timed_lock_object(time_left);
+			if (!cond)
+			{
+				int bits = pool_vector.at(index) -> get_n_bits_in_pool();
+
+				if (bits > pool_block_size)
+				{
+					dummy -= bits;
+					available.push_back(index);
+				}
+			}
+		}
+
+		index++;
+
+		if (index == n)
+			index = 0;
+	}
+
+	// FIXME go through availalbe: get & unlock
+
+#if 0
 	int offset = myrand() % n;
 	int index = offset;
-	bool round_two = false;
+	int round = 0;
 
 	// n_to_do_bits can be less than 0 due to the pool block size (more bits might
 	// get returned than what was requested)
 	while(n_to_do_bits > 0)
 	{
-		// this gets the minimum number of bits one can retrieve from a
-		// pool in one request
-		int pool_block_size = pool_vector.at(index) -> get_get_size();
+		pthread_cond_t *cond = pool_vector.at(index) -> lock_object();
 
-		if (pool_vector.at(index) -> get_n_bits_in_pool() > pool_block_size || (round_two && allow_prng))
+		if (cond == NULL)
 		{
-			int cur_n_to_get_bits = min(n_to_do_bits, pool_block_size);
-			int cur_n_to_get_bytes = (cur_n_to_get_bits + 7) / 8;
-
-			unsigned int got_n_bytes = pool_vector.at(index) -> get_entropy_data(cur_p, cur_n_to_get_bytes, 0);
-			unsigned int got_n_bits = got_n_bytes * 8;
-
-			if (verify_quality(cur_p, got_n_bytes, ignore_rngtest_fips140, pfips, ignore_rngtest_scc, pscc))
+			// this gets the minimum number of bits one can retrieve from a
+			// pool in one request
+			if (pool_vector.at(index) -> get_n_bits_in_pool() > pool_block_size || (round >= 2 && allow_prng))
 			{
-				cur_p += got_n_bytes;
-				n_to_do_bits -= got_n_bits;
-				n_bits_retrieved += got_n_bits;
+				int cur_n_to_get_bits = min(n_to_do_bits, pool_block_size);
+				int cur_n_to_get_bytes = (cur_n_to_get_bits + 7) / 8;
+
+				unsigned int got_n_bytes = pool_vector.at(index) -> get_entropy_data(cur_p, cur_n_to_get_bytes, 0);
+				unsigned int got_n_bits = got_n_bytes * 8;
+
+				if (verify_quality(cur_p, got_n_bytes, ignore_rngtest_fips140, pfips, ignore_rngtest_scc, pscc))
+				{
+					cur_p += got_n_bytes;
+					n_to_do_bits -= got_n_bits;
+					n_bits_retrieved += got_n_bits;
+				}
 			}
 		}
 
@@ -434,12 +486,18 @@ int pools::get_bits_from_pools(int n_bits_requested, unsigned char **buffer, boo
 
 		if (index == offset)
 		{
-			round_two = true;
+			round++;
 
-			if (!allow_prng)
+			if (round >= 1)
+			{
+			// wait for condition
+			}
+				
+			if (round >= 2 && !allow_prng)
 				break;
 		}
 	}
+#endif
 
 	list_unlock();
 
