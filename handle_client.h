@@ -1,7 +1,7 @@
 #define PIPE_CMD_HAVE_DATA 1
 #define PIPE_CMD_NEED_DATA 2
 #define PIPE_CMD_IS_FULL   3
-const char *pipe_cmd_str[] = { NULL, "have data (1)", "need data (2)", "is full (3)" };
+extern const char *pipe_cmd_str[];
 
 typedef struct
 {

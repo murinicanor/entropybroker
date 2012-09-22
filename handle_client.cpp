@@ -40,6 +40,7 @@
 #include "protocol.h"
 #include "hc_protocol.h"
 
+const char *pipe_cmd_str[] = { NULL, "have data (1)", "need data (2)", "is full (3)" };
 extern const char *pid_file;
 
 void forget_client_index(std::vector<client_t *> *clients, int nr)
@@ -99,7 +100,7 @@ void forget_client_thread_id(std::vector<client_t *> *clients, pthread_t *tid)
 
 int send_pipe_command(int fd, unsigned char command)
 {
-	printf("SEND TO MAIN %s\n", pipe_cmd_str[command]);
+	// printf("SEND TO MAIN %s\n", pipe_cmd_str[command]);
 	for(;;)
 	{
 		int rc = write(fd, &command, 1);
@@ -400,7 +401,7 @@ int process_pipe_from_client_thread(client_t *p, std::vector<msg_pair_t> *msgs_c
 			break;
 		}
 
-printf("RECV %s FROM %d\n", pipe_cmd_str[cmd], p -> socket_fd);
+		// printf("RECV %s FROM %d\n", pipe_cmd_str[cmd], p -> socket_fd);
 
 		msg_pair_t queue_entry = { p -> socket_fd, cmd };
 
@@ -417,12 +418,37 @@ printf("RECV %s FROM %d\n", pipe_cmd_str[cmd], p -> socket_fd);
 	return rc;
 }
 
-void send_to_client_threads(std::vector<client_t *> *clients, std::vector<msg_pair_t> *msgs, bool is_server_in)
+void send_to_client_threads(std::vector<client_t *> *clients, std::vector<msg_pair_t> *msgs, bool is_server_in, bool *send_have_data, bool *send_need_data, bool *send_is_full)
 {
-printf("send_to_client_threads\n");
+	// printf("send_to_client_threads\n");
 	for(unsigned int loop=0; loop<msgs -> size(); loop++)
 	{
 		msg_pair_t *cur_msg = &msgs -> at(loop);
+
+		if (cur_msg -> cmd == PIPE_CMD_HAVE_DATA)
+		{
+			if (*send_have_data == true)
+				continue;
+
+			*send_have_data = true;
+			*send_need_data = false;
+		}
+		else if (cur_msg -> cmd == PIPE_CMD_NEED_DATA)
+		{
+			if (*send_need_data == true)
+				continue;
+
+			*send_need_data = true;
+			*send_have_data = false;
+		}
+		else if (cur_msg -> cmd == PIPE_CMD_IS_FULL)
+		{
+			if (*send_is_full == true)
+				continue;
+
+			*send_is_full = true;
+			*send_need_data = false;
+		}
 
 		for(unsigned int index=0; index<clients -> size(); index++)
 		{
@@ -430,7 +456,7 @@ printf("send_to_client_threads\n");
 
 			if (cur_cl -> is_server == is_server_in && cur_cl -> socket_fd != cur_msg -> fd_sender)
 {
-printf("SEND TO thread: %s to %d\n", pipe_cmd_str[cur_msg -> cmd], cur_cl -> socket_fd);
+			// printf("SEND TO thread: %s to %d\n", pipe_cmd_str[cur_msg -> cmd], cur_cl -> socket_fd);
 				(void)send_pipe_command(cur_cl -> to_thread[1], cur_msg -> cmd);
 }
 		}
@@ -452,6 +478,7 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 
 	users *user_map = new users(*config -> user_map);
 
+	bool send_have_data = false, send_need_data = false, send_is_full = false;
 	for(;;)
 	{
 		fd_set rfds;
@@ -581,11 +608,14 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 		for(unsigned int loop=0; loop<delete_ids.size(); loop++)
 			forget_client_thread_id(&clients, delete_ids.at(loop));
 
-		send_to_client_threads(&clients, &msgs_clients, false);
-		send_to_client_threads(&clients, &msgs_servers, true);
+		send_to_client_threads(&clients, &msgs_clients, false, &send_have_data, &send_need_data, &send_is_full);
+		send_to_client_threads(&clients, &msgs_servers, true, &send_have_data, &send_need_data, &send_is_full);
 
 		if (FD_ISSET(listen_socket_fd, &rfds))
+		{
 			register_new_client(listen_socket_fd, &clients, user_map, config, ppools, &stats, eb_output_fips140, eb_output_scc);
+			send_have_data = send_need_data = send_is_full = false;
+		}
 	}
 
 	dolog(LOG_WARNING, "main|end of main loop");
