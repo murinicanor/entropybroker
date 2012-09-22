@@ -402,11 +402,11 @@ int pools::get_bits_from_pools(int n_bits_requested, unsigned char **buffer, boo
 	unsigned int n = pool_vector.size();
 	int pool_block_size = pool_vector.at(0) -> get_get_size();
 
-	std::vector<unsigned int> available;
+	std::vector<pool_avail_t> available;
 	int dummy = n_to_do_bits;
 	double start_ts = get_ts();
 
-	unsigned int index = 0;
+	unsigned int index = 0, round = 0;
 	for(;available.size() < n;)
 	{
 		double now_ts = get_ts();
@@ -427,7 +427,15 @@ int pools::get_bits_from_pools(int n_bits_requested, unsigned char **buffer, boo
 
 		if (!found)
 		{
-			pthread_cond_t *cond = pool_vector.at(index) -> timed_lock_object(time_left);
+			pthread_cond_t *cond = NULL;
+
+// FIXME get when available & unlock
+// remember the locked ones
+// wait for the locked ones & check if others got a refill
+			if (round > 0)
+				cond = pool_vector.at(index) -> timed_lock_object(time_left);
+			else
+				cond = pool_vector.at(index) -> lock_object(time_left);
 			if (!cond)
 			{
 				int bits = pool_vector.at(index) -> get_n_bits_in_pool();
@@ -435,7 +443,9 @@ int pools::get_bits_from_pools(int n_bits_requested, unsigned char **buffer, boo
 				if (bits > pool_block_size)
 				{
 					dummy -= bits;
-					available.push_back(index);
+
+					pool_avail_t pa = { index, bits };
+					available.push_back(pa);
 				}
 			}
 		}
@@ -443,61 +453,32 @@ int pools::get_bits_from_pools(int n_bits_requested, unsigned char **buffer, boo
 		index++;
 
 		if (index == n)
-			index = 0;
-	}
-
-	// FIXME go through availalbe: get & unlock
-
-#if 0
-	int offset = myrand() % n;
-	int index = offset;
-	int round = 0;
-
-	// n_to_do_bits can be less than 0 due to the pool block size (more bits might
-	// get returned than what was requested)
-	while(n_to_do_bits > 0)
-	{
-		pthread_cond_t *cond = pool_vector.at(index) -> lock_object();
-
-		if (cond == NULL)
 		{
-			// this gets the minimum number of bits one can retrieve from a
-			// pool in one request
-			if (pool_vector.at(index) -> get_n_bits_in_pool() > pool_block_size || (round >= 2 && allow_prng))
-			{
-				int cur_n_to_get_bits = min(n_to_do_bits, pool_block_size);
-				int cur_n_to_get_bytes = (cur_n_to_get_bits + 7) / 8;
-
-				unsigned int got_n_bytes = pool_vector.at(index) -> get_entropy_data(cur_p, cur_n_to_get_bytes, 0);
-				unsigned int got_n_bits = got_n_bytes * 8;
-
-				if (verify_quality(cur_p, got_n_bytes, ignore_rngtest_fips140, pfips, ignore_rngtest_scc, pscc))
-				{
-					cur_p += got_n_bytes;
-					n_to_do_bits -= got_n_bits;
-					n_bits_retrieved += got_n_bits;
-				}
-			}
-		}
-
-		index++;
-		if (index == n)
 			index = 0;
-
-		if (index == offset)
-		{
 			round++;
-
-			if (round >= 1)
-			{
-			// wait for condition
-			}
-				
-			if (round >= 2 && !allow_prng)
-				break;
 		}
 	}
-#endif
+
+	// go through available: get & unlock
+	for(unsigned int available_index=0; available_index<available.size(); available_index++)
+	{
+		unsigned int get_index = available.at(available_index).index;
+
+		int cur_n_to_get_bits = available.at(available_index).n_bits;
+		int cur_n_to_get_bytes = (cur_n_to_get_bits + 7) / 8;
+
+		unsigned int got_n_bytes = pool_vector.at(get_index) -> get_entropy_data(cur_p, cur_n_to_get_bytes, allow_prng);
+		unsigned int got_n_bits = got_n_bytes * 8;
+
+		if (verify_quality(cur_p, got_n_bytes, ignore_rngtest_fips140, pfips, ignore_rngtest_scc, pscc))
+		{
+			cur_p += got_n_bytes;
+			n_to_do_bits -= got_n_bits;
+			n_bits_retrieved += got_n_bits;
+		}
+
+		pool_vector.at(get_index) -> unlock_object();
+	}
 
 	list_unlock();
 

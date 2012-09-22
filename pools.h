@@ -1,3 +1,10 @@
+typedef struct
+{
+	unsigned int index;
+	int n_bits;
+}
+pool_avail_t;
+
 class pools
 {
 private:
