@@ -6,17 +6,37 @@ private:
 	scc *pscc;
 	pools *ppools;
 
-	int bps, bps_cur;
+	pthread_mutex_t recv_lck;
+	long long int total_recv;
+	int total_recv_requests;
 
-	long long int total_recv, total_sent;
-	int total_recv_requests, total_sent_requests;
-	int n_times_empty, n_times_not_allowed, n_times_full, n_times_quota;
+	pthread_mutex_t sent_lck;
+	long long int total_sent;
+	int total_sent_requests;
+	int bps_cur;
 
-	int disconnects, timeouts;
+	pthread_mutex_t times_empty_lck;
+	int n_times_empty;
 
-	pthread_mutex_t lck;
+	pthread_mutex_t times_not_allowed_lck;
+	int n_times_not_allowed;
+
+	pthread_mutex_t times_full_lck;
+	int n_times_full;
+
+	pthread_mutex_t times_quota_lck;
+	int n_times_quota;
+
+	pthread_mutex_t disconnects_lck;
+	int disconnects;
+
+	pthread_mutex_t timeouts_lck;
+	int timeouts;
 
 	double start_ts;
+
+	void lock_all();
+	void unlock_all();
 
 public:
 	statistics(char *file_in, fips140 *fips140_in, scc *scc_in, pools *pp_in);

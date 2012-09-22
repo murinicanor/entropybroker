@@ -28,9 +28,15 @@
 
 statistics::statistics(char *file_in, fips140 *fips140_in, scc *scc_in, pools *pp_in) : file(file_in), pfips140(fips140_in), pscc(scc_in), ppools(pp_in)
 {
-	pthread_mutex_init(&lck, NULL);
+	pthread_mutex_init(&recv_lck, NULL);
+	pthread_mutex_init(&sent_lck, NULL);
+	pthread_mutex_init(&times_empty_lck, NULL);
+	pthread_mutex_init(&times_not_allowed_lck, NULL);
+	pthread_mutex_init(&times_full_lck, NULL);
+	pthread_mutex_init(&times_quota_lck, NULL);
+	pthread_mutex_init(&disconnects_lck, NULL);
+	pthread_mutex_init(&timeouts_lck, NULL);
 
-	bps = 0;
 	bps_cur = 0;
 
 	total_recv = 0;
@@ -50,59 +56,90 @@ statistics::statistics(char *file_in, fips140 *fips140_in, scc *scc_in, pools *p
 
 statistics::~statistics()
 {
-	pthread_mutex_destroy(&lck);
+	pthread_mutex_destroy(&recv_lck);
+	pthread_mutex_destroy(&sent_lck);
+	pthread_mutex_destroy(&times_empty_lck);
+	pthread_mutex_destroy(&times_not_allowed_lck);
+	pthread_mutex_destroy(&times_full_lck);
+	pthread_mutex_destroy(&times_quota_lck);
+	pthread_mutex_destroy(&disconnects_lck);
+	pthread_mutex_destroy(&timeouts_lck);
 }
 
 void statistics::inc_disconnects()
 {
-	pthread_mutex_lock(&lck);
+	pthread_mutex_lock(&disconnects_lck);
 	disconnects++;
-	pthread_mutex_unlock(&lck);
+	pthread_mutex_unlock(&disconnects_lck);
 }
 
 void statistics::inc_timeouts()
 {
-	pthread_mutex_lock(&lck);
+	pthread_mutex_lock(&timeouts_lck);
 	timeouts++;
-	pthread_mutex_unlock(&lck);
+	pthread_mutex_unlock(&timeouts_lck);
 }
 
 void statistics::inc_n_times_empty()
 {
-	pthread_mutex_lock(&lck);
+	pthread_mutex_lock(&times_empty_lck);
 	n_times_empty++;
-	pthread_mutex_unlock(&lck);
+	pthread_mutex_unlock(&times_empty_lck);
 }
 
 void statistics::inc_n_times_quota()
 {
-	pthread_mutex_lock(&lck);
+	pthread_mutex_lock(&times_quota_lck);
 	n_times_quota++;
-	pthread_mutex_unlock(&lck);
+	pthread_mutex_unlock(&times_quota_lck);
 }
 
 void statistics::inc_n_times_full()
 {
-	pthread_mutex_lock(&lck);
+	pthread_mutex_lock(&times_full_lck);
 	n_times_full++;
-	pthread_mutex_unlock(&lck);
+	pthread_mutex_unlock(&times_full_lck);
 }
 
 void statistics::track_sents(int cur_n_bits)
 {
-	pthread_mutex_lock(&lck);
+	pthread_mutex_lock(&sent_lck);
 	bps_cur += cur_n_bits;
 	total_sent += cur_n_bits;
 	total_sent_requests++;
-	pthread_mutex_unlock(&lck);
+	pthread_mutex_unlock(&sent_lck);
 }
 
 void statistics::track_recvs(int n_bits_added)
 {
-	pthread_mutex_lock(&lck);
+	pthread_mutex_lock(&recv_lck);
 	total_recv += n_bits_added;
 	total_recv_requests++;
-	pthread_mutex_unlock(&lck);
+	pthread_mutex_unlock(&recv_lck);
+}
+
+void statistics::lock_all()
+{
+	pthread_mutex_lock(&recv_lck);
+	pthread_mutex_lock(&sent_lck);
+	pthread_mutex_lock(&times_empty_lck);
+	pthread_mutex_lock(&times_not_allowed_lck);
+	pthread_mutex_lock(&times_full_lck);
+	pthread_mutex_lock(&times_quota_lck);
+	pthread_mutex_lock(&disconnects_lck);
+	pthread_mutex_lock(&timeouts_lck);
+}
+
+void statistics::unlock_all()
+{
+	pthread_mutex_unlock(&timeouts_lck);
+	pthread_mutex_unlock(&disconnects_lck);
+	pthread_mutex_unlock(&times_quota_lck);
+	pthread_mutex_unlock(&times_full_lck);
+	pthread_mutex_unlock(&times_not_allowed_lck);
+	pthread_mutex_unlock(&times_empty_lck);
+	pthread_mutex_unlock(&sent_lck);
+	pthread_mutex_unlock(&recv_lck);
 }
 
 void statistics::emit_statistics_file(int n_clients)
@@ -120,13 +157,14 @@ void statistics::emit_statistics_file(int n_clients)
 		double proc_usage = (double)usage.ru_utime.tv_sec + (double)usage.ru_utime.tv_usec / 1000000.0 +
 			(double)usage.ru_stime.tv_sec + (double)usage.ru_stime.tv_usec / 1000000.0;
 
-		pthread_mutex_lock(&lck);
 		double now = get_ts();
 		int total_n_bits = ppools -> get_bit_sum();
+
+		lock_all();
 		fprintf(fh, "%f %lld %lld %d %d %d %d %f %s\n", now, total_recv, total_sent,
 				total_recv_requests, total_sent_requests,
 				n_clients, total_n_bits, proc_usage, pscc -> stats());
-		pthread_mutex_unlock(&lck);
+		unlock_all();
 
 		fclose(fh);
 	}
@@ -134,17 +172,17 @@ void statistics::emit_statistics_file(int n_clients)
 
 void statistics::emit_statistics_log(int n_clients, bool force_stats, int reset_counters_interval)
 {
-	pthread_mutex_lock(&lck);
 	int total_n_bits = ppools -> get_bit_sum();
 	double now = get_ts();
 	double runtime = now - start_ts;
 
-	bps = bps_cur / reset_counters_interval;
+	lock_all();
+	int bps = bps_cur / reset_counters_interval;
 	bps_cur = 0;
 
 	dolog(LOG_DEBUG, "stats|client bps: %d (in last %ds interval), disconnects: %d", bps, reset_counters_interval, disconnects);
 	dolog(LOG_DEBUG, "stats|total recv: %ld (%fbps), total sent: %ld (%fbps), run time: %f", total_recv, double(total_recv) / runtime, total_sent, double(total_sent) / runtime, runtime);
 	dolog(LOG_DEBUG, "stats|recv requests: %d, sent: %d, clients/servers: %u, bits: %d", total_recv_requests, total_sent_requests, n_clients, total_n_bits);
 	dolog(LOG_DEBUG, "stats|%s, scc: %s", pfips140, pscc);
-	pthread_mutex_unlock(&lck);
+	unlock_all();
 }
