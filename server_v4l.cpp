@@ -219,7 +219,7 @@ int main(int argc, char *argv[])
 		error_exit("no host to connect to or file to write to given");
 
 	if (!device)
-		error_exit("Please select a video4linux video device (e.g. a webcam, tv-card, etc.)");
+		error_exit("Please select a video4linux video device (a webcam, tv-card, etc.)\ne.g.: -d /dev/vide0");
 
 	(void)umask(0177);
 	no_core();
