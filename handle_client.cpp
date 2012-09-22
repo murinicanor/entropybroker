@@ -166,46 +166,55 @@ int send_request_from_main_to_clients(client_t *p)
 
 			return -1;
 		}
+
+		if (cmd == PIPE_CMD_NEED_DATA)
+		{
+			need_data = true;
+			have_data = false;
+			is_full = false;
+		}
+		else if (cmd == PIPE_CMD_HAVE_DATA)
+		{
+			need_data = false;
+			have_data = true;
+			is_full = false;
+		}
+		else if (cmd == PIPE_CMD_IS_FULL)
+		{
+			need_data = false;
+			have_data = false;
+			is_full = true;
+		}
 		else
 		{
-			if (cmd == PIPE_CMD_NEED_DATA)
-			{
-				need_data = true;
-				have_data = false;
-				is_full = false;
-			}
-			else if (cmd == PIPE_CMD_HAVE_DATA)
-			{
-				need_data = false;
-				have_data = true;
-				is_full = false;
-			}
-			else if (cmd == PIPE_CMD_IS_FULL)
-			{
-				need_data = false;
-				have_data = false;
-				is_full = true;
-			}
-			else
-			{
-				error_exit("Unknown interprocess command %02x", cmd);
-			}
+			error_exit("Unknown interprocess command %02x", cmd);
 		}
 	}
 
-	int rc_client = 0;
+static int err1=0, err2=0, err3=0;
 	if (need_data && !p -> is_server && p -> type_set)
-		error_exit("if (need_data && p -> is_client) %s", p -> type);
+	{
+		err1++;
+		fprintf(stderr, "%d %d %d\n", err1, err2, err3);
+	}
+	if (have_data && p -> is_server && p -> type_set)
+	{
+		err2++;
+		fprintf(stderr, "%d %d %d\n", err1, err2, err3);
+	}
+	if (is_full && !p -> is_server && p -> type_set)
+	{
+		err3++;
+		fprintf(stderr, "%d %d %d\n", err1, err2, err3);
+	}
+
+	int rc_client = 0;
 	if (need_data)
 		rc_client |= notify_server_data_needed(p -> socket_fd, p -> stats, p -> config);
 
-	if (have_data && p -> is_server && p -> type_set)
-		error_exit("if (have_data && p -> is_server) %s", p -> type);
 	if (have_data)
 		rc_client |= notify_client_data_available(p -> socket_fd, p -> ppools, p -> stats, p -> config);
 
-	if (is_full && !p -> is_server && p -> type_set)
-		error_exit("if (is_full && p -> is_client) %s", p -> type);
 	if (is_full)
 		rc_client |= notify_server_full(p -> socket_fd, p -> stats, p -> config);
 

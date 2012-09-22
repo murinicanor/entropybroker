@@ -368,8 +368,8 @@ int do_client_server_type(client_t *client)
 		return -1;
 	}
 
-	strncpy(client -> type, buffer, sizeof(client -> type));
-	(client -> type)[sizeof(client -> type) - 1] = 0x00;
+	strncpy(client -> type, buffer, sizeof client -> type);
+	(client -> type)[sizeof client -> type - 1] = 0x00;
 
 	dolog(LOG_INFO, "type|%s is \"%s\"", client -> host, client -> type);
 
