@@ -446,8 +446,11 @@ int do_client(client_t *client, bool *no_bits, bool *new_bits, bool *is_full)
 	}
 	else if (strcmp(cmd, "0006") == 0)	// client type
 	{
+		// yeah, well, this will fail when threading
+		// it does in fact, but I could only reproduce that under valgrind
 		client -> is_server = false;
 		client -> type_set = true;
+
 		return do_client_server_type(client);
 	}
 	else if (strcmp(cmd, "0008") == 0)	// # bits in kernel reply (to 0007)
