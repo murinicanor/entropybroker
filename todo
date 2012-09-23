@@ -22,3 +22,5 @@ http://en.wikipedia.org/wiki/Twofish <--
   ^ load balance 'server' but also client
 
 - fips140 & scc in een wrapper 'verify_entropy'-class proppen
+
+- locks: PTHREAD_MUTEX_ERRORCHECK

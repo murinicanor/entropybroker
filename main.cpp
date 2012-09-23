@@ -48,10 +48,10 @@ void seed(pools *ppools)
 {
 	int n = 0, dummy;
 
-	n += ppools -> add_event(get_ts_ns(), NULL, 0); 
+	n += ppools -> add_event(get_ts_ns(), NULL, 0, 0.005); 
 
 	dummy = getpid();
-	n += ppools -> add_event(get_ts_ns(), (unsigned char *)&dummy, sizeof(dummy));
+	n += ppools -> add_event(get_ts_ns(), (unsigned char *)&dummy, sizeof(dummy), 0.005);
 
 	dolog(LOG_DEBUG, "added %d bits of startup-event-entropy to pool", n);
 }

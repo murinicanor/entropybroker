@@ -294,32 +294,39 @@ bool pools::verify_quality(unsigned char *data, int n, bool ignore_rngtest_fips1
 	return rc_fips140 == true && rc_scc == true;
 }
 
-int pools::find_non_full_pool() const
+int pools::find_non_full_pool(bool timed, double max_duration)
 {
 	assert(is_w_locked || is_r_locked > 0);
 
 	int n = pool_vector.size();
-	if (n > 0)
+
+	for(int index=0; index<n; index++)
 	{
-		int offset = myrand() % n;
-
-		for(int loop=0; loop<n; loop++)
+		// FIXME calculate how long we're busy and use that instead of fixed wait time
+// FIXME use timed_lock if 'timed'
+		pthread_cond_t *cond = pool_vector.at(index) -> timed_lock_object(max_duration / double(n));
+		if (!cond)
 		{
-			int index = (offset + loop) % n;
-
 			if (!pool_vector.at(index) -> is_almost_full())
+			{
+				pool_vector.at(index) -> unlock_object();
+
 				return index;
+			}
+
+			pool_vector.at(index) -> unlock_object();
 		}
 	}
 
 	return -1;
 }
 
-int pools::select_pool_to_add_to()
+// returns a locked pool
+int pools::select_pool_to_add_to(bool timed, double max_time)
 {
 	list_rlock();
 
-	int index = find_non_full_pool();
+	int index = find_non_full_pool(timed, max_time);
 
 	if (index == -1 || pool_vector.at(index) -> is_almost_full())
 	{
@@ -345,12 +352,15 @@ int pools::select_pool_to_add_to()
 		list_unlock();
 
 		list_rlock();
-		index = find_non_full_pool();
+		index = find_non_full_pool(timed, max_time);
 		if (index == -1)
 		{
 			// this can happen if 1. the number of in-memory-pools limit has been reached and
 			// 2. the number of on-disk-pools limit has been reached
 			index = myrand(pool_vector.size());
+
+			if (pool_vector.at(index) -> timed_lock_object(max_time))
+				index = -1;
 		}
 	}
 
@@ -412,14 +422,14 @@ int pools::get_bits_from_pools(int n_bits_requested, unsigned char **buffer, boo
 		{
 			double now_ts = get_ts();
 			// FIXME divide by number of bits left divided by available in the following pools
-			double time_left = ((max_duration * 0.9) - (now_ts - start_ts)) / double(n - index);
+			double time_left = max(0.001, ((max_duration * 0.9) - (now_ts - start_ts)) / double(n - index));
 
 			pthread_cond_t *cond = NULL;
-
 			if (round > 0)
 				cond = pool_vector.at(index) -> timed_lock_object(time_left);
 			else
 				cond = pool_vector.at(index) -> lock_object();
+
 			if (!cond)
 			{
 				int cur_n_to_get_bits = (round > 0 && allow_prng) ? get_per_pool_n : n_to_do_bits;
@@ -447,38 +457,61 @@ int pools::get_bits_from_pools(int n_bits_requested, unsigned char **buffer, boo
 	return n_bits_retrieved;
 }
 
-int pools::add_bits_to_pools(unsigned char *data, int n_bytes, bool ignore_rngtest_fips140, fips140 *pfips, bool ignore_rngtest_scc, scc *pscc)
+int pools::add_bits_to_pools(unsigned char *data, int n_bytes, bool ignore_rngtest_fips140, fips140 *pfips, bool ignore_rngtest_scc, scc *pscc, double max_duration)
 {
 	int n_bits_added = 0;
-	int index = -1;
 
+	double start_ts = get_ts();
+
+	int round = 0, n_was_locked = 0;
 	bool first = true;
 	while(n_bytes > 0)
 	{
 		if (first)
+		{
+			list_rlock();
 			first = false;
-		else
-			list_unlock();
+		}
 
-		index = select_pool_to_add_to();
+		int n = pool_vector.size();
+
+		list_unlock();
+
+		double now_ts = get_ts();
+		// FIXME divide by number of bits left divided by pool sizes
+		double time_left = max(0.001, ((max_duration * 0.9) - (now_ts - start_ts)) / double(n));
+
+		int index = select_pool_to_add_to(round > 0, time_left); // returns a locked object
 		assert(!is_w_locked);
 		// the list is now read-locked
 
-// FIXME locking
-		int space_available = pool_vector.at(index) -> get_pool_size() - pool_vector.at(index) -> get_n_bits_in_pool();
-		// in that case we're already mixing in so we can change all data anyway
-		// this only happens when all pools are full
-		if (space_available <= pool_vector.at(index) -> get_get_size_in_bits())
-			space_available = pool_vector.at(index) -> get_pool_size();
+		if (index == -1)
+		{
+			if (++n_was_locked >= n)
+			{
+				n_was_locked = 0;
+				round++;
+			}
+		}
+		else
+		{
+			int space_available = pool_vector.at(index) -> get_pool_size() - pool_vector.at(index) -> get_n_bits_in_pool();
+			// in that case we're already mixing in so we can change all data anyway
+			// this only happens when all pools are full
+			if (space_available <= pool_vector.at(index) -> get_get_size_in_bits())
+				space_available = pool_vector.at(index) -> get_pool_size();
 
-		unsigned int n_bytes_to_add = min(n_bytes, (space_available + 7) / 8);
-		dolog(LOG_DEBUG, "Adding %d bits to pool %d", n_bytes_to_add * 8, index);
+			unsigned int n_bytes_to_add = min(n_bytes, (space_available + 7) / 8);
+			dolog(LOG_DEBUG, "Adding %d bits to pool %d", n_bytes_to_add * 8, index);
 
-		if (verify_quality(data, n_bytes_to_add, ignore_rngtest_fips140, pfips, ignore_rngtest_scc, pscc))
-			n_bits_added += pool_vector.at(index) -> add_entropy_data(data, n_bytes_to_add);
+			if (verify_quality(data, n_bytes_to_add, ignore_rngtest_fips140, pfips, ignore_rngtest_scc, pscc))
+				n_bits_added += pool_vector.at(index) -> add_entropy_data(data, n_bytes_to_add);
 
-		n_bytes -= n_bytes_to_add;
-		data += n_bytes_to_add;
+			n_bytes -= n_bytes_to_add;
+			data += n_bytes_to_add;
+
+			pool_vector.at(index) -> unlock_object();
+		}
 	}
 
 	list_unlock();
@@ -495,13 +528,19 @@ int pools::get_bit_sum()
 	return bit_count;
 }
 
-int pools::add_event(long double event, unsigned char *event_data, int n_event_data)
+int pools::add_event(long double event, unsigned char *event_data, int n_event_data, double max_time)
 {
-	unsigned int index = select_pool_to_add_to();
+	int index = select_pool_to_add_to(true, max_time); // returns a locked object
 	assert(!is_w_locked);
 	// the list is now read-locked
 
-	int rc = pool_vector.at(index) -> add_event(event, event_data, n_event_data);
+	int rc = 0;
+	if (index != -1)
+	{
+		rc = pool_vector.at(index) -> add_event(event, event_data, n_event_data);
+
+		pool_vector.at(index) -> unlock_object();
+	}
 
 	list_unlock();
 
@@ -514,6 +553,7 @@ bool pools::all_pools_full()
 
 	list_rlock();
 
+// FIXME lock pools
 	for(unsigned int loop=0; loop<pool_vector.size(); loop++)
 	{
 		if (!pool_vector.at(loop) -> is_almost_full())

@@ -44,7 +44,6 @@ pool::pool(int new_pool_size_bytes, bit_count_estimator *bce_in, hasher *hclass,
 {
 	pthread_mutex_init(&lck, NULL);
 	is_locked = false;
-is_locked = true; // FIXME
 	pthread_cond_init(&cond, NULL);
 
 	memset(&state, 0x00, sizeof(state));
@@ -67,7 +66,6 @@ pool::pool(int pool_nr, FILE *fh, bit_count_estimator *bce_in, hasher *hclass, s
 	pthread_mutex_init(&lck, NULL);
 	is_locked = false;
 	pthread_cond_init(&cond, NULL);
-is_locked = true; // FIXME
 
 	unsigned char val_buffer[8];
 
@@ -119,11 +117,13 @@ pool::~pool()
 
 pthread_cond_t * pool::lock_object()
 {
-	if (pthread_mutex_trylock(&lck))
+	int rc = -1;
+	if ((rc = pthread_mutex_trylock(&lck)))
 	{
-		if (errno == EBUSY)
+		if (rc == EBUSY)
 			return &cond;
 
+		errno = rc;
 		error_exit("pthread_mutex_trylock failed");
 	}
 
@@ -147,11 +147,13 @@ pthread_cond_t * pool::timed_lock_object(double max_time)
 		abs_time.tv_nsec -= 1000000000L ;
 	}
 
-	if (pthread_mutex_timedlock(&lck, &abs_time))
+	int rc = -1;
+	if ((rc = pthread_mutex_timedlock(&lck, &abs_time)))
 	{
-		if (errno == EBUSY)
+		if (rc == EBUSY)
 			return &cond;
 
+		errno = rc;
 		error_exit("pthread_mutex_timedlock failed");
 	}
 

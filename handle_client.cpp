@@ -593,7 +593,7 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 
 		if (config -> allow_event_entropy_addition)
 		{
-			int event_bits = ppools -> add_event(now, (unsigned char *)&rfds, sizeof(rfds));
+			int event_bits = ppools -> add_event(now, (unsigned char *)&rfds, sizeof(rfds), double(DEFAULT_COMM_TO) * 0.05);
 
 			dolog(LOG_DEBUG, "main|added %d bits of event-entropy to pool", event_bits);
 		}
