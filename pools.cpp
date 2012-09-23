@@ -464,6 +464,7 @@ int pools::add_bits_to_pools(unsigned char *data, int n_bytes, bool ignore_rngte
 		assert(!is_w_locked);
 		// the list is now read-locked
 
+// FIXME locking
 		int space_available = pool_vector.at(index) -> get_pool_size() - pool_vector.at(index) -> get_n_bits_in_pool();
 		// in that case we're already mixing in so we can change all data anyway
 		// this only happens when all pools are full
