@@ -26,8 +26,8 @@ void dolog(int level, const char *format, ...)
         vsnprintf(buffer, sizeof(buffer), format, ap);
         va_end(ap);
 
-//	if (log_console)
-//		printf("%s]%d| %s\n", timestr, level, buffer);
+	if (log_console)
+		printf("%s]%d| %s\n", timestr, level, buffer);
 
         if (log_file)
         {
