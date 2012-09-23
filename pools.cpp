@@ -561,19 +561,31 @@ int pools::add_event(long double event, unsigned char *event_data, int n_event_d
 	return rc;
 }
 
-bool pools::all_pools_full()
+bool pools::all_pools_full(double max_duration)
 {
 	bool rc = true;
+	double start_ts = get_ts();
 
 	list_rlock();
 
-// FIXME lock pools
-	for(unsigned int loop=0; loop<pool_vector.size(); loop++)
+	int n = pool_vector.size();
+
+	for(int loop=0; loop<n; loop++)
 	{
-		if (!pool_vector.at(loop) -> is_almost_full())
+		// FIXME move this calculation to a method
+		double time_left = max(MIN_SLEEP, (max_duration - (get_ts() - start_ts)) / double(n - loop));
+
+		if (!pool_vector.at(loop) -> timed_lock_object(time_left))
 		{
-			rc = false;
-			break;
+			if (!pool_vector.at(loop) -> is_almost_full())
+			{
+				pool_vector.at(loop) -> unlock_object();
+
+				rc = false;
+				break;
+			}
+
+			pool_vector.at(loop) -> unlock_object();
 		}
 	}
 

@@ -242,7 +242,7 @@ int do_client_put(client_t *client, bool *new_bits, bool *is_full)
 
 	*new_bits = false;
 
-	if (client -> ppools -> all_pools_full())
+	if (client -> ppools -> all_pools_full(double(DEFAULT_COMM_TO) * 0.9))
 	{
 		*is_full = true;
 

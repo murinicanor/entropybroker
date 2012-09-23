@@ -41,5 +41,5 @@ public:
 	int add_bits_to_pools(unsigned char *data, int n_bytes, bool ignore_rngtest_fips140, fips140 *prt, bool ignore_rngtest_scc, scc *pscc, double max_duration);
 	int get_bit_sum();
 	int add_event(long double event, unsigned char *event_data, int n_event_data, double max_time);
-	bool all_pools_full();
+	bool all_pools_full(double max_duration);
 };
