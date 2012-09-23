@@ -431,7 +431,7 @@ int pools::get_bits_from_pools(int n_bits_requested, unsigned char **buffer, boo
 
 // FIXME get when available & unlock
 // remember the locked ones
-// wait for the locked ones & check if others got a refill
+// wait for the locked ones (time_left / n_locked) & check if others got a refill
 			if (round > 0)
 				cond = pool_vector.at(index) -> timed_lock_object(time_left);
 			else
