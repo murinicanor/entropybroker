@@ -299,12 +299,19 @@ int pools::find_non_full_pool(bool timed, double max_duration)
 	assert(is_w_locked || is_r_locked > 0);
 
 	int n = pool_vector.size();
+	double start_ts = get_ts();
 
 	for(int index=0; index<n; index++)
 	{
-		// FIXME calculate how long we're busy and use that instead of fixed wait time
-// FIXME use timed_lock if 'timed'
-		pthread_cond_t *cond = pool_vector.at(index) -> timed_lock_object(max_duration / double(n));
+		double working = get_ts() - start_ts;
+		double cur_max_duration = max(MIN_SLEEP, (max_duration - working) / double(n - index));
+
+		pthread_cond_t *cond = NULL;
+		if (timed)
+			cond = pool_vector.at(index) -> timed_lock_object(cur_max_duration);
+		else
+			cond = pool_vector.at(index) -> lock_object();
+
 		if (!cond)
 		{
 			if (!pool_vector.at(index) -> is_almost_full())
@@ -324,6 +331,8 @@ int pools::find_non_full_pool(bool timed, double max_duration)
 // returns a locked pool
 int pools::select_pool_to_add_to(bool timed, double max_time)
 {
+	double start_ts = get_ts();
+
 	list_rlock();
 
 	int index = find_non_full_pool(timed, max_time);
@@ -352,14 +361,19 @@ int pools::select_pool_to_add_to(bool timed, double max_time)
 		list_unlock();
 
 		list_rlock();
-		index = find_non_full_pool(timed, max_time);
+
+		double left = max(MIN_SLEEP, max_time - (get_ts() - start_ts));
+
+		index = find_non_full_pool(timed, left);
 		if (index == -1)
 		{
 			// this can happen if 1. the number of in-memory-pools limit has been reached and
 			// 2. the number of on-disk-pools limit has been reached
 			index = myrand(pool_vector.size());
 
-			if (pool_vector.at(index) -> timed_lock_object(max_time))
+			left = max(MIN_SLEEP, max_time - (get_ts() - start_ts));
+
+			if (pool_vector.at(index) -> timed_lock_object(left))
 				index = -1;
 		}
 	}
@@ -422,7 +436,7 @@ int pools::get_bits_from_pools(int n_bits_requested, unsigned char **buffer, boo
 		{
 			double now_ts = get_ts();
 			// FIXME divide by number of bits left divided by available in the following pools
-			double time_left = max(0.001, ((max_duration * 0.9) - (now_ts - start_ts)) / double(n - index));
+			double time_left = max(MIN_SLEEP, ((max_duration * 0.9) - (now_ts - start_ts)) / double(n - index));
 
 			pthread_cond_t *cond = NULL;
 			if (round > 0)
@@ -479,7 +493,7 @@ int pools::add_bits_to_pools(unsigned char *data, int n_bytes, bool ignore_rngte
 
 		double now_ts = get_ts();
 		// FIXME divide by number of bits left divided by pool sizes
-		double time_left = max(0.001, ((max_duration * 0.9) - (now_ts - start_ts)) / double(n));
+		double time_left = max(MIN_SLEEP, ((max_duration * 0.9) - (now_ts - start_ts)) / double(n));
 
 		int index = select_pool_to_add_to(round > 0, time_left); // returns a locked object
 		assert(!is_w_locked);
