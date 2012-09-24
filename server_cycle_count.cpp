@@ -46,8 +46,8 @@ void fiddle(fiddle_state_t *p)
 
 	p -> index += p -> cache_line_size;
 
-	if (p -> index >= p -> cache_size * 2)
-		p -> index -= p -> cache_size * 2;
+	while(p -> index >= p -> cache_size * 3)
+		p -> index -= p -> cache_size * 3;
 
 	// trigger an occasional exception
 	a /= (p -> buffer)[p -> index];
@@ -183,7 +183,7 @@ int main(int argc, char *argv[])
 	fs.index = 0;
 	fs.cache_size = get_cache_size();
 	dolog(LOG_INFO, "cache size: %dKB", fs.cache_size);
-	fs.buffer = (char *)malloc(fs.cache_size * 2);
+	fs.buffer = (char *)malloc(fs.cache_size * 3);
 	fs.cache_line_size = get_cache_line_size();
 	dolog(LOG_INFO, "cache-line size: %d bytes", fs.cache_line_size);
 

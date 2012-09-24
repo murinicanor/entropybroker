@@ -134,12 +134,13 @@ pthread_cond_t * pool::lock_object()
 
 pthread_cond_t * pool::timed_lock_object(double max_time)
 {
+	assert(max_time > 0.0);
 	struct timespec abs_time;
 
 	clock_gettime(CLOCK_REALTIME, &abs_time);
 
 	abs_time.tv_sec += max_time;
-	abs_time.tv_nsec += (max_time - double(abs_time.tv_sec)) * 1000000000L;
+	abs_time.tv_nsec += (max_time - floor(max_time)) * 1000000000L;
 
 	if (abs_time.tv_nsec >= 1000000000L)
 	{
@@ -150,7 +151,7 @@ pthread_cond_t * pool::timed_lock_object(double max_time)
 	int rc = -1;
 	if ((rc = pthread_mutex_timedlock(&lck, &abs_time)))
 	{
-		if (rc == EBUSY)
+		if (rc == ETIMEDOUT)
 			return &cond;
 
 		errno = rc;

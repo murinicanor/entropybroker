@@ -117,11 +117,16 @@ void pools::store_caches(unsigned int keep_n)
 
 		while(pool_vector.size() > keep_n)
 		{
-			if (pool_vector.at(0) -> get_n_bits_in_pool() > 0)
-				pool_vector.at(0) -> dump(fh);
+			if (pool_vector.at(0) -> timed_lock_object(1.0) == NULL) // will always succeed due to writelock on list
+			{
+				if (pool_vector.at(0) -> get_n_bits_in_pool() > 0)
+					pool_vector.at(0) -> dump(fh);
 
-			delete pool_vector.at(0);
-			pool_vector.erase(pool_vector.begin() + 0);
+				pool_vector.at(0) -> unlock_object();
+
+				delete pool_vector.at(0);
+				pool_vector.erase(pool_vector.begin() + 0);
+			}
 		}
 
 		fflush(fh);
@@ -156,7 +161,12 @@ void pools::load_caches(unsigned int load_n_bits)
 			pool *new_pool = new pool(++files_loaded, fh, bce, h, s);
 			pool_vector.push_back(new_pool);
 
-			bits_loaded += new_pool -> get_n_bits_in_pool();
+			if (new_pool -> timed_lock_object(1.0) == NULL) // will always succeed due to writelock on list
+			{
+				bits_loaded += new_pool -> get_n_bits_in_pool();
+
+				new_pool -> unlock_object();
+			}
 		}
 
 		if (unlink(cache_list.at(0).c_str()) == -1)
@@ -171,6 +181,8 @@ void pools::load_caches(unsigned int load_n_bits)
 
 		cache_list.erase(cache_list.begin());
 	}
+
+	dolog(LOG_DEBUG, "%d bits loaded from %d files", bits_loaded, files_loaded);
 }
 
 void pools::flush_empty_pools()
@@ -179,12 +191,21 @@ void pools::flush_empty_pools()
 	unsigned int deleted = 0;
 	for(int index=pool_vector.size() - 1; index >= 0; index--)
 	{
-		if (pool_vector.at(index) -> get_n_bits_in_pool() == 0)
+		if (pool_vector.at(index) -> timed_lock_object(1.0) == NULL) // will always succeed due to writelock on list
 		{
-			delete pool_vector.at(index);
-			pool_vector.erase(pool_vector.begin() + index);
+			if (pool_vector.at(index) -> get_n_bits_in_pool() == 0)
+			{
+				pool_vector.at(index) -> unlock_object();
 
-			deleted++;
+				delete pool_vector.at(index);
+				pool_vector.erase(pool_vector.begin() + index);
+
+				deleted++;
+			}
+			else
+			{
+				pool_vector.at(index) -> unlock_object();
+			}
 		}
 	}
 
@@ -203,16 +224,28 @@ void pools::merge_pools()
 
 	for(int i1=0; i1 < (int(pool_vector.size()) - 1); i1++)
 	{
-		if (pool_vector.at(i1) -> is_full())
+		if (pool_vector.at(i1) -> timed_lock_object(1.0))
 			continue;
+
+		if (pool_vector.at(i1) -> is_full())
+		{
+			pool_vector.at(i1) -> unlock_object();
+			continue;
+		}
 
 		int i1_size = pool_vector.at(i1) -> get_n_bits_in_pool();
 
 		for(int i2=(int(pool_vector.size()) - 1); i2 >= (i1 + 1); i2--)
 		{
+			if (pool_vector.at(i2) -> timed_lock_object(1.0))
+				continue;
+
 			int i2_size = pool_vector.at(i2) -> get_n_bits_in_pool();
 			if (i1_size + i2_size > pool_vector.at(i1) -> get_pool_size())
+			{
+				pool_vector.at(i2) -> unlock_object();
 				continue;
+			}
 
 			int bytes = (i2_size + 7) / 8;
 
@@ -220,6 +253,8 @@ void pools::merge_pools()
 			lock_mem(buffer, bytes);
 
 			pool_vector.at(i2) -> get_entropy_data(buffer, bytes, false);
+
+			pool_vector.at(i2) -> unlock_object();
 
 			delete pool_vector.at(i2);
 			pool_vector.erase(pool_vector.begin() + i2);
@@ -232,6 +267,8 @@ void pools::merge_pools()
 
 			n_merged++;
 		}
+
+		pool_vector.at(i1) -> unlock_object();
 	}
 
 
@@ -570,22 +607,27 @@ bool pools::all_pools_full(double max_duration)
 
 	int n = pool_vector.size();
 
-	for(int loop=0; loop<n; loop++)
+	if (n < max_n_mem_pools)
+		rc = false;
+	else
 	{
-		// FIXME move this calculation to a method
-		double time_left = max(MIN_SLEEP, (max_duration - (get_ts() - start_ts)) / double(n - loop));
-
-		if (!pool_vector.at(loop) -> timed_lock_object(time_left))
+		for(int loop=0; loop<n; loop++)
 		{
-			if (!pool_vector.at(loop) -> is_almost_full())
+			// FIXME move this calculation to a method
+			double time_left = max(MIN_SLEEP, (max_duration - (get_ts() - start_ts)) / double(n - loop));
+
+			if (!pool_vector.at(loop) -> timed_lock_object(time_left))
 			{
+				if (!pool_vector.at(loop) -> is_almost_full())
+				{
+					pool_vector.at(loop) -> unlock_object();
+
+					rc = false;
+					break;
+				}
+
 				pool_vector.at(loop) -> unlock_object();
-
-				rc = false;
-				break;
 			}
-
-			pool_vector.at(loop) -> unlock_object();
 		}
 	}
 
