@@ -45,6 +45,55 @@
 
 const char *pid_file = PID_DIR "/entropy_broker.pid";
 
+// http://curl.haxx.se/libcurl/c/threaded-ssl.html /////
+static pthread_mutex_t *lockarray = NULL;
+
+static void lock_callback(int mode, int type, const char *file, int line)
+{
+	(void)file;
+	(void)line;
+	if (mode & CRYPTO_LOCK) {
+		pthread_mutex_lock(&(lockarray[type]));
+	}
+	else {
+		pthread_mutex_unlock(&(lockarray[type]));
+	}
+}
+
+static unsigned long thread_id(void)
+{
+	unsigned long ret;
+
+	ret=(unsigned long)pthread_self();
+	return(ret);
+}
+
+static void init_locks(void)
+{
+	int i;
+
+	lockarray=(pthread_mutex_t *)OPENSSL_malloc(CRYPTO_num_locks() *
+			sizeof(pthread_mutex_t));
+	for (i=0; i<CRYPTO_num_locks(); i++) {
+		pthread_mutex_init(&(lockarray[i]),NULL);
+	}
+
+	CRYPTO_set_id_callback(thread_id);
+	CRYPTO_set_locking_callback(lock_callback);
+}
+
+static void kill_locks(void)
+{
+	int i;
+
+	CRYPTO_set_locking_callback(NULL);
+	for (i=0; i<CRYPTO_num_locks(); i++)
+		pthread_mutex_destroy(&(lockarray[i]));
+
+	OPENSSL_free(lockarray);
+}
+// /////////////////////////////////////////////// /////
+
 void seed(pools *ppools)
 {
 	int n = 0, dummy;
@@ -60,10 +109,10 @@ void seed(pools *ppools)
 void help(void)
 {
 	printf("-c file   config-file to read (default: " CONFIG "\n");
-        printf("-l file   log to file 'file'\n");
-        printf("-s        log to syslog\n");
+	printf("-l file   log to file 'file'\n");
+	printf("-s        log to syslog\n");
 	printf("-S        statistics-file to log to\n");
-        printf("-n        do not fork\n");
+	printf("-n        do not fork\n");
 	printf("-P file   write pid to file\n");
 }
 
@@ -119,8 +168,11 @@ int main(int argc, char *argv[])
 				return 1;
 		}
 	}
+
 	(void)umask(0177);
 	no_core();
+
+	init_locks();
 
 	if (pthread_mutexattr_init(&global_mutex_attr))
 		error_exit("pthread_mutexattr_init failed");
@@ -196,6 +248,8 @@ int main(int argc, char *argv[])
 	}
 
 	unlink(pid_file);
+
+	kill_locks();
 
 	printf("Finished\n");
 
