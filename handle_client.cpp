@@ -481,7 +481,7 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 	int listen_socket_fd = start_listen(config -> listen_adapter, config -> listen_port, config -> listen_queue_size);
 	statistics stats(config -> stats_file, eb_output_fips140, eb_output_scc, ppools);
 
-	memset(&event_state, 0x00, sizeof(event_state));
+	memset(&event_state, 0x00, sizeof event_state);
 
 	dolog(LOG_INFO, "main|main-loop started");
 
@@ -593,7 +593,7 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 
 		if (config -> allow_event_entropy_addition)
 		{
-			int event_bits = ppools -> add_event(now, (unsigned char *)&rfds, sizeof(rfds), double(DEFAULT_COMM_TO) * 0.05);
+			int event_bits = ppools -> add_event(now, (unsigned char *)&rfds, sizeof rfds, double(DEFAULT_COMM_TO) * 0.05);
 
 			dolog(LOG_DEBUG, "main|added %d bits of event-entropy to pool", event_bits);
 		}

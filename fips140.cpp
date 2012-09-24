@@ -41,9 +41,9 @@ fips140::fips140() : user(NULL)
 {
 	int loop, bit;
 
-	memset(fips140_bit1cnt, 0x00, sizeof(fips140_bit1cnt));
-	memset(fips140_rval, 0x00, sizeof(fips140_rval));
-	memset(fips140_pokerbuf, 0x00, sizeof(fips140_pokerbuf));
+	memset(fips140_bit1cnt, 0x00, sizeof fips140_bit1cnt);
+	memset(fips140_rval, 0x00, sizeof fips140_rval);
+	memset(fips140_pokerbuf, 0x00, sizeof fips140_pokerbuf);
 
 	fips140_p = fips140_nbits = fips140_nnewbits = fips140_n1 = 0;
 
@@ -181,7 +181,7 @@ bool fips140::fips140_longtest()
 	int runlength=0;
 	int runlencounts[7][2];
 	char nok=0;
-	memset(runlencounts, 0x00, sizeof(runlencounts));
+	memset(runlencounts, 0x00, sizeof runlencounts);
 
 	/* first see if the shorttest fails. no need to do
 	 * the long one if the short one is failing already
@@ -301,7 +301,7 @@ char *fips140::stats()
 {
 	static char stats_buffer[4096];
 
-	snprintf(stats_buffer, sizeof(stats_buffer), "monobit: %d, poker: %d, longrun: %d, runs: %d",
+	snprintf(stats_buffer, sizeof stats_buffer, "monobit: %d, poker: %d, longrun: %d, runs: %d",
 			stats_t.monobit, stats_t.poker, stats_t.longrun, stats_t.runs);
 
 	return stats_buffer;

@@ -23,7 +23,7 @@ void dolog(int level, const char *format, ...)
         if (dummy) *dummy = 0x00;
 
         va_start(ap, format);
-        vsnprintf(buffer, sizeof(buffer), format, ap);
+        vsnprintf(buffer, sizeof buffer, format, ap);
         va_end(ap);
 
 	if (log_console)

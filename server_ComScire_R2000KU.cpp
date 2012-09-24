@@ -141,7 +141,7 @@ int main(int argc, char *argv[])
 		error_exit("Could not find a device? (2)");
 	lock_mem(q, sizeof *q);
 
-	snprintf(server_type, sizeof(server_type), "server_egb v" VERSION " %s", q -> DeviceID());
+	snprintf(server_type, sizeof server_type, "server_egb v" VERSION " %s", q -> DeviceID());
 
 	if (!do_not_fork)
 	{
@@ -189,7 +189,7 @@ int main(int argc, char *argv[])
 
 		////////
 
-		if (index == sizeof(bytes))
+		if (index == sizeof bytes)
 		{
 			if (show_bps)
 				update_showbps(1249);

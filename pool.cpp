@@ -46,7 +46,7 @@ pool::pool(int new_pool_size_bytes, bit_count_estimator *bce_in, hasher *hclass,
 	is_locked = false;
 	pthread_cond_init(&cond, NULL);
 
-	memset(&state, 0x00, sizeof(state));
+	memset(&state, 0x00, sizeof state);
 
 	pool_size_bytes = new_pool_size_bytes;
 	entropy_pool = (unsigned char *)malloc(pool_size_bytes);
@@ -100,7 +100,7 @@ pool::pool(int pool_nr, FILE *fh, bit_count_estimator *bce_in, hasher *hclass, s
 		dolog(LOG_DEBUG, "Pool %d: loaded %d bits from cache", pool_nr, bits_in_pool);
 	}
 
-	memset(&state, 0x00, sizeof(state));
+	memset(&state, 0x00, sizeof state);
 }
 
 pool::~pool()

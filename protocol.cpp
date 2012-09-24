@@ -533,7 +533,7 @@ int protocol::request_bytes(char *where_to, int n_bits, bool fail_on_no_bits)
                         static int pingnr = 0;
                         char xmit_buffer[8 + 1];
 
-                        snprintf(xmit_buffer, sizeof(xmit_buffer), "0005%04d", pingnr++);
+                        snprintf(xmit_buffer, sizeof xmit_buffer, "0005%04d", pingnr++);
                         dolog(LOG_DEBUG, "PING");
 
                         if (WRITE_TO(socket_fd, xmit_buffer, 8, DEFAULT_COMM_TO) != 8)
@@ -548,8 +548,8 @@ int protocol::request_bytes(char *where_to, int n_bits, bool fail_on_no_bits)
                         char xmit_buffer[128], val_buffer[128];
 
 			int entropy_count = kernel_rng_get_entropy_count();
-                        snprintf(val_buffer, sizeof(val_buffer), "%d", entropy_count);
-                        snprintf(xmit_buffer, sizeof(xmit_buffer), "0008%04d%s", (int)strlen(val_buffer), val_buffer);
+                        snprintf(val_buffer, sizeof val_buffer, "%d", entropy_count);
+                        snprintf(xmit_buffer, sizeof xmit_buffer, "0008%04d%s", (int)strlen(val_buffer), val_buffer);
 
                         dolog(LOG_DEBUG, "Send kernel entropy count %d bits", entropy_count);
 

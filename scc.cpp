@@ -12,7 +12,7 @@ scc::scc()
 {
 	index = bytes_in = 0;
 
-	memset(buffer, 0x00, sizeof(buffer));
+	memset(buffer, 0x00, sizeof buffer);
 
 	threshold = 0.2;
 
@@ -106,7 +106,7 @@ char *scc::stats()
 {
 	static char stats_buffer[4096];
 
-	snprintf(stats_buffer, sizeof(stats_buffer), "%f", get_cur_scc());
+	snprintf(stats_buffer, sizeof stats_buffer, "%f", get_cur_scc());
 
 	return stats_buffer;
 }

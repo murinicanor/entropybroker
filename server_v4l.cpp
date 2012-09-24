@@ -47,7 +47,7 @@ void open_dev(char *dev_name, int *fd, unsigned char **io_buffer, int *io_buffer
 		return;
 
 	struct v4l2_capability cap;
-	memset(&cap, 0x00, sizeof(cap));
+	memset(&cap, 0x00, sizeof cap);
 	if (ioctl(*fd, VIDIOC_QUERYCAP, &cap) == -1)
 		error_exit("Cannot VIDIOC_QUERYCAP");
 	else
@@ -60,7 +60,7 @@ void open_dev(char *dev_name, int *fd, unsigned char **io_buffer, int *io_buffer
 	}
 
 	struct v4l2_format fmt;
-	memset(&fmt, 0x00, sizeof(fmt));
+	memset(&fmt, 0x00, sizeof fmt);
 	fmt.type                = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 	fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_YUV420;
 	if (ioctl(*fd, VIDIOC_G_FMT, &fmt) == -1)
@@ -75,7 +75,7 @@ void open_dev(char *dev_name, int *fd, unsigned char **io_buffer, int *io_buffer
 		error_exit("ioctl(VIDIOC_S_FMT) failed");
 
 	struct v4l2_requestbuffers req;
-	memset(&req, 0x00, sizeof(req));
+	memset(&req, 0x00, sizeof req);
 	req.count  = 1;
 	req.type   = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 	req.memory = V4L2_MEMORY_MMAP;
@@ -83,7 +83,7 @@ void open_dev(char *dev_name, int *fd, unsigned char **io_buffer, int *io_buffer
 		error_exit("ioctl(VIDIOC_REQBUFS) failed");
 
 	struct v4l2_buffer buf;
-	memset(&buf, 0x00, sizeof(buf));
+	memset(&buf, 0x00, sizeof buf);
 	buf.type        = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 	buf.memory      = V4L2_MEMORY_MMAP;
 	buf.index       = 0;
@@ -257,7 +257,7 @@ int main(int argc, char *argv[])
 	for(loop=0; loop<device_settle; loop++)
 	{
 		struct v4l2_buffer buf;
-		memset(&buf, 0x00, sizeof(buf));
+		memset(&buf, 0x00, sizeof buf);
 		buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 		buf.memory = V4L2_MEMORY_MMAP;
 
@@ -282,14 +282,14 @@ int main(int argc, char *argv[])
 
 		/* take pictures */
 		dolog(LOG_DEBUG, "Smile!");
-		memset(&buf, 0x00, sizeof(buf));
+		memset(&buf, 0x00, sizeof buf);
 		buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 		buf.memory = V4L2_MEMORY_MMAP;
 		take_picture(fd, &buf);
 		memcpy(img1, io_buffer, io_buffer_len);
 		untake_picture(fd, &buf);
 		//
-		memset(&buf, 0x00, sizeof(buf));
+		memset(&buf, 0x00, sizeof buf);
 		buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 		buf.memory = V4L2_MEMORY_MMAP;
 		take_picture(fd, &buf);

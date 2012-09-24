@@ -153,10 +153,10 @@ int open_unixdomain_socket(char *path, int nListen)
 	struct sockaddr_un addr;
 	int fd = -1;
 
-	if (strlen(path) >= sizeof(addr.sun_path))
-		error_exit("Path %s too large (%d limit)", path, sizeof(addr.sun_path));
+	if (strlen(path) >= sizeof addr.sun_path)
+		error_exit("Path %s too large (%d limit)", path, sizeof addr.sun_path);
 
-	memset(&addr, 0x00, sizeof(addr));
+	memset(&addr, 0x00, sizeof addr);
 	addr.sun_family = AF_UNIX;
 	strcpy(addr.sun_path, path);
 	len = offsetof(struct sockaddr_un, sun_path) + strlen(path);
@@ -339,7 +339,7 @@ int main(int argc, char *argv[])
 		}
 
 		struct sockaddr addr;
-		socklen_t addr_len = sizeof(addr);
+		socklen_t addr_len = sizeof addr;
 
 		if (u_listen_fd != -1 && FD_ISSET(u_listen_fd, &a_fds))
 			start_child(accept(u_listen_fd, &addr, &addr_len), do_not_fork, &addr, p1);

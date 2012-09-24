@@ -45,10 +45,10 @@ int open_unixdomain_socket(char *path)
         struct sockaddr_un addr;
         int fd = -1;
 
-        if (strlen(path) >= sizeof(addr.sun_path))
-		error_exit("Path %s too large (%d limit)", path, sizeof(addr.sun_path));
+        if (strlen(path) >= sizeof addr.sun_path)
+		error_exit("Path %s too large (%d limit)", path, sizeof addr.sun_path);
 
-        memset(&addr, 0x00, sizeof(addr));
+        memset(&addr, 0x00, sizeof addr);
         addr.sun_family = AF_UNIX;
 	strcpy(addr.sun_path, path);
         len = offsetof(struct sockaddr_un, sun_path) + strlen(path);
@@ -144,8 +144,8 @@ int main(int argc, char *argv[])
 
 			case 'a':
 				read_bytes_per_interval = atoi(optarg);
-				if (read_bytes_per_interval > sizeof(bytes))
-					error_exit("-a: parameter must be %d or less", sizeof(bytes));
+				if (read_bytes_per_interval > sizeof bytes)
+					error_exit("-a: parameter must be %d or less", sizeof bytes);
 				break;
 
 			case 'b':
@@ -201,7 +201,7 @@ int main(int argc, char *argv[])
 
 	set_logging_parameters(log_console, log_logfile, log_syslog);
 
-	snprintf(server_type, sizeof(server_type), "server_egb v" VERSION " %s", device);
+	snprintf(server_type, sizeof server_type, "server_egb v" VERSION " %s", device);
 
 	protocol *p = NULL;
 	if (!hosts.empty())
@@ -238,12 +238,12 @@ int main(int argc, char *argv[])
 	for(;;)
 	{
 		unsigned char request[2], reply[1];
-		int bytes_to_read = min(255, min(sizeof(bytes) - index, read_bytes_per_interval));
+		int bytes_to_read = min(255, min(sizeof bytes - index, read_bytes_per_interval));
 
 		// gather random data from EGD
 		request[0] = 1;
 		request[1] = bytes_to_read;
-		if (WRITE(read_fd, (char *)request, sizeof(request)) != 2)
+		if (WRITE(read_fd, (char *)request, sizeof request) != 2)
 			error_exit("Problem sending request to EGD");
 		if (READ(read_fd, (char *)reply, 1) != 1)
 			error_exit("Problem receiving reply header from EGD");

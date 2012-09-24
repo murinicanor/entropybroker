@@ -51,7 +51,7 @@ void seed(pools *ppools)
 	n += ppools -> add_event(get_ts_ns(), NULL, 0, 0.005); 
 
 	dummy = getpid();
-	n += ppools -> add_event(get_ts_ns(), (unsigned char *)&dummy, sizeof(dummy), 0.005);
+	n += ppools -> add_event(get_ts_ns(), (unsigned char *)&dummy, sizeof dummy, 0.005);
 
 	dolog(LOG_DEBUG, "added %d bits of startup-event-entropy to pool", n);
 }
@@ -77,7 +77,7 @@ int main(int argc, char *argv[])
 	const char *config_file = CONFIG;
 	config_t config;
 
-	memset(&config, 0x00, sizeof(config));
+	memset(&config, 0x00, sizeof config);
 
 	printf("entropy_broker v " VERSION ", (C) 2009-2012 by folkert@vanheusden.com\n");
 

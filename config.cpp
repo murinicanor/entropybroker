@@ -93,7 +93,7 @@ void load_config(const char *config, config_t *pconfig)
 		double parvald;
 		int parval;
                 char read_buffer[4096], *lf, *par;
-                char *cmd = fgets(read_buffer, sizeof(read_buffer), fh), *is;
+                char *cmd = fgets(read_buffer, sizeof read_buffer, fh), *is;
                 if (!cmd)
                         break;
                 linenr++;

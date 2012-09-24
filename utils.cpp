@@ -235,7 +235,7 @@ int start_listen(const char *adapter, int portnr, int listen_queue_size)
                 error_exit("failed creating socket");
 
         int reuse_addr = 1;
-        if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (char *)&reuse_addr, sizeof(reuse_addr)) == -1)
+        if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (char *)&reuse_addr, sizeof reuse_addr) == -1)
                 error_exit("setsockopt(SO_REUSEADDR) failed");
 
         struct sockaddr_in6 server_addr;
@@ -312,7 +312,7 @@ void disable_nagle(int fd)
 {
 	int disable = 1;
 
-	if (setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, (char *)&disable, sizeof(disable)) == -1)
+	if (setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, (char *)&disable, sizeof disable) == -1)
 		error_exit("setsockopt(IPPROTO_TCP, TCP_NODELAY) failed");
 }
 
@@ -320,7 +320,7 @@ void enable_tcp_keepalive(int fd)
 {
 	int keep_alive = 1;
 
-	if (setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, (char *)&keep_alive, sizeof(keep_alive)) == -1)
+	if (setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, (char *)&keep_alive, sizeof keep_alive) == -1)
 		error_exit("problem setting KEEPALIVE");
 }
 
@@ -332,7 +332,7 @@ void check_rand_state()
 	{
 		unsigned short seed16v[3];
 
-		kernel_rng_read_non_blocking((unsigned char *)seed16v, sizeof(seed16v));
+		kernel_rng_read_non_blocking((unsigned char *)seed16v, sizeof seed16v);
 		seed48(seed16v);
 
 		n_random_retrieved = MAX_LRAND48_GETS;

@@ -155,7 +155,7 @@ int main(int argc, char *argv[])
         if (SCARD_S_SUCCESS != (rv = SCardListReaders(hContext, NULL, NULL, &dwReaders)))
         	error_exit("SCardListReaders: %s", pcsc_stringify_error(rv));
 
-        mszReaders = calloc(dwReaders, sizeof(char));
+        mszReaders = calloc(dwReaders, sizeof char);
         if (SCARD_S_SUCCESS != (rv = SCardListReaders(hContext, NULL, mszReaders, &dwReaders)))
         	error_exit("SCardListReaders %s", pcsc_stringify_error(rv));
 #endif
@@ -194,21 +194,6 @@ int main(int argc, char *argv[])
 	if (hosts.size() > 0)
 		p = new protocol(&hosts, username, password, true, server_type);
 
-/*
-	{
-		BYTE pbRecvBuffer[258];
-		BYTE pin[] = { 0x00, 0x20, 0x00, 0x80, 0x08, 0x24, xxxx, xxxx, 0xff, 0xff, 0xff, 0xff, 0xff };
-
-		DWORD dwRecvLength = sizeof(pbRecvBuffer);
-                if (SCARD_S_SUCCESS != (rv = SCardTransmit(hCard, &pioSendPci, pin, sizeof(pin), NULL, pbRecvBuffer, &dwRecvLength)))
-                	error_exit("SCardTransmit %s", pcsc_stringify_error(rv));
-
-		for(int loop=0; loop<dwRecvLength; loop++)
-			printf("%02x ", pbRecvBuffer[loop]);
-		printf("\n");
-	}
-*/
-
 	init_showbps();
 	set_showbps_start_ts();
 	for(;;)
@@ -217,8 +202,8 @@ int main(int argc, char *argv[])
 		BYTE pbRecvBuffer[258];
 		BYTE cmdGET_CHALLENGE[] = { 0x00, 0x84, 0x00, 0x00, 0x08 };
 
-		DWORD dwRecvLength = sizeof(pbRecvBuffer);
-                if (SCARD_S_SUCCESS != (rv = SCardTransmit(hCard, &pioSendPci, cmdGET_CHALLENGE, sizeof(cmdGET_CHALLENGE), NULL, pbRecvBuffer, &dwRecvLength)))
+		DWORD dwRecvLength = sizeof pbRecvBuffer;
+                if (SCARD_S_SUCCESS != (rv = SCardTransmit(hCard, &pioSendPci, cmdGET_CHALLENGE, sizeof cmdGET_CHALLENGE, NULL, pbRecvBuffer, &dwRecvLength)))
                 	error_exit("SCardTransmit %s", pcsc_stringify_error(rv));
 
 		if (dwRecvLength == 2)

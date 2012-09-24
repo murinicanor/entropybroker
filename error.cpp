@@ -17,7 +17,7 @@ void error_exit(const char *format, ...)
 	va_list ap;
 
 	va_start(ap, format);
-	vsnprintf(buffer, sizeof(buffer), format, ap);
+	vsnprintf(buffer, sizeof buffer, format, ap);
 	va_end(ap);
 
 	dolog(LOG_EMERG, "FATAL|%s\n", buffer);
