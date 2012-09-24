@@ -193,7 +193,7 @@ int main(int argc, char *argv[])
 
 	protocol *p = NULL;
 	if (hosts.size() > 0)
-		p = new protocol(&hosts, username, password, true, server_type);
+		p = new protocol(&hosts, username, password, true, server_type, DEFAULT_COMM_TO);
 
 	init_showbps();
 	set_showbps_start_ts();

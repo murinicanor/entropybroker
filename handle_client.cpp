@@ -48,17 +48,10 @@ void forget_client_index(std::vector<client_t *> *clients, int nr, bool force)
 {
 	client_t *p = clients -> at(nr);
 
-	pthread_mutex_destroy(&p -> stats_lck);
-
 	close(p -> socket_fd);
-	close(p -> to_thread[0]);
 	close(p -> to_thread[1]);
+	close(p -> to_thread[0]);
 	close(p -> to_main[0]);
-
-	delete p -> pfips140;
-	delete p -> pscc;
-
-	free(p -> password);
 
 	if (pthread_yield() != 0)
 		error_exit("pthread_yield failed");
@@ -69,6 +62,13 @@ void forget_client_index(std::vector<client_t *> *clients, int nr, bool force)
 	void *value_ptr = NULL;
 	if (pthread_join(p -> th, &value_ptr) != 0)
 		error_exit("pthread_join failed");
+
+	pthread_mutex_destroy(&p -> stats_lck);
+
+	delete p -> pfips140;
+	delete p -> pscc;
+
+	free(p -> password);
 
 	delete p;
 	clients -> erase(clients -> begin() + nr);
@@ -155,7 +155,7 @@ int send_request_from_main_to_clients(client_t *p)
 
 		int rc_pipe = read(p -> to_thread[0], &cmd, 1);
 		if (rc_pipe == 0)
-			break;
+			return -1;
 		if (rc_pipe == -1)
 		{
 			if (errno == EINTR)
@@ -193,22 +193,27 @@ int send_request_from_main_to_clients(client_t *p)
 		}
 	}
 
-static int err1=0, err2=0, err3=0;
-	if (need_data && !p -> is_server && p -> type_set)
+///
 	{
-		err1++;
-		fprintf(stderr, "%d %d %d\n", err1, err2, err3);
+		static int err1=0, err2=0, err3=0;
+
+		if (need_data && !p -> is_server && p -> type_set)
+		{
+			err1++;
+			fprintf(stderr, "%d %d %d\n", err1, err2, err3);
+		}
+		if (have_data && p -> is_server && p -> type_set)
+		{
+			err2++;
+			fprintf(stderr, "%d %d %d\n", err1, err2, err3);
+		}
+		if (is_full && !p -> is_server && p -> type_set)
+		{
+			err3++;
+			fprintf(stderr, "%d %d %d\n", err1, err2, err3);
+		}
 	}
-	if (have_data && p -> is_server && p -> type_set)
-	{
-		err2++;
-		fprintf(stderr, "%d %d %d\n", err1, err2, err3);
-	}
-	if (is_full && !p -> is_server && p -> type_set)
-	{
-		err3++;
-		fprintf(stderr, "%d %d %d\n", err1, err2, err3);
-	}
+///
 
 	int rc_client = 0;
 	if (need_data)
@@ -638,7 +643,7 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 	{
 		dolog(LOG_DEBUG, "... %s/%d (fd: %d)", clients.at(0) -> host, clients.at(0) -> type, clients.at(0) -> socket_fd);
 
-		forget_client_index(&clients, 0, false);
+		forget_client_index(&clients, 0, true);
 	}
 
 	dolog(LOG_WARNING, "main|end of main loop");

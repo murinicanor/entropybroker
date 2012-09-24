@@ -96,7 +96,7 @@ int main(int argc, char *argv[])
 	char *log_logfile = NULL;
 	char *device = NULL;
 	char *bytes_file = NULL;
-	int read_interval = 5;
+	double read_interval = 5.0;
 	unsigned int read_bytes_per_interval = 16;
 	int index = 0;
 	int verbose = 0;
@@ -150,7 +150,7 @@ int main(int argc, char *argv[])
 				break;
 
 			case 'b':
-				read_interval = atoi(optarg);
+				read_interval = atof(optarg);
 				break;
 
 			case 'o':
@@ -206,7 +206,7 @@ int main(int argc, char *argv[])
 
 	protocol *p = NULL;
 	if (!hosts.empty())
-		p = new protocol(&hosts, username, password, true, server_type);
+		p = new protocol(&hosts, username, password, true, server_type, DEFAULT_COMM_TO);
 
 	if (device)
 	{
@@ -272,16 +272,16 @@ int main(int argc, char *argv[])
 					p -> drop();
 				}
 
-				if (read_interval > 0 && p -> sleep_interruptable(read_interval) != 0)
+				if (read_interval > 0.0 && p -> sleep_interruptable(read_interval) != 0)
 				{
 					dolog(LOG_INFO, "connection closed");
 
 					p -> drop();
 				}
 			}
-			else if (read_interval > 0)
+			else if (read_interval > 0.0)
 			{
-				sleep(read_interval);
+				usleep(read_interval * 1000000.0);
 			}
 
 			set_showbps_start_ts();

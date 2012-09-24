@@ -154,7 +154,7 @@ int main(int argc, char *argv[])
 
 	protocol *p = NULL;
 	if (!hosts.empty())
-		p = new protocol(&hosts, username, password, true, server_type);
+		p = new protocol(&hosts, username, password, true, server_type, DEFAULT_COMM_TO);
 
 	signal(SIGPIPE, SIG_IGN);
 	signal(SIGTERM, sig_handler);

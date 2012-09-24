@@ -483,7 +483,7 @@ int main(int argc, char *argv[])
 
 	users *user_map = new users(clients_auths);
 
-	protocol *p = new protocol(&hosts, username, password, true, client_type);
+	protocol *p = new protocol(&hosts, username, password, true, client_type, DEFAULT_COMM_TO);
 
 	no_core();
 

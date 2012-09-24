@@ -27,6 +27,7 @@ private:
 	std::string username, password;
 	bool is_server;
 	std::string type;
+	double comm_time_out;
 	//
 	int socket_fd;
 	int sleep_9003;
@@ -43,10 +44,10 @@ private:
 	void error_sleep(int count);
 
 public:
-	protocol(std::vector<std::string> * hosts_in, std::string username, std::string password, bool is_server, std::string type);
+	protocol(std::vector<std::string> * hosts_in, std::string username, std::string password, bool is_server, std::string type, double comm_time_out);
 	~protocol();
 
-	int sleep_interruptable(int how_long);
+	int sleep_interruptable(double how_long);
 	int message_transmit_entropy_data(unsigned char *bytes_in, int n_bytes);
 	int request_bytes(char *where_to, int n_bits, bool fail_on_no_bits);
 	void drop();

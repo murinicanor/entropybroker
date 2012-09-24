@@ -162,7 +162,7 @@ int main(int argc, char *argv[])
 	(void)umask(0177);
 	set_logging_parameters(log_console, log_logfile, log_syslog);
 
-	protocol *p = new protocol(&hosts, username, password, false, client_type);
+	protocol *p = new protocol(&hosts, username, password, false, client_type, DEFAULT_COMM_TO);
 
 	FILE *fh = fopen(file, "wb");
 	if (!fh)

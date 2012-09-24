@@ -118,7 +118,7 @@ int main(int argc, char *argv[])
 			error_exit("fork failed");
 	}
 
-	protocol *p = new protocol(&hosts, username, password, false, client_type);
+	protocol *p = new protocol(&hosts, username, password, false, client_type, DEFAULT_COMM_TO);
 
 	(void)umask(0177);
 	no_core();

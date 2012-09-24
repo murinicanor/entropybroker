@@ -298,8 +298,8 @@ int main(int argc, char *argv[])
 
 	set_logging_parameters(log_console, log_logfile, log_syslog);
 
-	protocol *p1 = new protocol(&hosts, username, password, false, client_type);
-	protocol *p2 = new protocol(&hosts, username, password, false, client_type);
+	protocol *p1 = new protocol(&hosts, username, password, false, client_type, DEFAULT_COMM_TO);
+	protocol *p2 = new protocol(&hosts, username, password, false, client_type, DEFAULT_COMM_TO);
 
 	if (uds != NULL)
 		u_listen_fd = open_unixdomain_socket(uds, nListen);

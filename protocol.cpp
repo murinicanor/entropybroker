@@ -114,7 +114,7 @@ void calc_ivec(char *password, long long unsigned int rnd, long long unsigned in
 	memcpy(dest, dummy, 8);
 }
 
-protocol::protocol(std::vector<std::string> *hosts_in, std::string username_in, std::string password_in, bool is_server_in, std::string type_in) : hosts(hosts_in), username(username_in), password(password_in), is_server(is_server_in), type(type_in)
+protocol::protocol(std::vector<std::string> *hosts_in, std::string username_in, std::string password_in, bool is_server_in, std::string type_in, double comm_time_out_in) : hosts(hosts_in), username(username_in), password(password_in), is_server(is_server_in), type(type_in), comm_time_out(comm_time_out_in)
 {
 	host_index = 0;
 
@@ -242,7 +242,7 @@ int protocol::reconnect_server_socket()
 
 			int msg_len = strlen(buffer);
 
-			if (WRITE_TO(socket_fd, buffer, msg_len, DEFAULT_COMM_TO) != msg_len)
+			if (WRITE_TO(socket_fd, buffer, msg_len, comm_time_out) != msg_len)
 			{
 				dolog(LOG_INFO, "connection closed");
 				close(socket_fd);
@@ -260,7 +260,7 @@ int protocol::reconnect_server_socket()
 	return 0;
 }
 
-int protocol::sleep_interruptable(int how_long)
+int protocol::sleep_interruptable(double how_long)
 {
 	if (socket_fd == -1)
 		return -1;
@@ -275,7 +275,7 @@ int protocol::sleep_interruptable(int how_long)
 
 		struct timeval tv;
 		tv.tv_sec = how_long;
-		tv.tv_usec = myrand(999999);
+		tv.tv_usec = (how_long - double(tv.tv_sec)) * 1000000.0;
 
 		rc = select(socket_fd + 1, &rfds, NULL, NULL, &tv);
 		if (rc != -1 || errno != EINTR)
@@ -286,7 +286,7 @@ int protocol::sleep_interruptable(int how_long)
 	{
 		char buffer[8 + 1];
 
-		if (READ_TO(socket_fd, buffer, 8, DEFAULT_COMM_TO) != 8)
+		if (READ_TO(socket_fd, buffer, 8, comm_time_out) != 8)
 		{
 			dolog(LOG_INFO, "error receiving unsollicited message");
 			return -1;
@@ -336,7 +336,7 @@ int protocol::message_transmit_entropy_data(unsigned char *bytes_in, int n_bytes
 		make_msg((char *)header, 2, n_bytes * 8); // 0002 xmit data request
 
 		// header
-		if (WRITE_TO(socket_fd, (char *)header, 8, DEFAULT_COMM_TO) != 8)
+		if (WRITE_TO(socket_fd, (char *)header, 8, comm_time_out) != 8)
 		{
 			dolog(LOG_INFO, "error transmitting header");
 
@@ -350,7 +350,7 @@ int protocol::message_transmit_entropy_data(unsigned char *bytes_in, int n_bytes
 		// ack from server?
 	ignore_unsollicited_msg: // we jump to this label when unsollicited msgs are
 		// received during data-transmission handshake
-		if (READ_TO(socket_fd, reply, 8, DEFAULT_COMM_TO) != 8)
+		if (READ_TO(socket_fd, reply, 8, comm_time_out) != 8)
 		{
 			dolog(LOG_INFO, "error receiving ack/nack");
 
@@ -396,7 +396,7 @@ int protocol::message_transmit_entropy_data(unsigned char *bytes_in, int n_bytes
 			unlock_mem(temp_buffer, with_hash_n);
 			free(temp_buffer);
 
-			if (WRITE_TO(socket_fd, (char *)bytes_out, with_hash_n, DEFAULT_COMM_TO) != with_hash_n)
+			if (WRITE_TO(socket_fd, (char *)bytes_out, with_hash_n, comm_time_out) != with_hash_n)
 			{
 				dolog(LOG_INFO, "error transmitting data");
 				free(bytes_out);
@@ -499,7 +499,7 @@ int protocol::request_bytes(char *where_to, int n_bits, bool fail_on_no_bits)
 		}
 
 		char reply[8 + 1];
-		int rc = READ_TO(socket_fd, reply, 8, DEFAULT_COMM_TO);
+		int rc = READ_TO(socket_fd, reply, 8, comm_time_out);
 		if (rc == 0)
 			continue;
 		if (rc != 8)
@@ -537,7 +537,7 @@ int protocol::request_bytes(char *where_to, int n_bits, bool fail_on_no_bits)
                         snprintf(xmit_buffer, sizeof xmit_buffer, "0005%04d", pingnr++);
                         dolog(LOG_DEBUG, "PING");
 
-                        if (WRITE_TO(socket_fd, xmit_buffer, 8, DEFAULT_COMM_TO) != 8)
+                        if (WRITE_TO(socket_fd, xmit_buffer, 8, comm_time_out) != 8)
                         {
                                 close(socket_fd);
                                 socket_fd = -1;
@@ -555,7 +555,7 @@ int protocol::request_bytes(char *where_to, int n_bits, bool fail_on_no_bits)
                         dolog(LOG_DEBUG, "Send kernel entropy count %d bits", entropy_count);
 
 			int send_len = strlen(xmit_buffer);
-                        if (WRITE_TO(socket_fd, xmit_buffer, send_len, DEFAULT_COMM_TO) != send_len)
+                        if (WRITE_TO(socket_fd, xmit_buffer, send_len, comm_time_out) != send_len)
                         {
                                 close(socket_fd);
                                 socket_fd = -1;
@@ -596,7 +596,7 @@ int protocol::request_bytes(char *where_to, int n_bits, bool fail_on_no_bits)
 			if (!buffer_in)
 				error_exit("out of memory allocating %d bytes", will_get_n_bytes);
 
-			if (READ_TO(socket_fd, (char *)buffer_in, xmit_bytes, DEFAULT_COMM_TO) != xmit_bytes)
+			if (READ_TO(socket_fd, (char *)buffer_in, xmit_bytes, comm_time_out) != xmit_bytes)
 			{
 				dolog(LOG_INFO, "Network read error (data)");
 
@@ -671,15 +671,15 @@ bool protocol::proxy_auth_user(std::string pa_username, std::string pa_password)
 			error_exit("Failed to connect");
 
 		const char *request = "0011";
-		if (ok == true && WRITE_TO(socket_fd, (char *)request, 4, DEFAULT_COMM_TO) != 4)
+		if (ok == true && WRITE_TO(socket_fd, (char *)request, 4, comm_time_out) != 4)
 			ok = false;
 
 		long long unsigned int dummy_challenge = 123;
-		if (ok == true && auth_client_server_user(socket_fd, DEFAULT_COMM_TO, pa_username, pa_password, &dummy_challenge) != 0)
+		if (ok == true && auth_client_server_user(socket_fd, comm_time_out, pa_username, pa_password, &dummy_challenge) != 0)
 			ok = false;
 
 		char reply[8 + 1];
-		if (ok == true && READ_TO(socket_fd, reply, 8, DEFAULT_COMM_TO) != 8)
+		if (ok == true && READ_TO(socket_fd, reply, 8, comm_time_out) != 8)
 			ok = false;
 
 		if (ok == true && memcmp(reply, "0012", 4) != 0)
