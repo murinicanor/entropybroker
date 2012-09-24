@@ -496,7 +496,7 @@ int pools::get_bits_from_pools(int n_bits_requested, unsigned char **buffer, boo
 				unsigned int got_n_bytes = pool_vector.at(index) -> get_entropy_data(cur_p, cur_n_to_get_bytes, round > 0 ? allow_prng : false);
 				unsigned int got_n_bits = got_n_bytes * 8;
 
-				if (verify_quality(cur_p, got_n_bytes, ignore_rngtest_fips140, pfips, ignore_rngtest_scc, pscc))
+				if (got_n_bits > 0 && verify_quality(cur_p, got_n_bytes, ignore_rngtest_fips140, pfips, ignore_rngtest_scc, pscc))
 				{
 					cur_p += got_n_bytes;
 					n_to_do_bits -= got_n_bits;
