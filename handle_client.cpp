@@ -44,14 +44,14 @@
 const char *pipe_cmd_str[] = { NULL, "have data (1)", "need data (2)", "is full (3)" };
 extern const char *pid_file;
 
-void forget_client_index(std::vector<client_t *> *clients, int nr)
+void forget_client_index(std::vector<client_t *> *clients, int nr, bool force)
 {
 	client_t *p = clients -> at(nr);
 
 	pthread_mutex_destroy(&p -> stats_lck);
 
 	close(p -> socket_fd);
-
+	close(p -> to_thread[0]);
 	close(p -> to_thread[1]);
 	close(p -> to_main[0]);
 
@@ -63,7 +63,8 @@ void forget_client_index(std::vector<client_t *> *clients, int nr)
 	if (pthread_yield() != 0)
 		error_exit("pthread_yield failed");
 
-	pthread_cancel(p -> th);
+	if (force)
+		pthread_cancel(p -> th);
 
 	void *value_ptr = NULL;
 	if (pthread_join(p -> th, &value_ptr) != 0)
@@ -73,26 +74,26 @@ void forget_client_index(std::vector<client_t *> *clients, int nr)
 	clients -> erase(clients -> begin() + nr);
 }
 
-void forget_client_socket_fd(std::vector<client_t *> *clients, int socket_fd)
+void forget_client_socket_fd(std::vector<client_t *> *clients, int socket_fd, bool force)
 {
 	for(unsigned int index=0; index<clients -> size(); index++)
 	{
 		if (clients -> at(index) -> socket_fd == socket_fd)
 		{
-			forget_client_index(clients, index);
+			forget_client_index(clients, index, force);
 
 			break;
 		}
 	}
 }
 
-void forget_client_thread_id(std::vector<client_t *> *clients, pthread_t *tid)
+void forget_client_thread_id(std::vector<client_t *> *clients, pthread_t *tid, bool force)
 {
 	for(unsigned int index=0; index<clients -> size(); index++)
 	{
 		if (pthread_equal(clients -> at(index) -> th, *tid) != 0)
 		{
-			forget_client_index(clients, index);
+			forget_client_index(clients, index, force);
 
 			break;
 		}
@@ -249,7 +250,7 @@ void * thread(void *data)
 
 		if (!ok)
 		{
-			dolog(LOG_WARNING, "main|client: %s/fd %d authentication failed", p -> host, p -> socket_fd);
+			dolog(LOG_WARNING, "main|client: %s (fd: %d) authentication failed", p -> host, p -> socket_fd);
 			break;
 		}
 
@@ -297,7 +298,7 @@ void * thread(void *data)
 
 				if (do_client(p, &no_bits, &new_bits, &is_full) == -1)
 				{
-					dolog(LOG_INFO, "Terminating connection with %s (%p)", p -> host, p -> socket_fd);
+					dolog(LOG_INFO, "Terminating connection with %s (fd: %p)", p -> host, p -> socket_fd);
 					break;
 				}
 
@@ -315,16 +316,14 @@ void * thread(void *data)
 			}
 		}
 
-		dolog(LOG_DEBUG, "End of thread imminent");
+		dolog(LOG_DEBUG, "End of thread imminent (fd: %p)", p -> socket_fd);
 
 		break;
 	}
 
-	close(p -> socket_fd);
-	close(p -> to_thread[0]);
 	close(p -> to_main[1]);
 
-	dolog(LOG_DEBUG, "End of thread");
+	dolog(LOG_DEBUG, "End of thread (fd: %d)", p -> socket_fd);
 
 	return NULL;
 }
@@ -620,7 +619,7 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 		}
 
 		for(unsigned int loop=0; loop<delete_ids.size(); loop++)
-			forget_client_thread_id(&clients, delete_ids.at(loop));
+			forget_client_thread_id(&clients, delete_ids.at(loop), true);
 
 		send_to_client_threads(&clients, &msgs_clients, false, &send_have_data, &send_need_data, &send_is_full);
 		send_to_client_threads(&clients, &msgs_servers, true, &send_have_data, &send_need_data, &send_is_full);
@@ -630,6 +629,15 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 			register_new_client(listen_socket_fd, &clients, user_map, config, ppools, &stats, eb_output_fips140, eb_output_scc);
 			send_have_data = send_need_data = send_is_full = false;
 		}
+	}
+
+	dolog(LOG_INFO, "Terminating %d threads...", clients.size());
+
+	while(clients.size() > 0)
+	{
+		dolog(LOG_DEBUG, "... %s/%d (fd: %d)", clients.at(0) -> host, clients.at(0) -> type, clients.at(0) -> socket_fd);
+
+		forget_client_index(&clients, 0, false);
 	}
 
 	dolog(LOG_WARNING, "main|end of main loop");

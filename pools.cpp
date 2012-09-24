@@ -204,7 +204,7 @@ void pools::flush_empty_pools()
 	}
 
 	if (deleted)
-		dolog(LOG_DEBUG, "Deleted %d empty pools", deleted);
+		dolog(LOG_DEBUG, "Deleted %d empty pool(s), new count: %d", deleted, pool_vector.size());
 }
 
 void pools::merge_pools()
@@ -263,9 +263,8 @@ void pools::merge_pools()
 		pool_vector.at(i1) -> unlock_object();
 	}
 
-
 	if (n_merged)
-		dolog(LOG_INFO, "%d merged", n_merged);
+		dolog(LOG_INFO, "%d pool(s) merged, new count: %d", n_merged, pool_vector.size());
 }
 
 void pools::load_cachefiles_list()
@@ -502,6 +501,8 @@ int pools::get_bits_from_pools(int n_bits_requested, unsigned char **buffer, boo
 					cur_p += got_n_bytes;
 					n_to_do_bits -= got_n_bits;
 					n_bits_retrieved += got_n_bits;
+
+					dolog(LOG_DEBUG, "Retrieved %d bits from pool %d", got_n_bits, index);
 				}
 
 				pool_vector.at(index) -> unlock_object();
