@@ -165,7 +165,7 @@ pthread_cond_t * pool::timed_lock_object(double max_time)
 
 void pool::unlock_object()
 {
-	is_locked = true;
+	is_locked = false;
 
 	my_mutex_unlock(&lck);
 
