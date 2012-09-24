@@ -459,6 +459,7 @@ int pools::get_bits_from_pools(int n_bits_requested, unsigned char **buffer, boo
 
 		// a 'list_relock' would be nice
 		list_runlock();
+		pthread_testcancel();
 		list_wlock();
 
 		flush_empty_pools();
@@ -540,6 +541,7 @@ int pools::add_bits_to_pools(unsigned char *data, int n_bytes, bool ignore_rngte
 		int n = pool_vector.size();
 
 		list_runlock();
+		pthread_testcancel();
 
 		double now_ts = get_ts();
 		// FIXME divide by number of bits left divided by pool sizes
