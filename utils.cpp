@@ -539,8 +539,14 @@ void my_mutex_unlock(pthread_mutex_t *mutex)
 		error_exit("pthread_mutex_unlock failed with error %s (%d)", strerror(rc), rc);
 }
 
-void my_Assert(int value, int line, const char *file)
+void my_Assert(bool flag, int line, const char *file)
 {
-	if (value == 0)
+	if (flag == false)
 		error_exit("assert failed in %s:%d", file, line);
+}
+
+void my_Assert2(bool flag, int line, const char *file, int debug_value)
+{
+	if (flag == false)
+		error_exit("assert failed in %s:%d (%d)", file, line, debug_value);
 }

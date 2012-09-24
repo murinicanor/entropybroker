@@ -29,5 +29,7 @@ std::string get_endpoint_name(int fd);
 void my_mutex_lock(pthread_mutex_t *mutex);
 void my_mutex_unlock(pthread_mutex_t *mutex);
 
-void my_Assert(int value, int line, const char *file);
+void my_Assert(bool flag, int line, const char *file);
 #define my_assert(x) my_Assert(x, __LINE__,  __FILE__)
+void my_Assert2(bool flag, int line, const char *file, int debug_value);
+#define my_assert2(x, y) my_Assert2(x, __LINE__,  __FILE__, y)

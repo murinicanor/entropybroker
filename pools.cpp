@@ -603,7 +603,7 @@ int pools::get_bit_sum(double max_duration)
 int pools::add_event(long double event, unsigned char *event_data, int n_event_data, double max_time)
 {
 	int index = select_pool_to_add_to(true, max_time); // returns a locked object
-	my_assert(!is_w_locked && is_r_locked > 0);
+	my_assert2(!is_w_locked && is_r_locked > 0, is_r_locked);
 	// the list is now read-locked and the object as well
 
 	int rc = 0;
