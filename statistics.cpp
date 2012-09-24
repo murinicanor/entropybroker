@@ -159,7 +159,7 @@ void statistics::emit_statistics_file(int n_clients)
 			(double)usage.ru_stime.tv_sec + (double)usage.ru_stime.tv_usec / 1000000.0;
 
 		double now = get_ts();
-		int total_n_bits = ppools -> get_bit_sum();
+		int total_n_bits = ppools -> get_bit_sum(1.0);
 
 		lock_all();
 		fprintf(fh, "%f %lld %lld %d %d %d %d %f %s\n", now, total_recv, total_sent,
@@ -173,7 +173,7 @@ void statistics::emit_statistics_file(int n_clients)
 
 void statistics::emit_statistics_log(int n_clients, bool force_stats, int reset_counters_interval)
 {
-	int total_n_bits = ppools -> get_bit_sum();
+	int total_n_bits = ppools -> get_bit_sum(1.0);
 	double now = get_ts();
 	double runtime = now - start_ts;
 

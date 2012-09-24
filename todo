@@ -23,6 +23,6 @@ http://en.wikipedia.org/wiki/Twofish <--
 
 - fips140 & scc in een wrapper 'verify_entropy'-class proppen
 
-- locks: PTHREAD_MUTEX_ERRORCHECK
+- protocol.cpp: timeouts, niet DEFAULT_
 
 SVN: $Id$

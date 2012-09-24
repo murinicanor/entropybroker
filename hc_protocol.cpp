@@ -88,7 +88,7 @@ int send_got_data(int fd, pools *ppools, config_t *config)
 	char buffer[4 + 4 + 1];
 
 	// data is an estimate; it can be different anyway as other clients may come first
-	make_msg(buffer, 9, min(9999, ppools -> get_bit_sum())); // 0009
+	make_msg(buffer, 9, min(9999, ppools -> get_bit_sum(config -> communication_timeout))); // 0009
 
 	return WRITE_TO(fd, buffer, 8, config -> communication_timeout) == 8 ? 0 : -1;
 }
@@ -161,7 +161,7 @@ int do_client_get(client_t *client, bool *no_bits)
 	dolog(LOG_DEBUG, "get|%s memory allocated, retrieving bits", client -> host);
 
 	unsigned char *temp_buffer = NULL;
-	cur_n_bits = client -> ppools -> get_bits_from_pools(cur_n_bits, &temp_buffer, client -> allow_prng, client -> ignore_rngtest_fips140, client -> output_fips140, client -> ignore_rngtest_scc, client -> output_scc, double(DEFAULT_COMM_TO) * 0.9);
+	cur_n_bits = client -> ppools -> get_bits_from_pools(cur_n_bits, &temp_buffer, client -> allow_prng, client -> ignore_rngtest_fips140, client -> output_fips140, client -> ignore_rngtest_scc, client -> output_scc, double(client -> config -> communication_timeout) * 0.9);
 	if (cur_n_bits == 0)
 	{
 		dolog(LOG_WARNING, "get|%s no bits in pools, sending deny", client -> host);
@@ -243,7 +243,7 @@ int do_client_put(client_t *client, bool *new_bits, bool *is_full)
 
 	*new_bits = false;
 
-	if (client -> ppools -> all_pools_full(double(DEFAULT_COMM_TO) * 0.9))
+	if (client -> ppools -> all_pools_full(double(client -> config -> communication_timeout) * 0.9))
 	{
 		*is_full = true;
 
@@ -331,7 +331,7 @@ int do_client_put(client_t *client, bool *new_bits, bool *is_full)
 	{
 		client -> last_put_message = now;
 
-		int n_bits_added = client -> ppools -> add_bits_to_pools(entropy_data, entropy_data_len, client -> ignore_rngtest_fips140, client -> pfips140, client -> ignore_rngtest_scc, client -> pscc, double(DEFAULT_COMM_TO) * 0.9);
+		int n_bits_added = client -> ppools -> add_bits_to_pools(entropy_data, entropy_data_len, client -> ignore_rngtest_fips140, client -> pfips140, client -> ignore_rngtest_scc, client -> pscc, double(client -> config -> communication_timeout) * 0.9);
 		if (n_bits_added == -1)
 			dolog(LOG_CRIT, "put|%s error while adding data to pools", client -> host);
 		else

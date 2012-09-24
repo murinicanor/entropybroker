@@ -337,9 +337,9 @@ int pools::find_non_full_pool(bool timed, double max_duration)
 {
 	assert(is_w_locked || is_r_locked > 0);
 
-	int n = pool_vector.size();
 	double start_ts = get_ts();
 
+	int n = pool_vector.size();
 	for(int index=0; index<n; index++)
 	{
 		double working = get_ts() - start_ts;
@@ -420,20 +420,33 @@ int pools::select_pool_to_add_to(bool timed, double max_time)
 	return index;
 }
 
-int pools::get_bit_sum_unlocked()
+int pools::get_bit_sum_unlocked(double max_duration)
 {
 	assert(is_w_locked || is_r_locked > 0);
 
-	int bit_count = 0;
+	double start_ts = get_ts();
 
-	for(unsigned int loop=0; loop<pool_vector.size(); loop++)
-		bit_count += pool_vector.at(loop) -> get_n_bits_in_pool();
+	int bit_count = 0;
+	unsigned int n = pool_vector.size();
+	for(unsigned int index=0; index<n; index++)
+	{
+		double time_left = max(MIN_SLEEP, ((max_duration * 0.9) - (get_ts() - start_ts)) / double(n - index));
+
+		if (!pool_vector.at(index) -> timed_lock_object(time_left))
+		{
+			bit_count += pool_vector.at(index) -> get_n_bits_in_pool();
+
+			pool_vector.at(index) -> unlock_object();
+		}
+	}
 
 	return bit_count;
 }
 
 int pools::get_bits_from_pools(int n_bits_requested, unsigned char **buffer, bool allow_prng, bool ignore_rngtest_fips140, fips140 *pfips, bool ignore_rngtest_scc, scc *pscc, double max_duration)
 {
+	double start_ts = get_ts();
+
 	int n_to_do_bytes = (n_bits_requested + 7) / 8;
 	int n_to_do_bits = n_to_do_bytes * 8;
 	int n_bits_retrieved = 0;
@@ -448,13 +461,16 @@ int pools::get_bits_from_pools(int n_bits_requested, unsigned char **buffer, boo
 	for(;;)
 	{
 		list_rlock();
-		int bits_needed_to_load = n_bits_requested - get_bit_sum_unlocked();
+		int bits_needed_to_load = n_bits_requested - get_bit_sum_unlocked(max_duration);
 
+		// no unlock in the break: need to have the list locked later on
 		if (bits_needed_to_load <= 0)
 			break;
-		list_unlock();
 
+		// a 'list_relock' would be nice
+		list_unlock();
 		list_wlock();
+
 		flush_empty_pools();
 		merge_pools();
 		load_caches(bits_needed_to_load);
@@ -464,8 +480,6 @@ int pools::get_bits_from_pools(int n_bits_requested, unsigned char **buffer, boo
 
 	unsigned int n = pool_vector.size();
 	int pool_block_size = pool_vector.at(0) -> get_get_size();
-
-	double start_ts = get_ts();
 
 	int get_per_pool_n = max(pool_block_size, n_bits_requested / int(n));
 	int round = 0;
@@ -512,9 +526,9 @@ int pools::get_bits_from_pools(int n_bits_requested, unsigned char **buffer, boo
 
 int pools::add_bits_to_pools(unsigned char *data, int n_bytes, bool ignore_rngtest_fips140, fips140 *pfips, bool ignore_rngtest_scc, scc *pscc, double max_duration)
 {
-	int n_bits_added = 0;
-
 	double start_ts = get_ts();
+
+	int n_bits_added = 0;
 
 	int round = 0, n_was_locked = 0;
 	bool first = true;
@@ -534,7 +548,7 @@ int pools::add_bits_to_pools(unsigned char *data, int n_bytes, bool ignore_rngte
 		// FIXME divide by number of bits left divided by pool sizes
 		double time_left = max(MIN_SLEEP, ((max_duration * 0.9) - (now_ts - start_ts)) / double(n));
 
-		assert(!is_w_locked && is_r_locked == 0);
+		assert(!is_w_locked);
 		int index = select_pool_to_add_to(round > 0, time_left); // returns a locked object
 		assert(!is_w_locked && is_r_locked > 0);
 		// the list is now read-locked
@@ -573,10 +587,10 @@ int pools::add_bits_to_pools(unsigned char *data, int n_bytes, bool ignore_rngte
 	return n_bits_added;
 }
 
-int pools::get_bit_sum()
+int pools::get_bit_sum(double max_duration)
 {
 	list_rlock();
-	int bit_count = get_bit_sum_unlocked();
+	int bit_count = get_bit_sum_unlocked(max_duration);
 	list_unlock();
 
 	return bit_count;
@@ -584,7 +598,6 @@ int pools::get_bit_sum()
 
 int pools::add_event(long double event, unsigned char *event_data, int n_event_data, double max_time)
 {
-	assert(!is_w_locked && is_r_locked == 0);
 	int index = select_pool_to_add_to(true, max_time); // returns a locked object
 	assert(!is_w_locked && is_r_locked > 0);
 	// the list is now read-locked and the object as well
@@ -604,8 +617,9 @@ int pools::add_event(long double event, unsigned char *event_data, int n_event_d
 
 bool pools::all_pools_full(double max_duration)
 {
-	bool rc = true;
 	double start_ts = get_ts();
+
+	bool rc = true;
 
 	list_rlock();
 
