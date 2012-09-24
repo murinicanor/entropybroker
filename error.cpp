@@ -2,6 +2,7 @@
 #include <errno.h>
 #include <stdarg.h>
 #include <string.h>
+#include <string>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
@@ -11,6 +12,7 @@
 #include <openssl/err.h>
 
 #include "log.h"
+#include "utils.h"
 
 void error_exit(const char *format, ...)
 {
@@ -21,8 +23,8 @@ void error_exit(const char *format, ...)
 	vsnprintf(buffer, sizeof buffer, format, ap);
 	va_end(ap);
 
-	dolog(LOG_EMERG, "FATAL|%s\n", buffer);
-	dolog(LOG_EMERG, "errno at that time: %d (%s)", errno, strerror(errno));
+	dolog(LOG_EMERG, "FATAL|%s|%s\n", get_current_thread_name().c_str(), buffer);
+	dolog(LOG_EMERG, "FATAL|%s|errno at that time: %d (%s)", get_current_thread_name().c_str(), errno, strerror(errno));
 
 	ERR_load_crypto_strings();
 	for(;;)

@@ -15,7 +15,7 @@ public:
 	scc();
 	~scc();
 
-	void set_user(char *puser);
+	void set_user(const char *puser);
 	void set_threshold(double t);
 
 	void add(unsigned char byte);

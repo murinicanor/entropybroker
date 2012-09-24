@@ -460,7 +460,12 @@ int pools::get_bits_from_pools(int n_bits_requested, unsigned char **buffer, boo
 
 		flush_empty_pools();
 		merge_pools();
+
+		// due to the un- and relock this might have changed
+		// also merging pools might change this value
+		bits_needed_to_load = n_bits_requested - get_bit_sum_unlocked(max_duration);
 		load_caches(bits_needed_to_load);
+
 		list_wunlock();
 	}
 	// at this point the list is read locked

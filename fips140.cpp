@@ -68,7 +68,7 @@ fips140::~fips140()
 	free(user);
 }
 
-void fips140::set_user(char *puser)
+void fips140::set_user(const char *puser)
 {
 	free(user);
 

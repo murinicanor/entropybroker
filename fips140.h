@@ -39,7 +39,7 @@ public:
 	~fips140();
 
 	void set_fips_version(int version);
-	void set_user(char *puser);
+	void set_user(const char *puser);
 
 	void add(unsigned char newval);
 	bool is_ok();

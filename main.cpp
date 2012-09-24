@@ -132,8 +132,8 @@ int main(int argc, char *argv[])
 	printf("entropy_broker v " VERSION ", (C) 2009-2012 by folkert@vanheusden.com\n");
 	printf("SVN revision: $Revision$\n");
 
-	eb_output_fips140 -> set_user((char *)"output");
-	eb_output_scc     -> set_user((char *)"output");
+	eb_output_fips140 -> set_user("output");
+	eb_output_scc     -> set_user("output");
 
 	while((c = getopt(argc, argv, "hP:c:S:l:sn")) != -1)
 	{

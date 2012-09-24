@@ -233,6 +233,8 @@ void * thread(void *data)
 {
 	client_t *p = (client_t *)data;
 
+	set_thread_name(std::string(p -> host));
+
 	for(;;)
 	{
 		long long unsigned int auth_rnd = 1;
@@ -604,7 +606,9 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 		std::vector<msg_pair_t> msgs_servers;
 		for(unsigned int loop=0; loop<clients.size(); loop++)
 		{
-			if (!FD_ISSET(clients.at(loop) -> to_main[0], &rfds))
+			// this way we go through each fd in the process_pipe_from_client_thread part
+			// so that we detect closed fds
+			if (rc > 0 && !FD_ISSET(clients.at(loop) -> to_main[0], &rfds))
 				continue;
 
 			if (process_pipe_from_client_thread(clients.at(loop), &msgs_clients, &msgs_servers) == -1)
@@ -621,7 +625,7 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 		send_to_client_threads(&clients, &msgs_clients, false, &send_have_data, &send_need_data, &send_is_full);
 		send_to_client_threads(&clients, &msgs_servers, true, &send_have_data, &send_need_data, &send_is_full);
 
-		if (FD_ISSET(listen_socket_fd, &rfds))
+		if (rc > 0 && FD_ISSET(listen_socket_fd, &rfds))
 		{
 			register_new_client(listen_socket_fd, &clients, user_map, config, ppools, &stats, eb_output_fips140, eb_output_scc);
 			send_have_data = send_need_data = send_is_full = false;

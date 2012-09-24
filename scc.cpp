@@ -25,7 +25,7 @@ scc::~scc()
 	free(user);
 }
 
-void scc::set_user(char *puser)
+void scc::set_user(const char *puser)
 {
 	free(user);
         user = strdup(puser);

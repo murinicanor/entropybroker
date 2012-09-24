@@ -550,3 +550,26 @@ void my_Assert2(bool flag, int line, const char *file, int debug_value)
 	if (flag == false)
 		error_exit("assert failed in %s:%d (%d)", file, line, debug_value);
 }
+
+// *BSD need a different implemenation for this
+void set_thread_name(std::string name)
+{
+        pthread_setname_np(pthread_self(), ("eb:" + name).c_str());
+}
+
+// *BSD need a different implemenation for this
+std::string get_thread_name(pthread_t *thread)
+{
+        char buffer[4096];
+
+        pthread_getname_np(*thread, buffer, sizeof buffer);
+
+        return std::string(buffer);
+}
+
+std::string get_current_thread_name()
+{
+	pthread_t tid = pthread_self();
+
+	return get_thread_name(&tid);
+}
