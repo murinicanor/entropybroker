@@ -1,3 +1,4 @@
+// SVN: $Id$
 #include <signal.h>
 
 #include "error.h"

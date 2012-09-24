@@ -1,3 +1,4 @@
+// SVN: $Id$
 /*
   GPL 2 applies to entropybroker.
 

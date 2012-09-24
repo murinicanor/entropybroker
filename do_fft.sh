@@ -1,4 +1,5 @@
 #! /bin/sh
+# SVN: $Id$
 
 if [ $# -eq 0 ] ; then
 	echo usage: do_fft.sh bin_file.dat result.png

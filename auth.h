@@ -1,3 +1,4 @@
+// SVN: $Id$
 int auth_eb_user(int fd, int to, users *user_map, std::string & password, long long unsigned int *challenge, bool is_proxy_auth);
 int auth_eb(int fd, int to, users *user_map, std::string & password, long long unsigned int *challenge);
 int auth_client_server(int fd, int to, std::string & username, std::string & password, long long unsigned int *challenge);

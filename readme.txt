@@ -316,3 +316,5 @@ GPL2
 Contact info
 ------------
 either folkert@vanheusden.com or folkert.mobiel@gmail.com
+
+SVN: $Id$

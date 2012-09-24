@@ -1,3 +1,4 @@
+// SVN: $Id$
 class stirrer_aes : public stirrer
 {
 public:

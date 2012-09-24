@@ -1,3 +1,4 @@
+// SVN: $Id$
 typedef struct
 {
 	unsigned int max_number_of_mem_pools;

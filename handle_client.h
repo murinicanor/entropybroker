@@ -1,3 +1,4 @@
+// SVN: $Id$
 #define PIPE_CMD_HAVE_DATA 1
 #define PIPE_CMD_NEED_DATA 2
 #define PIPE_CMD_IS_FULL   3

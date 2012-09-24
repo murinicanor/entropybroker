@@ -1,3 +1,4 @@
+// SVN: $Id$
 #include <openssl/whrlpool.h>
 
 #include "hasher.h"

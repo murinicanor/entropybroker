@@ -1,3 +1,4 @@
+// SVN: $Id$
 #include <stdio.h>
 #include <openssl/rand.h>
 

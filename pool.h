@@ -1,3 +1,4 @@
+// SVN: $Id$
 #define DEFAULT_POOL_SIZE_BITS	32768
 #define MAX_EVENT_BITS	11
 

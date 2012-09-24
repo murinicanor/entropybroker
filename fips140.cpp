@@ -1,3 +1,4 @@
+// SVN: $Id$
 /* This RNG-tester was written by F.J.J. van Heusden (folkert@vanheusden.com).
  * It was implemented according to the FIPS1401-documentation which can be
  * found at http://csrc.nist.gov/publications/fips/index.html

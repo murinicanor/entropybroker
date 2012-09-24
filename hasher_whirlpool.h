@@ -1,3 +1,4 @@
+// SVN: $Id$
 class hasher_whirlpool : public hasher
 {
 public:

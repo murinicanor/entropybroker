@@ -1,3 +1,4 @@
+// SVN: $Id$
 class hasher_sha512 : public hasher
 {
 public:

@@ -1,4 +1,6 @@
+// SVN: $Id$
 #define SCC_BUFFER_SIZE 4096
+
 class scc
 {
 	int bytes_in, index;

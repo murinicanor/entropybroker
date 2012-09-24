@@ -1,3 +1,4 @@
+// SVN: $Id$
 int send_denied_empty(int fd, statistics *stats, config_t *config);
 int send_denied_quota(int fd, statistics *stats, config_t *config);
 int send_denied_full(int fd, statistics *stats, config_t *config, char *host);
