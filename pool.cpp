@@ -139,6 +139,8 @@ pthread_cond_t * pool::timed_lock_object(double max_time)
 
 	while(max_time > 0.0)
 	{
+		pthread_testcancel();
+
 		clock_gettime(CLOCK_REALTIME, &abs_time);
 
 		double cur_time = min(max_time, 1.0);
