@@ -181,7 +181,8 @@ void pools::load_caches(unsigned int load_n_bits)
 		cache_list.erase(cache_list.begin());
 	}
 
-	dolog(LOG_DEBUG, "%d bits loaded from %d files", bits_loaded, files_loaded);
+	if (bits_loaded > 0 || files_loaded > 0)
+		dolog(LOG_DEBUG, "%d bits loaded from %d files", bits_loaded, files_loaded);
 }
 
 void pools::flush_empty_pools()
