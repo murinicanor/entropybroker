@@ -137,30 +137,39 @@ pthread_cond_t * pool::timed_lock_object(double max_time)
 	my_assert(max_time > 0.0);
 	struct timespec abs_time;
 
-	clock_gettime(CLOCK_REALTIME, &abs_time);
-
-	abs_time.tv_sec += max_time;
-	abs_time.tv_nsec += (max_time - floor(max_time)) * 1000000000L;
-
-	if (abs_time.tv_nsec >= 1000000000L)
+	while(max_time > 0.0)
 	{
-		abs_time.tv_sec++;
-		abs_time.tv_nsec -= 1000000000L ;
+		clock_gettime(CLOCK_REALTIME, &abs_time);
+
+		double cur_time = min(max_time, 1.0);
+		abs_time.tv_sec += cur_time;
+		abs_time.tv_nsec += (cur_time - floor(cur_time)) * 1000000000L;
+
+		if (abs_time.tv_nsec >= 1000000000L)
+		{
+			abs_time.tv_sec++;
+			abs_time.tv_nsec -= 1000000000L;
+		}
+
+		int rc = -1;
+		rc = pthread_mutex_timedlock(&lck, &abs_time);
+		if (rc == 0)
+		{
+			is_locked = true;
+
+			return NULL;
+		}
+
+		if (rc != ETIMEDOUT)
+		{
+			errno = rc;
+			error_exit("pthread_mutex_timedlock failed");
+		}
+
+		max_time -= cur_time;
 	}
 
-	int rc = -1;
-	if ((rc = pthread_mutex_timedlock(&lck, &abs_time)))
-	{
-		if (rc == ETIMEDOUT)
-			return &cond;
-
-		errno = rc;
-		error_exit("pthread_mutex_timedlock failed");
-	}
-
-	is_locked = true;
-
-	return NULL;
+	return &cond;
 }
 
 void pool::unlock_object()
