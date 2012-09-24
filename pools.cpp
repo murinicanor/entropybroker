@@ -233,6 +233,8 @@ void pools::merge_pools()
 
 		for(int i2=(int(pool_vector.size()) - 1); i2 >= (i1 + 1); i2--)
 		{
+			pthread_testcancel();
+
 			if (pool_vector.at(i2) -> timed_lock_object(1.0))
 				continue;
 
@@ -337,6 +339,8 @@ int pools::find_non_full_pool(bool timed, double max_duration)
 		double working = get_ts() - start_ts;
 		double cur_max_duration = max(MIN_SLEEP, (max_duration - working) / double(n - index));
 
+		pthread_testcancel();
+
 		pthread_cond_t *cond = NULL;
 		if (timed)
 			cond = pool_vector.at(index) -> timed_lock_object(cur_max_duration);
@@ -372,6 +376,7 @@ int pools::select_pool_to_add_to(bool timed, double max_time)
 			pool_vector.at(index) -> unlock_object();
 
 		list_runlock();
+		pthread_testcancel();
 		list_wlock();
 		// at this point (due to context switching between the unlock and the
 		// wlock), there may already be a non-empty pool: that is not a problem
@@ -391,6 +396,7 @@ int pools::select_pool_to_add_to(bool timed, double max_time)
 		}
 
 		list_wunlock();
+		pthread_testcancel();
 		list_rlock();
 
 		double left = max(MIN_SLEEP, max_time - (get_ts() - start_ts));
@@ -420,6 +426,7 @@ int pools::get_bit_sum_unlocked(double max_duration)
 	unsigned int n = pool_vector.size();
 	for(unsigned int index=0; index<n; index++)
 	{
+		pthread_testcancel();
 		double time_left = max(MIN_SLEEP, ((max_duration * 0.9) - (get_ts() - start_ts)) / double(n - index));
 
 		if (!pool_vector.at(index) -> timed_lock_object(time_left))
@@ -486,6 +493,8 @@ int pools::get_bits_from_pools(int n_bits_requested, unsigned char **buffer, boo
 			double now_ts = get_ts();
 			// FIXME divide by number of bits left divided by available in the following pools
 			double time_left = max(MIN_SLEEP, ((max_duration * 0.9) - (now_ts - start_ts)) / double(n - index));
+
+			pthread_testcancel();
 
 			pthread_cond_t *cond = NULL;
 			if (round > 0)
@@ -629,6 +638,8 @@ bool pools::all_pools_full(double max_duration)
 		{
 			// FIXME move this calculation to a method
 			double time_left = max(MIN_SLEEP, (max_duration - (get_ts() - start_ts)) / double(n - loop));
+
+			pthread_testcancel();
 
 			if (!pool_vector.at(loop) -> timed_lock_object(time_left))
 			{
