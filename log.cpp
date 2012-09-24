@@ -19,7 +19,9 @@ void dolog(int level, const char *format, ...)
         char buffer[4096];
         va_list ap;
         time_t now = time(NULL);
-        char *timestr = ctime(&now);
+
+        char timestr[256] = { 0 };
+	ctime_r(&now, timestr); // can't set a limit so hopefully this 256 is enough!
         char *dummy = strchr(timestr, '\n');
         if (dummy) *dummy = 0x00;
 
