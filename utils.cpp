@@ -96,7 +96,7 @@ int READ_TO(int fd, char *whereto, size_t len, double to)
 			return -1;
 
 		tv.tv_sec = time_left;
-		tv.tv_usec = (time_left - (double)tv.tv_sec) * 1000000.0;
+		tv.tv_usec = (time_left - double(tv.tv_sec)) * 1000000.0;
 
 		FD_ZERO(&rfds);
 		FD_SET(fd, &rfds);
@@ -120,19 +120,19 @@ int READ_TO(int fd, char *whereto, size_t len, double to)
 
 			if (rc == -1)
 			{
-				if (errno != EINTR && errno != EINPROGRESS && errno != EAGAIN)
-					return -1;
+				if (errno == EINTR || errno == EINPROGRESS || errno == EAGAIN)
+					continue;
+
+				return -1;
 			}
 			else if (rc == 0)
 			{
 				return -1;
 			}
-			else
-			{
-				whereto += rc;
-				len -= rc;
-				cnt += rc;
-			}
+
+			whereto += rc;
+			len -= rc;
+			cnt += rc;
 		}
 	}
 

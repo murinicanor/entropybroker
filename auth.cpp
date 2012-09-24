@@ -51,9 +51,9 @@ int auth_eb_user(int fd, int to, users *user_map, std::string & password, long l
 		return -1;
 	}
 
-	dolog(LOG_INFO, "User '%s' requesting access", username);
+	dolog(LOG_INFO, "User '%s'[len: %d] requesting access", username, username_length);
 
-	if (username[0] == 0x00 || username_length == 0)
+	if (username == NULL || username[0] == 0x00 || username_length == 0)
 	{
 		dolog(LOG_WARNING, "Empty username");
 		free(username);
