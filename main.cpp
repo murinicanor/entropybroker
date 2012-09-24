@@ -1,4 +1,4 @@
-// SVN: $Id$
+// SVN: $Id: main.cpp 458 2012-09-24 13:38:14Z folkert $
 #include <sys/time.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -130,6 +130,7 @@ int main(int argc, char *argv[])
 	memset(&config, 0x00, sizeof config);
 
 	printf("entropy_broker v " VERSION ", (C) 2009-2012 by folkert@vanheusden.com\n");
+	printf("SVN revision: $Revision$\n");
 
 	eb_output_fips140 -> set_user((char *)"output");
 	eb_output_scc     -> set_user((char *)"output");
