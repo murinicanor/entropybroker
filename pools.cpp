@@ -45,7 +45,9 @@ pools::pools(std::string cache_dir_in, unsigned int max_n_mem_pools_in, unsigned
 	if (max_n_disk_pools < 1)
 		error_exit("maximum number of disk pools must be at least 1");
 
+	pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, NULL);
 	load_cachefiles_list();
+	pthread_setcanceltype(PTHREAD_CANCEL_ENABLE, NULL);
 }
 
 pools::~pools()
@@ -85,6 +87,8 @@ void pools::list_rlock()
 
 void pools::store_caches(unsigned int keep_n)
 {
+	pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, NULL);
+
 	if (cache_list.size() >= max_n_disk_pools)
 	{
 		if (!disk_limit_reached_notified)
@@ -132,6 +136,8 @@ void pools::store_caches(unsigned int keep_n)
 
 		fclose(fh);
 	}
+
+	pthread_setcanceltype(PTHREAD_CANCEL_ENABLE, NULL);
 }
 
 void pools::load_caches(unsigned int load_n_bits)

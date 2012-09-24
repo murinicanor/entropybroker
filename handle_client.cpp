@@ -641,7 +641,7 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 
 	while(clients.size() > 0)
 	{
-		dolog(LOG_DEBUG, "... %s/%d (fd: %d)", clients.at(0) -> host, clients.at(0) -> type, clients.at(0) -> socket_fd);
+		dolog(LOG_DEBUG, "... %s/%s (fd: %d)", clients.at(0) -> host, clients.at(0) -> type, clients.at(0) -> socket_fd);
 
 		forget_client_index(&clients, 0, true);
 	}
