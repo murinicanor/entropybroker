@@ -1,6 +1,5 @@
 // SVN: $Id$
 #include <math.h>
-#include <assert.h>
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
@@ -54,7 +53,7 @@ pools::~pools()
 {
 	list_wlock();
 	store_caches(0);
-	list_unlock();
+	list_wunlock();
 
 	pthread_rwlock_destroy(&list_lck);
 }
@@ -62,19 +61,25 @@ pools::~pools()
 void pools::list_wlock()
 {
 	pthread_rwlock_wrlock(&list_lck);
+	my_assert(is_r_locked == 0);
 	is_w_locked = true;
 }
 
-void pools::list_unlock()
+void pools::list_wunlock()
 {
-	assert(is_w_locked || is_r_locked > 0);
+	my_assert(is_w_locked);
+	is_w_locked = false;
 
-	if (is_w_locked)
-		is_w_locked = false;
-	else
-		is_r_locked--;
+	my_assert(is_r_locked == 0);
 
-	assert(is_r_locked >= 0);
+	pthread_rwlock_unlock(&list_lck);
+}
+
+void pools::list_runlock()
+{
+	my_assert(is_r_locked > 0);
+	is_r_locked--; // this is tricky (multiple rlocks)
+	my_assert(is_r_locked >= 0);
 
 	pthread_rwlock_unlock(&list_lck);
 }
@@ -82,13 +87,13 @@ void pools::list_unlock()
 void pools::list_rlock()
 {
 	pthread_rwlock_rdlock(&list_lck);
-	assert(is_r_locked >= 0);
+	my_assert(is_r_locked >= 0);
 	is_r_locked++;
 }
 
 void pools::store_caches(unsigned int keep_n)
 {
-	assert(is_w_locked);
+	my_assert(is_w_locked);
 
 	if (cache_list.size() >= max_n_disk_pools)
 	{
@@ -141,7 +146,7 @@ void pools::store_caches(unsigned int keep_n)
 
 void pools::load_caches(unsigned int load_n_bits)
 {
-	assert(is_w_locked);
+	my_assert(is_w_locked);
 	dolog(LOG_DEBUG, "Loading %d bits from pools", load_n_bits);
 
 	unsigned int bits_loaded = 0;
@@ -188,7 +193,7 @@ void pools::load_caches(unsigned int load_n_bits)
 
 void pools::flush_empty_pools()
 {
-	assert(is_w_locked);
+	my_assert(is_w_locked);
 	unsigned int deleted = 0;
 	for(int index=pool_vector.size() - 1; index >= 0; index--)
 	{
@@ -216,7 +221,7 @@ void pools::flush_empty_pools()
 
 void pools::merge_pools()
 {
-	assert(is_w_locked);
+	my_assert(is_w_locked);
 
 	if (pool_vector.empty())
 		return;
@@ -335,7 +340,7 @@ bool pools::verify_quality(unsigned char *data, int n, bool ignore_rngtest_fips1
 // returns a locked pool
 int pools::find_non_full_pool(bool timed, double max_duration)
 {
-	assert(is_w_locked || is_r_locked > 0);
+	my_assert(is_w_locked || is_r_locked > 0);
 
 	double start_ts = get_ts();
 
@@ -379,7 +384,7 @@ int pools::select_pool_to_add_to(bool timed, double max_time)
 		if (index != -1)
 			pool_vector.at(index) -> unlock_object();
 
-		list_unlock();
+		list_runlock();
 		list_wlock();
 		// at this point (due to context switching between the unlock and the
 		// wlock), there may already be a non-empty pool: that is not a problem
@@ -398,7 +403,7 @@ int pools::select_pool_to_add_to(bool timed, double max_time)
 			pool_vector.push_back(new pool(new_pool_size, bce, h, s));
 		}
 
-		list_unlock();
+		list_wunlock();
 		list_rlock();
 
 		double left = max(MIN_SLEEP, max_time - (get_ts() - start_ts));
@@ -422,7 +427,7 @@ int pools::select_pool_to_add_to(bool timed, double max_time)
 
 int pools::get_bit_sum_unlocked(double max_duration)
 {
-	assert(is_w_locked || is_r_locked > 0);
+	my_assert(is_w_locked || is_r_locked > 0);
 
 	double start_ts = get_ts();
 
@@ -468,13 +473,13 @@ int pools::get_bits_from_pools(int n_bits_requested, unsigned char **buffer, boo
 			break;
 
 		// a 'list_relock' would be nice
-		list_unlock();
+		list_runlock();
 		list_wlock();
 
 		flush_empty_pools();
 		merge_pools();
 		load_caches(bits_needed_to_load);
-		list_unlock();
+		list_wunlock();
 	}
 	// at this point the list is read locked
 
@@ -519,7 +524,7 @@ int pools::get_bits_from_pools(int n_bits_requested, unsigned char **buffer, boo
 		round++;
 	}
 
-	list_unlock();
+	list_runlock();
 
 	return n_bits_retrieved;
 }
@@ -542,15 +547,14 @@ int pools::add_bits_to_pools(unsigned char *data, int n_bytes, bool ignore_rngte
 
 		int n = pool_vector.size();
 
-		list_unlock();
+		list_runlock();
 
 		double now_ts = get_ts();
 		// FIXME divide by number of bits left divided by pool sizes
 		double time_left = max(MIN_SLEEP, ((max_duration * 0.9) - (now_ts - start_ts)) / double(n));
 
-		assert(!is_w_locked);
 		int index = select_pool_to_add_to(round > 0, time_left); // returns a locked object
-		assert(!is_w_locked && is_r_locked > 0);
+		my_assert(!is_w_locked && is_r_locked > 0);
 		// the list is now read-locked
 
 		if (index == -1)
@@ -582,7 +586,7 @@ int pools::add_bits_to_pools(unsigned char *data, int n_bytes, bool ignore_rngte
 		}
 	}
 
-	list_unlock();
+	list_runlock();
 
 	return n_bits_added;
 }
@@ -591,7 +595,7 @@ int pools::get_bit_sum(double max_duration)
 {
 	list_rlock();
 	int bit_count = get_bit_sum_unlocked(max_duration);
-	list_unlock();
+	list_runlock();
 
 	return bit_count;
 }
@@ -599,7 +603,7 @@ int pools::get_bit_sum(double max_duration)
 int pools::add_event(long double event, unsigned char *event_data, int n_event_data, double max_time)
 {
 	int index = select_pool_to_add_to(true, max_time); // returns a locked object
-	assert(!is_w_locked && is_r_locked > 0);
+	my_assert(!is_w_locked && is_r_locked > 0);
 	// the list is now read-locked and the object as well
 
 	int rc = 0;
@@ -610,7 +614,7 @@ int pools::add_event(long double event, unsigned char *event_data, int n_event_d
 		pool_vector.at(index) -> unlock_object();
 	}
 
-	list_unlock();
+	list_runlock();
 
 	return rc;
 }
@@ -649,7 +653,7 @@ bool pools::all_pools_full(double max_duration)
 		}
 	}
 
-	list_unlock();
+	list_runlock();
 
 	return rc;
 }

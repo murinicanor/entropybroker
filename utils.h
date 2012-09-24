@@ -28,3 +28,6 @@ void set_fd_nonblocking(int fd);
 std::string get_endpoint_name(int fd);
 void my_mutex_lock(pthread_mutex_t *mutex);
 void my_mutex_unlock(pthread_mutex_t *mutex);
+
+void my_Assert(int value, int line, const char *file);
+#define my_assert(x) my_Assert(x, __LINE__,  __FILE__)

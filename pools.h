@@ -18,11 +18,12 @@ private:
 
 	pthread_rwlock_t list_lck;
 	bool is_w_locked;
-	int is_r_locked;
+	volatile int is_r_locked;
 
 	void list_wlock();
-	void list_unlock();
+	void list_wunlock();
 	void list_rlock();
+	void list_runlock();
 
 	void load_cachefiles_list();
 	void load_caches(unsigned int load_n_bits);

@@ -25,7 +25,6 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <errno.h>
-#include <assert.h>
 #include <string>
 #include <sys/mman.h>
 #include <arpa/inet.h>
@@ -135,7 +134,7 @@ pthread_cond_t * pool::lock_object()
 
 pthread_cond_t * pool::timed_lock_object(double max_time)
 {
-	assert(max_time > 0.0);
+	my_assert(max_time > 0.0);
 	struct timespec abs_time;
 
 	clock_gettime(CLOCK_REALTIME, &abs_time);
@@ -175,7 +174,7 @@ void pool::unlock_object()
 
 void pool::dump(FILE *fh)
 {
-	assert(is_locked);
+	my_assert(is_locked);
 
 	if (bits_in_pool > 0)
 	{
@@ -202,7 +201,7 @@ void pool::dump(FILE *fh)
 
 int pool::add_entropy_data(unsigned char *entropy_data, int n_bytes_in)
 {
-	assert(is_locked);
+	my_assert(is_locked);
 
 	int ivec_size = s -> get_ivec_size();
 	unsigned char *cur_ivec = (unsigned char *)malloc(ivec_size);
@@ -259,14 +258,14 @@ int pool::add_entropy_data(unsigned char *entropy_data, int n_bytes_in)
 
 int pool::get_n_bits_in_pool() const
 {
-	assert(is_locked);
+	my_assert(is_locked);
 
 	return bits_in_pool;
 }
 
 int pool::get_entropy_data(unsigned char *entropy_data, int n_bytes_requested, bool prng_ok)
 {
-	assert(is_locked);
+	my_assert(is_locked);
 
 	unsigned char *temp_buffer = (unsigned char *)malloc(pool_size_bytes);
 	lock_mem(temp_buffer, pool_size_bytes);
@@ -343,14 +342,14 @@ int pool::get_pool_size() const
 
 bool pool::is_full() const
 {
-	assert(is_locked);
+	my_assert(is_locked);
 
 	return bits_in_pool == (pool_size_bytes * 8);
 }
 
 bool pool::is_almost_full() const
 {
-	assert(is_locked);
+	my_assert(is_locked);
 
 	return ((pool_size_bytes * 8) - bits_in_pool) < get_get_size_in_bits();
 }
@@ -358,7 +357,7 @@ bool pool::is_almost_full() const
 /* taken from random driver from linux-kernel */
 int pool::add_event(double ts, unsigned char *event_data, int n_event_data)
 {
-	assert(is_locked);
+	my_assert(is_locked);
 
 	unsigned char *temp_buffer = (unsigned char *)malloc(pool_size_bytes);
 	lock_mem(temp_buffer, pool_size_bytes);

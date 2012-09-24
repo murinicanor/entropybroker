@@ -538,3 +538,9 @@ void my_mutex_unlock(pthread_mutex_t *mutex)
 	if ((rc = pthread_mutex_unlock(mutex)))
 		error_exit("pthread_mutex_unlock failed with error %s (%d)", strerror(rc), rc);
 }
+
+void my_Assert(int value, int line, const char *file)
+{
+	if (value == 0)
+		error_exit("assert failed in %s:%d", file, line);
+}
