@@ -42,6 +42,7 @@
 #include "log.h"
 #include "signals.h"
 #include "auth.h"
+#include "defines.h"
 
 const char *pid_file = PID_DIR "/entropy_broker.pid";
 
@@ -121,6 +122,11 @@ int main(int argc, char *argv[])
 	}
 	(void)umask(0177);
 	no_core();
+
+	if (pthread_mutexattr_init(&global_mutex_attr))
+		error_exit("pthread_mutexattr_init failed");
+	if (pthread_mutexattr_settype(&global_mutex_attr, PTHREAD_MUTEX_ERRORCHECK))
+		error_exit("pthread_mutexattr_settype(PTHREAD_MUTEX_ERRORCHECK) failed");
 
 	set_logging_parameters(log_console, log_logfile, log_syslog);
 

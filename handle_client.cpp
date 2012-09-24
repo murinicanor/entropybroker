@@ -19,6 +19,7 @@
 #include <string>
 #include <map>
 
+#include "defines.h"
 #include "error.h"
 #include "log.h"
 #include "math.h"
@@ -360,7 +361,7 @@ void register_new_client(int listen_socket_fd, std::vector<client_t *> *clients,
 		p -> ignore_rngtest_scc = config -> ignore_rngtest_scc;
 		p -> allow_prng = config -> allow_prng;
 
-		pthread_mutex_init(&p -> stats_lck, NULL);
+		pthread_mutex_init(&p -> stats_lck, &global_mutex_attr);
 
 		// globals
 		p -> pu = user_map;

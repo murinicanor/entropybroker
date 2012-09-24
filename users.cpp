@@ -4,13 +4,14 @@
 #include <fstream>
 #include <pthread.h>
 
+#include "defines.h"
 #include "error.h"
 #include "log.h"
 #include "users.h"
 
 users::users(std::string filename_in) : filename(filename_in)
 {
-	pthread_mutex_init(&lock, NULL);
+	pthread_mutex_init(&lock, &global_mutex_attr);
 
 	user_map = NULL;
 	load_usermap();

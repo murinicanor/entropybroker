@@ -31,6 +31,7 @@
 #include <arpa/inet.h>
 #include <openssl/rand.h>
 
+#include "defines.h"
 #include "math.h"
 #include "ivec.h"
 #include "hasher.h"
@@ -43,7 +44,7 @@
 
 pool::pool(int new_pool_size_bytes, bit_count_estimator *bce_in, hasher *hclass, stirrer *sclass) : bce(bce_in), h(hclass), s(sclass)
 {
-	pthread_mutex_init(&lck, NULL);
+	pthread_mutex_init(&lck, &global_mutex_attr);
 	is_locked = false;
 	pthread_cond_init(&cond, NULL);
 
@@ -64,7 +65,7 @@ pool::pool(int new_pool_size_bytes, bit_count_estimator *bce_in, hasher *hclass,
 
 pool::pool(int pool_nr, FILE *fh, bit_count_estimator *bce_in, hasher *hclass, stirrer *sclass) : bce(bce_in), h(hclass), s(sclass)
 {
-	pthread_mutex_init(&lck, NULL);
+	pthread_mutex_init(&lck, &global_mutex_attr);
 	is_locked = false;
 	pthread_cond_init(&cond, NULL);
 

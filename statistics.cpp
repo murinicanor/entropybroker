@@ -9,6 +9,7 @@
 #include <sys/resource.h>
 #include <arpa/inet.h>
 
+#include "defines.h"
 #include "error.h"
 #include "log.h"
 #include "math.h"
@@ -29,14 +30,14 @@
 
 statistics::statistics(char *file_in, fips140 *fips140_in, scc *scc_in, pools *pp_in) : file(file_in), pfips140(fips140_in), pscc(scc_in), ppools(pp_in)
 {
-	pthread_mutex_init(&recv_lck, NULL);
-	pthread_mutex_init(&sent_lck, NULL);
-	pthread_mutex_init(&times_empty_lck, NULL);
-	pthread_mutex_init(&times_not_allowed_lck, NULL);
-	pthread_mutex_init(&times_full_lck, NULL);
-	pthread_mutex_init(&times_quota_lck, NULL);
-	pthread_mutex_init(&disconnects_lck, NULL);
-	pthread_mutex_init(&timeouts_lck, NULL);
+	pthread_mutex_init(&recv_lck, &global_mutex_attr);
+	pthread_mutex_init(&sent_lck, &global_mutex_attr);
+	pthread_mutex_init(&times_empty_lck, &global_mutex_attr);
+	pthread_mutex_init(&times_not_allowed_lck, &global_mutex_attr);
+	pthread_mutex_init(&times_full_lck, &global_mutex_attr);
+	pthread_mutex_init(&times_quota_lck, &global_mutex_attr);
+	pthread_mutex_init(&disconnects_lck, &global_mutex_attr);
+	pthread_mutex_init(&timeouts_lck, &global_mutex_attr);
 
 	bps_cur = 0;
 
