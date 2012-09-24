@@ -147,9 +147,9 @@ int do_client_get(client_t *client, bool *no_bits)
 
 	dolog(LOG_DEBUG, "get|%s requested %d bits", client -> host, cur_n_bits);
 
-	pthread_mutex_lock(&client -> stats_lck);
+	my_mutex_lock(&client -> stats_lck);
 	cur_n_bits = min(cur_n_bits, client -> max_bits_per_interval - client -> bits_sent);
-	pthread_mutex_unlock(&client -> stats_lck);
+	my_mutex_unlock(&client -> stats_lck);
 	dolog(LOG_DEBUG, "get|%s is allowed to now receive %d bits", client -> host, cur_n_bits);
 	if (cur_n_bits == 0)
 		return send_denied_quota(client -> socket_fd, client -> stats, client -> config);
@@ -198,9 +198,9 @@ int do_client_get(client_t *client, bool *no_bits)
 	free(temp_buffer);
 
 	// update statistics for accounting
-	pthread_mutex_lock(&client -> stats_lck);
+	my_mutex_lock(&client -> stats_lck);
 	client -> bits_sent += cur_n_bits;
-	pthread_mutex_unlock(&client -> stats_lck);
+	my_mutex_unlock(&client -> stats_lck);
 
 	client -> stats -> track_sents(cur_n_bits);
 
@@ -337,9 +337,9 @@ int do_client_put(client_t *client, bool *new_bits, bool *is_full)
 		else
 			dolog(LOG_DEBUG, "put|%s %d bits mixed into pools", client -> host, n_bits_added);
 
-		pthread_mutex_lock(&client -> stats_lck);
+		my_mutex_lock(&client -> stats_lck);
 		client -> bits_recv += n_bits_added;
-		pthread_mutex_unlock(&client -> stats_lck);
+		my_mutex_unlock(&client -> stats_lck);
 
 		client -> stats -> track_recvs(n_bits_added);
 

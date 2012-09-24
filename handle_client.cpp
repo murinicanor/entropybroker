@@ -19,7 +19,6 @@
 #include <string>
 #include <map>
 
-#include "defines.h"
 #include "error.h"
 #include "log.h"
 #include "math.h"
@@ -560,9 +559,9 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 				{
 					client_t *p = clients.at(loop);
 
-					pthread_mutex_lock(&p -> stats_lck);
+					my_mutex_lock(&p -> stats_lck);
 					p -> bits_recv = p -> bits_sent = 0;
-					pthread_mutex_unlock(&p -> stats_lck);
+					my_mutex_unlock(&p -> stats_lck);
 				}
 			}
 
@@ -581,12 +580,12 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 			for(unsigned int loop=0; loop<clients.size(); loop++)
 			{
 				client_t *p = clients.at(loop);
-				pthread_mutex_lock(&p -> stats_lck);
+				my_mutex_lock(&p -> stats_lck);
 				dolog(LOG_DEBUG, "stats|%s (%s): %s, scc: %s | sent: %d, recv: %d | last msg: %ld seconds ago, %lds connected",
 						p -> host, p -> type, p -> pfips140 -> stats(),
 						p -> pscc -> stats(),
 						p -> bits_sent, p -> bits_recv, (long int)(now - p -> last_message), (long int)(now - p -> connected_since));
-				pthread_mutex_unlock(&p -> stats_lck);
+				my_mutex_unlock(&p -> stats_lck);
 			}
 		}
 

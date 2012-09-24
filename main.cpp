@@ -42,7 +42,6 @@
 #include "log.h"
 #include "signals.h"
 #include "auth.h"
-#include "defines.h"
 
 const char *pid_file = PID_DIR "/entropy_broker.pid";
 

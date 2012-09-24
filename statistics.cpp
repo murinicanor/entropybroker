@@ -9,7 +9,6 @@
 #include <sys/resource.h>
 #include <arpa/inet.h>
 
-#include "defines.h"
 #include "error.h"
 #include "log.h"
 #include "math.h"
@@ -70,78 +69,78 @@ statistics::~statistics()
 
 void statistics::inc_disconnects()
 {
-	pthread_mutex_lock(&disconnects_lck);
+	my_mutex_lock(&disconnects_lck);
 	disconnects++;
-	pthread_mutex_unlock(&disconnects_lck);
+	my_mutex_unlock(&disconnects_lck);
 }
 
 void statistics::inc_timeouts()
 {
-	pthread_mutex_lock(&timeouts_lck);
+	my_mutex_lock(&timeouts_lck);
 	timeouts++;
-	pthread_mutex_unlock(&timeouts_lck);
+	my_mutex_unlock(&timeouts_lck);
 }
 
 void statistics::inc_n_times_empty()
 {
-	pthread_mutex_lock(&times_empty_lck);
+	my_mutex_lock(&times_empty_lck);
 	n_times_empty++;
-	pthread_mutex_unlock(&times_empty_lck);
+	my_mutex_unlock(&times_empty_lck);
 }
 
 void statistics::inc_n_times_quota()
 {
-	pthread_mutex_lock(&times_quota_lck);
+	my_mutex_lock(&times_quota_lck);
 	n_times_quota++;
-	pthread_mutex_unlock(&times_quota_lck);
+	my_mutex_unlock(&times_quota_lck);
 }
 
 void statistics::inc_n_times_full()
 {
-	pthread_mutex_lock(&times_full_lck);
+	my_mutex_lock(&times_full_lck);
 	n_times_full++;
-	pthread_mutex_unlock(&times_full_lck);
+	my_mutex_unlock(&times_full_lck);
 }
 
 void statistics::track_sents(int cur_n_bits)
 {
-	pthread_mutex_lock(&sent_lck);
+	my_mutex_lock(&sent_lck);
 	bps_cur += cur_n_bits;
 	total_sent += cur_n_bits;
 	total_sent_requests++;
-	pthread_mutex_unlock(&sent_lck);
+	my_mutex_unlock(&sent_lck);
 }
 
 void statistics::track_recvs(int n_bits_added)
 {
-	pthread_mutex_lock(&recv_lck);
+	my_mutex_lock(&recv_lck);
 	total_recv += n_bits_added;
 	total_recv_requests++;
-	pthread_mutex_unlock(&recv_lck);
+	my_mutex_unlock(&recv_lck);
 }
 
 void statistics::lock_all()
 {
-	pthread_mutex_lock(&recv_lck);
-	pthread_mutex_lock(&sent_lck);
-	pthread_mutex_lock(&times_empty_lck);
-	pthread_mutex_lock(&times_not_allowed_lck);
-	pthread_mutex_lock(&times_full_lck);
-	pthread_mutex_lock(&times_quota_lck);
-	pthread_mutex_lock(&disconnects_lck);
-	pthread_mutex_lock(&timeouts_lck);
+	my_mutex_lock(&recv_lck);
+	my_mutex_lock(&sent_lck);
+	my_mutex_lock(&times_empty_lck);
+	my_mutex_lock(&times_not_allowed_lck);
+	my_mutex_lock(&times_full_lck);
+	my_mutex_lock(&times_quota_lck);
+	my_mutex_lock(&disconnects_lck);
+	my_mutex_lock(&timeouts_lck);
 }
 
 void statistics::unlock_all()
 {
-	pthread_mutex_unlock(&timeouts_lck);
-	pthread_mutex_unlock(&disconnects_lck);
-	pthread_mutex_unlock(&times_quota_lck);
-	pthread_mutex_unlock(&times_full_lck);
-	pthread_mutex_unlock(&times_not_allowed_lck);
-	pthread_mutex_unlock(&times_empty_lck);
-	pthread_mutex_unlock(&sent_lck);
-	pthread_mutex_unlock(&recv_lck);
+	my_mutex_unlock(&timeouts_lck);
+	my_mutex_unlock(&disconnects_lck);
+	my_mutex_unlock(&times_quota_lck);
+	my_mutex_unlock(&times_full_lck);
+	my_mutex_unlock(&times_not_allowed_lck);
+	my_mutex_unlock(&times_empty_lck);
+	my_mutex_unlock(&sent_lck);
+	my_mutex_unlock(&recv_lck);
 }
 
 void statistics::emit_statistics_file(int n_clients)

@@ -2,6 +2,8 @@
 #define min(x, y)       ((x)<(y)?(x):(y))
 #define max(x, y)       ((x)>(y)?(x):(y))
 
+extern pthread_mutexattr_t global_mutex_attr;
+
 double get_ts(void);
 long double get_ts_ns(void);
 int READ(int fd, char *whereto, size_t len);
@@ -24,3 +26,5 @@ void hexdump(unsigned char *in, int n);
 void split_resource_location(std::string in, std::string & host, int & port);
 void set_fd_nonblocking(int fd);
 std::string get_endpoint_name(int fd);
+void my_mutex_lock(pthread_mutex_t *mutex);
+void my_mutex_unlock(pthread_mutex_t *mutex);

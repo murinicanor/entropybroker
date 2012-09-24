@@ -31,7 +31,6 @@
 #include <arpa/inet.h>
 #include <openssl/rand.h>
 
-#include "defines.h"
 #include "math.h"
 #include "ivec.h"
 #include "hasher.h"
@@ -169,7 +168,7 @@ void pool::unlock_object()
 {
 	is_locked = true;
 
-	pthread_mutex_unlock(&lck);
+	my_mutex_unlock(&lck);
 
 	pthread_cond_signal(&cond);
 }

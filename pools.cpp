@@ -332,6 +332,7 @@ bool pools::verify_quality(unsigned char *data, int n, bool ignore_rngtest_fips1
 	return rc_fips140 == true && rc_scc == true;
 }
 
+// returns a locked pool
 int pools::find_non_full_pool(bool timed, double max_duration)
 {
 	assert(is_w_locked || is_r_locked > 0);
@@ -353,11 +354,7 @@ int pools::find_non_full_pool(bool timed, double max_duration)
 		if (!cond)
 		{
 			if (!pool_vector.at(index) -> is_almost_full())
-			{
-				pool_vector.at(index) -> unlock_object();
-
 				return index;
-			}
 
 			pool_vector.at(index) -> unlock_object();
 		}
@@ -377,6 +374,11 @@ int pools::select_pool_to_add_to(bool timed, double max_time)
 
 	if (index == -1 || pool_vector.at(index) -> is_almost_full())
 	{
+		// unlock the object because it is not usable (it is full)
+		// and we might go and shuffle the pools (flush/merge)
+		if (index != -1)
+			pool_vector.at(index) -> unlock_object();
+
 		list_unlock();
 		list_wlock();
 		// at this point (due to context switching between the unlock and the
@@ -397,7 +399,6 @@ int pools::select_pool_to_add_to(bool timed, double max_time)
 		}
 
 		list_unlock();
-
 		list_rlock();
 
 		double left = max(MIN_SLEEP, max_time - (get_ts() - start_ts));
@@ -533,8 +534,9 @@ int pools::add_bits_to_pools(unsigned char *data, int n_bytes, bool ignore_rngte
 		// FIXME divide by number of bits left divided by pool sizes
 		double time_left = max(MIN_SLEEP, ((max_duration * 0.9) - (now_ts - start_ts)) / double(n));
 
+		assert(!is_w_locked && is_r_locked == 0);
 		int index = select_pool_to_add_to(round > 0, time_left); // returns a locked object
-		assert(!is_w_locked);
+		assert(!is_w_locked && is_r_locked > 0);
 		// the list is now read-locked
 
 		if (index == -1)
@@ -582,9 +584,10 @@ int pools::get_bit_sum()
 
 int pools::add_event(long double event, unsigned char *event_data, int n_event_data, double max_time)
 {
+	assert(!is_w_locked && is_r_locked == 0);
 	int index = select_pool_to_add_to(true, max_time); // returns a locked object
-	assert(!is_w_locked);
-	// the list is now read-locked
+	assert(!is_w_locked && is_r_locked > 0);
+	// the list is now read-locked and the object as well
 
 	int rc = 0;
 	if (index != -1)
@@ -606,13 +609,13 @@ bool pools::all_pools_full(double max_duration)
 
 	list_rlock();
 
-	int n = pool_vector.size();
+	unsigned int n = pool_vector.size();
 
 	if (n < max_n_mem_pools)
 		rc = false;
 	else
 	{
-		for(int loop=0; loop<n; loop++)
+		for(unsigned int loop=0; loop<n; loop++)
 		{
 			// FIXME move this calculation to a method
 			double time_left = max(MIN_SLEEP, (max_duration - (get_ts() - start_ts)) / double(n - loop));

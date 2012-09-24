@@ -1,5 +1,6 @@
 // SVN: $Id$
 #include <string>
+#include <pthread.h>
 #include <openssl/blowfish.h>
 #include <vector>
 #include <unistd.h>
@@ -30,7 +31,7 @@
 
 #define MAX_LRAND48_GETS 250
 
-#define incopy(a)       *((struct in_addr *)a)
+pthread_mutexattr_t global_mutex_attr;
 
 long double get_ts_ns()
 {
@@ -520,4 +521,20 @@ std::string get_endpoint_name(int fd)
 	}
 
 	return std::string(buffer);
+}
+
+void my_mutex_lock(pthread_mutex_t *mutex)
+{
+	int rc = -1;
+
+	if ((rc = pthread_mutex_lock(mutex)))
+		error_exit("pthread_mutex_lock failed with error %s (%d)", strerror(rc), rc);
+}
+
+void my_mutex_unlock(pthread_mutex_t *mutex)
+{
+	int rc = -1;
+
+	if ((rc = pthread_mutex_unlock(mutex)))
+		error_exit("pthread_mutex_unlock failed with error %s (%d)", strerror(rc), rc);
 }

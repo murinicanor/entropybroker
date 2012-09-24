@@ -223,7 +223,7 @@ int put_data(proxy_client_t *client, lookup_t *lt, bool is_A)
 		return -1;
 	}
 
-	pthread_mutex_lock(&lt -> lock);
+	my_mutex_lock(&lt -> lock);
 
 	bool use = false;
 	if (is_A)
@@ -274,7 +274,7 @@ int put_data(proxy_client_t *client, lookup_t *lt, bool is_A)
 	if (use)
 		dolog(LOG_DEBUG, "storing %d bits from %s", cur_n_bits, client -> host.c_str());
 
-	pthread_mutex_unlock(&lt -> lock);
+	my_mutex_unlock(&lt -> lock);
 
 	// memset
 	// unlock_mem
@@ -345,7 +345,7 @@ void * thread(void *pars)
 
 	for(;!sig_quit;)
 	{
-		pthread_mutex_lock(&p -> lt -> lock);
+		my_mutex_lock(&p -> lt -> lock);
 
 		// transmit to broker
 		bool send = false;
@@ -379,15 +379,15 @@ void * thread(void *pars)
 				out[loop] = v;
 			}
 
-			pthread_mutex_unlock(&p -> lt -> lock);
+			my_mutex_unlock(&p -> lt -> lock);
 			(void)p -> p -> message_transmit_entropy_data((unsigned char *)out, n_bytes);
 			free(out);
-			pthread_mutex_lock(&p -> lt -> lock);
+			my_mutex_lock(&p -> lt -> lock);
 		}
 		if (send)
 			dolog(LOG_DEBUG, "Finished transmitting");
 
-		pthread_mutex_unlock(&p -> lt -> lock);
+		my_mutex_unlock(&p -> lt -> lock);
 
 		usleep(250000); // FIXME condwait or so
 	}
