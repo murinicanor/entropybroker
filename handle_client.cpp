@@ -240,6 +240,7 @@ void * thread(void *data)
 	client_t *p = (client_t *)data;
 
 	set_thread_name(std::string(p -> host));
+	pthread_setcanceltype(PTHREAD_CANCEL_ENABLE, NULL);
 
 	if (p -> config -> disable_nagle)
 		disable_nagle(p -> socket_fd);

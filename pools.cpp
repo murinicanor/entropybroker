@@ -45,9 +45,7 @@ pools::pools(std::string cache_dir_in, unsigned int max_n_mem_pools_in, unsigned
 	if (max_n_disk_pools < 1)
 		error_exit("maximum number of disk pools must be at least 1");
 
-	pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, NULL);
 	load_cachefiles_list();
-	pthread_setcanceltype(PTHREAD_CANCEL_ENABLE, NULL);
 }
 
 pools::~pools()
