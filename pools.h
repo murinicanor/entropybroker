@@ -18,7 +18,6 @@ private:
 
 	pthread_rwlock_t list_lck;
 	bool is_w_locked;
-	volatile int is_r_locked;
 
 	void list_wlock();
 	void list_wunlock();
