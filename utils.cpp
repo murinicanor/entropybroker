@@ -314,7 +314,8 @@ void disable_nagle(int fd)
 {
 	int disable = 1;
 
-	if (setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, (char *)&disable, sizeof disable) == -1)
+	// EBADF might happen if a connection was closed just before this call
+	if (setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, (char *)&disable, sizeof disable) == -1 && errno != EBADF)
 		error_exit("setsockopt(IPPROTO_TCP, TCP_NODELAY) failed");
 }
 
@@ -322,7 +323,8 @@ void enable_tcp_keepalive(int fd)
 {
 	int keep_alive = 1;
 
-	if (setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, (char *)&keep_alive, sizeof keep_alive) == -1)
+	// EBADF might happen if a connection was closed just before this call
+	if (setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, (char *)&keep_alive, sizeof keep_alive) == -1 && errno != EBADF)
 		error_exit("problem setting KEEPALIVE");
 }
 

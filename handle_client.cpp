@@ -235,6 +235,12 @@ void * thread(void *data)
 
 	set_thread_name(std::string(p -> host));
 
+	if (p -> config -> disable_nagle)
+		disable_nagle(p -> socket_fd);
+
+	if (p -> config -> enable_keepalive)
+		enable_tcp_keepalive(p -> socket_fd);
+
 	for(;;)
 	{
 		long long unsigned int auth_rnd = 1;
@@ -246,12 +252,6 @@ void * thread(void *data)
 			dolog(LOG_WARNING, "main|client: %s/fd %d authentication failed", p -> host, p -> socket_fd);
 			break;
 		}
-
-		if (p -> config -> disable_nagle)
-			disable_nagle(p -> socket_fd);
-
-		if (p -> config -> enable_keepalive)
-			enable_tcp_keepalive(p -> socket_fd);
 
 		p -> challenge = auth_rnd;
 		p -> ivec_counter = 0;
