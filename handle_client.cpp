@@ -597,7 +597,8 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 		{
 			int event_bits = ppools -> add_event(now, (unsigned char *)&rfds, sizeof rfds, double(config -> communication_timeout) * 0.05);
 
-			dolog(LOG_DEBUG, "main|added %d bits of event-entropy to pool", event_bits);
+			if (event_bits > 0)
+				dolog(LOG_DEBUG, "main|added %d bits of event-entropy to pool", event_bits);
 		}
 
 		std::vector<pthread_t *> delete_ids;
