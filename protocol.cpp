@@ -513,24 +513,6 @@ int protocol::request_bytes(char *where_to, int n_bits, bool fail_on_no_bits)
                                 socket_fd = -1;
                         }
                 }
-                else if (memcmp(reply, "0007", 4) == 0)  /* kernel entropy count */
-                {
-			error_count = 0;
-                        char xmit_buffer[128], val_buffer[128];
-
-			int entropy_count = kernel_rng_get_entropy_count();
-                        snprintf(val_buffer, sizeof val_buffer, "%d", entropy_count);
-                        snprintf(xmit_buffer, sizeof xmit_buffer, "0008%04d%s", (int)strlen(val_buffer), val_buffer);
-
-                        dolog(LOG_DEBUG, "Send kernel entropy count %d bits", entropy_count);
-
-			int send_len = strlen(xmit_buffer);
-                        if (WRITE_TO(socket_fd, xmit_buffer, send_len, comm_time_out) != send_len)
-                        {
-                                close(socket_fd);
-                                socket_fd = -1;
-                        }
-                }
                 else if (memcmp(reply, "0009", 4) == 0)
                 {
 			error_count = 0;
@@ -626,54 +608,4 @@ void protocol::drop()
 	close(socket_fd);
 
 	socket_fd = -1;
-}
-
-bool protocol::proxy_auth_user(std::string pa_username, std::string pa_password)
-{
-	bool rc = false;
-	int count = 1;
-
-	for(;;)
-	{
-		bool ok = true;
-
-		if (reconnect_server_socket() == -1)
-			error_exit("Failed to connect");
-
-		const char *request = "0011";
-		if (ok == true && WRITE_TO(socket_fd, (char *)request, 4, comm_time_out) != 4)
-			ok = false;
-
-		long long unsigned int dummy_challenge = 123;
-		if (ok == true && auth_client_server_user(socket_fd, comm_time_out, pa_username, pa_password, &dummy_challenge, is_server, type) != 0)
-			ok = false;
-
-		char reply[8 + 1];
-		if (ok == true && READ_TO(socket_fd, reply, 8, comm_time_out) != 8)
-			ok = false;
-
-		if (ok == true && memcmp(reply, "0012", 4) != 0)
-			ok = false;
-
-		if (ok == true)
-		{
-			if (memcmp(&reply[4], "0000", 4) == 0)
-				rc = true;
-			else
-				rc = false;
-
-			break;
-		}
-
-		dolog(LOG_INFO, "connection closed");
-
-		close(socket_fd);
-		socket_fd = -1;
-
-		error_sleep(count);
-		if (count < 16)
-			count++;
-	}
-
-	return rc;
 }

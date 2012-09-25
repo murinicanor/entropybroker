@@ -50,9 +50,7 @@ pools::pools(std::string cache_dir_in, unsigned int max_n_mem_pools_in, unsigned
 
 pools::~pools()
 {
-	list_wlock();
 	store_caches(0);
-	list_wunlock();
 
 	pthread_rwlock_destroy(&list_lck);
 }
@@ -149,7 +147,7 @@ void pools::store_caches(unsigned int keep_n)
 	pthread_setcanceltype(PTHREAD_CANCEL_ENABLE, NULL);
 }
 
-void pools::load_caches(unsigned int load_n_bits)
+bool pools::load_caches(unsigned int load_n_bits)
 {
 	dolog(LOG_DEBUG, "Loading %d bits from pools", load_n_bits);
 
@@ -193,7 +191,12 @@ void pools::load_caches(unsigned int load_n_bits)
 	}
 
 	if (bits_loaded > 0 || files_loaded > 0)
+	{
 		dolog(LOG_DEBUG, "%d bits loaded from %d files", bits_loaded, files_loaded);
+		return true;
+	}
+
+	return false;
 }
 
 void pools::flush_empty_pools()
@@ -468,9 +471,13 @@ int pools::get_bits_from_pools(int n_bits_requested, unsigned char **buffer, boo
 	lock_mem(buffer, n_to_do_bytes);
 
 	// load bits from disk if needed
+	bool have_bits = true;
 	for(;;)
 	{
 		list_rlock();
+		if (!have_bits)
+			break;
+
 		int bits_needed_to_load = n_bits_requested - get_bit_sum_unlocked(max_duration);
 
 		// no unlock in the break: need to have the list locked later on
@@ -488,7 +495,7 @@ int pools::get_bits_from_pools(int n_bits_requested, unsigned char **buffer, boo
 		// due to the un- and relock this might have changed
 		// also merging pools might change this value
 		bits_needed_to_load = n_bits_requested - get_bit_sum_unlocked(max_duration);
-		load_caches(bits_needed_to_load);
+		have_bits = load_caches(bits_needed_to_load);
 
 		list_wunlock();
 	}

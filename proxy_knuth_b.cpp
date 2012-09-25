@@ -267,31 +267,7 @@ int handle_client(proxy_client_t *client, lookup_t *lt)
 		return -1;
 	}
 
-	if (memcmp(cmd, "0003", 4) == 0) // server info msg
-	{
-		char *info = NULL;
-		int info_len = 0;
-		if (recv_length_data(client -> fd, &info, &info_len, DEFAULT_COMM_TO) == -1)
-			return -1;
-
-		client -> type = std::string(info);
-		dolog(LOG_WARNING, "Client %s is: %s", client -> host.c_str(), info);
-
-		free(info);
-	}
-	else if (memcmp(cmd, "0006", 4) == 0) // client info msg
-	{
-		char *info = NULL;
-		int info_len = 0;
-		if (recv_length_data(client -> fd, &info, &info_len, DEFAULT_COMM_TO) == -1)
-			return -1;
-
-		dolog(LOG_WARNING, "Clients (%s/%s) connecting to this proxy not supported!", client -> host.c_str(), info);
-		free(info);
-
-		return -1;
-	}
-	else if (memcmp(cmd, "0002", 4) == 0) // put data
+	if (memcmp(cmd, "0002", 4) == 0) // put data
 	{
 		return put_data(client, lt);
 	}
@@ -575,8 +551,11 @@ int main(int argc, char *argv[])
 
 				std::string client_password;
 				long long unsigned int challenge = 1;
-				if (auth_eb(new_socket_fd, DEFAULT_COMM_TO, user_map, client_password, &challenge) == 0)
+				bool is_server = false;
+				std::string type;
+				if (auth_eb(new_socket_fd, DEFAULT_COMM_TO, user_map, client_password, &challenge, &is_server, type) == 0)
 				{
+					dolog(LOG_INFO, "%s/%s %d/%d", host.c_str(), type.c_str(), new_socket_fd, is_server);
 					if (clients[0] -> fd != -1 && clients[1] -> fd != -1)
 					{
 						dolog(LOG_WARNING, "New connection with 2 clients connected: dropping all previous connections");

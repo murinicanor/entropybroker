@@ -102,22 +102,6 @@ int send_need_data(int fd, config_t *config)
 	return WRITE_TO(fd, buffer, 8, config -> communication_timeout) == 8 ? 0 : -1;
 }
 
-int do_proxy_auth(int fd, config_t *config, users *user_map)
-{
-	char reply[4 + 4 + 1];
-
-	std::string password;
-	long long unsigned int challenge;
-
-	// 0012
-	if (auth_eb_user(fd, config -> communication_timeout, user_map, password, &challenge, true) == 0)
-		make_msg(reply, 12, 0); // 0 == OK
-	else
-		make_msg(reply, 12, 1); // 1 == FAIL
-
-	return WRITE_TO(fd, reply, 8, config -> communication_timeout) == 8 ? 0 : -1;
-}
-
 int do_client_get(client_t *client, bool *no_bits)
 {
 	int cur_n_bits, cur_n_bytes;
@@ -355,69 +339,6 @@ int do_client_put(client_t *client, bool *new_bits, bool *is_full)
 	return 0;
 }
 
-int do_client_server_type(client_t *client)
-{
-	char *buffer = NULL;
-	int n_bytes = 0;
-
-	if (recv_length_data(client -> socket_fd, &buffer, &n_bytes, client -> config -> communication_timeout) == -1)
-		return -1;
-
-	if (n_bytes <= 0)
-	{
-		dolog(LOG_WARNING, "%s sends 0003 msg with 0 bytes of contents", client -> host.c_str());
-		return -1;
-	}
-
-	client -> type = std::string(buffer);
-
-	dolog(LOG_INFO, "type|%s is \"%s\"", client -> host.c_str(), client -> type.c_str());
-
-	free(buffer);
-
-	return 0;
-}
-
-int do_client_kernelpoolfilled_reply(client_t *client)
-{
-	char *buffer;
-	int n_bytes;
-
-	if (recv_length_data(client -> socket_fd, &buffer, &n_bytes, client -> config -> communication_timeout) == -1)
-		return -1;
-
-	if (n_bytes <= 0)
-	{
-		dolog(LOG_WARNING, "%s sends 0008 msg with 0 bytes of contents", client -> host.c_str());
-		return -1;
-	}
-
-	dolog(LOG_INFO, "kernfill|%s has %d bits", client -> host.c_str(), atoi(buffer));
-
-	free(buffer);
-
-	return 0;
-}
-
-int do_client_kernelpoolfilled_request(client_t *client)
-{
-	char buffer[8 + 1];
-
-	make_msg(buffer, 7, 0); // 0007
-
-	if (WRITE_TO(client -> socket_fd, buffer, 8, client -> config -> communication_timeout) != 8)
-	{
-		dolog(LOG_INFO, "kernfill|Short write while sending kernel pool fill status request to %s", client -> host.c_str());
-		return -1;
-	}
-
-	dolog(LOG_DEBUG, "kernfill|Client kernel pool filled request sent to %s", client -> host.c_str());
-
-	client -> ping_nr++;
-
-	return 0;
-}
-
 int do_client(client_t *client, bool *no_bits, bool *new_bits, bool *is_full)
 {
 	char cmd[4 + 1];
@@ -437,29 +358,6 @@ int do_client(client_t *client, bool *no_bits, bool *new_bits, bool *is_full)
 	else if (strcmp(cmd, "0002") == 0)	// PUT bits
 	{
 		return do_client_put(client, new_bits, is_full);
-	}
-	else if (strcmp(cmd, "0003") == 0)	// server type
-	{
-		client -> is_server = true;
-		client -> type_set = true;
-		return do_client_server_type(client);
-	}
-	else if (strcmp(cmd, "0006") == 0)	// client type
-	{
-		// yeah, well, this will fail when threading
-		// it does in fact, but I could only reproduce that under valgrind
-		client -> is_server = false;
-		client -> type_set = true;
-
-		return do_client_server_type(client);
-	}
-	else if (strcmp(cmd, "0008") == 0)	// # bits in kernel reply (to 0007)
-	{
-		return do_client_kernelpoolfilled_reply(client);
-	}
-	else if (strcmp(cmd, "0011") == 0)	// proxy auth
-	{
-		return do_proxy_auth(client -> socket_fd, client -> config, client -> pu);
 	}
 	else
 	{

@@ -197,17 +197,17 @@ int send_request_from_main_to_clients(client_t *p)
 	{
 		static int err1=0, err2=0, err3=0;
 
-		if (need_data && !p -> is_server && p -> type_set)
+		if (need_data && !p -> is_server)
 		{
 			err1++;
 			fprintf(stderr, "%d %d %d\n", err1, err2, err3);
 		}
-		if (have_data && p -> is_server && p -> type_set)
+		if (have_data && p -> is_server)
 		{
 			err2++;
 			fprintf(stderr, "%d %d %d\n", err1, err2, err3);
 		}
-		if (is_full && !p -> is_server && p -> type_set)
+		if (is_full && !p -> is_server)
 		{
 			err3++;
 			fprintf(stderr, "%d %d %d\n", err1, err2, err3);
@@ -252,7 +252,7 @@ void * thread(void *data)
 	{
 		long long unsigned int auth_rnd = 1;
 		std::string password;
-		bool ok = auth_eb(p -> socket_fd, p -> config -> communication_timeout, p -> pu, password, &auth_rnd) == 0;
+		bool ok = auth_eb(p -> socket_fd, p -> config -> communication_timeout, p -> pu, password, &auth_rnd, &p -> is_server, p -> type) == 0;
 
 		if (!ok)
 		{
@@ -349,17 +349,23 @@ void register_new_client(int listen_socket_fd, std::vector<client_t *> *clients,
 
 		p -> socket_fd = new_socket_fd;
 		p -> host = host;
+		p -> type = "?";
+
 		p -> pfips140 = new fips140();
 		p -> pscc = new scc();
-		double now = get_ts();
-		p -> last_message = now;
-		p -> connected_since = now;
-		p -> last_put_message = now;
 		p -> pfips140 -> set_user(p -> host.c_str());
 		p -> pscc     -> set_user(p -> host.c_str());
 		p -> pscc -> set_threshold(config -> scc_threshold);
 
-		p -> type = "?";
+		double now = get_ts();
+		p -> last_message = now;
+		p -> connected_since = now;
+		p -> last_put_message = now;
+
+		p -> ivec_offset = 0;
+		p -> ivec_counter = 0;
+
+		p -> bits_sent = p -> bits_recv = 0;
 
 		p -> max_bits_per_interval = config -> default_max_bits_per_interval;
 		p -> ignore_rngtest_fips140 = config -> ignore_rngtest_fips140;
@@ -646,5 +652,5 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 		forget_client_index(&clients, 0, true);
 	}
 
-	dolog(LOG_WARNING, "main|end of main loop");
+	dolog(LOG_INFO, "main|end of main loop");
 }

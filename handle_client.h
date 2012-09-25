@@ -11,7 +11,7 @@ typedef struct
 
 	int socket_fd;
 	std::string host, type;
-	bool is_server, type_set;
+	bool is_server;
 	int max_bits_per_interval;
 	bool allow_prng;
 	bool ignore_rngtest_fips140, ignore_rngtest_scc;
@@ -30,8 +30,6 @@ typedef struct
 
 	int bits_sent, bits_recv;
 	pthread_mutex_t stats_lck;
-
-	int ping_nr;
 
 	// globals
 	users *pu;

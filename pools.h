@@ -25,7 +25,7 @@ private:
 	void list_runlock();
 
 	void load_cachefiles_list();
-	void load_caches(unsigned int load_n_bits);
+	bool load_caches(unsigned int load_n_bits);
 	void store_caches(unsigned int keep_n);
 	int select_pool_to_add_to(bool timed, double max_time);
 	int find_non_full_pool(bool timed, double max_duration);
