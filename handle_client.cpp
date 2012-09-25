@@ -227,7 +227,7 @@ int send_request_from_main_to_clients(client_t *p)
 
 	if (rc_client)
 	{
-		dolog(LOG_INFO, "Connection with %s lost", p -> host);
+		dolog(LOG_INFO, "Connection with %s lost", p -> host.c_str());
 
 		return -1;
 	}
@@ -239,7 +239,7 @@ void * thread(void *data)
 {
 	client_t *p = (client_t *)data;
 
-	set_thread_name(std::string(p -> host));
+	set_thread_name(p -> host.c_str());
 	pthread_setcanceltype(PTHREAD_CANCEL_ENABLE, NULL);
 
 	if (p -> config -> disable_nagle)
@@ -256,7 +256,7 @@ void * thread(void *data)
 
 		if (!ok)
 		{
-			dolog(LOG_WARNING, "main|client: %s (fd: %d) authentication failed", p -> host, p -> socket_fd);
+			dolog(LOG_WARNING, "main|client: %s (fd: %d) authentication failed", p -> host.c_str(), p -> socket_fd);
 			break;
 		}
 
@@ -289,12 +289,12 @@ void * thread(void *data)
 				if (errno == EINTR)
 					continue;
 
-				dolog(LOG_CRIT, "select() failed for thread %s", p -> host);
+				dolog(LOG_CRIT, "select() failed for thread %s", p -> host.c_str());
 				break;
 			}
 			else if (rc == 0)
 			{
-				dolog(LOG_CRIT, "host %s fell asleep", p -> host);
+				dolog(LOG_CRIT, "host %s fell asleep", p -> host.c_str());
 				break;
 			}
 
@@ -304,7 +304,7 @@ void * thread(void *data)
 
 				if (do_client(p, &no_bits, &new_bits, &is_full) == -1)
 				{
-					dolog(LOG_INFO, "Terminating connection with %s (fd: %p)", p -> host, p -> socket_fd);
+					dolog(LOG_INFO, "Terminating connection with %s (fd: %p)", p -> host.c_str(), p -> socket_fd);
 					break;
 				}
 
@@ -347,20 +347,19 @@ void register_new_client(int listen_socket_fd, std::vector<client_t *> *clients,
 		if (!p)
 			error_exit("memory allocation error");
 
-		memset(p, 0x00, sizeof(client_t));
 		p -> socket_fd = new_socket_fd;
-		snprintf(p -> host, sizeof p -> host, "%s", host.c_str());
+		p -> host = host;
 		p -> pfips140 = new fips140();
 		p -> pscc = new scc();
 		double now = get_ts();
 		p -> last_message = now;
 		p -> connected_since = now;
 		p -> last_put_message = now;
-		p -> pfips140 -> set_user(p -> host);
-		p -> pscc     -> set_user(p -> host);
+		p -> pfips140 -> set_user(p -> host.c_str());
+		p -> pscc     -> set_user(p -> host.c_str());
 		p -> pscc -> set_threshold(config -> scc_threshold);
 
-		strcpy(p -> type, "?");
+		p -> type = "?";
 
 		p -> max_bits_per_interval = config -> default_max_bits_per_interval;
 		p -> ignore_rngtest_fips140 = config -> ignore_rngtest_fips140;
@@ -429,7 +428,7 @@ int process_pipe_from_client_thread(client_t *p, std::vector<msg_pair_t> *msgs_c
 		else if (cmd == PIPE_CMD_IS_FULL)
 			msgs_servers -> push_back(queue_entry);
 		else
-			error_exit("Message %02x from thread %s/%s is not known", cmd, p -> host, p -> type);
+			error_exit("Message %02x from thread %s/%s is not known", cmd, p -> host.c_str(), p -> type.c_str());
 	}
 
 	return rc;
@@ -589,7 +588,7 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 				client_t *p = clients.at(loop);
 				my_mutex_lock(&p -> stats_lck);
 				dolog(LOG_DEBUG, "stats|%s (%s): %s, scc: %s | sent: %d, recv: %d | last msg: %ld seconds ago, %lds connected",
-						p -> host, p -> type, p -> pfips140 -> stats(),
+						p -> host.c_str(), p -> type.c_str(), p -> pfips140 -> stats(),
 						p -> pscc -> stats(),
 						p -> bits_sent, p -> bits_recv, (long int)(now - p -> last_message), (long int)(now - p -> connected_since));
 				my_mutex_unlock(&p -> stats_lck);
@@ -619,7 +618,7 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 
 			if (process_pipe_from_client_thread(clients.at(loop), &msgs_clients, &msgs_servers) == -1)
 			{
-				dolog(LOG_INFO, "main|connection with %s/%s lost", clients.at(loop) -> host, clients.at(loop) -> type);
+				dolog(LOG_INFO, "main|connection with %s/%s lost", clients.at(loop) -> host.c_str(), clients.at(loop) -> type.c_str());
 
 				delete_ids.push_back(&clients.at(loop) -> th);
 			}
@@ -642,7 +641,7 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 
 	while(clients.size() > 0)
 	{
-		dolog(LOG_DEBUG, "... %s/%s (fd: %d)", clients.at(0) -> host, clients.at(0) -> type, clients.at(0) -> socket_fd);
+		dolog(LOG_DEBUG, "... %s/%s (fd: %d)", clients.at(0) -> host.c_str(), clients.at(0) -> type.c_str(), clients.at(0) -> socket_fd);
 
 		forget_client_index(&clients, 0, true);
 	}

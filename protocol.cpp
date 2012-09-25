@@ -190,7 +190,7 @@ int protocol::reconnect_server_socket()
 				socket_fd = connect_to(host.c_str(), port);
 				if (socket_fd != -1)
 				{
-					if (auth_client_server(socket_fd, 10, username, password, &challenge) == 0)
+					if (auth_client_server(socket_fd, 10, username, password, &challenge, is_server, type) == 0)
 						break;
 
 					close(socket_fd);
@@ -222,37 +222,7 @@ int protocol::reconnect_server_socket()
 		}
 
 		if (connect_msg)
-		{
-			char buffer[1250];
-
 			dolog(LOG_INFO, "Connected");
-
-			int len = type.length();
-			if (len > 1240)
-				error_exit("client/server-type too large %d (%s)", len, type.c_str());
-
-			if (len == 0)
-				error_exit("client/server-type should not be 0 bytes in size");
-
-			if (is_server)
-				make_msg((char *)buffer, 3, len); // 0003 server type
-			else
-				make_msg((char *)buffer, 6, len); // 0006 client type
-			strcpy((char *)&buffer[8], type.c_str());
-
-			int msg_len = strlen(buffer);
-
-			if (WRITE_TO(socket_fd, buffer, msg_len, comm_time_out) != msg_len)
-			{
-				dolog(LOG_INFO, "connection closed");
-				close(socket_fd);
-				socket_fd = -1;
-
-				error_sleep(count);
-
-				continue;
-			}
-		}
 
 		break;
 	}
@@ -675,7 +645,7 @@ bool protocol::proxy_auth_user(std::string pa_username, std::string pa_password)
 			ok = false;
 
 		long long unsigned int dummy_challenge = 123;
-		if (ok == true && auth_client_server_user(socket_fd, comm_time_out, pa_username, pa_password, &dummy_challenge) != 0)
+		if (ok == true && auth_client_server_user(socket_fd, comm_time_out, pa_username, pa_password, &dummy_challenge, is_server, type) != 0)
 			ok = false;
 
 		char reply[8 + 1];

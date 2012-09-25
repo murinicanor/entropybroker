@@ -20,7 +20,7 @@
 #include "protocol.h"
 #include "users.h"
 
-int auth_eb_user(int fd, int to, users *user_map, std::string & password, long long unsigned int *challenge, bool is_proxy_auth)
+int auth_eb_user(int fd, int to, users *user_map, std::string & password, long long unsigned int *challenge, bool is_proxy_auth, bool *is_server_in, std::string & type)
 {
 	const char *ts = is_proxy_auth ? "Proxy-auth" : "Connection";
 
@@ -81,18 +81,37 @@ int auth_eb_user(int fd, int to, users *user_map, std::string & password, long l
 		return -1;
 	}
 
-	if (user_known && memcmp(hash_cmp, hash_in, SHA512_DIGEST_LENGTH) == 0)
+	if (!user_known || memcmp(hash_cmp, hash_in, SHA512_DIGEST_LENGTH) != 0)
 	{
-		dolog(LOG_INFO, "%s for fd %d: authentication ok", ts, fd);
-		return 0;
+		dolog(LOG_INFO, "%s for fd %d: authentication failed!", ts, fd);
+		return -1;
 	}
 
-	dolog(LOG_INFO, "%s for fd %d: authentication failed!", ts, fd);
+        char is_server = 0;
+        if (READ_TO(fd, &is_server, 1, to) != 1)
+        {
+                dolog(LOG_INFO, "%s for fd %d: failed retrieving server/client", ts, fd);
+                return -1;
+        }
+	*is_server_in = is_server ? true : false;
 
-	return -1;
+	char *type_in = NULL;
+	int type_in_size = 0;
+
+	if (recv_length_data(fd, &type_in, &type_in_size, to) == -1)
+	{
+                dolog(LOG_INFO, "%s for fd %d: failed retrieving type", ts, fd);
+		return -1;
+	}
+	type = std::string(type_in);
+	free(type_in);
+
+	dolog(LOG_INFO, "%s for fd %d: authentication ok", ts, fd);
+
+	return 0;
 }
 
-int auth_eb(int fd, int to, users *user_map, std::string & password, long long unsigned int *challenge)
+int auth_eb(int fd, int to, users *user_map, std::string & password, long long unsigned int *challenge, bool *is_server_in, std::string & type)
 {
 	char prot_ver[4 + 1] = { 0 };
 	snprintf(prot_ver, sizeof prot_ver, "%04d", PROTOCOL_VERSION);
@@ -103,7 +122,7 @@ int auth_eb(int fd, int to, users *user_map, std::string & password, long long u
 		return -1;
 	}
 
-	return auth_eb_user(fd, to, user_map, password, challenge, false);
+	return auth_eb_user(fd, to, user_map, password, challenge, false, is_server_in, type);
 }
 
 bool get_auth_from_file(char *filename, std::string & username, std::string & password)
@@ -132,7 +151,7 @@ bool get_auth_from_file(char *filename, std::string & username, std::string & pa
 	return true;
 }
 
-int auth_client_server_user(int fd, int to, std::string & username, std::string & password, long long unsigned int *challenge)
+int auth_client_server_user(int fd, int to, std::string & username, std::string & password, long long unsigned int *challenge, bool is_server, std::string type)
 {
 	char *rnd_str = NULL;
 	int rnd_str_size = 0;
@@ -163,16 +182,31 @@ int auth_client_server_user(int fd, int to, std::string & username, std::string 
 
 	SHA512((const unsigned char *)hash_cmp_str, strlen(hash_cmp_str), (unsigned char *)hash_cmp);
 
-	if (WRITE(fd, hash_cmp, SHA512_DIGEST_LENGTH) == -1)
+	if (WRITE_TO(fd, hash_cmp, SHA512_DIGEST_LENGTH, to) == -1)
 	{
 		dolog(LOG_INFO, "Connection for fd %d closed (3)", fd);
+		return -1;
+	}
+
+	char is_server_byte = is_server ? 1 : 0;
+	if (WRITE_TO(fd, &is_server_byte, 1, to) != 1)
+	{
+		dolog(LOG_INFO, "Connection for fd %d closed (4)", fd);
+		return -1;
+	}
+
+	int type_length = type.length();
+	if (send_length_data(fd, (char *)type.c_str(), type_length, to) == -1)
+	{
+		dolog(LOG_INFO, "Connection for fd %d closed (5)", fd);
+		free(rnd_str);
 		return -1;
 	}
 
 	return 0;
 }
 
-int auth_client_server(int fd, int to, std::string & username, std::string & password, long long unsigned int *challenge)
+int auth_client_server(int fd, int to, std::string & username, std::string & password, long long unsigned int *challenge, bool is_server, std::string type)
 {
 	char prot_ver[4 + 1] = { 0 };
 
@@ -185,5 +219,5 @@ int auth_client_server(int fd, int to, std::string & username, std::string & pas
 	if (eb_ver != PROTOCOL_VERSION)
 		error_exit("Broker server has unsupported protocol version %d! (expecting %d)", eb_ver, PROTOCOL_VERSION);
 
-	return auth_client_server_user(fd, to, username, password, challenge);
+	return auth_client_server_user(fd, to, username, password, challenge, is_server, type);
 }

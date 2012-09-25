@@ -10,7 +10,7 @@ typedef struct
 	pthread_t th;
 
 	int socket_fd;
-	char host[128], type[128]; // FIXME std::string
+	std::string host, type;
 	bool is_server, type_set;
 	int max_bits_per_interval;
 	bool allow_prng;
