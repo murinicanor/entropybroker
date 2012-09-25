@@ -452,7 +452,7 @@ int pools::select_pool_to_add_to(bool timed, double max_time)
 	}
 
 	if (index != -1)
-		last_added_to = index;
+		last_added_to = index; // FIXME race condition! not protected by write lock!
 
 	return index;
 }
