@@ -68,7 +68,8 @@ double calc_time_left(double start_ts, unsigned int cur, unsigned int n, double 
 
 void pools::list_wlock()
 {
-	pthread_rwlock_wrlock(&list_lck);
+	if ((errno = pthread_rwlock_wrlock(&list_lck)) != 0)
+		error_exit("pthread_rwlock_wrlock failed");
 
 	my_assert(is_w_locked == false);
 	is_w_locked = true;
@@ -79,17 +80,20 @@ void pools::list_wunlock()
 	my_assert(is_w_locked);
 	is_w_locked = false;
 
-	pthread_rwlock_unlock(&list_lck);
+	if ((errno = pthread_rwlock_unlock(&list_lck)) != 0)
+		error_exit("pthread_rwlock_unlock failed");
 }
 
 void pools::list_runlock()
 {
-	pthread_rwlock_unlock(&list_lck);
+	if ((errno = pthread_rwlock_unlock(&list_lck)) != 0)
+		error_exit("pthread_rwlock_unlock failed");
 }
 
 void pools::list_rlock()
 {
-	pthread_rwlock_rdlock(&list_lck);
+	if ((errno = pthread_rwlock_rdlock(&list_lck)) != 0)
+		error_exit("pthread_rwlock_rdlock failed");
 }
 
 void pools::store_caches(unsigned int keep_n)

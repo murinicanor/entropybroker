@@ -21,7 +21,6 @@ private:
 	ivec *iv;
 
 	pthread_mutex_t lck;
-	bool is_locked;
 	pthread_cond_t cond;
 
 public:

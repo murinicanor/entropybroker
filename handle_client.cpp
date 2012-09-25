@@ -53,14 +53,14 @@ void forget_client_index(std::vector<client_t *> *clients, int nr, bool force)
 	close(p -> to_thread[0]);
 	close(p -> to_main[0]);
 
-	if (pthread_yield() != 0)
+	if ((errno = pthread_yield()) != 0)
 		error_exit("pthread_yield failed");
 
 	if (force)
 		pthread_cancel(p -> th);
 
 	void *value_ptr = NULL;
-	if (pthread_join(p -> th, &value_ptr) != 0)
+	if ((errno = pthread_join(p -> th, &value_ptr)) != 0)
 		error_exit("pthread_join failed");
 
 	pthread_mutex_destroy(&p -> stats_lck);
@@ -392,7 +392,7 @@ void register_new_client(int listen_socket_fd, std::vector<client_t *> *clients,
 
 		set_fd_nonblocking(p -> to_main[0]);
 
-		if (pthread_create(&p -> th, NULL, thread, p) != 0)
+		if ((errno = pthread_create(&p -> th, NULL, thread, p)) != 0)
 			error_exit("Error creating thread");
 
 		clients -> push_back(p);

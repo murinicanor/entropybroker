@@ -527,18 +527,14 @@ std::string get_endpoint_name(int fd)
 
 void my_mutex_lock(pthread_mutex_t *mutex)
 {
-	int rc = -1;
-
-	if ((rc = pthread_mutex_lock(mutex)))
-		error_exit("pthread_mutex_lock failed with error %s (%d)", strerror(rc), rc);
+	if ((errno = pthread_mutex_lock(mutex)) != 0)
+		error_exit("pthread_mutex_lock failed");
 }
 
 void my_mutex_unlock(pthread_mutex_t *mutex)
 {
-	int rc = -1;
-
-	if ((rc = pthread_mutex_unlock(mutex)))
-		error_exit("pthread_mutex_unlock failed with error %s (%d)", strerror(rc), rc);
+	if ((errno = pthread_mutex_unlock(mutex)) != 0)
+		error_exit("pthread_mutex_unlock failed");
 }
 
 void my_Assert(bool flag, int line, const char *file)

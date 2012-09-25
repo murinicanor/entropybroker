@@ -43,7 +43,6 @@
 pool::pool(int new_pool_size_bytes, bit_count_estimator *bce_in, hasher *hclass, stirrer *sclass) : bce(bce_in), h(hclass), s(sclass)
 {
 	pthread_mutex_init(&lck, &global_mutex_attr);
-	is_locked = false;
 	pthread_cond_init(&cond, NULL);
 
 	memset(&state, 0x00, sizeof state);
@@ -64,7 +63,6 @@ pool::pool(int new_pool_size_bytes, bit_count_estimator *bce_in, hasher *hclass,
 pool::pool(int pool_nr, FILE *fh, bit_count_estimator *bce_in, hasher *hclass, stirrer *sclass) : bce(bce_in), h(hclass), s(sclass)
 {
 	pthread_mutex_init(&lck, &global_mutex_attr);
-	is_locked = false;
 	pthread_cond_init(&cond, NULL);
 
 	unsigned char val_buffer[8];
@@ -127,8 +125,6 @@ pthread_cond_t * pool::lock_object()
 		error_exit("pthread_mutex_trylock failed");
 	}
 
-	is_locked = true;
-
 	return NULL;
 }
 
@@ -156,11 +152,7 @@ pthread_cond_t * pool::timed_lock_object(double max_time)
 		int rc = -1;
 		rc = pthread_mutex_timedlock(&lck, &abs_time);
 		if (rc == 0)
-		{
-			is_locked = true;
-
 			return NULL;
-		}
 
 		if (rc != ETIMEDOUT)
 		{
@@ -176,8 +168,6 @@ pthread_cond_t * pool::timed_lock_object(double max_time)
 
 void pool::unlock_object()
 {
-	is_locked = false;
-
 	my_mutex_unlock(&lck);
 
 	pthread_cond_signal(&cond);
@@ -185,8 +175,6 @@ void pool::unlock_object()
 
 void pool::dump(FILE *fh)
 {
-	my_assert(is_locked);
-
 	if (bits_in_pool > 0)
 	{
 		unsigned char val_buffer[8];
@@ -212,8 +200,6 @@ void pool::dump(FILE *fh)
 
 int pool::add_entropy_data(unsigned char *entropy_data, int n_bytes_in)
 {
-	my_assert(is_locked);
-
 	int ivec_size = s -> get_ivec_size();
 	unsigned char *cur_ivec = (unsigned char *)malloc(ivec_size);
 	lock_mem(cur_ivec, ivec_size);
@@ -269,15 +255,11 @@ int pool::add_entropy_data(unsigned char *entropy_data, int n_bytes_in)
 
 int pool::get_n_bits_in_pool() const
 {
-	my_assert(is_locked);
-
 	return bits_in_pool;
 }
 
 int pool::get_entropy_data(unsigned char *entropy_data, int n_bytes_requested, bool prng_ok)
 {
-	my_assert(is_locked);
-
 	unsigned char *temp_buffer = (unsigned char *)malloc(pool_size_bytes);
 	lock_mem(temp_buffer, pool_size_bytes);
 
@@ -353,23 +335,17 @@ int pool::get_pool_size() const
 
 bool pool::is_full() const
 {
-	my_assert(is_locked);
-
 	return bits_in_pool == (pool_size_bytes * 8);
 }
 
 bool pool::is_almost_full() const
 {
-	my_assert(is_locked);
-
 	return ((pool_size_bytes * 8) - bits_in_pool) < get_get_size_in_bits();
 }
 
 /* taken from random driver from linux-kernel */
 int pool::add_event(double ts, unsigned char *event_data, int n_event_data)
 {
-	my_assert(is_locked);
-
 	unsigned char *temp_buffer = (unsigned char *)malloc(pool_size_bytes);
 	lock_mem(temp_buffer, pool_size_bytes);
 
