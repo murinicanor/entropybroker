@@ -350,6 +350,7 @@ void register_new_client(int listen_socket_fd, std::vector<client_t *> *clients,
 		p -> socket_fd = new_socket_fd;
 		p -> host = host;
 		p -> type = "?";
+		p -> is_server = false;
 
 		p -> pfips140 = new fips140();
 		p -> pscc = new scc();
@@ -364,6 +365,7 @@ void register_new_client(int listen_socket_fd, std::vector<client_t *> *clients,
 
 		p -> ivec_offset = 0;
 		p -> ivec_counter = 0;
+		p -> password = NULL;
 
 		p -> bits_sent = p -> bits_recv = 0;
 
@@ -521,7 +523,7 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 		dummy1_time = max(0, (last_counters_reset + config -> reset_counters_interval) - now);
 		time_left = min(time_left, dummy1_time);
 
-		for(unsigned int loop =0; loop<clients.size(); loop++)
+		for(unsigned int loop=0; loop<clients.size(); loop++)
 		{
 			FD_SET(clients.at(loop) -> to_main[0], &rfds);
 			max_fd = max(max_fd, clients.at(loop) -> to_main[0]);

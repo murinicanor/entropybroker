@@ -269,14 +269,26 @@ void pools::merge_pools()
 			unsigned char *buffer = (unsigned char *)malloc(bytes);
 			lock_mem(buffer, bytes);
 
-			pool_vector.at(i2) -> get_entropy_data(buffer, bytes, false);
+			int got_n_total = 0;
+			unsigned char *dummy = buffer;
+			int dummy_bytes = bytes;
+			while(dummy_bytes > 0)
+			{
+				int got_n = pool_vector.at(i2) -> get_entropy_data(dummy, dummy_bytes, false);
+				if (got_n == 0)
+					break;
+
+				dummy += got_n;
+				dummy_bytes -= got_n;
+				got_n_total += got_n;
+			}
 
 			pool_vector.at(i2) -> unlock_object();
 
 			delete pool_vector.at(i2);
 			pool_vector.erase(pool_vector.begin() + i2);
 
-			pool_vector.at(i1) -> add_entropy_data(buffer, bytes);
+			pool_vector.at(i1) -> add_entropy_data(buffer, got_n_total);
 
 			memset(buffer, 0x00, bytes);
 			unlock_mem(buffer, bytes);
