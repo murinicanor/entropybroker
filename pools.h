@@ -19,6 +19,8 @@ private:
 	pthread_rwlock_t list_lck;
 	bool is_w_locked;
 
+	unsigned int last_added_to;
+
 	void list_wlock();
 	void list_wunlock();
 	void list_rlock();

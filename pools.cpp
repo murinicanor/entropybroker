@@ -32,6 +32,8 @@ pools::pools(std::string cache_dir_in, unsigned int max_n_mem_pools_in, unsigned
 	pthread_rwlock_init(&list_lck, NULL);
 	is_w_locked = false;
 
+	last_added_to = 0;
+
 	new_pool_size = new_pool_size_in_bytes;
 
 	if (min_store_on_disk_n >= max_n_mem_pools)
@@ -435,9 +437,12 @@ int pools::select_pool_to_add_to(bool timed, double max_time)
 		index = find_non_full_pool(timed, left);
 		if (index == -1)
 		{
-			// this can happen if 1. the number of in-memory-pools limit has been reached and
+			// this can happen if
+			// 1. the number of in-memory-pools limit has been reached and
 			// 2. the number of on-disk-pools limit has been reached
-			index = myrand(pool_vector.size());
+			last_added_to++;
+			last_added_to %= pool_vector.size();
+			index = last_added_to;
 
 			left = max(MIN_SLEEP, max_time - (get_ts() - start_ts));
 
@@ -445,6 +450,9 @@ int pools::select_pool_to_add_to(bool timed, double max_time)
 				index = -1;
 		}
 	}
+
+	if (index != -1)
+		last_added_to = index;
 
 	return index;
 }
