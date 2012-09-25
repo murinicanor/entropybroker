@@ -214,10 +214,12 @@ void pools::flush_empty_pools()
 		{
 			if (pool_vector.at(index) -> get_n_bits_in_pool() == 0)
 			{
-				pool_vector.at(index) -> unlock_object();
+				pool *obj = pool_vector.at(index);
 
-				delete pool_vector.at(index);
 				pool_vector.erase(pool_vector.begin() + index);
+
+				obj -> unlock_object();
+				delete obj;
 
 				deleted++;
 			}
