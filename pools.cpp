@@ -57,6 +57,17 @@ pools::~pools()
 	pthread_rwlock_destroy(&list_lck);
 }
 
+double calc_time_left(double start_ts, unsigned int cur, unsigned int n, double max_duration)
+{
+	double now_ts = get_ts();
+	double time_left = ((max_duration * 0.9) - (now_ts - start_ts)) / double(n - cur);
+
+	if (time_left < MIN_SLEEP)
+		return MIN_SLEEP;
+
+	return time_left;
+}
+
 void pools::list_wlock()
 {
 	pthread_rwlock_wrlock(&list_lck);
@@ -428,7 +439,8 @@ int pools::get_bit_sum_unlocked(double max_duration)
 	for(unsigned int index=0; index<n; index++)
 	{
 		pthread_testcancel();
-		double time_left = max(MIN_SLEEP, ((max_duration * 0.9) - (get_ts() - start_ts)) / double(n - index));
+
+		double time_left = calc_time_left(start_ts, index, n, max_duration);
 
 		if (!pool_vector.at(index) -> timed_lock_object(time_left))
 		{
@@ -491,9 +503,7 @@ int pools::get_bits_from_pools(int n_bits_requested, unsigned char **buffer, boo
 	{
 		for(unsigned int index=0; index<n; index++)
 		{
-			double now_ts = get_ts();
-			// FIXME divide by number of bits left divided by available in the following pools
-			double time_left = max(MIN_SLEEP, ((max_duration * 0.9) - (now_ts - start_ts)) / double(n - index));
+			double time_left = calc_time_left(start_ts, index, n, max_duration);
 
 			pthread_testcancel();
 
@@ -537,6 +547,7 @@ int pools::add_bits_to_pools(unsigned char *data, int n_bytes, bool ignore_rngte
 	double start_ts = get_ts();
 
 	int n_bits_added = 0;
+	int start_n = n_bytes;
 
 	int round = 0, n_was_locked = 0;
 	bool first = true;
@@ -553,9 +564,7 @@ int pools::add_bits_to_pools(unsigned char *data, int n_bytes, bool ignore_rngte
 		list_runlock();
 		pthread_testcancel();
 
-		double now_ts = get_ts();
-		// FIXME divide by number of bits left divided by pool sizes
-		double time_left = max(MIN_SLEEP, ((max_duration * 0.9) - (now_ts - start_ts)) / double(n));
+		double time_left = calc_time_left(start_ts, start_n - n_bytes, start_n, max_duration);
 
 		int index = select_pool_to_add_to(round > 0, time_left); // returns a locked object
 		// the list is now read-locked
