@@ -1,5 +1,6 @@
 // SVN: $Id$
 #include <signal.h>
+#include <stdlib.h>
 
 #include "error.h"
 
@@ -15,6 +16,9 @@ void signal_handler(int sig)
 
 	if (sig == SIGBUS)
 		error_exit("hardware issue, terminating");
+
+	if (sig == SIGUSR2)
+		exit(0);
 
 	signal(sig, signal_handler);
 }
@@ -44,4 +48,6 @@ void set_signal_handlers(void)
 	signal(SIGTERM, signal_handler);
 	signal(SIGQUIT, signal_handler);
 	signal(SIGINT , signal_handler);
+
+	signal(SIGUSR2, signal_handler);
 }
