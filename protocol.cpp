@@ -513,6 +513,8 @@ int protocol::request_bytes(char *where_to, int n_bits, bool fail_on_no_bits)
                 {
 			error_count = 0;
                         dolog(LOG_INFO, "Broker informs about data");
+			if (sleep_trigger > 0.0)
+				sleep_trigger = 2.0;
                 }
                 else if (memcmp(reply, "0010", 4) == 0)
                 {
