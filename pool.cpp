@@ -90,8 +90,9 @@ pool::pool(int pool_nr, FILE *fh, bit_count_estimator *bce_in, hasher *hclass, s
 		entropy_pool = (unsigned char *)malloc(pool_size_bytes);
 		lock_mem(entropy_pool, pool_size_bytes);
 
-		if (fread(entropy_pool, 1, pool_size_bytes, fh) != (size_t)pool_size_bytes)
-			error_exit("Dump is corrupt (using disk-pools from an entropybroker version older than v1.1?)");
+		int rc = -1;
+		if ((rc = fread(entropy_pool, 1, pool_size_bytes, fh)) != (size_t)pool_size_bytes)
+			error_exit("Dump is corrupt: are you using disk-pools from an entropybroker version older than v1.1? (expected %d, got %d)", pool_size_bytes, rc);
 
 		iv = new ivec(fh, s -> get_ivec_size(), bce);
 
