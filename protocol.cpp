@@ -124,6 +124,8 @@ protocol::protocol(std::vector<std::string> *hosts_in, std::string username_in, 
         ivec_counter = 0;
 	challenge = 13;
         ivec_offset = 0;
+
+	memset(ivec, 0x00, sizeof ivec);
 }
 
 protocol::~protocol()
