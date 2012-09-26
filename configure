@@ -4,7 +4,7 @@ B2=''
 FILE=/tmp/a.out_eb_$$
 FILE2=/tmp/a.out_eb2_$$
 
-echo \*\*\* Entropy Broker v`cat version | cut -d = -f 2` configure script \*\*\*
+echo \*\*\* Entropy Broker v`cat version | cut -d = -f 2` ($Revision$) configure script \*\*\*
 echo
 
 echo -n \* checking for GCC...
