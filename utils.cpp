@@ -559,7 +559,20 @@ void my_Assert2(bool flag, int line, const char *file, int debug_value)
 // *BSD need a different implemenation for this
 void set_thread_name(std::string name)
 {
-        pthread_check(pthread_setname_np(pthread_self(), ("eb:" + name).c_str()), "pthread_setname_np");
+	char *dummy = strdup(("eb:" + name).c_str());
+	if (!dummy)
+		error_exit("set_thread_name: out of memory");
+
+	if (strlen(dummy) > 16)
+	{
+		dolog(LOG_DEBUG, "Truncating thread name '%s' to 16 characters", dummy);
+		dummy[16] = 0x00;
+	}
+
+	// ignore pthread errors: at least under helgrind this would always fail
+        pthread_setname_np(pthread_self(), dummy);
+
+	free(dummy);
 }
 
 // *BSD need a different implemenation for this
