@@ -10,6 +10,7 @@ echo
 echo -n \* checking for GCC...
 gcc -O0 -o $FILE test_gcc.cpp 2> $FILE2
 if [ $? -ne 0 ] ; then
+	echo
 	echo \! problem invoking GCC
 	echo \! entropy_broker does not require GCC but this
 	echo \! $0 script does
@@ -25,6 +26,7 @@ echo \ OK
 echo -n \* checking for OpenSSL...
 gcc -O0 -o $FILE test_openssl.cpp 2> $FILE2
 if [ $? -ne 0 ] ; then
+	echo
 	echo \! OpenSSL was NOT detected
 	echo \! OpenSSL is required for entropy_broker
 	echo
