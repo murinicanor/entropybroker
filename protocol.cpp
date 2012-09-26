@@ -146,7 +146,7 @@ void protocol::error_sleep(int count)
 {
 	long int sleep_micro_seconds = myrand(count * 1000000) + 1;
 
-	dolog(LOG_WARNING, "Failed connecting (%s), sleeping for %f seconds", strerror(errno), (double)sleep_micro_seconds / 1000000.0);
+	dolog(LOG_WARNING, "Failed connecting (%s), sleeping for %f seconds", strerror(errno), double(sleep_micro_seconds) / 1000000.0);
 
 	usleep((long)sleep_micro_seconds);
 }

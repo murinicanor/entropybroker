@@ -558,7 +558,7 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 		max_fd = max(max_fd, listen_socket_fd);
 
 		tv.tv_sec = time_left;
-		tv.tv_nsec = (time_left - (double)tv.tv_sec) * 1000000000.0;
+		tv.tv_nsec = (time_left - double(tv.tv_sec)) * 1000000000.0;
 
 		int rc = pselect(max_fd + 1, &rfds, NULL, NULL, &tv, &sig_set);
 
@@ -588,7 +588,7 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 
 		now = get_ts();
 
-		if (((last_counters_reset + (double)config -> reset_counters_interval) - now) <= 0 || force_stats)
+		if (((last_counters_reset + double(config -> reset_counters_interval)) - now) <= 0 || force_stats)
 		{
 			stats.emit_statistics_log(clients.size(), force_stats, config -> reset_counters_interval);
 
@@ -607,7 +607,7 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 			last_counters_reset = now;
 		}
 
-		if ((config -> statistics_interval != 0 && ((last_statistics_emit + (double)config -> statistics_interval) - now) <= 0) || force_stats)
+		if ((config -> statistics_interval != 0 && ((last_statistics_emit + double(config -> statistics_interval)) - now) <= 0) || force_stats)
 		{
 			stats.emit_statistics_file(clients.size());
 

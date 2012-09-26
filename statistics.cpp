@@ -155,8 +155,8 @@ void statistics::emit_statistics_file(int n_clients)
 		if (getrusage(RUSAGE_SELF, &usage) == -1)
 			error_exit("getrusage() failed");
 
-		double proc_usage = (double)usage.ru_utime.tv_sec + (double)usage.ru_utime.tv_usec / 1000000.0 +
-			(double)usage.ru_stime.tv_sec + (double)usage.ru_stime.tv_usec / 1000000.0;
+		double proc_usage = double(usage.ru_utime.tv_sec) + double(usage.ru_utime.tv_usec) / 1000000.0 +
+			double(usage.ru_stime.tv_sec) + double(usage.ru_stime.tv_usec) / 1000000.0;
 
 		double now = get_ts();
 		int total_n_bits = ppools -> get_bit_sum(1.0);

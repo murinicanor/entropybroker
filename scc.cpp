@@ -66,7 +66,7 @@ double scc::get_cur_scc()
 
 	for(loop=0; loop<bytes_in; loop++)
 	{
-		double cur_val = (double)buffer[loop];
+		double cur_val = double(buffer[loop]);
 
 		if (loop == 0)
 		{
@@ -83,11 +83,11 @@ double scc::get_cur_scc()
 
 	t[0] = t[0] + prev_val * u0;
 	t[1] = t[1] * t[1];
-	scc_val = (double)bytes_in * t[2] - t[1];
+	scc_val = double(bytes_in) * t[2] - t[1];
 	if (scc_val == 0.0)
 		scc_val = -100000.0;
 	else
-		scc_val = ((double)bytes_in * t[0] - t[1]) / scc_val;
+		scc_val = (double(bytes_in) * t[0] - t[1]) / scc_val;
 
 	return scc_val;
 }

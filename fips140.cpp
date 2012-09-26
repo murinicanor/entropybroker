@@ -156,7 +156,7 @@ bool fips140::fips140_shorttest()
 	{
 		total += (fips140_pokerbuf[loop]*fips140_pokerbuf[loop]);
 	}
-	X = (16.0/5000.0) * ((double)total) - 5001.0;
+	X = (16.0/5000.0) * double(total) - 5001.0;
 	if ((fips_version == 2 && (X<=2.16 || X>=46.17)) ||
 	    (fips_version == 1 && (X<=1.03 || X>=57.4)))
 	{
