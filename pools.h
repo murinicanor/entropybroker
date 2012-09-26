@@ -20,6 +20,7 @@ private:
 	bool is_w_locked;
 
 	unsigned int last_added_to;
+	pthread_mutex_t lat_lck;
 
 	void list_wlock();
 	void list_wunlock();
