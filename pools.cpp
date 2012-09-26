@@ -527,7 +527,12 @@ int pools::get_bits_from_pools(int n_bits_requested, unsigned char **buffer, boo
 	// at this point the list is read locked
 
 	unsigned int n = pool_vector.size();
-	int pool_block_size = pool_vector.at(0) -> get_get_size();
+
+	int pool_block_size = -1;
+	if (pool_vector.size() == 0)
+		pool_block_size = h -> get_hash_size() / 2;
+	else
+		pool_block_size = pool_vector.at(0) -> get_get_size();
 
 	int get_per_pool_n = max(pool_block_size, n_bits_requested / int(n));
 	int round = 0;

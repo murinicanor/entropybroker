@@ -234,6 +234,12 @@ int main(int argc, char *argv[])
 	printf("Dumping pool contents to cache-file\n");
 	delete ppools;
 
+	delete bce;
+	delete eb_output_fips140;
+	delete eb_output_scc;
+	delete h;
+	delete s;
+
 	if (config.prng_seed_file)
 	{
 		if (RAND_write_file(config.prng_seed_file) == -1)

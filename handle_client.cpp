@@ -677,5 +677,9 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 
 	terminate_threads(&clients);
 
+	delete user_map;
+
+	close(listen_socket_fd);
+
 	dolog(LOG_INFO, "main|end of main loop");
 }

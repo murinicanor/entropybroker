@@ -148,6 +148,8 @@ int do_client_get(client_t *client, bool *no_bits)
 	cur_n_bits = client -> ppools -> get_bits_from_pools(cur_n_bits, &temp_buffer, client -> allow_prng, client -> ignore_rngtest_fips140, client -> output_fips140, client -> ignore_rngtest_scc, client -> output_scc, double(client -> config -> communication_timeout) * 0.9);
 	if (cur_n_bits == 0)
 	{
+		free(temp_buffer);
+
 		dolog(LOG_WARNING, "get|%s no bits in pools, sending deny", client -> host.c_str());
 		*no_bits = true;
 		return send_denied_empty(client -> socket_fd, client -> stats, client -> config);
