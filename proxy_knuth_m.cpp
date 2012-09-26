@@ -517,11 +517,11 @@ int main(int argc, char *argv[])
 
 	load_knuth_file(knuth_file, &lt);
 
-	pthread_mutex_init(&lt.lock, NULL);
+	pthread_check(pthread_mutex_init(&lt.lock, NULL), "pthread_mutex_init");
 
 	thread_pars_t tp = { p, &lt };
 	pthread_t th;
-	pthread_create(&th, NULL, thread, &tp);
+	pthread_check(pthread_create(&th, NULL, thread, &tp), "pthread_create");
 
 	for(;!sig_quit;)
 	{
@@ -625,7 +625,7 @@ int main(int argc, char *argv[])
 
 	dolog(LOG_INFO, "Terminating...");
 
-	pthread_join(th, NULL);
+	pthread_check(pthread_join(th, NULL), "pthread_join");
 
 	delete p;
 

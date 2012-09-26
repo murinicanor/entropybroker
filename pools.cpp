@@ -29,10 +29,10 @@
 
 pools::pools(std::string cache_dir_in, unsigned int max_n_mem_pools_in, unsigned int max_n_disk_pools_in, unsigned int min_store_on_disk_n_in, bit_count_estimator *bce_in, int new_pool_size_in_bytes, hasher *hclass, stirrer *sclass) : cache_dir(cache_dir_in), max_n_mem_pools(max_n_mem_pools_in), max_n_disk_pools(max_n_disk_pools_in), min_store_on_disk_n(min_store_on_disk_n_in), disk_limit_reached_notified(false), bce(bce_in), h(hclass), s(sclass)
 {
-	pthread_rwlock_init(&list_lck, NULL);
+	pthread_check(pthread_rwlock_init(&list_lck, NULL), "pthread_rwlock_init");
 	is_w_locked = false;
 
-	pthread_mutex_init(&lat_lck, NULL);
+	pthread_check(pthread_mutex_init(&lat_lck, NULL), "pthread_mutex_init");
 	last_added_to = 0;
 
 	new_pool_size = new_pool_size_in_bytes;
@@ -55,8 +55,8 @@ pools::~pools()
 {
 	store_caches(0);
 
-	pthread_mutex_destroy(&lat_lck);
-	pthread_rwlock_destroy(&list_lck);
+	pthread_check(pthread_mutex_destroy(&lat_lck), "pthread_mutex_destroy");
+	pthread_check(pthread_rwlock_destroy(&list_lck), "pthread_rwlock_destroy");
 }
 
 double calc_time_left(double start_ts, unsigned int cur, unsigned int n, double max_duration)
@@ -72,8 +72,7 @@ double calc_time_left(double start_ts, unsigned int cur, unsigned int n, double 
 
 void pools::list_wlock()
 {
-	if ((errno = pthread_rwlock_wrlock(&list_lck)) != 0)
-		error_exit("pthread_rwlock_wrlock failed");
+	pthread_check(pthread_rwlock_wrlock(&list_lck), "pthread_rwlock_wrlock");
 
 	my_assert(is_w_locked == false);
 	is_w_locked = true;
@@ -84,25 +83,22 @@ void pools::list_wunlock()
 	my_assert(is_w_locked);
 	is_w_locked = false;
 
-	if ((errno = pthread_rwlock_unlock(&list_lck)) != 0)
-		error_exit("pthread_rwlock_unlock failed");
+	pthread_check(pthread_rwlock_unlock(&list_lck), "pthread_rwlock_unlock");
 }
 
 void pools::list_runlock()
 {
-	if ((errno = pthread_rwlock_unlock(&list_lck)) != 0)
-		error_exit("pthread_rwlock_unlock failed");
+	pthread_check(pthread_rwlock_unlock(&list_lck), "pthread_rwlock_unlock");
 }
 
 void pools::list_rlock()
 {
-	if ((errno = pthread_rwlock_rdlock(&list_lck)) != 0)
-		error_exit("pthread_rwlock_rdlock failed");
+	pthread_check(pthread_rwlock_rdlock(&list_lck), "pthread_rwlock_rdlock");
 }
 
 void pools::store_caches(unsigned int keep_n)
 {
-	pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, NULL);
+	pthread_check(pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, NULL), "pthread_setcanceltype");
 
 	if (cache_list.size() >= max_n_disk_pools)
 	{
@@ -152,7 +148,7 @@ void pools::store_caches(unsigned int keep_n)
 		fclose(fh);
 	}
 
-	pthread_setcanceltype(PTHREAD_CANCEL_ENABLE, NULL);
+	pthread_check(pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL), "pthread_setcanceltype");
 }
 
 bool pools::load_caches(unsigned int load_n_bits)

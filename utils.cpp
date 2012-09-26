@@ -525,16 +525,23 @@ std::string get_endpoint_name(int fd)
 	return std::string(buffer);
 }
 
+void pthread_check(int rc, const char *name)
+{
+	if (rc)
+	{
+		errno = rc;
+		error_exit("%s failed");
+	}
+}
+
 void my_mutex_lock(pthread_mutex_t *mutex)
 {
-	if ((errno = pthread_mutex_lock(mutex)) != 0)
-		error_exit("pthread_mutex_lock failed");
+	pthread_check(pthread_mutex_lock(mutex), "pthread_mutex_lock");
 }
 
 void my_mutex_unlock(pthread_mutex_t *mutex)
 {
-	if ((errno = pthread_mutex_unlock(mutex)) != 0)
-		error_exit("pthread_mutex_unlock failed");
+	pthread_check(pthread_mutex_unlock(mutex), "pthread_mutex_unlock");
 }
 
 void my_Assert(bool flag, int line, const char *file)
@@ -552,7 +559,7 @@ void my_Assert2(bool flag, int line, const char *file, int debug_value)
 // *BSD need a different implemenation for this
 void set_thread_name(std::string name)
 {
-        pthread_setname_np(pthread_self(), ("eb:" + name).c_str());
+        pthread_check(pthread_setname_np(pthread_self(), ("eb:" + name).c_str()), "pthread_setname_np");
 }
 
 // *BSD need a different implemenation for this
@@ -560,7 +567,7 @@ std::string get_thread_name(pthread_t *thread)
 {
         char buffer[4096];
 
-        pthread_getname_np(*thread, buffer, sizeof buffer);
+        pthread_check(pthread_getname_np(*thread, buffer, sizeof buffer), "pthread_getname_np");
 
         return std::string(buffer);
 }
@@ -576,6 +583,5 @@ void my_yield()
 {
 	// sched_yield
 
-	if ((errno = pthread_yield()) != 0)
-		error_exit("pthread_yield failed");
+	pthread_check(pthread_yield(), "pthread_yield");
 }

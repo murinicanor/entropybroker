@@ -42,8 +42,8 @@
 
 pool::pool(int new_pool_size_bytes, bit_count_estimator *bce_in, hasher *hclass, stirrer *sclass) : bce(bce_in), h(hclass), s(sclass)
 {
-	pthread_mutex_init(&lck, &global_mutex_attr);
-	pthread_cond_init(&cond, NULL);
+	pthread_check(pthread_mutex_init(&lck, &global_mutex_attr), "pthread_mutex_init");
+	pthread_check(pthread_cond_init(&cond, NULL), "pthread_cond_init");
 
 	memset(&state, 0x00, sizeof state);
 
@@ -62,8 +62,8 @@ pool::pool(int new_pool_size_bytes, bit_count_estimator *bce_in, hasher *hclass,
 
 pool::pool(int pool_nr, FILE *fh, bit_count_estimator *bce_in, hasher *hclass, stirrer *sclass) : bce(bce_in), h(hclass), s(sclass)
 {
-	pthread_mutex_init(&lck, &global_mutex_attr);
-	pthread_cond_init(&cond, NULL);
+	pthread_check(pthread_mutex_init(&lck, &global_mutex_attr), "pthread_mutex_init");
+	pthread_check(pthread_cond_init(&cond, NULL), "pthread_cond_init");
 
 	unsigned char val_buffer[8];
 
@@ -109,8 +109,8 @@ pool::~pool()
 
 	delete iv;
 
-	pthread_mutex_destroy(&lck);
-	pthread_cond_destroy(&cond);
+	pthread_check(pthread_mutex_destroy(&lck), "pthread_mutex_destroy");
+	pthread_check(pthread_cond_destroy(&cond), "pthread_cond_destroy");
 }
 
 pthread_cond_t * pool::lock_object()
@@ -170,7 +170,7 @@ void pool::unlock_object()
 {
 	my_mutex_unlock(&lck);
 
-	pthread_cond_signal(&cond);
+	pthread_check(pthread_cond_signal(&cond), "pthread_cond_signal");
 }
 
 void pool::dump(FILE *fh)

@@ -32,6 +32,7 @@ void set_thread_name(std::string name);
 std::string get_thread_name(pthread_t *thread);
 std::string get_current_thread_name();
 void my_yield();
+void pthread_check(int rc, const char *name);
 
 void my_Assert(bool flag, int line, const char *file);
 #define my_assert(x) my_Assert(x, __LINE__,  __FILE__)

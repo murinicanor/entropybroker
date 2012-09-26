@@ -11,7 +11,7 @@
 
 users::users(std::string filename_in) : filename(filename_in)
 {
-	pthread_mutex_init(&lock, &global_mutex_attr);
+	pthread_check(pthread_mutex_init(&lock, &global_mutex_attr), "pthread_mutex_init");
 
 	user_map = NULL;
 	load_usermap();
@@ -21,7 +21,7 @@ users::~users()
 {
 	delete user_map;
 
-	pthread_mutex_destroy(&lock);
+	pthread_check(pthread_mutex_destroy(&lock), "pthread_mutex_destroy");
 }
 
 void users::reload()

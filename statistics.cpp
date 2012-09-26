@@ -29,14 +29,14 @@
 
 statistics::statistics(char *file_in, fips140 *fips140_in, scc *scc_in, pools *pp_in) : file(file_in), pfips140(fips140_in), pscc(scc_in), ppools(pp_in)
 {
-	pthread_mutex_init(&recv_lck, &global_mutex_attr);
-	pthread_mutex_init(&sent_lck, &global_mutex_attr);
-	pthread_mutex_init(&times_empty_lck, &global_mutex_attr);
-	pthread_mutex_init(&times_not_allowed_lck, &global_mutex_attr);
-	pthread_mutex_init(&times_full_lck, &global_mutex_attr);
-	pthread_mutex_init(&times_quota_lck, &global_mutex_attr);
-	pthread_mutex_init(&disconnects_lck, &global_mutex_attr);
-	pthread_mutex_init(&timeouts_lck, &global_mutex_attr);
+	pthread_check(pthread_mutex_init(&recv_lck, &global_mutex_attr), "pthread_mutex_init");
+	pthread_check(pthread_mutex_init(&sent_lck, &global_mutex_attr), "pthread_mutex_init");
+	pthread_check(pthread_mutex_init(&times_empty_lck, &global_mutex_attr), "pthread_mutex_init");
+	pthread_check(pthread_mutex_init(&times_not_allowed_lck, &global_mutex_attr), "pthread_mutex_init");
+	pthread_check(pthread_mutex_init(&times_full_lck, &global_mutex_attr), "pthread_mutex_init");
+	pthread_check(pthread_mutex_init(&times_quota_lck, &global_mutex_attr), "pthread_mutex_init");
+	pthread_check(pthread_mutex_init(&disconnects_lck, &global_mutex_attr), "pthread_mutex_init");
+	pthread_check(pthread_mutex_init(&timeouts_lck, &global_mutex_attr), "pthread_mutex_init");
 
 	bps_cur = 0;
 
@@ -57,14 +57,14 @@ statistics::statistics(char *file_in, fips140 *fips140_in, scc *scc_in, pools *p
 
 statistics::~statistics()
 {
-	pthread_mutex_destroy(&recv_lck);
-	pthread_mutex_destroy(&sent_lck);
-	pthread_mutex_destroy(&times_empty_lck);
-	pthread_mutex_destroy(&times_not_allowed_lck);
-	pthread_mutex_destroy(&times_full_lck);
-	pthread_mutex_destroy(&times_quota_lck);
-	pthread_mutex_destroy(&disconnects_lck);
-	pthread_mutex_destroy(&timeouts_lck);
+	pthread_check(pthread_mutex_destroy(&recv_lck), "pthread_mutex_destroy");
+	pthread_check(pthread_mutex_destroy(&sent_lck), "pthread_mutex_destroy");
+	pthread_check(pthread_mutex_destroy(&times_empty_lck), "pthread_mutex_destroy");
+	pthread_check(pthread_mutex_destroy(&times_not_allowed_lck), "pthread_mutex_destroy");
+	pthread_check(pthread_mutex_destroy(&times_full_lck), "pthread_mutex_destroy");
+	pthread_check(pthread_mutex_destroy(&times_quota_lck), "pthread_mutex_destroy");
+	pthread_check(pthread_mutex_destroy(&disconnects_lck), "pthread_mutex_destroy");
+	pthread_check(pthread_mutex_destroy(&timeouts_lck), "pthread_mutex_destroy");
 }
 
 void statistics::inc_disconnects()

@@ -56,13 +56,12 @@ void forget_client_index(std::vector<client_t *> *clients, int nr, bool force)
 	my_yield();
 
 	if (force)
-		pthread_cancel(p -> th);
+		pthread_check(pthread_cancel(p -> th), "pthread_cancel");
 
 	void *value_ptr = NULL;
-	if ((errno = pthread_join(p -> th, &value_ptr)) != 0)
-		error_exit("pthread_join failed");
+	pthread_check(pthread_join(p -> th, &value_ptr), "pthread_join");
 
-	pthread_mutex_destroy(&p -> stats_lck);
+	pthread_check(pthread_mutex_destroy(&p -> stats_lck), "pthread_mutex_destroy");
 
 	delete p -> pfips140;
 	delete p -> pscc;
@@ -239,7 +238,8 @@ void * thread(void *data)
 	client_t *p = (client_t *)data;
 
 	set_thread_name(p -> host.c_str());
-	pthread_setcanceltype(PTHREAD_CANCEL_ENABLE, NULL);
+	pthread_check(pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL), "pthread_setcanceltype");
+	pthread_check(pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL), "pthread_setcancelstate");
 
 	if (p -> config -> disable_nagle)
 		disable_nagle(p -> socket_fd);
@@ -373,7 +373,7 @@ void register_new_client(int listen_socket_fd, std::vector<client_t *> *clients,
 		p -> ignore_rngtest_scc = config -> ignore_rngtest_scc;
 		p -> allow_prng = config -> allow_prng;
 
-		pthread_mutex_init(&p -> stats_lck, &global_mutex_attr);
+		pthread_check(pthread_mutex_init(&p -> stats_lck, &global_mutex_attr), "pthread_mutex_init");
 
 		// globals
 		p -> pu = user_map;
@@ -393,8 +393,7 @@ void register_new_client(int listen_socket_fd, std::vector<client_t *> *clients,
 
 		set_fd_nonblocking(p -> to_main[0]);
 
-		if ((errno = pthread_create(&p -> th, NULL, thread, p)) != 0)
-			error_exit("Error creating thread");
+		pthread_check(pthread_create(&p -> th, NULL, thread, p), "pthread_create");
 
 		clients -> push_back(p);
 	}
