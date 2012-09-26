@@ -310,7 +310,7 @@ void * thread(void *data)
 
 				if (do_client(p, &no_bits, &new_bits, &is_full) == -1)
 				{
-					dolog(LOG_INFO, "Terminating connection with %s (fd: %p)", p -> host.c_str(), p -> socket_fd);
+					dolog(LOG_INFO, "Terminating connection with %s (fd: %d)", p -> host.c_str(), p -> socket_fd);
 					break;
 				}
 
@@ -328,7 +328,7 @@ void * thread(void *data)
 			}
 		}
 
-		dolog(LOG_DEBUG, "End of thread imminent (fd: %p)", p -> socket_fd);
+		dolog(LOG_DEBUG, "End of thread imminent (fd: %d)", p -> socket_fd);
 
 		break;
 	}
