@@ -1,4 +1,4 @@
-// SVN: $Id$
+// SVN: $Revision$
 class fips140
 {
 	/* array with numberofbitssetto1 */

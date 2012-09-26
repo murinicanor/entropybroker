@@ -1,4 +1,4 @@
-// SVN: $Id$
+// SVN: $Revision$
 /*
   GPL 2 applies to entropybroker.
 

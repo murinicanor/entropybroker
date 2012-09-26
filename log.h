@@ -1,4 +1,4 @@
-// SVN: $Id$
+// SVN: $Revision$
 #include <syslog.h>
 
 void dolog(int level, const char *format, ...);

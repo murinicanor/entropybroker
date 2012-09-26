@@ -1,2 +1,2 @@
-// SVN: $Id$
+// SVN: $Revision$
 void error_exit(const char *format, ...);

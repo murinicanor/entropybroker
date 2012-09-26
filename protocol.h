@@ -1,4 +1,4 @@
-// SVN: $Id$
+// SVN: $Revision$
 #define PROTOCOL_VERSION 6
 #define TCP_SILENT_FAIL_TEST_INTERVAL 120
 #define MAX_ERROR_SLEEP 12

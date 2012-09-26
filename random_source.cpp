@@ -1,3 +1,4 @@
+// SVN: $Revision$
 #include <unistd.h>
 #include <string>
 #include <openssl/rand.h>

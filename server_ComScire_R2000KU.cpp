@@ -1,4 +1,4 @@
-// SVN: $Id$
+// SVN: $Revision$
 #include "ComScire_R2000KU/qwqng.hpp"
 
 #include <arpa/inet.h>

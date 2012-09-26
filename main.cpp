@@ -1,4 +1,4 @@
-// SVN: $Id: main.cpp 458 2012-09-24 13:38:14Z folkert $
+// SVN: $Revision$
 #include <sys/time.h>
 #include <stdio.h>
 #include <stdlib.h>

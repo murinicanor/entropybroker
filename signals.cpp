@@ -1,4 +1,4 @@
-// SVN: $Id$
+// SVN: $Revision$
 #include <signal.h>
 #include <stdlib.h>
 

@@ -1,3 +1,4 @@
+// SVN: $Revision$
 typedef enum { RS_OPENSSL, RS_DEV_URANDOM, RS_DEV_RANDOM } random_source_t;
 
 void get_random(random_source_t rs, unsigned char *p, size_t n);

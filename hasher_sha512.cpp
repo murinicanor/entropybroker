@@ -1,4 +1,4 @@
-// SVN: $Id$
+// SVN: $Revision$
 #include <openssl/sha.h>
 
 #include "hasher.h"

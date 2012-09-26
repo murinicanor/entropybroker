@@ -1,4 +1,4 @@
-// SVN: $Id$
+// SVN: $Revision$
 #include <string>
 #include <pthread.h>
 #include <openssl/blowfish.h>

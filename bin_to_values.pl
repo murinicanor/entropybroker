@@ -1,5 +1,7 @@
 #! /usr/bin/perl -w
 
+# $Revision$
+
 open(FILE, "<" . $ARGV[0]) or die 'Cannot open file '.$ARGV[0];
 binmode(FILE); 
 

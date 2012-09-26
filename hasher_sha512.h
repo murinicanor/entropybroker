@@ -1,4 +1,4 @@
-// SVN: $Id$
+// SVN: $Revision$
 class hasher_sha512 : public hasher
 {
 public:

@@ -1,4 +1,4 @@
-// SVN: $Id$
+// SVN: $Revision$
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>

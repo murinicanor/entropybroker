@@ -1,4 +1,4 @@
-// SVN: $Id$
+// SVN: $Revision$
 #define SET_KEY_ATTEMPTS 10
 
 class stirrer_3des : public stirrer

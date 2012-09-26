@@ -1,4 +1,4 @@
-// SVN: $Id$
+// SVN: $Revision$
 #include <math.h>
 #include <errno.h>
 #include <stdlib.h>

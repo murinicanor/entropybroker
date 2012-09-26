@@ -60,4 +60,4 @@ loop:
 
 	- if all pools are empty, the broker send 0010 (with a 0 value) to all servers
 
-SVN: $Id$
+SVN: $Revision$

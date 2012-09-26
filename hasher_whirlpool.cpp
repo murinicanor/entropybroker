@@ -1,4 +1,4 @@
-// SVN: $Id$
+// SVN: $Revision$
 #include <openssl/whrlpool.h>
 
 #include "hasher.h"

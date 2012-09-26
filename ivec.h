@@ -1,4 +1,4 @@
-// SVN: $Id$
+// SVN: $Revision$
 class ivec
 {
 private:

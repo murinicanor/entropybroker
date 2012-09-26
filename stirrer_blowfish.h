@@ -1,4 +1,4 @@
-// SVN: $Id$
+// SVN: $Revision$
 class stirrer_blowfish : public stirrer
 {
 public:

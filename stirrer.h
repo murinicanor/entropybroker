@@ -1,4 +1,4 @@
-// SVN: $Id$
+// SVN: $Revision$
 class stirrer
 {
 protected:

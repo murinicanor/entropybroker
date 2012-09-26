@@ -1,4 +1,4 @@
-// SVN: $Id$
+// SVN: $Revision$
 #include "hasher.h"
 
 hasher::hasher()
