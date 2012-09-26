@@ -7,8 +7,8 @@ FILE2=/tmp/a.out_eb2_$$
 echo \*\*\* Entropy Broker v`cat version | cut -d = -f 2` \(`echo $Revision$ | awk '{ print $2; }'`\) configure script \*\*\*
 echo
 
-echo -n \* checking for GCC...
-gcc -O0 -o $FILE test_gcc.cpp 2> $FILE2
+echo -n \* checking for GCC \(G++\)...
+g++ -O0 -o $FILE test_gcc.cpp 2> $FILE2
 if [ $? -ne 0 ] ; then
 	echo
 	echo \! problem invoking GCC
@@ -24,7 +24,7 @@ fi
 echo \ OK
 
 echo -n \* checking for OpenSSL...
-gcc -O0 -o $FILE test_openssl.cpp 2> $FILE2
+g++ -O0 -o $FILE test_openssl.cpp 2> $FILE2
 if [ $? -ne 0 ] ; then
 	echo
 	echo \! OpenSSL was NOT detected
@@ -38,7 +38,7 @@ if [ $? -ne 0 ] ; then
 fi
 echo \ OK
 
-gcc -O0 -o $FILE test_asound2.cpp 2> /dev/null
+g++ -O0 -o $FILE test_asound2.cpp 2> /dev/null
 if [ $? -eq 0 ] ; then
 	echo \+ libasound2 detected, enabling eb_server_audio
 	B2="$B2 eb_server_audio"
@@ -46,7 +46,7 @@ else
 	echo \- libasound2 NOT found, disabling eb_server_audio
 fi
 
-gcc -O0 -o $FILE test_libusb.cpp 2> /dev/null
+g++ -O0 -o $FILE test_libusb.cpp 2> /dev/null
 if [ $? -eq 0 ] ; then
 	echo \+ libusb-1.0-0 detected, enabling eb_server_usb
 	B2="$B2 eb_server_usb"
@@ -54,7 +54,7 @@ else
 	echo \- libusb-1.0-0 NOT found, disabling eb_server_usb
 fi
 
-gcc -O0 -o $FILE `pkg-config --cflags libpcsclite` test_pcsclite.cpp 2> /dev/null
+g++ -O0 -o $FILE `pkg-config --cflags libpcsclite` test_pcsclite.cpp 2> /dev/null
 if [ $? -eq 0 ] ; then
 	echo \+ libpcsclite-dev detected, enabling eb_server_smartcard
 	B2="$B2 eb_server_smartcard"
@@ -62,7 +62,7 @@ else
 	echo \- libpcsclite-dev NOT found, disabling eb_server_smartcard
 fi
 
-gcc -O0 -o $FILE test_libftdi.cpp 2> /dev/null
+g++ -O0 -o $FILE test_libftdi.cpp 2> /dev/null
 if [ $? -eq 0 ] ; then
 	echo \+ libftdi-dev detected, enabling eb_server_ComScire_R2000KU
 	B2="$B2 eb_server_ComScire_R2000KU"
@@ -70,7 +70,7 @@ else
 	echo \- libftdi-dev NOT found, disabling eb_server_ComScire_R2000KU
 fi
 
-gcc -O0 -o $FILE test_libpng.cpp 2> /dev/null
+g++ -O0 -o $FILE test_libpng.cpp 2> /dev/null
 if [ $? -eq 0 ] ; then
 	echo \+ libpng12-dev detected, enabling plot
 	B2="$B2 plot"
