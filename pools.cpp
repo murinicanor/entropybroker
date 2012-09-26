@@ -528,13 +528,19 @@ int pools::get_bits_from_pools(int n_bits_requested, unsigned char **buffer, boo
 
 	unsigned int n = pool_vector.size();
 
-	int pool_block_size = -1;
-	if (pool_vector.size() == 0)
+	int pool_block_size = -1, get_per_pool_n = -1;
+	if (n == 0)
+	{
 		pool_block_size = h -> get_hash_size() / 2;
+		get_per_pool_n = max(pool_block_size, n_bits_requested);
+	}
 	else
+	{
 		pool_block_size = pool_vector.at(0) -> get_get_size();
+		get_per_pool_n = max(pool_block_size, n_bits_requested / int(n));
+	}
+	get_per_pool_n = min(get_per_pool_n, new_pool_size);
 
-	int get_per_pool_n = max(pool_block_size, n_bits_requested / int(n));
 	int round = 0;
 	for(;n_to_do_bits > 0 && round < 2;)
 	{
