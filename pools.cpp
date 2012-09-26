@@ -710,8 +710,7 @@ bool pools::all_pools_full(double max_duration)
 	{
 		for(unsigned int loop=0; loop<n; loop++)
 		{
-			// FIXME move this calculation to a method
-			double time_left = max(MIN_SLEEP, (max_duration - (get_ts() - start_ts)) / double(n - loop));
+			double time_left = calc_time_left(start_ts, loop, n, max_duration);
 
 			if (!pool_vector.at(loop) -> timed_lock_object(time_left))
 			{

@@ -92,12 +92,10 @@ void make_msg(char *where_to, int code, int value)
 void calc_ivec(char *password, long long unsigned int rnd, long long unsigned int counter, unsigned char *dest)
 {
 	unsigned char *prnd = (unsigned char *)&rnd;
+	unsigned char *pcnt = (unsigned char *)&counter;
 	unsigned char dummy[8] = { 0 };
 
 	memcpy(dummy, password, min(strlen(password), 8));
-
-	// FIXME needs same loop as below
-	rnd ^= counter;
 
 	// this loop could be replaced if I were sure what
 	// the size of a long is. it is specified to be
@@ -107,6 +105,7 @@ void calc_ivec(char *password, long long unsigned int rnd, long long unsigned in
 	while(index_dummy < 8)
 	{
 		dummy[index_dummy++] ^= prnd[index_rnd++];
+		dummy[index_dummy++] ^= pcnt[index_rnd++];
 
 		if (index_rnd == rnd_len)
 			index_rnd = 0;
