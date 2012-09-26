@@ -97,9 +97,10 @@ void pools::list_rlock()
 	pthread_check(pthread_rwlock_rdlock(&list_lck), "pthread_rwlock_rdlock");
 }
 
+// keep_n == 0: means dump all
 void pools::store_caches(unsigned int keep_n)
 {
-	if (cache_list.size() >= max_n_disk_pools)
+	if (cache_list.size() >= max_n_disk_pools && keep_n != 0)
 	{
 		if (!disk_limit_reached_notified)
 		{
