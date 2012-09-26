@@ -82,7 +82,12 @@ pool::pool(int pool_nr, FILE *fh, bit_count_estimator *bce_in, hasher *hclass, s
 	else
 	{
 		bits_in_pool = (val_buffer[0] << 24) + (val_buffer[1] << 16) + (val_buffer[2] << 8) + val_buffer[3];
+		if (bits_in_pool < 0 || bits_in_pool >= 4194304) // more than 4MB is ridiculous
+			error_exit("Corrupt dump? bits in pool is strange! %d", bits_in_pool);
+
 		pool_size_bytes = (val_buffer[4] << 24) + (val_buffer[5] << 16) + (val_buffer[6] << 8) + val_buffer[7];
+		if (pool_size_bytes < 0 || pool_size_bytes >= 4194304) // more than 4MB is ridiculous
+			error_exit("Corrupt dump? pool size is strange! %d", pool_size_bytes);
 
 		entropy_pool = (unsigned char *)malloc(pool_size_bytes);
 		lock_mem(entropy_pool, pool_size_bytes);
