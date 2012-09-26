@@ -2,6 +2,7 @@
 #define PIPE_CMD_HAVE_DATA 1
 #define PIPE_CMD_NEED_DATA 2
 #define PIPE_CMD_IS_FULL   3
+#define PIPE_CMD_QUIT      4
 extern const char *pipe_cmd_str[];
 
 typedef struct

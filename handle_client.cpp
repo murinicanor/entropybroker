@@ -41,7 +41,7 @@
 #include "protocol.h"
 #include "hc_protocol.h"
 
-const char *pipe_cmd_str[] = { NULL, "have data (1)", "need data (2)", "is full (3)" };
+const char *pipe_cmd_str[] = { NULL, "have data (1)", "need data (2)", "is full (3)", "quit" };
 extern const char *pid_file;
 
 void forget_client_index(std::vector<client_t *> *clients, int nr, bool force)
@@ -53,8 +53,7 @@ void forget_client_index(std::vector<client_t *> *clients, int nr, bool force)
 	close(p -> to_thread[0]);
 	close(p -> to_main[0]);
 
-	if ((errno = pthread_yield()) != 0)
-		error_exit("pthread_yield failed");
+	my_yield();
 
 	if (force)
 		pthread_cancel(p -> th);
@@ -487,6 +486,33 @@ void send_to_client_threads(std::vector<client_t *> *clients, std::vector<msg_pa
 	}
 }
 
+void terminate_threads(std::vector<client_t *> *clients)
+{
+	for(unsigned int index=0; index<clients -> size(); index++)
+	{
+		client_t *p = clients -> at(index);
+
+		(void)send_pipe_command(p -> to_thread[1], PIPE_CMD_QUIT);
+
+		my_yield();
+
+		close(p -> socket_fd);
+		close(p -> to_thread[0]);
+		close(p -> to_thread[1]);
+		close(p -> to_main[0]);
+		close(p -> to_main[1]);
+	}
+
+	while(clients -> size() > 0)
+	{
+		client_t *p = clients -> at(0);
+
+		dolog(LOG_DEBUG, "... %s/%s (fd: %d)", p -> host.c_str(), p -> type.c_str(), p -> socket_fd);
+
+		forget_client_index(clients, 0, true);
+	}
+}
+
 void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc *eb_output_scc)
 {
 	std::vector<client_t *> clients;
@@ -647,12 +673,7 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 
 	dolog(LOG_INFO, "Terminating %d threads...", clients.size());
 
-	while(clients.size() > 0)
-	{
-		dolog(LOG_DEBUG, "... %s/%s (fd: %d)", clients.at(0) -> host.c_str(), clients.at(0) -> type.c_str(), clients.at(0) -> socket_fd);
-
-		forget_client_index(&clients, 0, true);
-	}
+	terminate_threads(&clients);
 
 	dolog(LOG_INFO, "main|end of main loop");
 }

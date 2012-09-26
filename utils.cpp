@@ -571,3 +571,11 @@ std::string get_current_thread_name()
 
 	return get_thread_name(&tid);
 }
+
+void my_yield()
+{
+	// sched_yield
+
+	if ((errno = pthread_yield()) != 0)
+		error_exit("pthread_yield failed");
+}
