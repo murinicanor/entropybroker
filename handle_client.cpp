@@ -56,7 +56,10 @@ void forget_client_index(std::vector<client_t *> *clients, int nr, bool force)
 	my_yield();
 
 	if (force)
-		pthread_check(pthread_cancel(p -> th), "pthread_cancel");
+	{
+		int ok[] = { ESRCH, 0 };
+		pthread_check(pthread_cancel(p -> th), "pthread_cancel", ok);
+	}
 
 	void *value_ptr = NULL;
 	pthread_check(pthread_join(p -> th, &value_ptr), "pthread_join");

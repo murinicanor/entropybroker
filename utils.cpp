@@ -525,13 +525,34 @@ std::string get_endpoint_name(int fd)
 	return std::string(buffer);
 }
 
-void pthread_check(int rc, const char *name)
+void pthread_check(int rc, const char *name, int ok[])
 {
 	if (rc)
 	{
-		errno = rc;
-		error_exit("%s failed");
+		bool found = false;
+		int index=0;
+		while(ok[index])
+		{
+			if (ok[index] == rc)
+			{
+				found = true;
+				break;
+			}
+		}
+
+		if (!found)
+		{
+			errno = rc;
+			error_exit("%s failed");
+		}
 	}
+}
+
+void pthread_check(int rc, const char *name)
+{
+	int ok[] = { 0 };
+
+	pthread_check(rc, name, ok);
 }
 
 void my_mutex_lock(pthread_mutex_t *mutex)
