@@ -1,0 +1,53 @@
+#! /bin/sh
+
+B2=''
+FILE=/tmp/a.out_eb_$$
+
+echo entropy_broker configure script
+echo
+
+gcc -o $FILE test_asound2.cpp 2> /dev/null
+if [ $? -eq 0 ] ; then
+	echo \+ libasound2 detected, enabling eb_server_audio
+	B2="$B2 eb_server_audio"
+else
+	echo \- libasound2 NOT found, disabling eb_server_audio
+fi
+
+gcc -o $FILE test_libusb.cpp 2> /dev/null
+if [ $? -eq 0 ] ; then
+	echo \+ libusb-1.0-0 detected, enabling eb_server_usb
+	B2="$B2 eb_server_usb"
+else
+	echo \- libusb-1.0-0 NOT found, disabling eb_server_usb
+fi
+
+gcc -o $FILE `pkg-config --cflags libpcsclite` test_pcsclite.cpp 2> /dev/null
+if [ $? -eq 0 ] ; then
+	echo \+ libpcsclite-dev detected, enabling eb_server_smartcard
+	B2="$B2 eb_server_smartcard"
+else
+	echo \- libpcsclite-dev NOT found, disabling eb_server_smartcard
+fi
+
+gcc -o $FILE test_libftdi.cpp 2> /dev/null
+if [ $? -eq 0 ] ; then
+	echo \+ libftdi-dev detected, enabling eb_server_ComScire_R2000KU
+	B2="$B2 eb_server_ComScire_R2000KU"
+else
+	echo \- libftdi-dev NOT found, disabling eb_server_ComScire_R2000KU
+fi
+
+gcc -o $FILE test_libpng.cpp 2> /dev/null
+if [ $? -eq 0 ] ; then
+	echo \+ libpng12-dev detected, enabling plot
+	B2="$B2 plot"
+else
+	echo \- libpng12-dev NOT found, disabling plot
+fi
+
+echo B2=$B2 > makefile.inc
+
+rm -f $FILE
+
+echo

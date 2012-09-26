@@ -34,13 +34,18 @@ applications to entropy broker.
 
 Building
 --------
-	make install
+	./configure
+	make everything install
+
 Files will be installed in  /usr/local/entropybroker 
 You need the OpenSSL and zlib development libraries.
-asound2 is for eb_server_audio
+libasound2-dev is for eb_server_audio
 libusb-1.0-0-dev is for eb_server_usb
 libftdi-dev is for eb_server_ComScire_R2000KU
 libpcsclite-dev is for eb_server_smartcard
+libpng12-dev is for plot
+The configure script will determine which libraries are available
+and then select which daemons to build.
 
 Usage
 -----
