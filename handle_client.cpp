@@ -238,7 +238,7 @@ void * thread(void *data)
 	client_t *p = (client_t *)data;
 
 	set_thread_name(p -> host.c_str());
-	pthread_check(pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL), "pthread_setcanceltype");
+	// pthread_check(pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL), "pthread_setcanceltype");
 	pthread_check(pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL), "pthread_setcancelstate");
 
 	if (p -> config -> disable_nagle)

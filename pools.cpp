@@ -98,7 +98,7 @@ void pools::list_rlock()
 
 void pools::store_caches(unsigned int keep_n)
 {
-	pthread_check(pthread_setcanceltype(PTHREAD_CANCEL_DEFERRED, NULL), "pthread_setcanceltype");
+	pthread_check(pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL), "pthread_setcancelstate");
 
 	if (cache_list.size() >= max_n_disk_pools)
 	{
@@ -148,7 +148,7 @@ void pools::store_caches(unsigned int keep_n)
 		fclose(fh);
 	}
 
-	pthread_check(pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL), "pthread_setcanceltype");
+	pthread_check(pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL), "pthread_setcancelstate");
 }
 
 bool pools::load_caches(unsigned int load_n_bits)
