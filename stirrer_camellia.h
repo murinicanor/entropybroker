@@ -2,7 +2,7 @@
 class stirrer_camellia : public stirrer
 {
 public:
-	stirrer_camellia();
+	stirrer_camellia(random_source_t rs);
 	~stirrer_camellia();
 
 	int get_ivec_size() const;

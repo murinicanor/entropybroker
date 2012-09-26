@@ -13,9 +13,9 @@
 #include <map>
 #include <openssl/blowfish.h>
 #include <openssl/des.h>
-#include <openssl/rand.h>
 
 #include "error.h"
+#include "random_source.h"
 #include "math.h"
 #include "ivec.h"
 #include "hasher_type.h"
@@ -185,7 +185,7 @@ int main(int argc, char *argv[])
 	eb_output_scc -> set_threshold(config.scc_threshold);
 
 	if (config.prng_seed_file)
-		RAND_load_file(config.prng_seed_file, -1);
+		retrieve_random_state(config.prng_seed_file);
 
 	bit_count_estimator *bce = new bit_count_estimator(config.bitcount_estimator);
 
@@ -203,17 +203,17 @@ int main(int argc, char *argv[])
 
 	stirrer *s = NULL;
 	if (config.st == S_BLOWFISH)
-		s = new stirrer_blowfish();
+		s = new stirrer_blowfish(config.rs);
 	else if (config.st == S_AES)
-		s = new stirrer_aes();
+		s = new stirrer_aes(config.rs);
 	else if (config.st == S_3DES)
-		s = new stirrer_3des();
+		s = new stirrer_3des(config.rs);
 	else if (config.st == S_CAMELLIA)
-		s = new stirrer_camellia();
+		s = new stirrer_camellia(config.rs);
 	else
 		error_exit("Internal error: no stirrer (%d)", config.st);
 
-	pools *ppools = new pools(std::string(CACHE_DIR), config.max_number_of_mem_pools, config.max_number_of_disk_pools, config.min_store_on_disk_n, bce, config.pool_size_bytes, h, s);
+	pools *ppools = new pools(std::string(CACHE_DIR), config.max_number_of_mem_pools, config.max_number_of_disk_pools, config.min_store_on_disk_n, bce, config.pool_size_bytes, h, s, config.rs);
 
 	dolog(LOG_DEBUG, "Blowfish options: %s", BF_options());
 
@@ -241,14 +241,7 @@ int main(int argc, char *argv[])
 	delete s;
 
 	if (config.prng_seed_file)
-	{
-		if (RAND_write_file(config.prng_seed_file) == -1)
-		{
-			unlink(config.prng_seed_file);
-
-			dolog(LOG_INFO, "SSL PRNG seed file deleted: not enough entropy data");
-		}
-	}
+		dump_random_state(config.prng_seed_file);
 
 	unlink(pid_file);
 

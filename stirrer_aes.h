@@ -2,7 +2,7 @@
 class stirrer_aes : public stirrer
 {
 public:
-	stirrer_aes();
+	stirrer_aes(random_source_t rs);
 	~stirrer_aes();
 
 	int get_ivec_size() const;

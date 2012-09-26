@@ -23,14 +23,15 @@
 #include <math.h>
 #include <unistd.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>
 #include <string>
 #include <sys/mman.h>
 #include <arpa/inet.h>
-#include <openssl/rand.h>
 
 #include "math.h"
+#include "random_source.h"
 #include "ivec.h"
 #include "hasher.h"
 #include "stirrer.h"
@@ -40,7 +41,7 @@
 #include "log.h"
 #include "utils.h"
 
-pool::pool(int new_pool_size_bytes, bit_count_estimator *bce_in, hasher *hclass, stirrer *sclass) : bce(bce_in), h(hclass), s(sclass)
+pool::pool(int new_pool_size_bytes, bit_count_estimator *bce_in, hasher *hclass, stirrer *sclass, random_source_t rs) : bce(bce_in), h(hclass), s(sclass)
 {
 	pthread_check(pthread_mutex_init(&lck, &global_mutex_attr), "pthread_mutex_init");
 	pthread_check(pthread_cond_init(&cond, NULL), "pthread_cond_init");
@@ -53,14 +54,12 @@ pool::pool(int new_pool_size_bytes, bit_count_estimator *bce_in, hasher *hclass,
 
 	bits_in_pool = 0;
 
-	// FIXME 'paranoid' boolean that enables /dev/(u)random?
-	if (RAND_bytes(entropy_pool, pool_size_bytes) == 0)
-		error_exit("RAND_bytes failed");
+	get_random(rs, entropy_pool, pool_size_bytes);
 
-	iv = new ivec(s -> get_ivec_size(), bce);
+	iv = new ivec(s -> get_ivec_size(), bce, rs);
 }
 
-pool::pool(int pool_nr, FILE *fh, bit_count_estimator *bce_in, hasher *hclass, stirrer *sclass) : bce(bce_in), h(hclass), s(sclass)
+pool::pool(int pool_nr, FILE *fh, bit_count_estimator *bce_in, hasher *hclass, stirrer *sclass, random_source_t rs) : bce(bce_in), h(hclass), s(sclass)
 {
 	pthread_check(pthread_mutex_init(&lck, &global_mutex_attr), "pthread_mutex_init");
 	pthread_check(pthread_cond_init(&cond, NULL), "pthread_cond_init");
@@ -76,11 +75,9 @@ pool::pool(int pool_nr, FILE *fh, bit_count_estimator *bce_in, hasher *hclass, s
 
 		lock_mem(entropy_pool, pool_size_bytes);
 
-		// FIXME 'paranoid' boolean that enables /dev/(u)random?
-		if (RAND_bytes(entropy_pool, pool_size_bytes) == 0)
-			error_exit("RAND_bytes failed");
+		get_random(rs, entropy_pool, pool_size_bytes);
 
-		iv = new ivec(s -> get_ivec_size(), bce);
+		iv = new ivec(s -> get_ivec_size(), bce, rs);
 	}
 	else
 	{
@@ -91,10 +88,10 @@ pool::pool(int pool_nr, FILE *fh, bit_count_estimator *bce_in, hasher *hclass, s
 		lock_mem(entropy_pool, pool_size_bytes);
 
 		int rc = -1;
-		if ((rc = fread(entropy_pool, 1, pool_size_bytes, fh)) != (size_t)pool_size_bytes)
+		if ((rc = fread(entropy_pool, 1, pool_size_bytes, fh)) != pool_size_bytes)
 			error_exit("Dump is corrupt: are you using disk-pools from an entropybroker version older than v1.1? (expected %d, got %d)", pool_size_bytes, rc);
 
-		iv = new ivec(fh, s -> get_ivec_size(), bce);
+		iv = new ivec(fh, s -> get_ivec_size(), bce, rs);
 
 		dolog(LOG_DEBUG, "Pool %d: loaded %d bits from cache", pool_nr, bits_in_pool);
 	}

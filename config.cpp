@@ -10,6 +10,7 @@
 #include <openssl/blowfish.h>
 
 #include "error.h"
+#include "random_source.h"
 #include "math.h"
 #include "hasher_type.h"
 #include "stirrer_type.h"
@@ -89,6 +90,8 @@ void load_config(const char *config, config_t *pconfig)
 	pconfig -> ht = H_SHA512;
 	pconfig -> st = S_BLOWFISH;
 
+	pconfig -> rs = RS_OPENSSL;
+
         for(;;)
         {
 		double parvald;
@@ -150,6 +153,17 @@ void load_config(const char *config, config_t *pconfig)
 				pconfig -> bitcount_estimator = BCE_COMPRESSION;
 			else
 				error_exit("bitcount_estimator of type '%s' is not known", par);
+		}
+		else if (strcmp(cmd, "random_source") == 0)
+		{
+			if (strcmp(par, "openssl") == 0)
+				pconfig -> rs = RS_OPENSSL;
+			else if (strcmp(par, "dev_random") == 0)
+				pconfig -> rs = RS_DEV_RANDOM;
+			else if (strcmp(par, "dev_urandom") == 0)
+				pconfig -> rs = RS_DEV_URANDOM;
+			else
+				error_exit("random_source of type '%s' is not known", par);
 		}
 		else if (strcmp(cmd, "listen_port") == 0)
 			pconfig -> listen_port = parval;

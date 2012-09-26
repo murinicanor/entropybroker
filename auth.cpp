@@ -1,7 +1,6 @@
 // SVN: $Id$
 #include <openssl/blowfish.h>
 #include <openssl/sha.h>
-#include <openssl/rand.h>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -15,19 +14,19 @@
 #include <fstream>
 
 #include "error.h"
+#include "random_source.h"
 #include "utils.h"
 #include "log.h"
 #include "protocol.h"
 #include "users.h"
 
-int auth_eb_user(int fd, int to, users *user_map, std::string & password, long long unsigned int *challenge, bool is_proxy_auth, bool *is_server_in, std::string & type)
+int auth_eb_user(int fd, int to, users *user_map, std::string & password, long long unsigned int *challenge, bool is_proxy_auth, bool *is_server_in, std::string & type, random_source_t rs)
 {
 	const char *ts = is_proxy_auth ? "Proxy-auth" : "Connection";
 
 	long long unsigned int rnd = 9;
 
-	if (RAND_bytes((unsigned char *)&rnd, sizeof rnd) == 0)
-		error_exit("RAND_bytes fails");
+	get_random(rs, (unsigned char *)&rnd, sizeof rnd);
 
 	char rnd_str[128];
 	unsigned char rnd_str_size = snprintf(rnd_str, sizeof rnd_str, "%llu", rnd);
@@ -111,7 +110,7 @@ int auth_eb_user(int fd, int to, users *user_map, std::string & password, long l
 	return 0;
 }
 
-int auth_eb(int fd, int to, users *user_map, std::string & password, long long unsigned int *challenge, bool *is_server_in, std::string & type)
+int auth_eb(int fd, int to, users *user_map, std::string & password, long long unsigned int *challenge, bool *is_server_in, std::string & type, random_source_t rs)
 {
 	char prot_ver[4 + 1] = { 0 };
 	snprintf(prot_ver, sizeof prot_ver, "%04d", PROTOCOL_VERSION);
@@ -122,7 +121,7 @@ int auth_eb(int fd, int to, users *user_map, std::string & password, long long u
 		return -1;
 	}
 
-	return auth_eb_user(fd, to, user_map, password, challenge, false, is_server_in, type);
+	return auth_eb_user(fd, to, user_map, password, challenge, false, is_server_in, type, rs);
 }
 
 bool get_auth_from_file(char *filename, std::string & username, std::string & password)

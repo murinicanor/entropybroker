@@ -1,18 +1,18 @@
 // SVN: $Id$
 #include <stdio.h>
-#include <openssl/rand.h>
 
 #include "error.h"
+#include "random_source.h"
 #include "math.h"
 #include "ivec.h"
 #include "log.h"
 
-ivec::ivec(int size_in, bit_count_estimator *bce_in) : size(size_in), bce(bce_in)
+ivec::ivec(int size_in, bit_count_estimator *bce_in, random_source_t rs_in) : size(size_in), bce(bce_in), rs(rs_in)
 {
 	init();
 }
 
-ivec::ivec(FILE *fh, int size_in, bit_count_estimator *bce_in) : size(size_in), bce(bce_in)
+ivec::ivec(FILE *fh, int size_in, bit_count_estimator *bce_in, random_source_t rs_in) : size(size_in), bce(bce_in), rs(rs_in)
 {
 	init();
 
@@ -31,8 +31,6 @@ ivec::ivec(FILE *fh, int size_in, bit_count_estimator *bce_in) : size(size_in), 
 
 void ivec::init()
 {
-	if (RAND_status() == 0)
-		error_exit("RAND_status: prng not seeded enough");
 }
 
 ivec::~ivec()
@@ -48,18 +46,17 @@ void ivec::dump(FILE *fh)
 
 void ivec::get(unsigned char *dest)
 {
-	if (RAND_bytes(dest, size) == 0)
-		error_exit("RAND_bytes failed");
+	get_random(rs, dest, size);
 }
 
 void ivec::seed(unsigned char *in, int n)
 {
 	double byte_count = double(bce -> get_bit_count(in, n)) / 8.0;
 
-	RAND_add(in, n, byte_count);
+	seed_random(rs, in, n, byte_count);
 }
 
 bool ivec::needs_seeding() const
 {
-	return false; // openssl rand takes care of that by itself
+	return check_random(rs);
 }

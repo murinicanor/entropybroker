@@ -3,14 +3,14 @@
 #include <arpa/inet.h>
 #include <string>
 #include <openssl/camellia.h>
-#include <openssl/rand.h>
 
 #include "error.h"
+#include "random_source.h"
 #include "utils.h"
 #include "stirrer.h"
 #include "stirrer_camellia.h"
 
-stirrer_camellia::stirrer_camellia()
+stirrer_camellia::stirrer_camellia(random_source_t rs_in) : rs(rs_in)
 {
 }
 
@@ -41,20 +41,20 @@ void stirrer_camellia::do_stir(unsigned char *ivec, unsigned char *target, int t
 	// estimation
 	if (data_in_size > 24 && data_in_size < 32)
 	{
-		if (RAND_bytes(&temp_key[data_in_size], 32 - data_in_size) == 0)
-			error_exit("RAND_bytes failed");
+		get_random(rs, &temp_key[data_in_size], 32 - data_in_size);
+
 		data_in_size = 32;
 	}
 	else if (data_in_size > 16 && data_in_size < 24)
 	{
-		if (RAND_bytes(&temp_key[data_in_size], 24 - data_in_size) == 0)
-			error_exit("RAND_bytes failed");
+		get_random(rs, &temp_key[data_in_size], 24 - data_in_size);
+
 		data_in_size = 24;
 	}
 	else if (data_in_size < 16)
 	{
-		if (RAND_bytes(&temp_key[data_in_size], 16 - data_in_size) == 0)
-			error_exit("RAND_bytes failed");
+		get_random(rs, &temp_key[data_in_size], 16 - data_in_size);
+
 		data_in_size = 16;
 	}
 

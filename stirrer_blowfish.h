@@ -2,7 +2,7 @@
 class stirrer_blowfish : public stirrer
 {
 public:
-	stirrer_blowfish();
+	stirrer_blowfish(random_source_t rs);
 	~stirrer_blowfish();
 
 	int get_ivec_size() const;

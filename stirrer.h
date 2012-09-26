@@ -1,8 +1,11 @@
 // SVN: $Id$
 class stirrer
 {
+private:
+	random_source_t rs;
+
 public:
-	stirrer();
+	stirrer(random_source_t rs);
 	virtual ~stirrer();
 
 	virtual int get_ivec_size() const = 0;

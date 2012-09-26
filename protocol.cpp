@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "error.h"
+#include "random_source.h"
 #include "log.h"
 #include "utils.h"
 #include "users.h"

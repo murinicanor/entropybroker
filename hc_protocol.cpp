@@ -10,6 +10,7 @@
 #include <map>
 
 #include "error.h"
+#include "random_source.h"
 #include "log.h"
 #include "math.h"
 #include "ivec.h"

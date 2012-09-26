@@ -386,6 +386,7 @@ int main(int argc, char *argv[])
 	std::string clients_auths;
 	std::string knuth_file = CACHE_DIR + std::string("/") + KNUTH_FILE;
 	std::vector<std::string> hosts;
+	random_source_t rs = RS_OPENSSL;
 
 	printf("proxy_knuth_b, (C) 2009-2012 by folkert@vanheusden.com\n");
 
@@ -553,7 +554,7 @@ int main(int argc, char *argv[])
 				long long unsigned int challenge = 1;
 				bool is_server = false;
 				std::string type;
-				if (auth_eb(new_socket_fd, DEFAULT_COMM_TO, user_map, client_password, &challenge, &is_server, type) == 0)
+				if (auth_eb(new_socket_fd, DEFAULT_COMM_TO, user_map, client_password, &challenge, &is_server, type, rs) == 0)
 				{
 					dolog(LOG_INFO, "%s/%s %d/%d", host.c_str(), type.c_str(), new_socket_fd, is_server);
 					if (clients[0] -> fd != -1 && clients[1] -> fd != -1)

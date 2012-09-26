@@ -24,8 +24,8 @@ private:
 	pthread_cond_t cond;
 
 public:
-	pool(int new_pool_size_bytes, bit_count_estimator *bce, hasher *hclass, stirrer *sclass);
-	pool(int pool_nr, FILE *fh, bit_count_estimator *bce, hasher *hclass, stirrer *sclass);
+	pool(int new_pool_size_bytes, bit_count_estimator *bce, hasher *hclass, stirrer *sclass, random_source_t rs);
+	pool(int pool_nr, FILE *fh, bit_count_estimator *bce, hasher *hclass, stirrer *sclass, random_source_t rs);
 	~pool();
 	void dump(FILE *fh);
 

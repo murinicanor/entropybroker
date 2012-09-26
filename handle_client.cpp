@@ -20,6 +20,7 @@
 #include <map>
 
 #include "error.h"
+#include "random_source.h"
 #include "log.h"
 #include "math.h"
 #include "ivec.h"
@@ -245,7 +246,7 @@ void * thread(void *data)
 	{
 		long long unsigned int auth_rnd = 1;
 		std::string password;
-		bool ok = auth_eb(p -> socket_fd, p -> config -> communication_timeout, p -> pu, password, &auth_rnd, &p -> is_server, p -> type) == 0;
+		bool ok = auth_eb(p -> socket_fd, p -> config -> communication_timeout, p -> pu, password, &auth_rnd, &p -> is_server, p -> type, p -> config -> rs) == 0;
 
 		if (!ok)
 		{
