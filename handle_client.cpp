@@ -188,6 +188,10 @@ int send_request_from_main_to_clients(client_t *p)
 			have_data = false;
 			is_full = true;
 		}
+		else if (cmd == PIPE_CMD_QUIT)
+		{
+			return -1;
+		}
 		else
 		{
 			error_exit("Unknown interprocess command %02x", cmd);
