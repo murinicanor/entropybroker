@@ -99,8 +99,6 @@ void pools::list_rlock()
 
 void pools::store_caches(unsigned int keep_n)
 {
-	pthread_check(pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL), "pthread_setcancelstate");
-
 	if (cache_list.size() >= max_n_disk_pools)
 	{
 		if (!disk_limit_reached_notified)
@@ -148,8 +146,6 @@ void pools::store_caches(unsigned int keep_n)
 
 		fclose(fh);
 	}
-
-	pthread_check(pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL), "pthread_setcancelstate");
 }
 
 bool pools::load_caches(unsigned int load_n_bits)
@@ -406,7 +402,6 @@ int pools::select_pool_to_add_to(bool timed, double max_time)
 			pool_vector.at(index) -> unlock_object();
 
 		list_runlock();
-		pthread_testcancel();
 		list_wlock();
 		// at this point (due to context switching between the unlock and the
 		// wlock), there may already be a non-empty pool: that is not a problem
@@ -426,7 +421,6 @@ int pools::select_pool_to_add_to(bool timed, double max_time)
 		}
 
 		list_wunlock();
-		pthread_testcancel();
 		list_rlock();
 
 		double left = max(MIN_SLEEP, max_time - (get_ts() - start_ts));
@@ -483,6 +477,9 @@ int pools::get_bit_sum_unlocked(double max_duration)
 
 int pools::get_bits_from_pools(int n_bits_requested, unsigned char **buffer, bool allow_prng, bool ignore_rngtest_fips140, fips140 *pfips, bool ignore_rngtest_scc, scc *pscc, double max_duration)
 {
+	pthread_testcancel();
+	pthread_check(pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL), "pthread_setcancelstate");
+
 	double start_ts = get_ts();
 
 	int n_to_do_bytes = (n_bits_requested + 7) / 8;
@@ -581,11 +578,17 @@ int pools::get_bits_from_pools(int n_bits_requested, unsigned char **buffer, boo
 
 	list_runlock();
 
+	pthread_check(pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL), "pthread_setcancelstate");
+	pthread_testcancel();
+
 	return n_bits_retrieved;
 }
 
 int pools::add_bits_to_pools(unsigned char *data, int n_bytes, bool ignore_rngtest_fips140, fips140 *pfips, bool ignore_rngtest_scc, scc *pscc, double max_duration)
 {
+	pthread_testcancel();
+	pthread_check(pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL), "pthread_setcancelstate");
+
 	double start_ts = get_ts();
 
 	int n_bits_added = 0;
@@ -642,20 +645,32 @@ int pools::add_bits_to_pools(unsigned char *data, int n_bytes, bool ignore_rngte
 
 	list_runlock();
 
+	pthread_check(pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL), "pthread_setcancelstate");
+	pthread_testcancel();
+
 	return n_bits_added;
 }
 
 int pools::get_bit_sum(double max_duration)
 {
+	pthread_testcancel();
+	pthread_check(pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL), "pthread_setcancelstate");
+
 	list_rlock();
 	int bit_count = get_bit_sum_unlocked(max_duration);
 	list_runlock();
+
+	pthread_check(pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL), "pthread_setcancelstate");
+	pthread_testcancel();
 
 	return bit_count;
 }
 
 int pools::add_event(long double event, unsigned char *event_data, int n_event_data, double max_time)
 {
+	pthread_testcancel();
+	pthread_check(pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL), "pthread_setcancelstate");
+
 	int index = select_pool_to_add_to(true, max_time); // returns a locked object
 	// the list is now read-locked and the object as well
 
@@ -669,11 +684,17 @@ int pools::add_event(long double event, unsigned char *event_data, int n_event_d
 
 	list_runlock();
 
+	pthread_check(pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL), "pthread_setcancelstate");
+	pthread_testcancel();
+
 	return rc;
 }
 
 bool pools::all_pools_full(double max_duration)
 {
+	pthread_testcancel();
+	pthread_check(pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL), "pthread_setcancelstate");
+
 	double start_ts = get_ts();
 
 	bool rc = true;
@@ -707,6 +728,8 @@ bool pools::all_pools_full(double max_duration)
 	}
 
 	list_runlock();
+
+	pthread_check(pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL), "pthread_setcancelstate");
 	pthread_testcancel();
 
 	return rc;
