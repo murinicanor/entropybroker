@@ -144,7 +144,7 @@ void main_loop(std::vector<std::string> * hosts, char *bytes_file, char show_bps
 	int bytes_out = 0;
 
 	protocol *p = NULL;
-	if (hosts -> size() > 0)
+	if (!hosts -> empty())
 		p = new protocol(hosts, username, password, true, server_type, DEFAULT_COMM_TO);
 
 	lock_mem(bytes, sizeof bytes);

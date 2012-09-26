@@ -172,60 +172,55 @@ int protocol::reconnect_server_socket()
 	int count = 1;
 
 	unsigned int host_try_count = 0;
-	for(;;)
+	// connect to server
+	if (socket_fd == -1)
 	{
-		// connect to server
-		if (socket_fd == -1)
+		connect_msg = 1;
+
+		for(;;)
 		{
-			connect_msg = 1;
+			std::string host;
+			int port = DEFAULT_BROKER_PORT;
+			split_resource_location(hosts -> at(host_index), host, port);
 
-			for(;;)
+			dolog(LOG_INFO, "Connecting to %s:%d", host.c_str(), port);
+
+			socket_fd = connect_to(host.c_str(), port);
+			if (socket_fd != -1)
 			{
-				std::string host;
-				int port = DEFAULT_BROKER_PORT;
-				split_resource_location(hosts -> at(host_index), host, port);
+				if (auth_client_server(socket_fd, 10, username, password, &challenge, is_server, type) == 0)
+					break;
 
-				dolog(LOG_INFO, "Connecting to %s:%d", host.c_str(), port);
-
-				socket_fd = connect_to(host.c_str(), port);
-				if (socket_fd != -1)
-				{
-					if (auth_client_server(socket_fd, 10, username, password, &challenge, is_server, type) == 0)
-						break;
-
-					close(socket_fd);
-					socket_fd = -1;
-				}
-
-				host_index++;
-				if (host_index == hosts -> size())
-				{
-					host_index = 0;
-
-					error_sleep(count);
-				}
-				else
-				{
-					dolog(LOG_WARNING, "Failed to connect to %s:%d (%s), continuing with next host", host.c_str(), port, strerror(errno));
-				}
-
-				host_try_count++;
-				if (host_try_count == hosts -> size())
-					dolog(LOG_WARNING, "All hosts are not reachable, still trying");
-
-				if (count < 16)
-					count++;
+				close(socket_fd);
+				socket_fd = -1;
 			}
 
-			set_password(password);
-			init_ivec(password, challenge, 0);
+			host_index++;
+			if (host_index == hosts -> size())
+			{
+				host_index = 0;
+
+				error_sleep(count);
+			}
+			else
+			{
+				dolog(LOG_WARNING, "Failed to connect to %s:%d (%s), continuing with next host", host.c_str(), port, strerror(errno));
+			}
+
+			host_try_count++;
+			if (host_try_count == hosts -> size())
+				dolog(LOG_WARNING, "All hosts are not reachable, still trying");
+
+			if (count < 16)
+				count++;
 		}
 
-		if (connect_msg)
-			dolog(LOG_INFO, "Connected");
-
-		break;
+		set_password(password);
+		init_ivec(password, challenge, 0);
 	}
+
+	if (connect_msg)
+		dolog(LOG_INFO, "Connected");
 
 	return 0;
 }

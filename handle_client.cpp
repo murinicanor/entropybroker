@@ -75,19 +75,6 @@ void forget_client_index(std::vector<client_t *> *clients, int nr, bool force)
 	clients -> erase(clients -> begin() + nr);
 }
 
-void forget_client_socket_fd(std::vector<client_t *> *clients, int socket_fd, bool force)
-{
-	for(unsigned int index=0; index<clients -> size(); index++)
-	{
-		if (clients -> at(index) -> socket_fd == socket_fd)
-		{
-			forget_client_index(clients, index, force);
-
-			break;
-		}
-	}
-}
-
 void forget_client_thread_id(std::vector<client_t *> *clients, pthread_t *tid, bool force)
 {
 	for(unsigned int index=0; index<clients -> size(); index++)
@@ -509,7 +496,7 @@ void terminate_threads(std::vector<client_t *> *clients)
 		close(p -> to_main[1]);
 	}
 
-	while(clients -> size() > 0)
+	while(!clients -> empty())
 	{
 		client_t *p = clients -> at(0);
 
