@@ -13,6 +13,7 @@
 # files in the program, then also delete it here.
 # SVN: $Id$
 
+include version
 VERSION=2.0
 
 PREFIX=/usr/local/entropybroker
