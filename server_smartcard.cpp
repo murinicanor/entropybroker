@@ -18,6 +18,7 @@ const char *server_type = "server_smartcard v" VERSION;
 const char *pid_file = PID_DIR "/server_smartcard.pid";
 
 #include "error.h"
+#include "random_source.h"
 #include "utils.h"
 #include "log.h"
 #include "protocol.h"

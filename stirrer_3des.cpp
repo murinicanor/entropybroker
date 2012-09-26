@@ -11,7 +11,7 @@
 #include "stirrer.h"
 #include "stirrer_3des.h"
 
-stirrer_3des::stirrer_3des(random_source_t rs_in) : rs(rs_in)
+stirrer_3des::stirrer_3des(random_source_t rs_in) : stirrer(rs_in)
 {
 }
 

@@ -58,5 +58,5 @@ void ivec::seed(unsigned char *in, int n)
 
 bool ivec::needs_seeding() const
 {
-	return check_random(rs);
+	return check_random_empty(rs);
 }

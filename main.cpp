@@ -185,7 +185,7 @@ int main(int argc, char *argv[])
 	eb_output_scc -> set_threshold(config.scc_threshold);
 
 	if (config.prng_seed_file)
-		retrieve_random_state(config.prng_seed_file);
+		retrieve_random_state(config.rs, config.prng_seed_file);
 
 	bit_count_estimator *bce = new bit_count_estimator(config.bitcount_estimator);
 
@@ -241,7 +241,7 @@ int main(int argc, char *argv[])
 	delete s;
 
 	if (config.prng_seed_file)
-		dump_random_state(config.prng_seed_file);
+		dump_random_state(config.rs, config.prng_seed_file);
 
 	unlink(pid_file);
 

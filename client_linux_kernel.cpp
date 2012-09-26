@@ -16,6 +16,7 @@
 #include <openssl/blowfish.h>
 
 #include "error.h"
+#include "random_source.h"
 #include "kernel_prng_io.h"
 #include "utils.h"
 #include "log.h"

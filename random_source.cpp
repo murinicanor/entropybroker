@@ -1,6 +1,10 @@
+#include <unistd.h>
+#include <string>
 #include <openssl/rand.h>
 
 #include "error.h"
+#include "log.h"
+#include "utils.h"
 #include "kernel_prng_io.h"
 #include "kernel_prng_rw.h"
 #include "random_source.h"
@@ -44,7 +48,7 @@ void seed_random(random_source_t rs, unsigned char *in, size_t n, double byte_co
 		RAND_add(in, n, byte_count);
 }
 
-void dump_random_state(char *file)
+void dump_random_state(random_source_t rs, char *file)
 {
 	if (rs == RS_OPENSSL)
 	{
@@ -57,11 +61,11 @@ void dump_random_state(char *file)
 	}
 }
 
-void retrieve_random_state(char *file)
+void retrieve_random_state(random_source_t rs, char *file)
 {
 	if (file_exist(file))
 	{
-		if (irs == RS_OPENSSL)
+		if (rs == RS_OPENSSL)
 			RAND_load_file(file, -1);
 
 		unlink(file);

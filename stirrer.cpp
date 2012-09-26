@@ -5,6 +5,7 @@
 #include <openssl/blowfish.h>
 
 #include "error.h"
+#include "random_source.h"
 #include "utils.h"
 #include "stirrer.h"
 

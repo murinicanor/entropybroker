@@ -17,6 +17,7 @@ const char *server_type = "server_cycle_count v" VERSION;
 const char *pid_file = PID_DIR "/server_cycle_count.pid";
 
 #include "error.h"
+#include "random_source.h"
 #include "utils.h"
 #include "log.h"
 #include "protocol.h"

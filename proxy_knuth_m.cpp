@@ -25,6 +25,7 @@
 #include <openssl/sha.h>
 
 #include "error.h"
+#include "random_source.h"
 #include "utils.h"
 #include "log.h"
 #include "math.h"

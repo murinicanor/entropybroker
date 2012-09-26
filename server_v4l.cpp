@@ -21,6 +21,7 @@
 #include <openssl/blowfish.h>
 
 #include "error.h"
+#include "random_source.h"
 #include "log.h"
 #include "protocol.h"
 #include "server_utils.h"

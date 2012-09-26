@@ -10,7 +10,7 @@
 #include "stirrer.h"
 #include "stirrer_camellia.h"
 
-stirrer_camellia::stirrer_camellia(random_source_t rs_in) : rs(rs_in)
+stirrer_camellia::stirrer_camellia(random_source_t rs_in) : stirrer(rs_in)
 {
 }
 

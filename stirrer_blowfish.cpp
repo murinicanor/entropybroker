@@ -11,7 +11,7 @@
 #include "stirrer.h"
 #include "stirrer_blowfish.h"
 
-stirrer_blowfish::stirrer_blowfish(random_source_t rs_in) : rs(rs_in)
+stirrer_blowfish::stirrer_blowfish(random_source_t rs_in) : stirrer(rs_in)
 {
 }
 

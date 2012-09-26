@@ -22,6 +22,7 @@
 #include <sys/mman.h>
 #include <sys/resource.h>
 #include <fcntl.h>
+#include <sys/stat.h>
 
 #include "error.h"
 #include "log.h"
@@ -261,10 +262,10 @@ int start_listen(const char *adapter, int portnr, int listen_queue_size)
 	}
 
         if (bind(fd, (struct sockaddr *)&server_addr, server_addr_len) == -1)
-                error_exit("bind() failed");
+                error_exit("bind([%s]:%d) failed", adapter, portnr);
 
         if (listen(fd, listen_queue_size) == -1)
-                error_exit("listen() failed");
+                error_exit("listen(%d) failed", listen_queue_size);
 
 	return fd;
 }
@@ -618,4 +619,19 @@ void my_yield()
 	// sched_yield
 
 	pthread_check(pthread_yield(), "pthread_yield");
+}
+
+bool file_exist(const char *file)
+{
+	struct stat st;
+
+	if (stat(file, &st) == -1)
+	{
+		if (errno == ENOENT)
+			return false;
+
+		error_exit("stat on %s failed", file);
+	}
+
+	return true;
 }

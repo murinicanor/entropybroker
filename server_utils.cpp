@@ -9,6 +9,7 @@
 #include <string.h>
 
 #include "error.h"
+#include "random_source.h"
 #include "utils.h"
 #include "log.h"
 #include "protocol.h"

@@ -192,7 +192,7 @@ void load_config(const char *config, config_t *pconfig)
 				strcpy(p_file, par);
 			else
 				sprintf(p_file, VAR_DIR "/%s", par);
-			dolog(LOG_INFO, "Load OpenSSL PRNG seed from %s", p_file);
+			dolog(LOG_INFO, "Will load PRNG seed from %s", p_file);
 			pconfig -> prng_seed_file = p_file;
 		}
 		else if (strcmp(cmd, "communication_timeout") == 0)

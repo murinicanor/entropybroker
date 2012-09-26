@@ -1,7 +1,7 @@
 // SVN: $Id$
 class stirrer
 {
-private:
+protected:
 	random_source_t rs;
 
 public:

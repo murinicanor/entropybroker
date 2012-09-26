@@ -10,7 +10,7 @@
 #include "stirrer.h"
 #include "stirrer_aes.h"
 
-stirrer_aes::stirrer_aes(random_source_t rs_in) : rs(rs_in)
+stirrer_aes::stirrer_aes(random_source_t rs_in) : stirrer(rs_in)
 {
 }
 
