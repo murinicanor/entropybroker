@@ -254,8 +254,6 @@ void pools::merge_pools()
 
 		for(int i2=(int(pool_vector.size()) - 1); i2 >= (i1 + 1); i2--)
 		{
-			pthread_testcancel();
-
 			if (pool_vector.at(i2) -> timed_lock_object(1.0))
 				continue;
 
@@ -372,8 +370,6 @@ int pools::find_non_full_pool(bool timed, double max_duration)
 		double working = get_ts() - start_ts;
 		double cur_max_duration = max(MIN_SLEEP, (max_duration - working) / double(n - index));
 
-		pthread_testcancel();
-
 		pthread_cond_t *cond = NULL;
 		if (timed)
 			cond = pool_vector.at(index) -> timed_lock_object(cur_max_duration);
@@ -471,8 +467,6 @@ int pools::get_bit_sum_unlocked(double max_duration)
 	unsigned int n = pool_vector.size();
 	for(unsigned int index=0; index<n; index++)
 	{
-		pthread_testcancel();
-
 		double time_left = calc_time_left(start_ts, index, n, max_duration);
 
 		if (!pool_vector.at(index) -> timed_lock_object(time_left))
@@ -528,6 +522,7 @@ int pools::get_bits_from_pools(int n_bits_requested, unsigned char **buffer, boo
 		have_bits = load_caches(bits_needed_to_load);
 
 		list_wunlock();
+		pthread_testcancel();
 	}
 	// at this point the list is read locked
 
@@ -541,8 +536,6 @@ int pools::get_bits_from_pools(int n_bits_requested, unsigned char **buffer, boo
 		for(unsigned int index=0; index<n; index++)
 		{
 			double time_left = calc_time_left(start_ts, index, n, max_duration);
-
-			pthread_testcancel();
 
 			pthread_cond_t *cond = NULL;
 			if (round > 0)
@@ -686,8 +679,6 @@ bool pools::all_pools_full(double max_duration)
 			// FIXME move this calculation to a method
 			double time_left = max(MIN_SLEEP, (max_duration - (get_ts() - start_ts)) / double(n - loop));
 
-			pthread_testcancel();
-
 			if (!pool_vector.at(loop) -> timed_lock_object(time_left))
 			{
 				if (!pool_vector.at(loop) -> is_almost_full())
@@ -704,6 +695,7 @@ bool pools::all_pools_full(double max_duration)
 	}
 
 	list_runlock();
+	pthread_testcancel();
 
 	return rc;
 }
