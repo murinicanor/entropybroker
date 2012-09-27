@@ -104,8 +104,10 @@ void calc_ivec(char *password, long long unsigned int rnd, long long unsigned in
 	int index_dummy = 0, index_rnd = 0, rnd_len = sizeof rnd;
 	while(index_dummy < 8)
 	{
-		dummy[index_dummy++] ^= prnd[index_rnd++];
-		dummy[index_dummy++] ^= pcnt[index_rnd++];
+		dummy[index_dummy] ^= prnd[index_rnd];
+		dummy[index_dummy] ^= pcnt[index_rnd];
+		index_dummy++;
+		index_rnd++;
 
 		if (index_rnd == rnd_len)
 			index_rnd = 0;
