@@ -67,7 +67,7 @@ void make_msg(unsigned char *where_to, unsigned int code, unsigned int value)
 	if (code > 9999)
 		error_exit("invalid code: %d", code);
 
-	snprintf(reinterpret_cast<char *>(where_to), 9, "%04d", code);
+	snprintf(reinterpret_cast<char *>(where_to), 5, "%04d", code);
 
 	uint_to_uchar(value, &where_to[4]);
 }

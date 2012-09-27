@@ -658,7 +658,7 @@ bool file_exist(const char *file)
 
 void split_string(char *in, char split, char ***out, int *n_out)
 {
-	char *copy_in = strdup(in);
+	char *copy_in = strdup(in), *dummy = copy_in;
 
 	for(;;)
 	{
@@ -681,7 +681,7 @@ void split_string(char *in, char split, char ***out, int *n_out)
 		copy_in = next + 1;
 	}
 
-	free(copy_in);
+	free(dummy);
 }
 
 unsigned int uchar_to_uint(unsigned char *in)
