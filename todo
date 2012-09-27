@@ -11,7 +11,6 @@ http://en.wikipedia.org/wiki/Twofish <--
 
 - filter.cpp:
   - whitening 0/0 en 1/1 -> drop, 01=0bit, 10=1bit
-  - 2 streams mergen (algorithm m)
   - what else? xoren met prng van openssl?
 
 - multiple hosts
