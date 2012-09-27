@@ -123,11 +123,12 @@ protocol::protocol(std::vector<std::string> *hosts_in, std::string username_in, 
         socket_fd = -1;
         sleep_9003 = 300;
 
-        ivec_counter = 0;
-	challenge = 13;
-        ivec_offset = 0;
+	pingnr = 0;
 
+        ivec_counter = 0;
+        ivec_offset = 0;
 	memset(ivec, 0x00, sizeof ivec);
+	challenge = 13;
 }
 
 protocol::~protocol()
@@ -365,7 +366,7 @@ int protocol::message_transmit_entropy_data(unsigned char *bytes_in, int n_bytes
 			unlock_mem(temp_buffer, with_hash_n);
 			free(temp_buffer);
 
-			if (WRITE_TO(socket_fd, reinterpret_cast<char *>(bytes_out), with_hash_n, comm_time_out) != with_hash_n)
+			if (WRITE_TO(socket_fd, bytes_out, with_hash_n, comm_time_out) != with_hash_n)
 			{
 				dolog(LOG_INFO, "error transmitting data");
 				free(bytes_out);
@@ -500,11 +501,11 @@ int protocol::request_bytes(char *where_to, int n_bits, bool fail_on_no_bits)
                 else if (memcmp(reply, "0004", 4) == 0)       /* ping request */
                 {
 			error_count = 0;
-                        static int pingnr = 0;
-                        char xmit_buffer[8 + 1];
 
-                        snprintf(xmit_buffer, sizeof xmit_buffer, "0005%04d", pingnr++);
                         dolog(LOG_DEBUG, "PING");
+
+                        char xmit_buffer[8 + 1];
+			make_msg(xmit_buffer, 5, pingnr++);
 
                         if (WRITE_TO(socket_fd, xmit_buffer, 8, comm_time_out) != 8)
                         {
@@ -549,7 +550,7 @@ int protocol::request_bytes(char *where_to, int n_bits, bool fail_on_no_bits)
 			if (!buffer_in)
 				error_exit("out of memory allocating %d bytes", will_get_n_bytes);
 
-			if (READ_TO(socket_fd, reinterpret_cast<char *>(buffer_in), xmit_bytes, comm_time_out) != xmit_bytes)
+			if (READ_TO(socket_fd, buffer_in, xmit_bytes, comm_time_out) != xmit_bytes)
 			{
 				dolog(LOG_INFO, "Network read error (data)");
 

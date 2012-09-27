@@ -179,7 +179,7 @@ int put_data(proxy_client_t *client, lookup_t *lt)
 	if (!buffer_in)
 		error_exit("%s error allocating %d bytes of memory", client -> host.c_str(), in_len);
 
-	if (READ_TO(client -> fd, reinterpret_cast<char *>(buffer_in), in_len, DEFAULT_COMM_TO) != in_len)
+	if (READ_TO(client -> fd, buffer_in, in_len, DEFAULT_COMM_TO) != in_len)
 	{
 		dolog(LOG_INFO, "put|%s short read while retrieving entropy data", client -> host.c_str());
 
@@ -587,7 +587,7 @@ int main(int argc, char *argv[])
 					pcp -> ivec_offset = 0;
 					calc_ivec(client_password.c_str(), pcp -> challenge, pcp -> ivec_counter, pcp -> ivec);
 
-					BF_set_key(&pcp -> key, client_password.length(), reinterpret_cast<unsigned char *>(client_password.c_str()));
+					BF_set_key(&pcp -> key, client_password.length(), reinterpret_cast<const unsigned char *>(client_password.c_str()));
 				}
 				else
 				{

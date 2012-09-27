@@ -615,7 +615,7 @@ int main(int argc, char *argv[])
 					pcp -> ivec_offset = 0;
 					calc_ivec(client_password.c_str(), pcp -> challenge, pcp -> ivec_counter, pcp -> ivec);
 
-					BF_set_key(&pcp -> key, client_password.length(), reinterpret_cast<unsigned char *>(client_password.c_str()));
+					BF_set_key(&pcp -> key, client_password.length(), reinterpret_cast<const unsigned char *>(client_password.c_str()));
 				}
 				else
 				{

@@ -228,8 +228,8 @@ int main(int argc, char *argv[])
 		fiddle(&fs);
 		unsigned long long int d = GetCC();
 
-		int A = (int)(b - a);
-		int B = (int)(d - c);
+		int A = int(b - a);
+		int B = int(d - c);
 
 		byte <<= 1;
 

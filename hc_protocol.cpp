@@ -208,7 +208,7 @@ int do_client_get(client_t *client, bool *no_bits)
 	free(ent_buffer_in);
 
 	int rc = 0;
-	if (WRITE_TO(client -> socket_fd, const_cast<const char *>(reinterpret_cast<char *>(output_buffer)), transmit_size, client -> config -> communication_timeout) != transmit_size)
+	if (WRITE_TO(client -> socket_fd, output_buffer, transmit_size, client -> config -> communication_timeout) != transmit_size)
 	{
 		dolog(LOG_INFO, "%s error while sending data to client", client -> host.c_str());
 
@@ -290,7 +290,7 @@ int do_client_put(client_t *client, bool *new_bits, bool *is_full)
 	if (!buffer_in)
 		error_exit("%s error allocating %d bytes of memory", client -> host.c_str(), in_len);
 
-	if (READ_TO(client -> socket_fd, reinterpret_cast<char *>(buffer_in), in_len, client -> config -> communication_timeout) != in_len)
+	if (READ_TO(client -> socket_fd, buffer_in, in_len, client -> config -> communication_timeout) != in_len)
 	{
 		dolog(LOG_INFO, "put|%s short read while retrieving entropy data", client -> host.c_str());
 

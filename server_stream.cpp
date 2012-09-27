@@ -337,7 +337,7 @@ int main(int argc, char *argv[])
 	set_showbps_start_ts();
 	for(;;)
 	{
-		if (READ(read_fd, reinterpret_cast<char *>(bytes), 1249) != 1249)
+		if (READ(read_fd, bytes, 1249) != 1249)
 			error_exit("error reading from input");
 
 		if (show_bps)

@@ -44,7 +44,7 @@ void egd_get__failure(int fd)
 {
 	unsigned char none = 0;
 
-	if (WRITE(fd, reinterpret_cast<char *>(&none), 1) != 1)
+	if (WRITE(fd, &none, 1) != 1)
 		dolog(LOG_INFO, "short write on egd client (# bytes)");
 }
 
@@ -52,7 +52,7 @@ void egd_get(int fd, protocol *p, bool blocking)
 {
 	unsigned char n_bytes_to_get;
 
-	if (READ(fd, reinterpret_cast<char *>(&n_bytes_to_get), 1) != 1)
+	if (READ(fd, &n_bytes_to_get, 1) != 1)
 	{
 		dolog(LOG_INFO, "short read on EGD client");
 		return;
@@ -73,9 +73,9 @@ void egd_get(int fd, protocol *p, bool blocking)
 	else
 	{
 		unsigned char msg = min(255, n_bytes);
-		if (!blocking && WRITE(fd, reinterpret_cast<char *>(&msg), 1) != 1)
+		if (!blocking && WRITE(fd, &msg, 1) != 1)
 			dolog(LOG_INFO, "short write on egd client (# bytes)");
-		else if (WRITE(fd, reinterpret_cast<char *>(buffer), msg) != msg)
+		else if (WRITE(fd, buffer, msg) != msg)
 			dolog(LOG_INFO, "short write on egd client (data)");
 
 		memset(buffer, 0x00, n_bytes);
@@ -90,14 +90,14 @@ void egd_entropy_count(int fd)
 	unsigned int count = 9999;
 	unsigned char reply[] = { (count >> 24) & 255, (count >> 16) & 255, (count >> 8) & 255, count & 255 };
 
-	if (WRITE(fd, reinterpret_cast<char *>(reply), 4) != 4)
+	if (WRITE(fd, reply, 4) != 4)
 		dolog(LOG_INFO, "short write on egd client");
 }
 
 void egd_put(int fd, protocol *p)
 {
 	unsigned char cmd[3];
-	if (READ(fd, reinterpret_cast<char *>(cmd), 3) != 3)
+	if (READ(fd, cmd, 3) != 3)
 	{
 		dolog(LOG_INFO, "EGD_put short read (1)");
 		return;
@@ -131,7 +131,7 @@ void handle_client(int fd, protocol *p)
 	{
 		unsigned char egd_msg;
 
-		if (READ(fd, reinterpret_cast<char *>(&egd_msg), 1) != 1)
+		if (READ(fd, &egd_msg, 1) != 1)
 		{
 			dolog(LOG_INFO, "EGD client disconnected");
 

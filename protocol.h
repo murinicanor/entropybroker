@@ -29,6 +29,7 @@ private:
 	std::string type;
 	double comm_time_out;
 	//
+	int pingnr;
 	int socket_fd;
 	int sleep_9003;
 	unsigned char ivec[8];

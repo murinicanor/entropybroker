@@ -80,6 +80,11 @@ int READ(int fd, char *whereto, size_t len)
 	return cnt;
 }
 
+int READ(int fd, unsigned char *whereto, size_t len)
+{
+	return READ(fd, reinterpret_cast<char *>(whereto), len);
+}
+
 int READ_TO(int fd, char *whereto, size_t len, double to)
 {
 	long double end_ts = get_ts_ns() + to;
@@ -140,6 +145,11 @@ int READ_TO(int fd, char *whereto, size_t len, double to)
 	return cnt;
 }
 
+int READ_TO(int fd, unsigned char *whereto, size_t len, double to)
+{
+	return READ_TO(fd, reinterpret_cast<char *>(whereto), len, to);
+}
+
 int WRITE(int fd, const char *whereto, size_t len)
 {
 	ssize_t cnt=0;
@@ -168,6 +178,11 @@ int WRITE(int fd, const char *whereto, size_t len)
 	}
 
 	return cnt;
+}
+
+int WRITE(int fd, const unsigned char *whereto, size_t len)
+{
+	return WRITE(fd, reinterpret_cast<const char *>(whereto), len);
 }
 
 int WRITE_TO(int fd, const char *whereto, size_t len, double to)
@@ -229,6 +244,11 @@ int WRITE_TO(int fd, const char *whereto, size_t len, double to)
 	}
 
 	return cnt;
+}
+
+int WRITE_TO(int fd, const unsigned char *whereto, size_t len, double to)
+{
+	return WRITE_TO(fd, reinterpret_cast<const char *>(whereto), len, to);
 }
 
 int start_listen(const char *adapter, int portnr, int listen_queue_size)
@@ -362,7 +382,7 @@ int myrand(int max)
 {
 	check_rand_state();
 
-	return (int)(drand48() * double(max));
+	return int(drand48() * double(max));
 }
 
 void write_pid(const char *file)
