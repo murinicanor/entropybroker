@@ -14,7 +14,6 @@
 # SVN: $Revision$
 
 include version
-VERSION=2.0
 
 PREFIX=/usr/local/entropybroker
 BIN=$(PREFIX)/bin
