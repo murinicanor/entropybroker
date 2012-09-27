@@ -24,8 +24,30 @@ int auth_eb_user(int fd, int to, users *user_map, std::string & password, long l
 {
 	const char *ts = is_proxy_auth ? "Proxy-auth" : "Connection";
 
-	long long unsigned int rnd = 9;
+	/* Inform the client about the hash-functions and ciphers that are used */
+	std::string hash_handshake = "sha512";
+	std::string mac_data = "sha256";
+	std::string cipher_data = "blowfish";
 
+	if (send_length_data(fd, hash_handshake.c_str(), hash_handshake.size(), to) == -1)
+	{
+		dolog(LOG_INFO, "%s failure sending handshake hash (fd: %d)", ts, fd);
+		return -1;
+	}
+	if (send_length_data(fd, mac_data.c_str(), mac_data.size(), to) == -1)
+	{
+		dolog(LOG_INFO, "%s failure sending data MAC (fd: %d)", ts, fd);
+		return -1;
+	}
+	if (send_length_data(fd, cipher_data.c_str(), cipher_data.size(), to) == -1)
+	{
+		dolog(LOG_INFO, "%s failure sending data cipher (fd: %d)", ts, fd);
+		return -1;
+	}
+	/////
+
+	/* send random with which will be concatenated to the password and then hashed */
+	long long unsigned int rnd = 9;
 	get_random(rs, reinterpret_cast<unsigned char *>(&rnd), sizeof rnd);
 
 	char rnd_str[128];
@@ -38,15 +60,17 @@ int auth_eb_user(int fd, int to, users *user_map, std::string & password, long l
 
 	if (send_length_data(fd, rnd_str, rnd_str_size, to) == -1)
 	{
-		dolog(LOG_INFO, "%s failure sending random via %d", ts, fd);
+		dolog(LOG_INFO, "%s failure sending random (fd: %d)", ts, fd);
 		return -1;
 	}
+	/////
 
+	/* receive username */
 	char *username = NULL;
 	int username_length = 0;
 	if (recv_length_data(fd, &username, &username_length, to) == -1)
 	{
-		dolog(LOG_INFO, "%s receiving username via %d", ts, fd);
+		dolog(LOG_INFO, "%s receiving username (fd: %d)", ts, fd);
 		return -1;
 	}
 
@@ -67,7 +91,9 @@ int auth_eb_user(int fd, int to, users *user_map, std::string & password, long l
 		user_known = false;
 	}
 	free(username);
+	/////
 
+	/* receive hashed password */
 	char hash_cmp_str[256], hash_cmp[SHA512_DIGEST_LENGTH];
 	snprintf(hash_cmp_str, sizeof hash_cmp_str, "%s %s", rnd_str, password.c_str());
 
@@ -76,36 +102,41 @@ int auth_eb_user(int fd, int to, users *user_map, std::string & password, long l
 	char hash_in[SHA512_DIGEST_LENGTH];
 	if (READ_TO(fd, hash_in, SHA512_DIGEST_LENGTH, to) != SHA512_DIGEST_LENGTH)
 	{
-		dolog(LOG_INFO, "%s for fd %d closed (3)", ts, fd);
+		dolog(LOG_INFO, "%s receiving hash failed (fd: %d)", ts, fd);
 		return -1;
 	}
 
 	if (!user_known || memcmp(hash_cmp, hash_in, SHA512_DIGEST_LENGTH) != 0)
 	{
-		dolog(LOG_INFO, "%s for fd %d: authentication failed!", ts, fd);
+		dolog(LOG_INFO, "%s authentication failed! (fd: %d)", ts, fd);
 		return -1;
 	}
+	/////
 
+	/* receive a byte which indicates if the other end is a client or a server */
         char is_server = 0;
         if (READ_TO(fd, &is_server, 1, to) != 1)
         {
-                dolog(LOG_INFO, "%s for fd %d: failed retrieving server/client", ts, fd);
+                dolog(LOG_INFO, "%s failed retrieving server/client (fd: %d)", ts, fd);
                 return -1;
         }
 	*is_server_in = is_server ? true : false;
+	/////
 
+	/* receive a string which describes the other send */
 	char *type_in = NULL;
 	int type_in_size = 0;
 
 	if (recv_length_data(fd, &type_in, &type_in_size, to) == -1)
 	{
-                dolog(LOG_INFO, "%s for fd %d: failed retrieving type", ts, fd);
+                dolog(LOG_INFO, "%s failed retrieving type (fd: %d)", ts, fd);
 		return -1;
 	}
 	type = std::string(type_in);
 	free(type_in);
+	/////
 
-	dolog(LOG_INFO, "%s for fd %d: authentication ok", ts, fd);
+	dolog(LOG_INFO, "%s authentication ok (fd: %d)", ts, fd);
 
 	return 0;
 }
@@ -152,12 +183,40 @@ bool get_auth_from_file(char *filename, std::string & username, std::string & pa
 
 int auth_client_server_user(int fd, int to, std::string & username, std::string & password, long long unsigned int *challenge, bool is_server, std::string type)
 {
+	char *hash_handshake = NULL;
+	int hash_handshake_size = 0;
+	if (recv_length_data(fd, &hash_handshake, &hash_handshake_size, to) == -1)
+	{
+		dolog(LOG_INFO, "Connection for fd %d closed (t1)", fd);
+		return -1;
+	}
+	if (strcmp(hash_handshake, "sha512") != 0)
+		error_exit("Server uses unsupported (%s) hash function for password hash (sha512 expected)");
+	char *mac_data = NULL;
+	int mac_data_size = 0;
+	if (recv_length_data(fd, &mac_data, &mac_data_size, to) == -1)
+	{
+		dolog(LOG_INFO, "Connection for fd %d closed (t2)", fd);
+		return -1;
+	}
+	if (strcmp(mac_data, "sha256") != 0)
+		error_exit("Server uses unsupported (%s) hash function for data mac (sha256 expected)");
+	char *cipher_data = NULL;
+	int cipher_data_size = 0;
+	if (recv_length_data(fd, &cipher_data, &cipher_data_size, to) == -1)
+	{
+		dolog(LOG_INFO, "Connection for fd %d closed (t3)", fd);
+		return -1;
+	}
+	if (strcmp(cipher_data, "blowfish") != 0)
+		error_exit("Server uses unsupported (%s) cipher function for data encryption (blowfish expected)");
+	printf("%s / %s / %s\n", hash_handshake, mac_data, cipher_data);
+
 	char *rnd_str = NULL;
 	int rnd_str_size = 0;
-
 	if (recv_length_data(fd, &rnd_str, &rnd_str_size, to) == -1)
 	{
-		dolog(LOG_INFO, "Connection for fd %d closed (1)", fd);
+		dolog(LOG_INFO, "Connection for fd %d closed (a1)", fd);
 		return -1;
 	}
 
@@ -170,7 +229,7 @@ int auth_client_server_user(int fd, int to, std::string & username, std::string 
 	int username_length = username.length();
 	if (send_length_data(fd, const_cast<char *>(username.c_str()), username_length, to) == -1)
 	{
-		dolog(LOG_INFO, "Connection for fd %d closed (u1)", fd);
+		dolog(LOG_INFO, "Connection for fd %d closed (a2)", fd);
 		free(rnd_str);
 		return -1;
 	}
@@ -183,21 +242,21 @@ int auth_client_server_user(int fd, int to, std::string & username, std::string 
 
 	if (WRITE_TO(fd, hash_cmp, SHA512_DIGEST_LENGTH, to) == -1)
 	{
-		dolog(LOG_INFO, "Connection for fd %d closed (3)", fd);
+		dolog(LOG_INFO, "Connection for fd %d closed (a3)", fd);
 		return -1;
 	}
 
 	char is_server_byte = is_server ? 1 : 0;
 	if (WRITE_TO(fd, &is_server_byte, 1, to) != 1)
 	{
-		dolog(LOG_INFO, "Connection for fd %d closed (4)", fd);
+		dolog(LOG_INFO, "Connection for fd %d closed (m1)", fd);
 		return -1;
 	}
 
 	int type_length = type.length();
 	if (send_length_data(fd, const_cast<char *>(type.c_str()), type_length, to) == -1)
 	{
-		dolog(LOG_INFO, "Connection for fd %d closed (5)", fd);
+		dolog(LOG_INFO, "Connection for fd %d closed (m2)", fd);
 		free(rnd_str);
 		return -1;
 	}

@@ -1,20 +1,29 @@
+BC: broker to client/server
+CB: client/server to broker
+
 session setup:
-	- 4 bytes ascii value protocol version
-	- 4 bytes length of string:
+	- BC 4 bytes ascii value protocol version
+	- BC 4 bytes length of string:
+		- string containing hash function for handshake (password hash)
+	- BC 4 bytes length of string:
+		- string containing hash function for data hash
+	- BC 4 bytes length of string:
+		- string containing cipher function for data encryption
+	- BC 4 bytes length of string:
 		- string containing a random used for authentication *1
 		- this random is the ascii representation of a 64 bit value
 		- this random is also used to initialize the IV for the blowfish cipher
-	- 4 bytes length of string:
-		- string containing username
+	- CB 4 bytes length of string:
+		- the client sends a string containing username
 
-	- broker then expects 64 bytes of data from the connecting party containing a SHA512 hash of:
+	- CB broker then expects 64 bytes of data from the connecting party containing a SHA512 hash of:
 		random *1 concated with a space and then the password
 
 	If this hash equals to the one calculated by the broker, then the connection proceeds.
 	If not, the broker just closes the connection.
 
-	- 1 byte: > 0 if server
-	- 4 bytes length of string
+	- CB 1 byte: > 0 if server
+	- CB 4 bytes length of string
 		- string containing description of client/server
 
 loop:
