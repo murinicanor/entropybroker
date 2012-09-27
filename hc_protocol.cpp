@@ -35,7 +35,7 @@
 int send_denied_empty(int fd, statistics *stats, config_t *config)
 {
 	int seconds = config -> default_sleep_when_pools_empty; // & default_max_sleep_when_pools_empty
-	char buffer[4 + 4 + 1];
+	unsigned char buffer[4 + 4];
 
 	stats -> inc_n_times_empty();
 
@@ -46,7 +46,7 @@ int send_denied_empty(int fd, statistics *stats, config_t *config)
 
 int send_denied_quota(int fd, statistics *stats, config_t *config)
 {
-	char buffer[4 + 4 + 1];
+	unsigned char buffer[4 + 4];
 
 	stats -> inc_n_times_quota();
 
@@ -57,7 +57,7 @@ int send_denied_quota(int fd, statistics *stats, config_t *config)
 
 int send_denied_full(int fd, statistics *stats, config_t *config, std::string host)
 {
-	char buffer[4 + 4 + 1];
+	unsigned char buffer[4 + 4];
 	int seconds = config -> default_sleep_time_when_pools_full;
 
 	stats -> inc_n_times_full();
@@ -74,7 +74,7 @@ int send_denied_full(int fd, statistics *stats, config_t *config, std::string ho
 
 int send_accepted_while_full(int fd, statistics *stats, config_t *config)
 {
-	char buffer[4 + 4 + 1];
+	unsigned char buffer[4 + 4];
 
 	make_msg(buffer, 9003, config -> default_sleep_time_when_pools_full);
 
@@ -86,7 +86,7 @@ int send_accepted_while_full(int fd, statistics *stats, config_t *config)
 
 int send_got_data(int fd, pools *ppools, config_t *config)
 {
-	char buffer[4 + 4 + 1];
+	unsigned char buffer[4 + 4];
 
 	// data is an estimate; it can be different anyway as other clients may come first
 	make_msg(buffer, 9, min(9999, ppools -> get_bit_sum(config -> communication_timeout))); // 0009
@@ -96,7 +96,7 @@ int send_got_data(int fd, pools *ppools, config_t *config)
 
 int send_need_data(int fd, config_t *config)
 {
-	char buffer[4 + 4 + 1];
+	unsigned char buffer[4 + 4];
 
 	make_msg(buffer, 10, 0); // 0010 0000
 
@@ -105,10 +105,8 @@ int send_need_data(int fd, config_t *config)
 
 int do_client_get(client_t *client, bool *no_bits)
 {
-	int cur_n_bits, cur_n_bytes;
 	int transmit_size;
-	char n_bits[4 + 1];
-	n_bits[4] = 0x00;
+	unsigned char n_bits[4];
 
 	*no_bits = false;
 
@@ -118,7 +116,7 @@ int do_client_get(client_t *client, bool *no_bits)
 		return -1;
 	}
 
-	cur_n_bits = atoi(n_bits);
+	int cur_n_bits = uchar_to_uint(n_bits);
 	if (cur_n_bits == 0)
 	{
 		dolog(LOG_INFO, "get|%s 0 bits requested", client -> host.c_str());
@@ -141,7 +139,7 @@ int do_client_get(client_t *client, bool *no_bits)
 	if (cur_n_bits < 0)
 		error_exit("cur_n_bits < 0");
 
-	cur_n_bytes = (cur_n_bits + 7) / 8;
+	int cur_n_bytes = (cur_n_bits + 7) / 8;
 
 	dolog(LOG_DEBUG, "get|%s memory allocated, retrieving bits", client -> host.c_str());
 
@@ -195,7 +193,7 @@ int do_client_get(client_t *client, bool *no_bits)
 	unsigned char *output_buffer = reinterpret_cast<unsigned char *>(malloc(transmit_size));
 	if (!output_buffer)
 		error_exit("error allocating %d bytes of memory", cur_n_bytes);
-	make_msg(reinterpret_cast<char *>(output_buffer), 2, cur_n_bits); // 0002
+	make_msg(output_buffer, 2, cur_n_bits); // 0002
 
 	dolog(LOG_DEBUG, "get|%s transmit size: %d, msg: %s", client -> host.c_str(), transmit_size, output_buffer);
 
@@ -222,9 +220,6 @@ int do_client_get(client_t *client, bool *no_bits)
 
 int do_client_put(client_t *client, bool *new_bits, bool *is_full)
 {
-	char msg[4 + 4 + 1];
-	int cur_n_bits, cur_n_bytes;
-	char n_bits[4 + 1];
 	double now = get_ts();
 	bool warn_all_full = false;
 
@@ -253,15 +248,14 @@ int do_client_put(client_t *client, bool *new_bits, bool *is_full)
 		warn_all_full = true;
 	}
 
-	n_bits[4] = 0x00;
-
+	unsigned char n_bits[4];
 	if (READ_TO(client -> socket_fd, n_bits, 4, client -> config -> communication_timeout) != 4)
 	{
 		dolog(LOG_INFO, "put|%s(%s) short read while retrieving number of bits to recv", client -> host.c_str(), client -> type.c_str());
 		return -1;
 	}
 
-	cur_n_bits = atoi(n_bits);
+	int cur_n_bits = uchar_to_uint(n_bits);
 	if (cur_n_bits == 0)
 	{
 		dolog(LOG_INFO, "put|%s(%s) 0 bits requested", client -> host.c_str(), client -> type.c_str());
@@ -273,6 +267,7 @@ int do_client_put(client_t *client, bool *new_bits, bool *is_full)
 		return -1;
 	}
 
+	unsigned char msg[4 + 4];
 	if (warn_all_full)
 		make_msg(msg, 9003, cur_n_bits);
 	else
@@ -283,7 +278,7 @@ int do_client_put(client_t *client, bool *new_bits, bool *is_full)
 		return -1;
 	}
 
-	cur_n_bytes = (cur_n_bits + 7) / 8;
+	int cur_n_bytes = (cur_n_bits + 7) / 8;
 
 	int in_len = cur_n_bytes + DATA_HASH_LEN;
 	unsigned char *buffer_in = reinterpret_cast<unsigned char *>(malloc(in_len));
@@ -344,8 +339,7 @@ int do_client_put(client_t *client, bool *new_bits, bool *is_full)
 
 int do_client(client_t *client, bool *no_bits, bool *new_bits, bool *is_full)
 {
-	char cmd[4 + 1];
-	cmd[4] = 0x00;
+	char cmd[4];
 
 	int rc = READ_TO(client -> socket_fd, cmd, 4, client -> config -> communication_timeout);
 	if (rc != 4)
@@ -354,11 +348,11 @@ int do_client(client_t *client, bool *no_bits, bool *new_bits, bool *is_full)
 		return -1;
 	}
 
-	if (strcmp(cmd, "0001") == 0)		// GET bits
+	if (memcmp(cmd, "0001", 4) == 0)		// GET bits
 	{
 		return do_client_get(client, no_bits);
 	}
-	else if (strcmp(cmd, "0002") == 0)	// PUT bits
+	else if (memcmp(cmd, "0002", 4) == 0)	// PUT bits
 	{
 		return do_client_put(client, new_bits, is_full);
 	}
@@ -373,7 +367,7 @@ int do_client(client_t *client, bool *no_bits, bool *new_bits, bool *is_full)
 
 int notify_server_full(int socket_fd, statistics *stats, config_t *config)
 {
-	char buffer[8 + 1];
+	unsigned char buffer[8];
 
 	make_msg(buffer, 9004, 0); // 9004
 

@@ -683,3 +683,40 @@ void split_string(char *in, char split, char ***out, int *n_out)
 
 	free(copy_in);
 }
+
+unsigned int uchar_to_uint(unsigned char *in)
+{
+	return (in[0] << 24) + (in[1] << 16) + (in[2] << 8) + in[3];
+}
+
+bool recv_uint(int fd, unsigned int *value, double to)
+{
+	unsigned char buffer[4] = { 0 };
+
+	if (READ_TO(fd, buffer, 4, to) != 4)
+		return false;
+
+	*value = uchar_to_uint(buffer);
+
+	return true;
+}
+
+void uint_to_uchar(unsigned int value, unsigned char *out)
+{
+	out[0] = (value >> 24) & 255;
+	out[1] = (value >> 16) & 255;
+	out[2] = (value >>  8) & 255;
+	out[3] = (value      ) & 255;
+}
+
+bool send_uint(int fd, unsigned int value, double to)
+{
+	unsigned char buffer[4];
+
+	uint_to_uchar(value, buffer);
+
+	if (WRITE_TO(fd, buffer, 4, to) != 4)
+		return false;
+
+	return true;
+}

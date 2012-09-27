@@ -62,7 +62,7 @@ void egd_get(int fd, protocol *p, bool blocking)
 
 	dolog(LOG_INFO, "will get %d bits (%sblocking)", n_bits_to_get, blocking?"":"non-");
 
-	char *buffer = static_cast<char *>(malloc(n_bytes_to_get));
+	unsigned char *buffer = static_cast<unsigned char *>(malloc(n_bytes_to_get));
 	if (!buffer)
 		error_exit("Out of memory");
 	lock_mem(buffer, n_bytes_to_get);

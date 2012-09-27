@@ -185,7 +185,7 @@ int main(int argc, char *argv[])
 	signal(SIGINT , sig_handler);
 	signal(SIGQUIT, sig_handler);
 
-	char buffer[1249];
+	unsigned char buffer[1249];
 	lock_mem(buffer, sizeof buffer);
 	while(count > 0 || count == -1)
 	{

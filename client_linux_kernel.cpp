@@ -185,7 +185,7 @@ int main(int argc, char *argv[])
 
 			int n_bytes_to_get = (n_bits_to_get + 7) / 8;
 
-			char *buffer = static_cast<char *>(malloc(n_bytes_to_get));
+			unsigned char *buffer = static_cast<unsigned char *>(malloc(n_bytes_to_get));
 			if (!buffer)
 				error_exit("out of memory allocating %d bytes", n_bytes_to_get);
 			lock_mem(buffer, n_bytes_to_get);

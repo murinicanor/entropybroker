@@ -40,6 +40,10 @@ void pthread_check(int rc, const char *name);
 void pthread_check(int rc, const char *name, int ok[]);
 bool file_exist(const char *file);
 void split_string(char *in, char split, char ***out, int *n_out);
+unsigned int uchar_to_uint(unsigned char *in);
+bool recv_uint(int fd, unsigned int *value, double to);
+void uint_to_uchar(unsigned int value, unsigned char *out);
+bool send_uint(int fd, unsigned int value, double to);
 
 void my_Assert(bool flag, int line, const char *file);
 #define my_assert(x) my_Assert(x, __LINE__,  __FILE__)

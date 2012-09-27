@@ -163,36 +163,30 @@ void write_knuth_file(std::string file, lookup_t *lt)
 
 int put_data(proxy_client_t *client, lookup_t *lt, bool is_A)
 {
-	char bit_cnt[4 + 1] = { 0 };
+	unsigned char bit_cnt[4] = { 0 };
 
 	// receive number of bits
 	if (READ_TO(client -> fd, bit_cnt, 4, DEFAULT_COMM_TO) != 4)
 		return -1;
 
-	int cur_n_bits = atoi(bit_cnt);
+	unsigned int cur_n_bits = uchar_to_uint(bit_cnt);
 	if (cur_n_bits > 9992)
 		return -1;
 
-	bool full = false;
-	if (is_A && lt -> t_offset == lt -> t_size && lt -> n_A == A_B_SIZE)
-		full = true;
-	else if (!is_A && lt -> n_B == A_B_SIZE)
-		full = true;
-
-	char reply[4 + 4 + 1] = { 0 };
+	unsigned char reply[4 + 4] = { 0 };
 	make_msg(reply, 1, cur_n_bits);
 	// make_msg(reply, full ? 9003 : 1, cur_n_bits);
 	if (WRITE_TO(client -> fd, reply, 8, DEFAULT_COMM_TO) != 8)
 		return -1;
 
-	int cur_n_bytes = (cur_n_bits + 7) / 8;
+	unsigned int cur_n_bytes = (cur_n_bits + 7) / 8;
 
-	int in_len = cur_n_bytes + DATA_HASH_LEN;
+	unsigned int in_len = cur_n_bytes + DATA_HASH_LEN;
 	unsigned char *buffer_in = reinterpret_cast<unsigned char *>(malloc(in_len));
 	if (!buffer_in)
 		error_exit("%s error allocating %d bytes of memory", client -> host.c_str(), in_len);
 
-	if (READ_TO(client -> fd, buffer_in, in_len, DEFAULT_COMM_TO) != in_len)
+	if (READ_TO(client -> fd, buffer_in, in_len, DEFAULT_COMM_TO) != int(in_len))
 	{
 		dolog(LOG_INFO, "put|%s short read while retrieving entropy data", client -> host.c_str());
 
@@ -288,7 +282,7 @@ int put_data(proxy_client_t *client, lookup_t *lt, bool is_A)
 
 int handle_client(proxy_client_t *client, lookup_t *lt, bool is_A)
 {
-	char cmd[4 + 1] = { 0 };
+	char cmd[4] = { 0 };
 
 	if (READ_TO(client -> fd, cmd, 4, DEFAULT_COMM_TO) != 4)
 	{

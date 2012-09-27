@@ -3,17 +3,17 @@ CB: client/server to broker
 
 session setup:
 	- BC 4 bytes ascii value protocol version
-	- BC 4 bytes length of string:
+	- BC 4 bytes length of string (big endian):
 		- string containing hash function for handshake (password hash)
-	- BC 4 bytes length of string:
+	- BC 4 bytes length of string (big endian):
 		- string containing hash function for data hash
-	- BC 4 bytes length of string:
+	- BC 4 bytes length of string (big endian):
 		- string containing cipher function for data encryption
-	- BC 4 bytes length of string:
+	- BC 4 bytes length of string (big endian):
 		- string containing a random used for authentication *1
 		- this random is the ascii representation of a 64 bit value
 		- this random is also used to initialize the IV for the blowfish cipher
-	- CB 4 bytes length of string:
+	- CB 4 bytes length of string (big endian):
 		- the client sends a string containing username
 
 	- CB broker then expects 64 bytes of data from the connecting party containing a SHA512 hash of:
@@ -23,13 +23,13 @@ session setup:
 	If not, the broker just closes the connection.
 
 	- CB 1 byte: > 0 if server
-	- CB 4 bytes length of string
+	- CB 4 bytes length of string (big endian):
 		- string containing description of client/server
 
 loop:
 	- client/server send 4 bytes ascii containing a command-code:
 		0001: get bits
-			- 4 bytes ascii value containing the number of bits (not bytes) requested
+			- 4 bytes value (big endian) containing the number of bits (not bytes) requested
 			  data is send in a multiple of bytes so this value is max 9992 (1249)
 			  - if there are not enought bits in the broker, a 9000 is end back with a 4-bytes
 			    value containing a suggestion for the number of seconds to delay a new get request
@@ -51,11 +51,11 @@ loop:
 			- a regular ack is 0001 (and the number of bits allowed)
 
 		0003: server type (type of a process producing entropy data)
-			- 4 bytes ascii value length of string:
+			- 4 bytes value (endian) length of string:
 				- an ascii string describing the server. format is arbitrary
 
 		0006: client type
-			- 4 bytes ascii value length of string:
+			- 4 bytes value (endian) length of string:
 				- an ascii string describing the client. format is arbitrary
 
 		0011: proxy auth

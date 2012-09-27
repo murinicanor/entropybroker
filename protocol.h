@@ -14,9 +14,9 @@
 #define DATA_HASH_FUNC(x, y, z) SHA256(x, y, z)
 #define DATA_HASH_LEN SHA256_DIGEST_LENGTH
 
-int recv_length_data(int fd, char **data, int *len, double to);
-int send_length_data(int fd, const char *data, int len, double to);
-void make_msg(char *where_to, int code, int value);
+int recv_length_data(int fd, char **data, unsigned int *len, double to);
+int send_length_data(int fd, const char *data, unsigned int len, double to);
+void make_msg(unsigned char *where_to, unsigned int code, unsigned int value);
 void calc_ivec(const char *password, long long unsigned int rnd, long long unsigned int counter, unsigned char *dest);
 
 class protocol
@@ -49,7 +49,7 @@ public:
 	~protocol();
 
 	int sleep_interruptable(double how_long);
-	int message_transmit_entropy_data(unsigned char *bytes_in, int n_bytes);
-	int request_bytes(char *where_to, int n_bits, bool fail_on_no_bits);
+	int message_transmit_entropy_data(unsigned char *bytes_in, unsigned int n_bytes);
+	int request_bytes(unsigned char *where_to, unsigned int n_bits, bool fail_on_no_bits);
 	void drop();
 };

@@ -21,27 +21,23 @@
 #include "server_utils.h"
 #include "protocol.h"
 
-int recv_length_data(int fd, char **data, int *len, double to)
+int recv_length_data(int fd, char **data, unsigned int *len, double to)
 {
-	char len_buffer[4 + 1] = { 0 };
-
-	if (READ_TO(fd, len_buffer, 4, to) != 4)
+	if (!recv_uint(fd, len, to))
 		return -1;
 
-	*len = atoi(len_buffer);
-
-	if (*len < 0) // someone is fiddling or something is really wrong
-	{
-		dolog(LOG_WARNING, "recv_length_data: got negative (%d) length (%s)", *len, len_buffer);
-		return -1;
-	}
-	else if (*len == 0)
+	if (*len == 0)
 		*data = NULL;
 	else
 	{
 		*data = reinterpret_cast<char *>(malloc(*len + 1));
+		if (!*data)
+		{
+			dolog(LOG_WARNING, "Cannot allocate %d bytes of memory (amount of data to be transmitted by fd: %d)", *len + 1, fd);
+			return -1;
+		}
 
-		if (READ_TO(fd, *data, *len, to) != *len)
+		if (READ_TO(fd, *data, int(*len), to) != int(*len))
 		{
 			free(*data);
 			*data = NULL;
@@ -55,38 +51,25 @@ int recv_length_data(int fd, char **data, int *len, double to)
 	return 0;
 }
 
-int send_length_data(int fd, const char *data, int len, double to)
+int send_length_data(int fd, const char *data, unsigned int len, double to)
 {
-	char len_buffer[4 + 1] = { 0 };
-
-	snprintf(len_buffer, sizeof len_buffer, "%04d", len);
-
-	if (WRITE_TO(fd, len_buffer, 4, to) != 4)
+	if (!send_uint(fd, len, to))
 		return -1;
 
-	if (len > 0 && WRITE_TO(fd, data, len, to) != len)
+	if (len > 0 && WRITE_TO(fd, data, int(len), to) != int(len))
 		return -1;
 
 	return 0;
 }
 
-void make_msg(char *where_to, int code, int value)
+void make_msg(unsigned char *where_to, unsigned int code, unsigned int value)
 {
-	if (code < 0 || code > 9999)
+	if (code > 9999)
 		error_exit("invalid code: %d", code);
 
-	if (value < 0)
-	{
-		dolog(LOG_WARNING, "value %d too small, adjusting to 0", value);
-		value = 0;
-	}
-	else if (value > 9999)
-	{
-		dolog(LOG_WARNING, "value %d too big, truncating to 9999", value);
-		value = 9999;
-	}
+	snprintf(reinterpret_cast<char *>(where_to), 9, "%04d", code);
 
-	snprintf(where_to, 9, "%04d%04d", code, value);
+	uint_to_uchar(value, &where_to[4]);
 }
 
 void calc_ivec(const char *password, long long unsigned int rnd, long long unsigned int counter, unsigned char *dest)
@@ -254,14 +237,14 @@ int protocol::sleep_interruptable(double how_long)
 
 	if (rc > 0 && FD_ISSET(socket_fd, &rfds))
 	{
-		char buffer[8 + 1];
+		char buffer[8];
 
 		if (READ_TO(socket_fd, buffer, 8, comm_time_out) != 8)
 		{
 			dolog(LOG_INFO, "error receiving unsollicited message");
 			return -1;
 		}
-		buffer[8] = 0x00;
+		buffer[4] = 0x00; // don't care about the value
 
 		if (memcmp(buffer, "0010", 4) == 0)
 			dolog(LOG_INFO, "Broker requests for data");
@@ -276,7 +259,7 @@ int protocol::sleep_interruptable(double how_long)
 	return 0;
 }
 
-int protocol::message_transmit_entropy_data(unsigned char *bytes_in, int n_bytes)
+int protocol::message_transmit_entropy_data(unsigned char *bytes_in, unsigned int n_bytes)
 {
 	if (n_bytes > 1249)
 		error_exit("message_transmit_entropy_data: too many bytes %d", n_bytes);
@@ -284,9 +267,8 @@ int protocol::message_transmit_entropy_data(unsigned char *bytes_in, int n_bytes
 	int error_count = 0;
 	for(;;)
 	{
-		int value;
-		char reply[8 + 1] = { 0 };
-		char header[8 + 1] = { 0 };
+		unsigned char reply[8] = { 0 };
+		unsigned char header[8] = { 0 };
 
 		error_count++;
 		if (error_count > MAX_ERROR_SLEEP)
@@ -331,12 +313,11 @@ int protocol::message_transmit_entropy_data(unsigned char *bytes_in, int n_bytes
 			continue;
 		}
 
-		value = atoi(&reply[4]);
-		reply[4] = 0x00;
+		unsigned int value = uchar_to_uint(&reply[4]);
 
-		if (strcmp(reply, "0001") == 0 || strcmp(reply, "9003") == 0)                 // ACK
+		if (memcmp(reply, "0001", 4) == 0 || memcmp(reply, "9003", 4) == 0)                 // ACK
 		{
-			int cur_n_bytes = (value + 7) / 8;
+			unsigned int cur_n_bytes = (value + 7) / 8;
 
 			if (cur_n_bytes > n_bytes)
 			{
@@ -380,7 +361,7 @@ int protocol::message_transmit_entropy_data(unsigned char *bytes_in, int n_bytes
 
 			free(bytes_out);
 
-			if (strcmp(reply, "9003") == 0)            // ACK but full
+			if (memcmp(reply, "9003", 4) == 0)            // ACK but full
 			{
 				// only usefull for eb_proxy
 				dolog(LOG_DEBUG, "pool full, sleeping %d seconds (with ACK)", sleep_9003);
@@ -390,7 +371,7 @@ int protocol::message_transmit_entropy_data(unsigned char *bytes_in, int n_bytes
 
 			break;
 		}
-		else if (strcmp(reply, "9001") == 0)            // NACK
+		else if (memcmp(reply, "9001", 4) == 0)            // NACK
 		{
 			dolog(LOG_DEBUG, "pool full, sleeping %d seconds", value);
 
@@ -402,15 +383,15 @@ int protocol::message_transmit_entropy_data(unsigned char *bytes_in, int n_bytes
 			// continue; it'll only be 0010 anyway
 			sleep_interruptable(value);
 		}
-		else if (strcmp(reply, "0010") == 0)            // there's a need for data
+		else if (memcmp(reply, "0010", 4) == 0)            // there's a need for data
 		{
 			// this message can be received during transmission hand-
 			// shake as it might have been queued earlier
 			goto ignore_unsollicited_msg;
 		}
-		else if (strcmp(reply, "9004") == 0)            // all pools full, only for provies
+		else if (memcmp(reply, "9004", 4) == 0)            // all pools full, only for provies
 			goto ignore_unsollicited_msg;
-		else if (strcmp(reply, "0009") == 0)            // got data
+		else if (memcmp(reply, "0009", 4) == 0)            // got data
 			goto ignore_unsollicited_msg;
 		else
 		{
@@ -426,15 +407,15 @@ int protocol::message_transmit_entropy_data(unsigned char *bytes_in, int n_bytes
 	return 0;
 }
 
-int protocol::request_bytes(char *where_to, int n_bits, bool fail_on_no_bits)
+int protocol::request_bytes(unsigned char *where_to, unsigned int n_bits, bool fail_on_no_bits)
 {
 	bool request_sent = false;
 
 	if (n_bits > 9999 || n_bits <= 0)
 		error_exit("Internal error: invalid bit count (%d)", n_bits);
 
-	char request[8 + 1];
-	snprintf(request, sizeof request, "0001%04d", n_bits);
+	unsigned char request[8];
+	make_msg(request, 1, n_bits); // 0001
 
 	double sleep_trigger = -1;
 	int error_count = 0;
@@ -468,7 +449,7 @@ int protocol::request_bytes(char *where_to, int n_bits, bool fail_on_no_bits)
 			request_sent = true;
 		}
 
-		char reply[8 + 1];
+		unsigned char reply[8];
 		int rc = READ_TO(socket_fd, reply, 8, comm_time_out);
 		if (rc == 0)
 			continue;
@@ -483,14 +464,13 @@ int protocol::request_bytes(char *where_to, int n_bits, bool fail_on_no_bits)
 
 			continue;
 		}
-		reply[8] = 0x00;
 
                 dolog(LOG_DEBUG, "received reply: %s", reply);
 
                 if (memcmp(reply, "9000", 4) == 0 || memcmp(reply, "9002", 4) == 0) // no data/quota
                 {
 			error_count = 0;
-			int sleep_time = atoi(&reply[4]);
+			unsigned int sleep_time = uchar_to_uint(&reply[4]);
 			dolog(LOG_DEBUG, "data denied: %s, sleep for %d seconds", reply[3] == '0' ? "no data" : "quota", sleep_time);
 
 			sleep_trigger = get_ts() + sleep_time;
@@ -504,8 +484,8 @@ int protocol::request_bytes(char *where_to, int n_bits, bool fail_on_no_bits)
 
                         dolog(LOG_DEBUG, "PING");
 
-                        char xmit_buffer[8 + 1];
-			make_msg(xmit_buffer, 5, pingnr++);
+                        unsigned char xmit_buffer[8];
+			make_msg(xmit_buffer, 5, pingnr++); // 0005
 
                         if (WRITE_TO(socket_fd, xmit_buffer, 8, comm_time_out) != 8)
                         {
@@ -533,7 +513,7 @@ int protocol::request_bytes(char *where_to, int n_bits, bool fail_on_no_bits)
 		else if (memcmp(reply, "0002", 4) == 0)	// there's data!
 		{
 			error_count = 0;
-			int will_get_n_bits = atoi(&reply[4]);
+			int will_get_n_bits = uchar_to_uint(&reply[4]);
 			int will_get_n_bytes = (will_get_n_bits + 7) / 8;
 
 			dolog(LOG_INFO, "server is offering %d bits (%d bytes)", will_get_n_bits, will_get_n_bytes);

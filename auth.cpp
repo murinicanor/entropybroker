@@ -51,7 +51,7 @@ int auth_eb_user(int fd, int to, users *user_map, std::string & password, long l
 	get_random(rs, reinterpret_cast<unsigned char *>(&rnd), sizeof rnd);
 
 	char rnd_str[128];
-	unsigned char rnd_str_size = snprintf(rnd_str, sizeof rnd_str, "%llu", rnd);
+	unsigned int rnd_str_size = snprintf(rnd_str, sizeof rnd_str, "%llu", rnd);
 
 	*challenge = rnd;
 
@@ -67,7 +67,7 @@ int auth_eb_user(int fd, int to, users *user_map, std::string & password, long l
 
 	/* receive username */
 	char *username = NULL;
-	int username_length = 0;
+	unsigned int username_length = 0;
 	if (recv_length_data(fd, &username, &username_length, to) == -1)
 	{
 		dolog(LOG_INFO, "%s receiving username (fd: %d)", ts, fd);
@@ -125,7 +125,7 @@ int auth_eb_user(int fd, int to, users *user_map, std::string & password, long l
 
 	/* receive a string which describes the other send */
 	char *type_in = NULL;
-	int type_in_size = 0;
+	unsigned int type_in_size = 0;
 
 	if (recv_length_data(fd, &type_in, &type_in_size, to) == -1)
 	{
@@ -184,7 +184,7 @@ bool get_auth_from_file(char *filename, std::string & username, std::string & pa
 int auth_client_server_user(int fd, int to, std::string & username, std::string & password, long long unsigned int *challenge, bool is_server, std::string type)
 {
 	char *hash_handshake = NULL;
-	int hash_handshake_size = 0;
+	unsigned int hash_handshake_size = 0;
 	if (recv_length_data(fd, &hash_handshake, &hash_handshake_size, to) == -1)
 	{
 		dolog(LOG_INFO, "Connection for fd %d closed (t1)", fd);
@@ -193,7 +193,7 @@ int auth_client_server_user(int fd, int to, std::string & username, std::string 
 	if (strcmp(hash_handshake, "sha512") != 0)
 		error_exit("Server uses unsupported (%s) hash function for password hash (sha512 expected)");
 	char *mac_data = NULL;
-	int mac_data_size = 0;
+	unsigned int mac_data_size = 0;
 	if (recv_length_data(fd, &mac_data, &mac_data_size, to) == -1)
 	{
 		dolog(LOG_INFO, "Connection for fd %d closed (t2)", fd);
@@ -202,7 +202,7 @@ int auth_client_server_user(int fd, int to, std::string & username, std::string 
 	if (strcmp(mac_data, "sha256") != 0)
 		error_exit("Server uses unsupported (%s) hash function for data mac (sha256 expected)");
 	char *cipher_data = NULL;
-	int cipher_data_size = 0;
+	unsigned int cipher_data_size = 0;
 	if (recv_length_data(fd, &cipher_data, &cipher_data_size, to) == -1)
 	{
 		dolog(LOG_INFO, "Connection for fd %d closed (t3)", fd);
@@ -213,7 +213,7 @@ int auth_client_server_user(int fd, int to, std::string & username, std::string 
 	printf("%s / %s / %s\n", hash_handshake, mac_data, cipher_data);
 
 	char *rnd_str = NULL;
-	int rnd_str_size = 0;
+	unsigned int rnd_str_size = 0;
 	if (recv_length_data(fd, &rnd_str, &rnd_str_size, to) == -1)
 	{
 		dolog(LOG_INFO, "Connection for fd %d closed (a1)", fd);
@@ -226,7 +226,7 @@ int auth_client_server_user(int fd, int to, std::string & username, std::string 
 	char *dummy = NULL;
 	*challenge = strtoull(rnd_str, &dummy, 10);
 
-	int username_length = username.length();
+	unsigned int username_length = username.length();
 	if (send_length_data(fd, const_cast<char *>(username.c_str()), username_length, to) == -1)
 	{
 		dolog(LOG_INFO, "Connection for fd %d closed (a2)", fd);
@@ -253,7 +253,7 @@ int auth_client_server_user(int fd, int to, std::string & username, std::string 
 		return -1;
 	}
 
-	int type_length = type.length();
+	unsigned int type_length = type.length();
 	if (send_length_data(fd, const_cast<char *>(type.c_str()), type_length, to) == -1)
 	{
 		dolog(LOG_INFO, "Connection for fd %d closed (m2)", fd);
