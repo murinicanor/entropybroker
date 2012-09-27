@@ -245,12 +245,12 @@ int main(int argc, char *argv[])
 		// gather random data from EGD
 		request[0] = 1;
 		request[1] = bytes_to_read;
-		if (WRITE(read_fd, (char *)request, sizeof request) != 2)
+		if (WRITE(read_fd, reinterpret_cast<char *>(request), sizeof request) != 2)
 			error_exit("Problem sending request to EGD");
-		if (READ(read_fd, (char *)reply, 1) != 1)
+		if (READ(read_fd, reinterpret_cast<char *>(reply), 1) != 1)
 			error_exit("Problem receiving reply header from EGD");
 		bytes_to_read = reply[0];
-		if (READ(read_fd, (char *)&bytes[index], bytes_to_read) != bytes_to_read)
+		if (READ(read_fd, reinterpret_cast<char *>(bytes[index]), bytes_to_read) != bytes_to_read)
 			error_exit("Problem receiving reply-data from EGD");
 		index += bytes_to_read;
 		dolog(LOG_DEBUG, "Got %d bytes from EGD", bytes_to_read);

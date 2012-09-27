@@ -34,29 +34,6 @@ void sig_handler(int sig)
 	exit(0);
 }
 
-void split_string(char *in, char split, char ***out, int *n_out)
-{
-	char *copy_in = strdup(in);
-
-	for(;;)
-	{
-		char *next;
-
-		(*n_out)++;
-		*out = (char **)realloc(*out, *n_out * sizeof(char *));
-
-		(*out)[*n_out - 1] = copy_in;
-
-		next = strchr(copy_in, split);
-		if (!next)
-			break;
-
-		*next = 0x00;
-
-		copy_in = next + 1;
-	}
-}
-
 void set_serial_parameters(int fd, char *pars_in)
 {
         struct termios newtio;
@@ -360,7 +337,7 @@ int main(int argc, char *argv[])
 	set_showbps_start_ts();
 	for(;;)
 	{
-		if (READ(read_fd, (char *)bytes, 1249) != 1249)
+		if (READ(read_fd, reinterpret_cast<char *>(bytes), 1249) != 1249)
 			error_exit("error reading from input");
 
 		if (show_bps)

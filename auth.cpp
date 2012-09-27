@@ -26,7 +26,7 @@ int auth_eb_user(int fd, int to, users *user_map, std::string & password, long l
 
 	long long unsigned int rnd = 9;
 
-	get_random(rs, (unsigned char *)&rnd, sizeof rnd);
+	get_random(rs, reinterpret_cast<unsigned char *>(&rnd), sizeof rnd);
 
 	char rnd_str[128];
 	unsigned char rnd_str_size = snprintf(rnd_str, sizeof rnd_str, "%llu", rnd);
@@ -71,7 +71,7 @@ int auth_eb_user(int fd, int to, users *user_map, std::string & password, long l
 	char hash_cmp_str[256], hash_cmp[SHA512_DIGEST_LENGTH];
 	snprintf(hash_cmp_str, sizeof hash_cmp_str, "%s %s", rnd_str, password.c_str());
 
-	SHA512((const unsigned char *)hash_cmp_str, strlen(hash_cmp_str), (unsigned char *)hash_cmp);
+	SHA512((const unsigned char *)hash_cmp_str, strlen(hash_cmp_str), reinterpret_cast<unsigned char *>(hash_cmp));
 
 	char hash_in[SHA512_DIGEST_LENGTH];
 	if (READ_TO(fd, hash_in, SHA512_DIGEST_LENGTH, to) != SHA512_DIGEST_LENGTH)
@@ -168,7 +168,7 @@ int auth_client_server_user(int fd, int to, std::string & username, std::string 
 	*challenge = strtoull(rnd_str, &dummy, 10);
 
 	int username_length = username.length();
-	if (send_length_data(fd, (char *)username.c_str(), username_length, to) == -1)
+	if (send_length_data(fd, const_cast<char *>(username.c_str()), username_length, to) == -1)
 	{
 		dolog(LOG_INFO, "Connection for fd %d closed (u1)", fd);
 		free(rnd_str);
@@ -179,7 +179,7 @@ int auth_client_server_user(int fd, int to, std::string & username, std::string 
 	snprintf(hash_cmp_str, sizeof hash_cmp_str, "%s %s", rnd_str, password.c_str());
 	free(rnd_str);
 
-	SHA512((const unsigned char *)hash_cmp_str, strlen(hash_cmp_str), (unsigned char *)hash_cmp);
+	SHA512((const unsigned char *)hash_cmp_str, strlen(hash_cmp_str), reinterpret_cast<unsigned char *>(hash_cmp));
 
 	if (WRITE_TO(fd, hash_cmp, SHA512_DIGEST_LENGTH, to) == -1)
 	{
@@ -195,7 +195,7 @@ int auth_client_server_user(int fd, int to, std::string & username, std::string 
 	}
 
 	int type_length = type.length();
-	if (send_length_data(fd, (char *)type.c_str(), type_length, to) == -1)
+	if (send_length_data(fd, const_cast<char *>(type.c_str()), type_length, to) == -1)
 	{
 		dolog(LOG_INFO, "Connection for fd %d closed (5)", fd);
 		free(rnd_str);

@@ -189,6 +189,10 @@ int main(int argc, char *argv[])
 
 	bit_count_estimator *bce = new bit_count_estimator(config.bitcount_estimator);
 
+	unsigned int rand_seed = 11;
+	get_random(config.rs, reinterpret_cast<unsigned char *>(&rand_seed), sizeof rand_seed);
+	srand(rand_seed);
+
 	hasher *h = NULL;
 	if (config.ht == H_SHA512)
 		h = new hasher_sha512();

@@ -51,7 +51,7 @@ void load_config(const char *config, config_t *pconfig)
 
 	pconfig -> bitcount_estimator = BCE_SHANNON;
 
-	pconfig -> listen_adapter    = (char *)"0.0.0.0";
+	pconfig -> listen_adapter    = "0.0.0.0";
 	pconfig -> listen_port       = DEFAULT_BROKER_PORT;
 	pconfig -> listen_queue_size = 5;
 	pconfig -> disable_nagle     = false;
@@ -136,7 +136,7 @@ void load_config(const char *config, config_t *pconfig)
 			pconfig -> listen_adapter = strdup(par);
 		else if (strcmp(cmd, "users") == 0)
 		{
-			char *p_file = (char *)malloc(strlen(cur_dir) + strlen(par) + 1 + 1);
+			char *p_file = static_cast<char *>(malloc(strlen(cur_dir) + strlen(par) + 1 + 1));
 			if (par[0] == '/')
 				strcpy(p_file, par);
 			else
@@ -187,7 +187,7 @@ void load_config(const char *config, config_t *pconfig)
 			pconfig -> stats_file = strdup(par);
 		else if (strcmp(cmd, "prng_seed_file") == 0)
 		{
-			char *p_file = (char *)malloc(strlen(VAR_DIR) + strlen(par) + 1 + 1);
+			char *p_file = static_cast<char *>(malloc(strlen(VAR_DIR) + strlen(par) + 1 + 1));
 			if (par[0] == '/')
 				strcpy(p_file, par);
 			else

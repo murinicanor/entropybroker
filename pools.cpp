@@ -362,9 +362,15 @@ int pools::find_non_full_pool(bool timed, double max_duration)
 {
 	double start_ts = get_ts();
 
+	// please note: it is not required that this offset is cryptographically
+	// random, it is only used to "spread the load" over all the pools
+	int index_offset = rand();
+
 	int n = pool_vector.size();
-	for(int index=0; index<n; index++)
+	for(int loop_index=0; loop_index<n; loop_index++)
 	{
+		int index = abs(loop_index + index_offset) % n;
+
 		double working = get_ts() - start_ts;
 		double cur_max_duration = max(MIN_SLEEP, (max_duration - working) / double(n - index));
 
@@ -540,11 +546,16 @@ int pools::get_bits_from_pools(int n_bits_requested, unsigned char **buffer, boo
 	}
 	get_per_pool_n = min(get_per_pool_n, new_pool_size);
 
+	int index_offset = rand();
 	int round = 0;
 	for(;n_to_do_bits > 0 && round < 2;)
 	{
-		for(unsigned int index=0; index<n; index++)
+		// please note: it is not required that this offset is cryptographically
+		// random, it is only used to "spread the load" over all the pools
+		for(unsigned int loop_index=0; loop_index<n; loop_index++)
 		{
+			int index = abs(loop_index + index_offset) % n;
+
 			double time_left = calc_time_left(start_ts, index, n, max_duration);
 
 			pthread_cond_t *cond = NULL;

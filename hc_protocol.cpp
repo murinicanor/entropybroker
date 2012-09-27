@@ -162,7 +162,7 @@ int do_client_get(client_t *client, bool *no_bits)
 	dolog(LOG_DEBUG, "get|%s got %d bits from pool", client -> host.c_str(), cur_n_bits);
 
 	int out_len = cur_n_bytes + DATA_HASH_LEN;
-	unsigned char *ent_buffer_in = (unsigned char *)malloc(out_len);
+	unsigned char *ent_buffer_in = reinterpret_cast<unsigned char *>(malloc(out_len));
 	lock_mem(ent_buffer_in, out_len);
 
 	memcpy(&ent_buffer_in[DATA_HASH_LEN], temp_buffer, cur_n_bytes);
@@ -172,7 +172,7 @@ int do_client_get(client_t *client, bool *no_bits)
 	// printf("send: "); hexdump(ent_buffer_in, 16);
 	// printf("data: "); hexdump(ent_buffer_in + DATA_HASH_LEN, 8);
 
-	unsigned char *ent_buffer = (unsigned char *)malloc(out_len);
+	unsigned char *ent_buffer = reinterpret_cast<unsigned char *>(malloc(out_len));
 	if (!ent_buffer)
 		error_exit("error allocating %d bytes of memory", out_len);
 
@@ -192,10 +192,10 @@ int do_client_get(client_t *client, bool *no_bits)
 	client -> stats -> track_sents(cur_n_bits);
 
 	transmit_size = 4 + 4 + out_len;
-	unsigned char *output_buffer = (unsigned char *)malloc(transmit_size);
+	unsigned char *output_buffer = reinterpret_cast<unsigned char *>(malloc(transmit_size));
 	if (!output_buffer)
 		error_exit("error allocating %d bytes of memory", cur_n_bytes);
-	make_msg((char *)output_buffer, 2, cur_n_bits); // 0002
+	make_msg(reinterpret_cast<char *>(output_buffer), 2, cur_n_bits); // 0002
 
 	dolog(LOG_DEBUG, "get|%s transmit size: %d, msg: %s", client -> host.c_str(), transmit_size, output_buffer);
 
@@ -208,7 +208,7 @@ int do_client_get(client_t *client, bool *no_bits)
 	free(ent_buffer_in);
 
 	int rc = 0;
-	if (WRITE_TO(client -> socket_fd, (char *)output_buffer, transmit_size, client -> config -> communication_timeout) != transmit_size)
+	if (WRITE_TO(client -> socket_fd, const_cast<const char *>(reinterpret_cast<char *>(output_buffer)), transmit_size, client -> config -> communication_timeout) != transmit_size)
 	{
 		dolog(LOG_INFO, "%s error while sending data to client", client -> host.c_str());
 
@@ -286,11 +286,11 @@ int do_client_put(client_t *client, bool *new_bits, bool *is_full)
 	cur_n_bytes = (cur_n_bits + 7) / 8;
 
 	int in_len = cur_n_bytes + DATA_HASH_LEN;
-	unsigned char *buffer_in = (unsigned char *)malloc(in_len);
+	unsigned char *buffer_in = reinterpret_cast<unsigned char *>(malloc(in_len));
 	if (!buffer_in)
 		error_exit("%s error allocating %d bytes of memory", client -> host.c_str(), in_len);
 
-	if (READ_TO(client -> socket_fd, (char *)buffer_in, in_len, client -> config -> communication_timeout) != in_len)
+	if (READ_TO(client -> socket_fd, reinterpret_cast<char *>(buffer_in), in_len, client -> config -> communication_timeout) != in_len)
 	{
 		dolog(LOG_INFO, "put|%s short read while retrieving entropy data", client -> host.c_str());
 
@@ -299,7 +299,7 @@ int do_client_put(client_t *client, bool *new_bits, bool *is_full)
 		return -1;
 	}
 
-	unsigned char *buffer_out = (unsigned char *)malloc(in_len);
+	unsigned char *buffer_out = reinterpret_cast<unsigned char *>(malloc(in_len));
 	if (!buffer_out)
 		error_exit("%s error allocating %d bytes of memory", client -> host.c_str(), cur_n_bytes);
 	lock_mem(buffer_out, cur_n_bytes);

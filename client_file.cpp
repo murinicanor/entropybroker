@@ -70,7 +70,7 @@ int main(int argc, char *argv[])
 	bool do_not_fork = false, log_console = false, log_syslog = false;
 	char *log_logfile = NULL;
 	int count = 0;
-	char *file = NULL;
+	const char *file = NULL;
 	int block_size = 1249;
 	int sleep_time = 0;
 	char *prog = basename(strdup(argv[0]));
@@ -79,7 +79,7 @@ int main(int argc, char *argv[])
 	std::vector<std::string> hosts;
 
 	if (!is_eb_client_file)
-		file = (char *)"/dev/random";
+		file = "/dev/random";
 
 	if (is_eb_client_file)
 		client_type = "eb_client_file v" VERSION;

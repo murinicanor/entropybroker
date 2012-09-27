@@ -63,7 +63,7 @@ int main(int argc, char *argv[])
 	int c;
 	bool do_not_fork = false, log_console = false, log_syslog = false;
 	char *log_logfile = NULL;
-	char *cmd = NULL, *shell = (char *)SHELL;
+	const char *cmd = NULL, *shell = SHELL;
 	std::string username, password;
 	int slp = DEFAULT_SLEEP;
 	char *bytes_file = NULL;
@@ -205,11 +205,11 @@ int main(int argc, char *argv[])
 				update_showbps(got_bytes);
 
 			if (bytes_file)
-				emit_buffer_to_file(bytes_file, (unsigned char *)buffer, got_bytes);
+				emit_buffer_to_file(bytes_file, reinterpret_cast<unsigned char *>(buffer), got_bytes);
 
 			if (p)
 			{
-				unsigned char *pnt = (unsigned char *)buffer;
+				unsigned char *pnt = reinterpret_cast<unsigned char *>(buffer);
 				while(got_bytes > 0)
 				{
 					int cur_count = min(got_bytes, 1249);

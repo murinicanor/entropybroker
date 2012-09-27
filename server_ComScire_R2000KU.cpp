@@ -168,7 +168,7 @@ int main(int argc, char *argv[])
 	bool stats_error_reported = false;
 	for(;;)
 	{
-		int rc = q -> RandBytes((char *)bytes, 1249);
+		int rc = q -> RandBytes(reinterpret_cast<char *>(bytes), 1249);
 		if (rc != QNG_S_OK && rc != S_OK)
 		{
 			if (rc == QNG_E_STATS_EXCEPTION)

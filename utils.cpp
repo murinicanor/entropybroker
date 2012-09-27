@@ -140,7 +140,7 @@ int READ_TO(int fd, char *whereto, size_t len, double to)
 	return cnt;
 }
 
-int WRITE(int fd, char *whereto, size_t len)
+int WRITE(int fd, const char *whereto, size_t len)
 {
 	ssize_t cnt=0;
 
@@ -170,7 +170,7 @@ int WRITE(int fd, char *whereto, size_t len)
 	return cnt;
 }
 
-int WRITE_TO(int fd, char *whereto, size_t len, double to)
+int WRITE_TO(int fd, const char *whereto, size_t len, double to)
 {
 	long double end_ts = get_ts_ns() + to;
 	ssize_t cnt=0;
@@ -238,14 +238,14 @@ int start_listen(const char *adapter, int portnr, int listen_queue_size)
                 error_exit("failed creating socket");
 
         int reuse_addr = 1;
-        if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (char *)&reuse_addr, sizeof reuse_addr) == -1)
+        if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<char *>(&reuse_addr), sizeof reuse_addr) == -1)
                 error_exit("setsockopt(SO_REUSEADDR) failed");
 
         struct sockaddr_in6 server_addr;
 
         int server_addr_len = sizeof server_addr;
 
-        memset((char *)&server_addr, 0x00, server_addr_len);
+        memset(reinterpret_cast<char *>(&server_addr), 0x00, server_addr_len);
         server_addr.sin6_family = AF_INET6;
         server_addr.sin6_port = htons(portnr);
 
@@ -316,7 +316,7 @@ void disable_nagle(int fd)
 	int disable = 1;
 
 	// EBADF might happen if a connection was closed just before this call
-	if (setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, (char *)&disable, sizeof disable) == -1 && errno != EBADF)
+	if (setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, reinterpret_cast<char *>(&disable), sizeof disable) == -1 && errno != EBADF)
 		error_exit("setsockopt(IPPROTO_TCP, TCP_NODELAY) failed (fd: %d)", fd);
 }
 
@@ -325,7 +325,7 @@ void enable_tcp_keepalive(int fd)
 	int keep_alive = 1;
 
 	// EBADF might happen if a connection was closed just before this call
-	if (setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, (char *)&keep_alive, sizeof keep_alive) == -1 && errno != EBADF)
+	if (setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, reinterpret_cast<char *>(&keep_alive), sizeof keep_alive) == -1 && errno != EBADF)
 		error_exit("problem setting KEEPALIVE (fd: %d)", fd);
 }
 
@@ -337,7 +337,7 @@ void check_rand_state()
 	{
 		unsigned short seed16v[3];
 
-		kernel_rng_read_non_blocking((unsigned char *)seed16v, sizeof seed16v);
+		kernel_rng_read_non_blocking(reinterpret_cast<unsigned char *>(seed16v), sizeof seed16v);
 		seed48(seed16v);
 
 		n_random_retrieved = MAX_LRAND48_GETS;
@@ -382,7 +382,7 @@ void close_fds()
 		close(fd);
 }
 
-void start_process(char *shell, char *cmd, int *fd, pid_t *pid)
+void start_process(const char *shell, const char *cmd, int *fd, pid_t *pid)
 {
 	int fd_slave;
 
@@ -409,7 +409,7 @@ void start_process(char *shell, char *cmd, int *fd, pid_t *pid)
 		close_fds();
 
 		/* start process */
-		if (-1 == execlp(shell, shell, "-c", cmd, (void *)NULL))
+		if (-1 == execlp(shell, shell, "-c", cmd, NULL))
 			error_exit("cannot execlp(%s -c '%s')", shell, cmd);
 
 		exit(1);
@@ -634,4 +634,32 @@ bool file_exist(const char *file)
 	}
 
 	return true;
+}
+
+void split_string(char *in, char split, char ***out, int *n_out)
+{
+	char *copy_in = strdup(in);
+
+	for(;;)
+	{
+		char *next = NULL;
+
+		(*n_out)++;
+		*out = reinterpret_cast<char **>(realloc(*out, *n_out * sizeof(char *)));
+
+		next = strchr(copy_in, split);
+		if (!next)
+		{
+			(*out)[*n_out - 1] = copy_in;
+			break;
+		}
+
+		*next = 0x00;
+
+		(*out)[*n_out - 1] = strdup(copy_in);
+
+		copy_in = next + 1;
+	}
+
+	free(copy_in);
 }

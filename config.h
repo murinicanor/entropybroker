@@ -6,7 +6,7 @@ typedef struct
 	unsigned int min_store_on_disk_n;
 	int pool_size_bytes;
 
-	char *listen_adapter;
+	const char *listen_adapter;
 	int listen_port;
 	int listen_queue_size;
 	bool disable_nagle;

@@ -39,7 +39,7 @@ int recv_length_data(int fd, char **data, int *len, double to)
 		*data = NULL;
 	else
 	{
-		*data = (char *)malloc(*len + 1);
+		*data = reinterpret_cast<char *>(malloc(*len + 1));
 
 		if (READ_TO(fd, *data, *len, to) != *len)
 		{
@@ -55,7 +55,7 @@ int recv_length_data(int fd, char **data, int *len, double to)
 	return 0;
 }
 
-int send_length_data(int fd, char *data, int len, double to)
+int send_length_data(int fd, const char *data, int len, double to)
 {
 	char len_buffer[4 + 1] = { 0 };
 
@@ -89,10 +89,10 @@ void make_msg(char *where_to, int code, int value)
 	snprintf(where_to, 9, "%04d%04d", code, value);
 }
 
-void calc_ivec(char *password, long long unsigned int rnd, long long unsigned int counter, unsigned char *dest)
+void calc_ivec(const char *password, long long unsigned int rnd, long long unsigned int counter, unsigned char *dest)
 {
-	unsigned char *prnd = (unsigned char *)&rnd;
-	unsigned char *pcnt = (unsigned char *)&counter;
+	unsigned char *prnd = reinterpret_cast<unsigned char *>(&rnd);
+	unsigned char *pcnt = reinterpret_cast<unsigned char *>(&counter);
 	unsigned char dummy[8] = { 0 };
 
 	memcpy(dummy, password, min(strlen(password), 8));
@@ -159,12 +159,12 @@ void protocol::set_password(std::string password_in)
 {
 	int len = password_in.length();
 
-	BF_set_key(&key, len, (unsigned char *)password_in.c_str());
+	BF_set_key(&key, len, reinterpret_cast<const unsigned char *>(password_in.c_str()));
 }
 
 void protocol::init_ivec(std::string password_in, long long unsigned int rnd, long long unsigned int counter)
 {
-	calc_ivec((char *)password_in.c_str(), rnd, counter, ivec);
+	calc_ivec(password_in.c_str(), rnd, counter, ivec);
 
 	ivec_counter = 0;
 	ivec_offset = 0;
@@ -302,10 +302,10 @@ int protocol::message_transmit_entropy_data(unsigned char *bytes_in, int n_bytes
 		if ((n_bytes * 8) > 9999)
 			error_exit("internal error: too many bytes to transmit in 1 message (%d)", n_bytes);
 
-		make_msg((char *)header, 2, n_bytes * 8); // 0002 xmit data request
+		make_msg(header, 2, n_bytes * 8); // 0002 xmit data request
 
 		// header
-		if (WRITE_TO(socket_fd, (char *)header, 8, comm_time_out) != 8)
+		if (WRITE_TO(socket_fd, header, 8, comm_time_out) != 8)
 		{
 			dolog(LOG_INFO, "error transmitting header");
 
@@ -348,10 +348,10 @@ int protocol::message_transmit_entropy_data(unsigned char *bytes_in, int n_bytes
 			// encrypt data
 			int with_hash_n = cur_n_bytes + DATA_HASH_LEN;
 
-			unsigned char *bytes_out = (unsigned char *)malloc(with_hash_n);
+			unsigned char *bytes_out = reinterpret_cast<unsigned char *>(malloc(with_hash_n));
 			if (!bytes_out)
 				error_exit("out of memory");
-			unsigned char *temp_buffer = (unsigned char *)malloc(with_hash_n);
+			unsigned char *temp_buffer = reinterpret_cast<unsigned char *>(malloc(with_hash_n));
 			if (!temp_buffer)
 				error_exit("out of memory");
 			lock_mem(temp_buffer, with_hash_n);
@@ -365,7 +365,7 @@ int protocol::message_transmit_entropy_data(unsigned char *bytes_in, int n_bytes
 			unlock_mem(temp_buffer, with_hash_n);
 			free(temp_buffer);
 
-			if (WRITE_TO(socket_fd, (char *)bytes_out, with_hash_n, comm_time_out) != with_hash_n)
+			if (WRITE_TO(socket_fd, reinterpret_cast<char *>(bytes_out), with_hash_n, comm_time_out) != with_hash_n)
 			{
 				dolog(LOG_INFO, "error transmitting data");
 				free(bytes_out);
@@ -545,11 +545,11 @@ int protocol::request_bytes(char *where_to, int n_bits, bool fail_on_no_bits)
 			}
 
 			int xmit_bytes = will_get_n_bytes + DATA_HASH_LEN;
-			unsigned char *buffer_in = (unsigned char *)malloc(xmit_bytes);
+			unsigned char *buffer_in = reinterpret_cast<unsigned char *>(malloc(xmit_bytes));
 			if (!buffer_in)
 				error_exit("out of memory allocating %d bytes", will_get_n_bytes);
 
-			if (READ_TO(socket_fd, (char *)buffer_in, xmit_bytes, comm_time_out) != xmit_bytes)
+			if (READ_TO(socket_fd, reinterpret_cast<char *>(buffer_in), xmit_bytes, comm_time_out) != xmit_bytes)
 			{
 				dolog(LOG_INFO, "Network read error (data)");
 
@@ -564,7 +564,7 @@ int protocol::request_bytes(char *where_to, int n_bits, bool fail_on_no_bits)
 			}
 
 			// decrypt
-			unsigned char *temp_buffer = (unsigned char *)malloc(xmit_bytes);
+			unsigned char *temp_buffer = reinterpret_cast<unsigned char *>(malloc(xmit_bytes));
 			lock_mem(temp_buffer, will_get_n_bytes);
 			do_decrypt(buffer_in, temp_buffer, xmit_bytes);
 

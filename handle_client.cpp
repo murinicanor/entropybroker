@@ -256,10 +256,10 @@ void * thread(void *data)
 
 		p -> challenge = auth_rnd;
 		p -> ivec_counter = 0;
-		calc_ivec((char *)password.c_str(), p -> challenge, p -> ivec_counter, p -> ivec);
+		calc_ivec(password.c_str(), p -> challenge, p -> ivec_counter, p -> ivec);
 
 		p -> password = strdup(password.c_str());
-		BF_set_key(&p -> key, password.length(), (unsigned char *)password.c_str());
+		BF_set_key(&p -> key, password.length(), reinterpret_cast<unsigned char *>(const_cast<char *>(password.c_str())));
 
 		for(;;)
 		{
@@ -628,7 +628,7 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 
 		if (config -> allow_event_entropy_addition)
 		{
-			int event_bits = ppools -> add_event(now, (unsigned char *)&rfds, sizeof rfds, double(config -> communication_timeout) * 0.05);
+			int event_bits = ppools -> add_event(now, reinterpret_cast<unsigned char *>(&rfds), sizeof rfds, double(config -> communication_timeout) * 0.05);
 
 			if (event_bits > 0)
 				dolog(LOG_DEBUG, "main|added %d bits of event-entropy to pool", event_bits);

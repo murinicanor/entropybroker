@@ -185,7 +185,7 @@ int main(int argc, char *argv[])
 	fs.index = 0;
 	fs.cache_size = get_cache_size();
 	dolog(LOG_INFO, "cache size: %dKB", fs.cache_size);
-	fs.buffer = (char *)malloc(fs.cache_size * 3);
+	fs.buffer = reinterpret_cast<char *>(malloc(fs.cache_size * 3));
 	fs.cache_line_size = get_cache_line_size();
 	dolog(LOG_INFO, "cache-line size: %d bytes", fs.cache_line_size);
 

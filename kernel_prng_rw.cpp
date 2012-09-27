@@ -24,7 +24,7 @@ int kernel_rng_read_blocking(unsigned char *buffer, int n)
 		error_exit("Failed to open %s", DEV_RANDOM);
 
 	int rc = -1;
-	if (READ(fd, (char *)buffer, n) == n)
+	if (READ(fd, reinterpret_cast<char *>(buffer), n) == n)
 		rc = n;
 
 	close(fd);

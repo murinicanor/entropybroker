@@ -15,9 +15,9 @@
 #define DATA_HASH_LEN SHA256_DIGEST_LENGTH
 
 int recv_length_data(int fd, char **data, int *len, double to);
-int send_length_data(int fd, char *data, int len, double to);
+int send_length_data(int fd, const char *data, int len, double to);
 void make_msg(char *where_to, int code, int value);
-void calc_ivec(char *password, long long unsigned int rnd, long long unsigned int counter, unsigned char *dest);
+void calc_ivec(const char *password, long long unsigned int rnd, long long unsigned int counter, unsigned char *dest);
 
 class protocol
 {

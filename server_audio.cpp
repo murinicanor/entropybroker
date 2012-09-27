@@ -159,7 +159,7 @@ void main_loop(std::vector<std::string> * hosts, char *bytes_file, char show_bps
 		char got_any = 0;
 
 		input_buffer_size = snd_pcm_frames_to_bytes(chandle, DEFAULT_SAMPLE_RATE * 2);
-		input_buffer = (char *)malloc(input_buffer_size);
+		input_buffer = reinterpret_cast<char *>(malloc(input_buffer_size));
 		if (!input_buffer)
 			error_exit("problem allocating %d bytes of memory", input_buffer_size);
 

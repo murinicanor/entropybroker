@@ -175,11 +175,11 @@ int put_data(proxy_client_t *client, lookup_t *lt)
 	int cur_n_bytes = (cur_n_bits + 7) / 8;
 
 	int in_len = cur_n_bytes + DATA_HASH_LEN;
-	unsigned char *buffer_in = (unsigned char *)malloc(in_len);
+	unsigned char *buffer_in = reinterpret_cast<unsigned char *>(malloc(in_len));
 	if (!buffer_in)
 		error_exit("%s error allocating %d bytes of memory", client -> host.c_str(), in_len);
 
-	if (READ_TO(client -> fd, (char *)buffer_in, in_len, DEFAULT_COMM_TO) != in_len)
+	if (READ_TO(client -> fd, reinterpret_cast<char *>(buffer_in), in_len, DEFAULT_COMM_TO) != in_len)
 	{
 		dolog(LOG_INFO, "put|%s short read while retrieving entropy data", client -> host.c_str());
 
@@ -188,7 +188,7 @@ int put_data(proxy_client_t *client, lookup_t *lt)
 		return -1;
 	}
 
-	unsigned char *buffer_out = (unsigned char *)malloc(in_len);
+	unsigned char *buffer_out = reinterpret_cast<unsigned char *>(malloc(in_len));
 	if (!buffer_out)
 		error_exit("%s error allocating %d bytes of memory", client -> host.c_str(), cur_n_bytes);
 	// FIXME lock_mem(buffer_out, cur_n_bytes);
@@ -329,7 +329,7 @@ void * thread(void *pars)
 			}
 
 			my_mutex_unlock(&p -> lt -> lock);
-			(void)p -> p -> message_transmit_entropy_data((unsigned char *)out, n_bytes);
+			(void)p -> p -> message_transmit_entropy_data(reinterpret_cast<unsigned char *>(out), n_bytes);
 			free(out);
 			my_mutex_lock(&p -> lt -> lock);
 		}
@@ -585,9 +585,9 @@ int main(int argc, char *argv[])
 					pcp -> challenge = challenge;
 					pcp -> ivec_counter = 0;
 					pcp -> ivec_offset = 0;
-					calc_ivec((char *)client_password.c_str(), pcp -> challenge, pcp -> ivec_counter, pcp -> ivec);
+					calc_ivec(client_password.c_str(), pcp -> challenge, pcp -> ivec_counter, pcp -> ivec);
 
-					BF_set_key(&pcp -> key, client_password.length(), (unsigned char *)client_password.c_str());
+					BF_set_key(&pcp -> key, client_password.length(), reinterpret_cast<unsigned char *>(client_password.c_str()));
 				}
 				else
 				{
