@@ -20,6 +20,8 @@ http://en.wikipedia.org/wiki/Twofish <--
 
 - abstraced prng to objects
 
-- get/add bits: random() zoek-offset om lock contention te voorkomen, hoeft niet een secure getal te zijn
+- loglevel
+
+- configurable cipher/hash voor protocol
 
 SVN: $Revision$
