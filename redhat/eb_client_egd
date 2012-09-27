@@ -1,6 +1,7 @@
 #!/bin/sh
 #
 # eb_client_egd
+# SVN: $Revision$
 #
 # chkconfig:   2345 28 83
 # description: eb_client_egd

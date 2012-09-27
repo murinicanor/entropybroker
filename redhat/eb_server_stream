@@ -1,6 +1,7 @@
 #!/bin/sh
 #
 # eb_server_stream - Entropy broker stream source 
+# SVN: $Revision$
 #
 # chkconfig:   2345 27 84
 # description: This daemon manages entropy sources and distributes entropy

@@ -1,6 +1,7 @@
 #!/bin/sh
 #
 # eb_server_ComScire_R2000KU - Entropy broker egd source 
+# SVN: $Revision$
 #
 # chkconfig:   2345 27 84
 # description: This daemon manages entropy sources and distributes entropy

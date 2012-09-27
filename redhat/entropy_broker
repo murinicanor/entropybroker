@@ -1,6 +1,7 @@
 #!/bin/sh
 #
 # entropy_broker - Entropy distribution service
+# SVN: $Revision$
 #
 # chkconfig:   2345 26 85
 # description: This daemon manages entropy sources and distributes entropy

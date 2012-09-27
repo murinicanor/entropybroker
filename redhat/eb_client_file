@@ -1,6 +1,7 @@
 #!/bin/sh
 #
 # eb_client_file - Entropy broker linux kernel client
+# SVN: $Revision$
 #
 # chkconfig:   2345 28 83
 # description: This daemon installs brokered entropy into the linux kernel
