@@ -390,6 +390,7 @@ void help()
 	printf("-j adapter  adapter to listen on\n");
 	printf("-p port   port to listen on (default: %d)\n", DEFAULT_PROXY_LISTEN_PORT);
 	printf("-l file   log to file 'file'\n");
+	printf("-L x      log level, 0=nothing, 255=all\n");
 	printf("-s        log to syslog\n");
 	printf("-n        do not fork\n");
 	printf("-V file   store buffers to this file (default: %s/%s)\n", CACHE_DIR, KNUTH_FILE);
@@ -409,11 +410,12 @@ int main(int argc, char *argv[])
 	std::string clients_auths;
 	std::string knuth_file = CACHE_DIR + std::string("/") + KNUTH_FILE;
 	std::vector<std::string> hosts;
+	int log_level = LOG_INFO;
 	random_source_t rs = RS_OPENSSL;
 
 	printf("proxy_knuth_m, (C) 2009-2012 by folkert@vanheusden.com\n");
 
-	while((c = getopt(argc, argv, "V:j:p:U:hf:X:P:I:l:sn")) != -1)
+	while((c = getopt(argc, argv, "V:j:p:U:hf:X:P:I:L:l:sn")) != -1)
 	{
 		switch(c)
 		{
@@ -449,6 +451,10 @@ int main(int argc, char *argv[])
 				log_syslog = true;
 				break;
 
+			case 'L':
+				log_level = atoi(optarg);
+				break;
+
 			case 'l':
 				log_logfile = optarg;
 				break;
@@ -479,7 +485,8 @@ int main(int argc, char *argv[])
 		error_exit("No host to connect to selected");
 
 	(void)umask(0177);
-	set_logging_parameters(log_console, log_logfile, log_syslog);
+
+	set_logging_parameters(log_console, log_logfile, log_syslog, log_level);
 
 	users *user_map = new users(clients_auths);
 

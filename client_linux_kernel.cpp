@@ -44,6 +44,7 @@ void help(void)
         printf("               [ipv6 literal]:port\n");
         printf("          you can have multiple entries of this\n");
 	printf("-l file   log to file 'file'\n");
+	printf("-L x      log level, 0=nothing, 255=all\n");
 	printf("-s        log to syslog\n");
 	printf("-b x      interval in which data will be seeded in a full(!) kernel entropy buffer (default is off)\n");
 	printf("-n        do not fork\n");
@@ -61,10 +62,11 @@ int main(int argc, char *argv[])
 	std::string username, password;
 	int interval = -1;
 	std::vector<std::string> hosts;
+	int log_level = LOG_INFO;
 
 	printf("eb_client_linux_kernel v" VERSION ", (C) 2009-2012 by folkert@vanheusden.com\n");
 
-	while((c = getopt(argc, argv, "b:hX:P:I:l:sn")) != -1)
+	while((c = getopt(argc, argv, "b:hX:P:I:L:l:sn")) != -1)
 	{
 		switch(c)
 		{
@@ -90,6 +92,10 @@ int main(int argc, char *argv[])
 				log_syslog = true;
 				break;
 
+			case 'L':
+				log_level = atoi(optarg);
+				break;
+
 			case 'l':
 				log_logfile = optarg;
 				break;
@@ -111,7 +117,7 @@ int main(int argc, char *argv[])
 	if (hosts.empty())
 		error_exit("no host to connect to selected");
 
-	set_logging_parameters(log_console, log_logfile, log_syslog);
+	set_logging_parameters(log_console, log_logfile, log_syslog, log_level);
 
 	if (!do_not_fork)
 	{

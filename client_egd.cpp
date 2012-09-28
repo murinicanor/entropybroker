@@ -192,6 +192,7 @@ void help(void)
 	printf("-t host   egd tcp host to listen on\n");
 	printf("-T port   egd tcp port to listen on\n");
 	printf("-l file   log to file 'file'\n");
+	printf("-L x      log level, 0=nothing, 255=all\n");
 	printf("-s        log to syslog\n");
 	printf("-n        do not fork\n");
 	printf("-P file   write pid to file\n");
@@ -233,10 +234,11 @@ int main(int argc, char *argv[])
 	int egd_port = -1;
 	int t_listen_fd = -1;
 	std::vector<std::string> hosts;
+	int log_level = LOG_INFO;
 
 	printf("eb_client_egd v" VERSION ", (C) 2009-2012 by folkert@vanheusden.com\n");
 
-	while((c = getopt(argc, argv, "t:T:hX:P:d:I:l:sn")) != -1)
+	while((c = getopt(argc, argv, "t:T:hX:P:d:I:L:l:sn")) != -1)
 	{
 		switch(c)
 		{
@@ -270,6 +272,10 @@ int main(int argc, char *argv[])
 				log_syslog = true;
 				break;
 
+			case 'L':
+				log_level = atoi(optarg);
+				break;
+
 			case 'l':
 				log_logfile = optarg;
 				break;
@@ -297,7 +303,7 @@ int main(int argc, char *argv[])
 	(void)umask(0177);
 	no_core();
 
-	set_logging_parameters(log_console, log_logfile, log_syslog);
+	set_logging_parameters(log_console, log_logfile, log_syslog, log_level);
 
 	protocol *p1 = new protocol(&hosts, username, password, false, client_type, DEFAULT_COMM_TO);
 	protocol *p2 = new protocol(&hosts, username, password, false, client_type, DEFAULT_COMM_TO);

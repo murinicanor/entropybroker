@@ -43,6 +43,7 @@ void help(void)
         printf("          you can have multiple entries of this\n");
 	printf("-f file   file to read from\n");
         printf("-l file   log to file 'file'\n");
+	printf("-L x      log level, 0=nothing, 255=all\n");
         printf("-s        log to syslog\n");
         printf("-n        do not fork\n");
 	printf("-S        show bps (mutual exclusive with -n)\n");
@@ -61,10 +62,11 @@ int main(int argc, char *argv[])
 	char *bytes_file = NULL;
 	bool show_bps = false;
 	std::vector<std::string> hosts;
+	int log_level = LOG_INFO;
 
 	fprintf(stderr, "%s, (C) 2009-2012 by folkert@vanheusden.com\n", server_type);
 
-	while((c = getopt(argc, argv, "S:I:f:hX:P:o:p:d:l:sn")) != -1)
+	while((c = getopt(argc, argv, "S:I:f:hX:P:o:p:d:L:l:sn")) != -1)
 	{
 		switch(c)
 		{
@@ -96,6 +98,10 @@ int main(int argc, char *argv[])
 				log_syslog = true;
 				break;
 
+			case 'L':
+				log_level = atoi(optarg);
+				break;
+
 			case 'l':
 				log_logfile = optarg;
 				break;
@@ -121,7 +127,8 @@ int main(int argc, char *argv[])
 		error_exit("no file to read from selected");
 
 	(void)umask(0177);
-	set_logging_parameters(log_console, log_logfile, log_syslog);
+
+	set_logging_parameters(log_console, log_logfile, log_syslog, log_level);
 
 	FILE *fh = fopen(file, "rb");
 	if (!fh)

@@ -108,6 +108,7 @@ void help(void)
 {
 	printf("-c file   config-file to read (default: " CONFIG "\n");
 	printf("-l file   log to file 'file'\n");
+	printf("-L x      log level, 0=nothing, 255=all\n");
 	printf("-s        log to syslog\n");
 	printf("-S        statistics-file to log to\n");
 	printf("-n        do not fork\n");
@@ -124,6 +125,7 @@ int main(int argc, char *argv[])
 	scc *eb_output_scc = new scc();
 	const char *config_file = CONFIG;
 	config_t config;
+	int log_level = LOG_INFO;
 
 	memset(&config, 0x00, sizeof config);
 
@@ -133,7 +135,7 @@ int main(int argc, char *argv[])
 	eb_output_fips140 -> set_user("output");
 	eb_output_scc     -> set_user("output");
 
-	while((c = getopt(argc, argv, "hP:c:S:l:sn")) != -1)
+	while((c = getopt(argc, argv, "hP:c:S:L:l:sn")) != -1)
 	{
 		switch(c)
 		{
@@ -157,6 +159,10 @@ int main(int argc, char *argv[])
 				log_logfile = optarg;
 				break;
 
+			case 'L':
+				log_level = atoi(optarg);
+				break;
+
 			case 'n':
 				do_not_fork = true;
 				log_console = true;
@@ -176,7 +182,7 @@ int main(int argc, char *argv[])
 	pthread_check(pthread_mutexattr_init(&global_mutex_attr), "pthread_mutexattr_init");
 	pthread_check(pthread_mutexattr_settype(&global_mutex_attr, PTHREAD_MUTEX_ERRORCHECK), "pthread_mutexattr_settype");
 
-	set_logging_parameters(log_console, log_logfile, log_syslog);
+	set_logging_parameters(log_console, log_logfile, log_syslog, log_level);
 
 	load_config(config_file, &config);
 	if (stats_file)

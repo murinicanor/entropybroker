@@ -44,6 +44,7 @@ void help(void)
 	printf("-o file   file to write entropy data to\n");
 	printf("-S        show bps (mutual exclusive with -n)\n");
 	printf("-l file   log to file 'file'\n");
+	printf("-L x      log level, 0=nothing, 255=all\n");
 	printf("-s        log to syslog\n");
 	printf("-n        do not fork\n");
 	printf("-P file   write pid to file\n");
@@ -59,12 +60,13 @@ int main(int argc, char *argv[])
 	bool show_bps = false;
 	std::string username, password;
 	std::vector<std::string> hosts;
+	int log_level = LOG_INFO;
 
 	fprintf(stderr, "%s, (C) 2009-2012 by folkert@vanheusden.com\n", server_type);
 	printf("Please note: this program RETRIEVES entropy data from the kernel and feeds that to the entropybroker!\n");
 	printf("If you want to ADD data to the kernel entropy buffer instead (which is what you most likely want to do), then use eb_client_linux_kernel\n");
 
-	while((c = getopt(argc, argv, "I:hX:P:So:l:sn")) != -1)
+	while((c = getopt(argc, argv, "I:hX:P:So:L:l:sn")) != -1)
 	{
 		switch(c)
 		{
@@ -92,6 +94,10 @@ int main(int argc, char *argv[])
 				log_syslog = true;
 				break;
 
+			case 'L':
+				log_level = atoi(optarg);
+				break;
+
 			case 'l':
 				log_logfile = optarg;
 				break;
@@ -116,7 +122,7 @@ int main(int argc, char *argv[])
 	(void)umask(0177);
 	no_core();
 
-	set_logging_parameters(log_console, log_logfile, log_syslog);
+	set_logging_parameters(log_console, log_logfile, log_syslog, log_level);
 
 	if (!do_not_fork && !show_bps)
 	{

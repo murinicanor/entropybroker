@@ -20,8 +20,6 @@ http://en.wikipedia.org/wiki/Twofish <--
 
 - abstraced prng to objects
 
-- loglevel
-
 - configurable cipher/hash voor protocol
 
 SVN: $Revision$

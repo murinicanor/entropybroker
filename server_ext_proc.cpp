@@ -51,6 +51,7 @@ void help(void)
 	printf("-b x      how long to sleep between invocations (default: %ds)\n", DEFAULT_SLEEP);
 	printf("-o file   file to write entropy data to\n");
         printf("-l file   log to file 'file'\n");
+	printf("-L x      log level, 0=nothing, 255=all\n");
         printf("-s        log to syslog\n");
         printf("-S        show bps\n");
         printf("-n        do not fork\n");
@@ -68,11 +69,12 @@ int main(int argc, char *argv[])
 	int slp = DEFAULT_SLEEP;
 	char *bytes_file = NULL;
 	bool show_bps = false;
+	int log_level = LOG_INFO;
 	std::vector<std::string> hosts;
 
 	fprintf(stderr, "%s, (C) 2009-2012 by folkert@vanheusden.com\n", server_type);
 
-	while((c = getopt(argc, argv, "I:So:hc:Z:X:P:o:p:d:l:sn")) != -1)
+	while((c = getopt(argc, argv, "I:So:hc:Z:X:P:o:p:d:L:l:sn")) != -1)
 	{
 		switch(c)
 		{
@@ -108,6 +110,10 @@ int main(int argc, char *argv[])
 				log_syslog = true;
 				break;
 
+			case 'L':
+				log_level = atoi(optarg);
+				break;
+
 			case 'l':
 				log_logfile = optarg;
 				break;
@@ -135,7 +141,7 @@ int main(int argc, char *argv[])
 	(void)umask(0177);
 	no_core();
 
-	set_logging_parameters(log_console, log_logfile, log_syslog);
+	set_logging_parameters(log_console, log_logfile, log_syslog, log_level);
 
 	if (!do_not_fork)
 	{

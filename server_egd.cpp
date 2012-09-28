@@ -81,6 +81,7 @@ void help(void)
 	printf("-a x      bytes per interval to read from egd\n");
 	printf("-b x      interval for reading data\n");
         printf("-l file   log to file 'file'\n");
+	printf("-L x      log level, 0=nothing, 255=all\n");
         printf("-s        log to syslog\n");
 	printf("-S        show bps (mutual exclusive with -n)\n");
         printf("-n        do not fork\n");
@@ -107,10 +108,11 @@ int main(int argc, char *argv[])
 	char *egd_host = NULL;
 	int egd_port = -1;
 	std::vector<std::string> hosts;
+	int log_level = LOG_INFO;
 
 	fprintf(stderr, "eb_server_egb v" VERSION ", (C) 2009-2012 by folkert@vanheusden.com\n");
 
-	while((c = getopt(argc, argv, "I:t:T:hSX:P:a:b:o:d:l:snv")) != -1)
+	while((c = getopt(argc, argv, "I:t:T:hSX:P:a:b:o:d:L:l:snv")) != -1)
 	{
 		switch(c)
 		{
@@ -166,6 +168,10 @@ int main(int argc, char *argv[])
 				log_syslog = true;
 				break;
 
+			case 'L':
+				log_level = atoi(optarg);
+				break;
+
 			case 'l':
 				log_logfile = optarg;
 				break;
@@ -201,7 +207,7 @@ int main(int argc, char *argv[])
 	no_core();
 	lock_mem(bytes, sizeof bytes);
 
-	set_logging_parameters(log_console, log_logfile, log_syslog);
+	set_logging_parameters(log_console, log_logfile, log_syslog, log_level);
 
 	snprintf(server_type, sizeof server_type, "server_egb v" VERSION " %s", device);
 

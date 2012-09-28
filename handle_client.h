@@ -25,9 +25,9 @@ typedef struct
 
 	unsigned char ivec[8]; // used for data encryption
 	int ivec_offset;
-	long long unsigned int challenge;
 	long long unsigned int ivec_counter; // required for CFB
 	BF_KEY key;
+	long long unsigned int challenge;
 
 	int bits_sent, bits_recv;
 	pthread_mutex_t stats_lck;

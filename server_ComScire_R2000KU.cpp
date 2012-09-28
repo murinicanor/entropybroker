@@ -47,6 +47,7 @@ void help(void)
 	printf("          you can have multiple entries of this\n");
 	printf("-o file   file to write entropy data to (mututal exclusive with -i)\n");
         printf("-l file   log to file 'file'\n");
+	printf("-L x      log level, 0=nothing, 255=all\n");
         printf("-s        log to syslog\n");
 	printf("-S        show bps (mutual exclusive with -n)\n");
         printf("-n        do not fork\n");
@@ -68,10 +69,11 @@ int main(int argc, char *argv[])
 	bool show_bps = false;
 	std::string username, password;
 	std::vector<std::string> hosts;
+	int log_level = LOG_INFO;
 
 	fprintf(stderr, "eb_server_ComScire_R2000KU v" VERSION ", (C) 2009-2012 by folkert@vanheusden.com\n");
 
-	while((c = getopt(argc, argv, "I:hSX:P:o:l:snv")) != -1)
+	while((c = getopt(argc, argv, "I:hSX:P:o:L:l:snv")) != -1)
 	{
 		switch(c)
 		{
@@ -101,6 +103,10 @@ int main(int argc, char *argv[])
 
 			case 's':
 				log_syslog = true;
+				break;
+
+			case 'L':
+				log_level = atoi(optarg);
 				break;
 
 			case 'l':
@@ -133,7 +139,7 @@ int main(int argc, char *argv[])
 
 	lock_mem(bytes, sizeof bytes);
 
-	set_logging_parameters(log_console, log_logfile, log_syslog);
+	set_logging_parameters(log_console, log_logfile, log_syslog, log_level);
 
 	QWQNG *q = QWQNG::Instance();
 	if (!q)

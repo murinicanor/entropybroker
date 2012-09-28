@@ -53,6 +53,7 @@ void help(bool is_eb_client_file)
 	if (is_eb_client_file)
 		printf("-f file   write bytes to \"file\"\n");
 	printf("-l file   log to file 'file'\n");
+	printf("-L x      log level, 0=nothing, 255=all\n");
 	printf("-s        log to syslog\n");
 	printf("-n        do not fork\n");
 	printf("-P file   write pid to file\n");
@@ -77,6 +78,7 @@ int main(int argc, char *argv[])
 	std::string username, password;
 	bool is_eb_client_file = strcmp(prog, "eb_client_file") == 0;
 	std::vector<std::string> hosts;
+	int log_level = LOG_INFO;
 
 	if (!is_eb_client_file)
 		file = "/dev/random";
@@ -87,7 +89,7 @@ int main(int argc, char *argv[])
 		client_type = "eb_client_kernel_generic v" VERSION;
 	printf("%s, (C) 2009-2012 by folkert@vanheusden.com\n", client_type);
 
-	while((c = getopt(argc, argv, "b:S:hc:f:X:P:I:l:sn")) != -1)
+	while((c = getopt(argc, argv, "b:S:hc:f:X:P:I:L:l:sn")) != -1)
 	{
 		switch(c)
 		{
@@ -129,6 +131,10 @@ int main(int argc, char *argv[])
 				log_syslog = true;
 				break;
 
+			case 'L':
+				log_level = atoi(optarg);
+				break;
+
 			case 'l':
 				log_logfile = optarg;
 				break;
@@ -161,7 +167,8 @@ int main(int argc, char *argv[])
 		error_exit("Count must be >= 1");
 
 	(void)umask(0177);
-	set_logging_parameters(log_console, log_logfile, log_syslog);
+
+	set_logging_parameters(log_console, log_logfile, log_syslog, log_level);
 
 	protocol *p = new protocol(&hosts, username, password, false, client_type, DEFAULT_COMM_TO);
 
