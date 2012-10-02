@@ -278,7 +278,7 @@ int start_listen(const char *adapter, int portnr, int listen_queue_size)
 		fprintf(stderr, " * If you're trying to use an IPv4 address (e.g. 192.168.0.1 or so)\n");
 		fprintf(stderr, " * then do not forget to place ::FFFF: in front of the address,\n");
 		fprintf(stderr, " * e.g.: ::FFFF:192.168.0.1\n\n");
-		error_exit("listen socket initialisation failure: did you configure a correct listen adapter?");
+		error_exit("listen socket initialisation failure: did you configure a correct listen adapter? (run with -n for details)");
 	}
 
         if (bind(fd, (struct sockaddr *)&server_addr, server_addr_len) == -1)
