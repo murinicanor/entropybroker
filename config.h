@@ -44,6 +44,8 @@ typedef struct
 	hasher_type ht;
 	stirrer_type st;
 
+	std::string stream_cipher;
+
 	std::string *user_map;
 } config_t;
 

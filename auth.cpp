@@ -17,17 +17,18 @@
 #include "random_source.h"
 #include "utils.h"
 #include "log.h"
+#include "encrypt_stream.h"
 #include "protocol.h"
 #include "users.h"
 
-int auth_eb_user(int fd, int to, users *user_map, std::string & password, long long unsigned int *challenge, bool is_proxy_auth, bool *is_server_in, std::string & type, random_source_t rs)
+int auth_eb_user(int fd, int to, users *user_map, std::string & password, long long unsigned int *challenge, bool is_proxy_auth, bool *is_server_in, std::string & type, random_source_t rs, encrypt_stream *es)
 {
 	const char *ts = is_proxy_auth ? "Proxy-auth" : "Connection";
 
 	/* Inform the client about the hash-functions and ciphers that are used */
 	std::string hash_handshake = "sha512";
 	std::string mac_data = "sha256";
-	std::string cipher_data = "blowfish";
+	std::string cipher_data = es -> get_name();
 
 	if (send_length_data(fd, hash_handshake.c_str(), hash_handshake.size(), to) == -1)
 	{
@@ -141,7 +142,7 @@ int auth_eb_user(int fd, int to, users *user_map, std::string & password, long l
 	return 0;
 }
 
-int auth_eb(int fd, int to, users *user_map, std::string & password, long long unsigned int *challenge, bool *is_server_in, std::string & type, random_source_t rs)
+int auth_eb(int fd, int to, users *user_map, std::string & password, long long unsigned int *challenge, bool *is_server_in, std::string & type, random_source_t rs, encrypt_stream *es)
 {
 	char prot_ver[4 + 1] = { 0 };
 	snprintf(prot_ver, sizeof prot_ver, "%04d", PROTOCOL_VERSION);
@@ -152,7 +153,7 @@ int auth_eb(int fd, int to, users *user_map, std::string & password, long long u
 		return -1;
 	}
 
-	return auth_eb_user(fd, to, user_map, password, challenge, false, is_server_in, type, rs);
+	return auth_eb_user(fd, to, user_map, password, challenge, false, is_server_in, type, rs, es);
 }
 
 bool get_auth_from_file(char *filename, std::string & username, std::string & password)

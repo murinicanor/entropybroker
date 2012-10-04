@@ -31,6 +31,8 @@
 #include "hasher_type.h"
 #include "stirrer_type.h"
 #include "users.h"
+#include "encrypt_stream.h"
+#include "encrypt_stream_blowfish.h"
 #include "config.h"
 #include "scc.h"
 #include "pools.h"
@@ -256,10 +258,12 @@ void * thread(void *data)
 
 		p -> challenge = auth_rnd;
 		p -> ivec_counter = 0;
-		calc_ivec(password.c_str(), p -> challenge, p -> ivec_counter, p -> ivec);
+		unsigned char ivec[8];
+		calc_ivec(password.c_str(), p -> challenge, p -> ivec_counter, ivec);
 
 		p -> password = strdup(password.c_str());
-		BF_set_key(&p -> key, password.length(), reinterpret_cast<unsigned char *>(const_cast<char *>(password.c_str())));
+
+		p -> stream_cipher = encrypt_stream::select_cipher(p -> config -> stream_cipher, reinterpret_cast<unsigned char *>(const_cast<char *>(password.c_str())), password.length(), ivec);
 
 		for(;;)
 		{
@@ -357,7 +361,6 @@ void register_new_client(int listen_socket_fd, std::vector<client_t *> *clients,
 		p -> connected_since = now;
 		p -> last_put_message = now;
 
-		p -> ivec_offset = 0;
 		p -> ivec_counter = 0;
 		p -> password = NULL;
 

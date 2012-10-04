@@ -34,8 +34,8 @@ private:
 	int sleep_9003;
 	unsigned char ivec[8];
 	long long unsigned ivec_counter, challenge;
-	int ivec_offset;
-	BF_KEY key;
+
+	encrypt_stream *stream_cipher;
 
 	void do_encrypt(unsigned char *buffer_in, unsigned char *buffer_out, int n_bytes);
 	void do_decrypt(unsigned char *buffer_in, unsigned char *buffer_out, int n_bytes);

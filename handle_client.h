@@ -23,11 +23,9 @@ typedef struct
 	fips140 *pfips140;
 	scc *pscc;
 
-	unsigned char ivec[8]; // used for data encryption
-	int ivec_offset;
-	long long unsigned int ivec_counter; // required for CFB
-	BF_KEY key;
+	long long unsigned int ivec_counter;
 	long long unsigned int challenge;
+	encrypt_stream *stream_cipher;
 
 	int bits_sent, bits_recv;
 	pthread_mutex_t stats_lck;

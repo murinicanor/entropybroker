@@ -34,6 +34,7 @@
 #include "fips140.h"
 #include "scc.h"
 #include "users.h"
+#include "encrypt_stream.h"
 #include "config.h"
 #include "pools.h"
 #include "statistics.h"

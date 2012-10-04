@@ -1,6 +1,5 @@
 // SVN: $Revision$
 #include <sys/types.h>
-#include <openssl/blowfish.h>
 #include <openssl/sha.h>
 #include <stdlib.h>
 #include <string.h>
@@ -21,6 +20,7 @@
 #include "hasher_type.h"
 #include "stirrer_type.h"
 #include "users.h"
+#include "encrypt_stream.h"
 #include "config.h"
 #include "scc.h"
 #include "pools.h"
@@ -175,7 +175,7 @@ int do_client_get(client_t *client, bool *no_bits)
 		error_exit("error allocating %d bytes of memory", out_len);
 
 	// encrypt data
-	BF_cfb64_encrypt(ent_buffer_in, ent_buffer, out_len, &client -> key, client -> ivec, &client -> ivec_offset, BF_ENCRYPT);
+	client -> stream_cipher -> encrypt(ent_buffer_in, out_len, ent_buffer);
 	// printf("encr: "); hexdump(ent_buffer, 16);
 
 	memset(temp_buffer, 0x00, cur_n_bytes);
@@ -300,7 +300,7 @@ int do_client_put(client_t *client, bool *new_bits, bool *is_full)
 	lock_mem(buffer_out, cur_n_bytes);
 
 	// decrypt data
-	BF_cfb64_encrypt(buffer_in, buffer_out, in_len, &client -> key, client -> ivec, &client -> ivec_offset, BF_DECRYPT);
+	client -> stream_cipher -> decrypt(buffer_in, in_len, buffer_out);
 
 	unsigned char *entropy_data = &buffer_out[DATA_HASH_LEN];
 	int entropy_data_len = cur_n_bytes;
