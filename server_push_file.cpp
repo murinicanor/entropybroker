@@ -13,7 +13,6 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <termios.h>
-#include <openssl/blowfish.h>
 
 const char *server_type = "server_push_file v" VERSION;
 const char *pid_file = PID_DIR "/server_push_file.pid";

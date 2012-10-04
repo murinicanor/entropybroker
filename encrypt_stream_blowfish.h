@@ -1,4 +1,6 @@
 // SVN: $Revision$
+#include <openssl/blowfish.h>
+
 class encrypt_stream_blowfish
 {
 private:

@@ -4,7 +4,6 @@
 #include <string.h>
 #include <stdlib.h>
 #include <errno.h>
-#include <openssl/blowfish.h>
 #include <openssl/sha.h>
 #include <arpa/inet.h>
 #include <string>
@@ -19,6 +18,7 @@
 #include "auth.h"
 #include "kernel_prng_io.h"
 #include "server_utils.h"
+#include "encrypt_stream.h"
 #include "protocol.h"
 
 int recv_length_data(int fd, char **data, unsigned int *len, double to)

@@ -16,7 +16,6 @@
 #include <termios.h>
 #include <sys/socket.h>
 #include <sys/un.h>
-#include <openssl/blowfish.h>
 
 #include "error.h"
 #include "random_source.h"

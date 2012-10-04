@@ -18,7 +18,6 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <openssl/blowfish.h>
 #include <string.h>
 #include <math.h>
 #include <unistd.h>

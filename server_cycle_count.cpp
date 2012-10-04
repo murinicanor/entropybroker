@@ -11,7 +11,6 @@
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <openssl/blowfish.h>
 
 const char *server_type = "server_cycle_count v" VERSION;
 const char *pid_file = PID_DIR "/server_cycle_count.pid";

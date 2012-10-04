@@ -13,7 +13,6 @@
 #include <unistd.h>
 #include <sys/time.h>
 #include <sys/resource.h>
-#include <openssl/blowfish.h>
 #include <openssl/sha.h>
 #include <vector>
 #include <string>

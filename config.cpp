@@ -7,7 +7,6 @@
 #include <string>
 #include <map>
 #include <vector>
-#include <openssl/blowfish.h>
 
 #include "error.h"
 #include "random_source.h"
@@ -15,6 +14,7 @@
 #include "hasher_type.h"
 #include "stirrer_type.h"
 #include "users.h"
+#include "encrypt_stream.h"
 #include "protocol.h"
 #include "config.h"
 #include "log.h"

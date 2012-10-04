@@ -11,7 +11,6 @@
 #include <vector>
 #include <string>
 #include <map>
-#include <openssl/blowfish.h>
 #include <openssl/des.h>
 
 #include "error.h"

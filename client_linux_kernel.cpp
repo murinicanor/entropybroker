@@ -13,7 +13,6 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
-#include <openssl/blowfish.h>
 
 #include "error.h"
 #include "random_source.h"

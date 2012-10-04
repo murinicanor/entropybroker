@@ -2,7 +2,6 @@
 #include <string>
 #include <string.h>
 #include <arpa/inet.h>
-#include <openssl/blowfish.h>
 
 #include "error.h"
 #include "random_source.h"

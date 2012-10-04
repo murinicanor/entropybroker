@@ -11,7 +11,6 @@
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <openssl/blowfish.h>
 #include <winscard.h>
 
 const char *server_type = "server_smartcard v" VERSION;

@@ -1,6 +1,5 @@
 // SVN: $Revision$
 #include <stdio.h>
-#include <openssl/blowfish.h>
 #include <openssl/sha.h>
 #include <vector>
 #include <string>
@@ -26,6 +25,7 @@
 #include "pools.h"
 #include "utils.h"
 #include "statistics.h"
+#include "encrypt_stream.h"
 #include "handle_client.h"
 
 statistics::statistics(char *file_in, fips140 *fips140_in, scc *scc_in, pools *pp_in) : file(file_in), pfips140(fips140_in), pscc(scc_in), ppools(pp_in)

@@ -20,7 +20,6 @@
 #include <sys/time.h>
 #include <errno.h>
 #include <alsa/asoundlib.h>
-#include <openssl/blowfish.h>
 
 const char *server_type = "eb_server_audio v" VERSION;
 const char *pid_file = PID_DIR "/eb_server_audio.pid";

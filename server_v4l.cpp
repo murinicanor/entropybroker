@@ -18,7 +18,6 @@
 #include <sys/types.h>
 #include <time.h>
 #include <unistd.h>
-#include <openssl/blowfish.h>
 
 #include "error.h"
 #include "random_source.h"

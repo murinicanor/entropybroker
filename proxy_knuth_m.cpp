@@ -21,7 +21,6 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <pthread.h>
-#include <openssl/blowfish.h>
 #include <openssl/sha.h>
 
 #include "error.h"

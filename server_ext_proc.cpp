@@ -14,7 +14,6 @@
 #include <fcntl.h>
 #include <termios.h>
 #include <sys/wait.h>
-#include <openssl/blowfish.h>
 
 #define SHELL "/bin/bash"
 

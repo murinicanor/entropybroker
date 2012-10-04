@@ -1,7 +1,6 @@
 // SVN: $Revision$
 #include <string>
 #include <pthread.h>
-#include <openssl/blowfish.h>
 #include <vector>
 #include <unistd.h>
 #include <signal.h>

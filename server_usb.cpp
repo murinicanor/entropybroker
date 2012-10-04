@@ -12,7 +12,6 @@
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <openssl/blowfish.h>
 
 extern "C" {
 #include <libusb-1.0/libusb.h>

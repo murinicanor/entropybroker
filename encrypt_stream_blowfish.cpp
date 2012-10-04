@@ -1,6 +1,4 @@
 // SVN: $Revision$
-#include <openssl/blowfish.h>
-
 #include "encrypt_stream.h"
 #include "encrypt_stream_blowfish.h"
 
