@@ -72,31 +72,25 @@ void make_msg(unsigned char *where_to, unsigned int code, unsigned int value)
 	uint_to_uchar(value, &where_to[4]);
 }
 
-void calc_ivec(const char *password, long long unsigned int rnd, long long unsigned int counter, unsigned char *dest)
+void calc_ivec(const char *password, long long unsigned int rnd, long long unsigned int counter, size_t ivec_size, unsigned char *dest)
 {
 	unsigned char *prnd = reinterpret_cast<unsigned char *>(&rnd);
 	unsigned char *pcnt = reinterpret_cast<unsigned char *>(&counter);
-	unsigned char dummy[8] = { 0 };
 
-	memcpy(dummy, password, min(strlen(password), 8));
+	memset(dest, 0x00, ivec_size);
+	memcpy(dest, password, min(strlen(password), ivec_size));
 
-	// this loop could be replaced if I were sure what
-	// the size of a long is. it is specified to be
-	// bigger than an int and at least 64 bit. that
-	// would allow 128 (or even bigger) as well
-	int index_dummy = 0, index_rnd = 0, rnd_len = sizeof rnd;
-	while(index_dummy < 8)
+	int index_dest = 0, index_rnd = 0, rnd_len = sizeof rnd;
+	while(index_dest < ivec_size)
 	{
-		dummy[index_dummy] ^= prnd[index_rnd];
-		dummy[index_dummy] ^= pcnt[index_rnd];
-		index_dummy++;
+		dest[index_dest] ^= prnd[index_rnd];
+		dest[index_dest] ^= pcnt[index_rnd];
+		index_dest++;
 		index_rnd++;
 
 		if (index_rnd == rnd_len)
 			index_rnd = 0;
 	}
-
-	memcpy(dest, dummy, 8);
 }
 
 protocol::protocol(std::vector<std::string> *hosts_in, std::string username_in, std::string password_in, bool is_server_in, std::string type_in, double comm_time_out_in) : hosts(hosts_in), username(username_in), password(password_in), is_server(is_server_in), type(type_in), comm_time_out(comm_time_out_in)
@@ -192,8 +186,10 @@ int protocol::reconnect_server_socket()
 		stream_cipher = encrypt_stream::select_cipher(cipher_data);
 
 		unsigned char ivec[8] = { 0 };
-		calc_ivec(password.c_str(), challenge, 0, ivec);
-		// printf("IVEC: "); hexdump(ivec, 8);
+		calc_ivec(password.c_str(), challenge, 0, stream_cipher -> get_ivec_size(), ivec);
+#ifdef CRYPTO_DEBUG
+		printf("IVEC: "); hexdump(ivec, 8);
+#endif
 
 		unsigned char *pw_char = reinterpret_cast<unsigned char *>(const_cast<char *>(password.c_str()));
 		stream_cipher -> init(pw_char, password.length(), ivec);
@@ -522,7 +518,9 @@ int protocol::request_bytes(unsigned char *where_to, unsigned int n_bits, bool f
 
 			int hash_len = mac_hasher -> get_hash_size();
 			int xmit_bytes = will_get_n_bytes + hash_len;
-			// printf("bytes: %d\n", xmit_bytes);
+#ifdef CRYPTO_DEBUG
+			printf("bytes: %d\n", xmit_bytes);
+#endif
 			unsigned char *buffer_in = reinterpret_cast<unsigned char *>(malloc(xmit_bytes));
 			if (!buffer_in)
 				error_exit("out of memory allocating %d bytes", will_get_n_bytes);
@@ -551,12 +549,18 @@ int protocol::request_bytes(unsigned char *where_to, unsigned int n_bits, bool f
 			unsigned char *hash = reinterpret_cast<unsigned char *>(malloc(hash_len));
 			mac_hasher -> do_hash(&temp_buffer[hash_len], will_get_n_bytes, hash);
 
-			// printf("in  : "); hexdump(temp_buffer, hash_len);
-			// printf("calc: "); hexdump(hash, hash_len);
-			// printf("data: "); hexdump(temp_buffer + hash_len, 8);
+#ifdef CRYPTO_DEBUG
+			printf("in  : "); hexdump(temp_buffer, hash_len);
+			printf("calc: "); hexdump(hash, hash_len);
+			printf("data: "); hexdump(temp_buffer + hash_len, 8);
+#endif
 
 			if (memcmp(hash, temp_buffer, hash_len) != 0)
 				error_exit("Data corrupt!");
+#ifdef CRYPTO_DEBUG
+			else
+				printf("data is OK\n");
+#endif
 
 			memcpy(where_to, &temp_buffer[hash_len], will_get_n_bytes);
 

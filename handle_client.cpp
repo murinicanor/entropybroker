@@ -263,7 +263,7 @@ void * thread(void *data)
 		p -> challenge = auth_rnd;
 		p -> ivec_counter = 0;
 		unsigned char ivec[8];
-		calc_ivec(password.c_str(), p -> challenge, p -> ivec_counter, ivec);
+		calc_ivec(password.c_str(), p -> challenge, p -> ivec_counter, es -> get_ivec_size(), ivec);
 		// printf("IVEC: "); hexdump(ivec, 8);
 
 		p -> password = strdup(password.c_str());

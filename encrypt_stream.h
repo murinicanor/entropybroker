@@ -2,7 +2,6 @@
 class encrypt_stream
 {
 protected:
-	unsigned char ivec[8];
 	int ivec_offset;
 
 public:
@@ -10,7 +9,9 @@ public:
 	virtual ~encrypt_stream();
 
 	static encrypt_stream * select_cipher(std::string type);
-	virtual void init(unsigned char *key, int key_len, unsigned char ivec[8]);
+
+	virtual int get_ivec_size() = 0;
+	virtual void init(unsigned char *key, int key_len, unsigned char *ivec) = 0;
 
 	virtual std::string get_name() = 0;
 

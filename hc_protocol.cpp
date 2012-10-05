@@ -161,7 +161,9 @@ int do_client_get(client_t *client, bool *no_bits)
 
 	int hash_len = client -> mac_hasher -> get_hash_size();
 	int out_len = cur_n_bytes + hash_len;
-	// printf("bytes: %d\n", out_len);
+#ifdef CRYPTO_DEBUG
+	printf("bytes: %d\n", out_len);
+#endif
 	unsigned char *ent_buffer_in = reinterpret_cast<unsigned char *>(malloc(out_len));
 	lock_mem(ent_buffer_in, out_len);
 
@@ -170,8 +172,10 @@ int do_client_get(client_t *client, bool *no_bits)
 
 	client -> mac_hasher -> do_hash(&ent_buffer_in[hash_len], cur_n_bytes, ent_buffer_in);
 
-	// printf("send: "); hexdump(ent_buffer_in, hash_len);
-	// printf("data: "); hexdump(&ent_buffer_in[hash_len], 8);
+#ifdef CRYPTO_DEBUG
+	printf("send: "); hexdump(ent_buffer_in, hash_len);
+	printf("data: "); hexdump(&ent_buffer_in[hash_len], 8);
+#endif
 
 	unsigned char *ent_buffer = reinterpret_cast<unsigned char *>(malloc(out_len));
 	if (!ent_buffer)
@@ -179,7 +183,9 @@ int do_client_get(client_t *client, bool *no_bits)
 
 	// encrypt data
 	client -> stream_cipher -> encrypt(ent_buffer_in, out_len, ent_buffer);
-	// printf("encr: "); hexdump(ent_buffer, 16);
+#ifdef CRYPTO_DEBUG
+	printf("encr: "); hexdump(ent_buffer, 16);
+#endif
 
 	memset(temp_buffer, 0x00, cur_n_bytes);
 	unlock_mem(temp_buffer, cur_n_bytes);

@@ -14,7 +14,7 @@
 int recv_length_data(int fd, char **data, unsigned int *len, double to);
 int send_length_data(int fd, const char *data, unsigned int len, double to);
 void make_msg(unsigned char *where_to, unsigned int code, unsigned int value);
-void calc_ivec(const char *password, long long unsigned int rnd, long long unsigned int counter, unsigned char *dest);
+void calc_ivec(const char *password, long long unsigned int rnd, long long unsigned int counter, size_t ivec_size, unsigned char *dest);
 
 class protocol
 {

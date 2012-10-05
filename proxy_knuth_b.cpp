@@ -602,7 +602,7 @@ int main(int argc, char *argv[])
 					pcp -> challenge = challenge;
 					pcp -> ivec_counter = 0;
 					unsigned char ivec[8] = { 0 };
-					calc_ivec(client_password.c_str(), pcp -> challenge, pcp -> ivec_counter, ivec);
+					calc_ivec(client_password.c_str(), pcp -> challenge, pcp -> ivec_counter, enc -> get_ivec_size(), ivec);
 
 					pcp -> sc = enc;
 					unsigned char *pw_char = reinterpret_cast<unsigned char *>(const_cast<char *>(client_password.c_str()));
