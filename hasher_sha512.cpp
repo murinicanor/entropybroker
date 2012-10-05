@@ -1,4 +1,5 @@
 // SVN: $Revision$
+#include <string>
 #include <openssl/sha.h>
 
 #include "hasher.h"
@@ -10,6 +11,11 @@ hasher_sha512::hasher_sha512()
 
 hasher_sha512::~hasher_sha512()
 {
+}
+
+std::string hasher_sha512::get_name()
+{
+	return "sha512";
 }
 
 int hasher_sha512::get_hash_size() const

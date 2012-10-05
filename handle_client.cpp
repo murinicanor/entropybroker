@@ -13,7 +13,6 @@
 #include <unistd.h>
 #include <sys/time.h>
 #include <sys/resource.h>
-#include <openssl/sha.h>
 #include <vector>
 #include <string>
 #include <map>
@@ -246,11 +245,14 @@ void * thread(void *data)
 	encrypt_stream *es = encrypt_stream::select_cipher(p -> config -> stream_cipher);
 	p -> stream_cipher = es;
 
+	hasher *mh = hasher::select_hasher(p -> config -> mac_hasher);
+	p -> mac_hasher = mh;
+
 	for(;;)
 	{
 		long long unsigned int auth_rnd = 1;
 		std::string password;
-		bool ok = auth_eb(p -> socket_fd, p -> config -> communication_timeout, p -> pu, password, &auth_rnd, &p -> is_server, p -> type, p -> config -> rs, es) == 0;
+		bool ok = auth_eb(p -> socket_fd, p -> config -> communication_timeout, p -> pu, password, &auth_rnd, &p -> is_server, p -> type, p -> config -> rs, es, mh, p -> config -> hash_hasher) == 0;
 
 		if (!ok)
 		{
@@ -262,10 +264,12 @@ void * thread(void *data)
 		p -> ivec_counter = 0;
 		unsigned char ivec[8];
 		calc_ivec(password.c_str(), p -> challenge, p -> ivec_counter, ivec);
+		// printf("IVEC: "); hexdump(ivec, 8);
 
 		p -> password = strdup(password.c_str());
 
-		es -> init(reinterpret_cast<unsigned char *>(const_cast<char *>(password.c_str())), password.length(), ivec);
+		unsigned char *pw_char = reinterpret_cast<unsigned char *>(const_cast<char *>(password.c_str()));
+		es -> init(pw_char, password.length(), ivec);
 
 		for(;;)
 		{

@@ -21,6 +21,8 @@ const char *pid_file = PID_DIR "/server_stream.pid";
 #include "random_source.h"
 #include "utils.h"
 #include "log.h"
+#include "encrypt_stream.h"
+#include "hasher.h"
 #include "protocol.h"
 #include "server_utils.h"
 #include "users.h"

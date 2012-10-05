@@ -1,4 +1,5 @@
 // SVN: $Revision$
+#include <string>
 #include <openssl/md5.h>
 
 #include "hasher.h"
@@ -10,6 +11,11 @@ hasher_md5::hasher_md5()
 
 hasher_md5::~hasher_md5()
 {
+}
+
+std::string hasher_md5::get_name()
+{
+	return "md5";
 }
 
 int hasher_md5::get_hash_size() const

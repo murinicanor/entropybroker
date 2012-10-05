@@ -26,6 +26,7 @@ typedef struct
 	long long unsigned int ivec_counter;
 	long long unsigned int challenge;
 	encrypt_stream *stream_cipher;
+	hasher *mac_hasher;
 
 	int bits_sent, bits_recv;
 	pthread_mutex_t stats_lck;

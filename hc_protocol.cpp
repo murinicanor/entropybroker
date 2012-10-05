@@ -1,12 +1,12 @@
 // SVN: $Revision$
 #include <sys/types.h>
-#include <openssl/sha.h>
 #include <stdlib.h>
 #include <string.h>
 #include <arpa/inet.h>
 #include <vector>
 #include <string>
 #include <map>
+#include <stdio.h>
 
 #include "error.h"
 #include "random_source.h"
@@ -159,16 +159,19 @@ int do_client_get(client_t *client, bool *no_bits)
 	cur_n_bytes = (cur_n_bits + 7) / 8;
 	dolog(LOG_DEBUG, "get|%s got %d bits from pool", client -> host.c_str(), cur_n_bits);
 
-	int out_len = cur_n_bytes + DATA_HASH_LEN;
+	int hash_len = client -> mac_hasher -> get_hash_size();
+	int out_len = cur_n_bytes + hash_len;
+	// printf("bytes: %d\n", out_len);
 	unsigned char *ent_buffer_in = reinterpret_cast<unsigned char *>(malloc(out_len));
 	lock_mem(ent_buffer_in, out_len);
 
-	memcpy(&ent_buffer_in[DATA_HASH_LEN], temp_buffer, cur_n_bytes);
-	memset(ent_buffer_in, 0x00, DATA_HASH_LEN);
-	DATA_HASH_FUNC(&ent_buffer_in[DATA_HASH_LEN], cur_n_bytes, ent_buffer_in);
+	memcpy(&ent_buffer_in[hash_len], temp_buffer, cur_n_bytes);
+	memset(ent_buffer_in, 0x00, hash_len);
 
-	// printf("send: "); hexdump(ent_buffer_in, 16);
-	// printf("data: "); hexdump(ent_buffer_in + DATA_HASH_LEN, 8);
+	client -> mac_hasher -> do_hash(&ent_buffer_in[hash_len], cur_n_bytes, ent_buffer_in);
+
+	// printf("send: "); hexdump(ent_buffer_in, hash_len);
+	// printf("data: "); hexdump(&ent_buffer_in[hash_len], 8);
 
 	unsigned char *ent_buffer = reinterpret_cast<unsigned char *>(malloc(out_len));
 	if (!ent_buffer)
@@ -280,7 +283,8 @@ int do_client_put(client_t *client, bool *new_bits, bool *is_full)
 
 	int cur_n_bytes = (cur_n_bits + 7) / 8;
 
-	int in_len = cur_n_bytes + DATA_HASH_LEN;
+	int hash_len = client -> mac_hasher -> get_hash_size();
+	int in_len = cur_n_bytes + hash_len;
 	unsigned char *buffer_in = reinterpret_cast<unsigned char *>(malloc(in_len));
 	if (!buffer_in)
 		error_exit("%s error allocating %d bytes of memory", client -> host.c_str(), in_len);
@@ -302,12 +306,13 @@ int do_client_put(client_t *client, bool *new_bits, bool *is_full)
 	// decrypt data
 	client -> stream_cipher -> decrypt(buffer_in, in_len, buffer_out);
 
-	unsigned char *entropy_data = &buffer_out[DATA_HASH_LEN];
+	unsigned char *entropy_data = &buffer_out[hash_len];
 	int entropy_data_len = cur_n_bytes;
-	unsigned char hash[DATA_HASH_LEN];
-	DATA_HASH_FUNC(entropy_data, entropy_data_len, hash);
+	unsigned char *hash = reinterpret_cast<unsigned char *>(malloc(hash_len));
 
-	if (memcmp(hash, buffer_out, DATA_HASH_LEN) != 0)
+	client -> mac_hasher -> do_hash(entropy_data, entropy_data_len, hash);
+
+	if (memcmp(hash, buffer_out, hash_len) != 0)
 		dolog(LOG_WARNING, "Hash mismatch in retrieved entropy data!");
 	else
 	{
@@ -327,6 +332,8 @@ int do_client_put(client_t *client, bool *new_bits, bool *is_full)
 
 		*new_bits = true;
 	}
+
+	free(hash);
 
 	memset(buffer_out, 0x00, cur_n_bytes);
 	unlock_mem(buffer_out, cur_n_bytes);

@@ -10,7 +10,7 @@ public:
 	virtual ~encrypt_stream();
 
 	static encrypt_stream * select_cipher(std::string type);
-	void init(unsigned char *key, int key_len, unsigned char ivec[8]);
+	virtual void init(unsigned char *key, int key_len, unsigned char ivec[8]);
 
 	virtual std::string get_name() = 0;
 

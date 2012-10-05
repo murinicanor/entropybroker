@@ -21,7 +21,6 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <pthread.h>
-#include <openssl/sha.h>
 
 #include "error.h"
 #include "random_source.h"
@@ -29,6 +28,7 @@
 #include "log.h"
 #include "math.h"
 #include "encrypt_stream.h"
+#include "hasher.h"
 #include "protocol.h"
 #include "users.h"
 #include "auth.h"
@@ -51,6 +51,7 @@ typedef struct
         long long unsigned int ivec_counter;
 
 	encrypt_stream *sc;
+	hasher *mac;
 } proxy_client_t;
 
 typedef struct
@@ -168,7 +169,8 @@ int put_data(proxy_client_t *client, lookup_t *lt)
 
 	unsigned int cur_n_bytes = (cur_n_bits + 7) / 8;
 
-	unsigned int in_len = cur_n_bytes + DATA_HASH_LEN;
+	int hash_len = client -> mac -> get_hash_size();
+	unsigned int in_len = cur_n_bytes + hash_len;
 	unsigned char *buffer_in = reinterpret_cast<unsigned char *>(malloc(in_len));
 	if (!buffer_in)
 		error_exit("%s error allocating %d bytes of memory", client -> host.c_str(), in_len);
@@ -190,20 +192,23 @@ int put_data(proxy_client_t *client, lookup_t *lt)
 	// decrypt data
 	client -> sc -> decrypt(buffer_in, in_len, buffer_out);
 
-	unsigned char *entropy_data = &buffer_out[DATA_HASH_LEN];
+	unsigned char *entropy_data = &buffer_out[hash_len];
 	int entropy_data_len = cur_n_bytes;
-	unsigned char hash[DATA_HASH_LEN];
-	DATA_HASH_FUNC(entropy_data, entropy_data_len, hash);
+	unsigned char *hash = reinterpret_cast<unsigned char *>(malloc(hash_len));
 
-	if (memcmp(hash, buffer_out, DATA_HASH_LEN) != 0)
+	client -> mac -> do_hash(entropy_data, entropy_data_len, hash);
+
+	if (memcmp(hash, buffer_out, hash_len) != 0)
 	{
 		dolog(LOG_WARNING, "Hash mismatch in retrieved entropy data!");
 
 		free(buffer_out);
 		free(buffer_in);
+		free(hash);
 
 		return -1;
 	}
+	free(hash);
 
 	my_mutex_lock(&lt -> lock);
 
@@ -384,7 +389,7 @@ int main(int argc, char *argv[])
 	std::vector<std::string> hosts;
 	int log_level = LOG_INFO;
 	random_source_t rs = RS_OPENSSL;
-	std::string cipher = "blowfish";
+	std::string cipher = "blowfish", handshake_hash = "sha512", mac_hasher = "md5";
 
 	printf("proxy_knuth_b, (C) 2009-2012 by folkert@vanheusden.com\n");
 
@@ -541,6 +546,7 @@ int main(int argc, char *argv[])
 					clients[client_index] -> fd = -1;
 
 					delete clients[client_index] -> sc;
+					delete clients[client_index] -> mac;
 				}
 			}
 		}
@@ -554,13 +560,14 @@ int main(int argc, char *argv[])
 
 				dolog(LOG_INFO, "new client: %s (fd: %d)", host.c_str(), new_socket_fd);
 
-				encrypt_stream *sc = encrypt_stream::select_cipher(cipher);
+				encrypt_stream *enc = encrypt_stream::select_cipher(cipher);
+				hasher *mac = hasher::select_hasher(mac_hasher);
 
 				std::string client_password;
 				long long unsigned int challenge = 1;
 				bool is_server = false;
 				std::string type;
-				if (auth_eb(new_socket_fd, DEFAULT_COMM_TO, user_map, client_password, &challenge, &is_server, type, rs, sc) == 0)
+				if (auth_eb(new_socket_fd, DEFAULT_COMM_TO, user_map, client_password, &challenge, &is_server, type, rs, enc, mac, handshake_hash) == 0)
 				{
 					dolog(LOG_INFO, "%s/%s %d/%d", host.c_str(), type.c_str(), new_socket_fd, is_server);
 					if (clients[0] -> fd != -1 && clients[1] -> fd != -1)
@@ -574,6 +581,8 @@ int main(int argc, char *argv[])
 
 						delete clients[0] -> sc;
 						delete clients[1] -> sc;
+						delete clients[0] -> mac;
+						delete clients[1] -> mac;
 					}
 
 					proxy_client_t *pcp = NULL;
@@ -595,14 +604,17 @@ int main(int argc, char *argv[])
 					unsigned char ivec[8] = { 0 };
 					calc_ivec(client_password.c_str(), pcp -> challenge, pcp -> ivec_counter, ivec);
 
-					pcp -> sc = sc;
+					pcp -> sc = enc;
 					unsigned char *pw_char = reinterpret_cast<unsigned char *>(const_cast<char *>(client_password.c_str()));
 					pcp -> sc -> init(pw_char, client_password.length(), ivec);
+
+					pcp -> mac = mac;
 				}
 				else
 				{
 					close(new_socket_fd);
-					delete sc;
+					delete enc;
+					delete mac;
 				}
 			}
 		}

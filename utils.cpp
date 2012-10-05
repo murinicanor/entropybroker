@@ -28,6 +28,7 @@
 #include "kernel_prng_rw.h"
 #include "my_pty.h"
 #include "encrypt_stream.h"
+#include "hasher.h"
 #include "protocol.h"
 
 #define MAX_LRAND48_GETS 250

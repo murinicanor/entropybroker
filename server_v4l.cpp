@@ -23,6 +23,7 @@
 #include "random_source.h"
 #include "log.h"
 #include "encrypt_stream.h"
+#include "hasher.h"
 #include "protocol.h"
 #include "server_utils.h"
 #include "utils.h"

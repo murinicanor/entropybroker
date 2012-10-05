@@ -4,7 +4,6 @@
 #include <string.h>
 #include <stdlib.h>
 #include <errno.h>
-#include <openssl/sha.h>
 #include <arpa/inet.h>
 #include <string>
 #include <map>
@@ -16,6 +15,7 @@
 #include "utils.h"
 #include "users.h"
 #include "encrypt_stream.h"
+#include "hasher.h"
 #include "auth.h"
 #include "kernel_prng_io.h"
 #include "server_utils.h"
@@ -104,6 +104,7 @@ protocol::protocol(std::vector<std::string> *hosts_in, std::string username_in, 
 	host_index = 0;
 
 	stream_cipher = NULL;
+	mac_hasher = NULL;
 
         socket_fd = -1;
         sleep_9003 = 300;
@@ -118,6 +119,9 @@ protocol::~protocol()
 {
 	if (socket_fd != -1)
 		close(socket_fd);
+
+	delete stream_cipher;
+	delete mac_hasher;
 }
 
 void protocol::error_sleep(int count)
@@ -141,8 +145,12 @@ int protocol::reconnect_server_socket()
 		connect_msg = 1;
 
 		delete stream_cipher;
+		stream_cipher = NULL;
 
-		std::string cipher_data;
+		delete mac_hasher;
+		mac_hasher = NULL;
+
+		std::string cipher_data, mac_hash;
 		for(;;)
 		{
 			std::string host;
@@ -154,7 +162,7 @@ int protocol::reconnect_server_socket()
 			socket_fd = connect_to(host.c_str(), port);
 			if (socket_fd != -1)
 			{
-				if (auth_client_server(socket_fd, 10, username, password, &challenge, is_server, type, cipher_data) == 0)
+				if (auth_client_server(socket_fd, 10, username, password, &challenge, is_server, type, cipher_data, mac_hash) == 0)
 					break;
 
 				close(socket_fd);
@@ -185,9 +193,12 @@ int protocol::reconnect_server_socket()
 
 		unsigned char ivec[8] = { 0 };
 		calc_ivec(password.c_str(), challenge, 0, ivec);
+		// printf("IVEC: "); hexdump(ivec, 8);
 
 		unsigned char *pw_char = reinterpret_cast<unsigned char *>(const_cast<char *>(password.c_str()));
 		stream_cipher -> init(pw_char, password.length(), ivec);
+
+		mac_hasher = hasher::select_hasher(mac_hash);
 	}
 
 	if (connect_msg)
@@ -311,7 +322,8 @@ int protocol::message_transmit_entropy_data(unsigned char *bytes_in, unsigned in
 			dolog(LOG_DEBUG, "Transmitting %d bytes", cur_n_bytes);
 
 			// encrypt data
-			int with_hash_n = cur_n_bytes + DATA_HASH_LEN;
+			int hash_len = mac_hasher -> get_hash_size();
+			int with_hash_n = cur_n_bytes + hash_len;
 
 			unsigned char *bytes_out = reinterpret_cast<unsigned char *>(malloc(with_hash_n));
 			if (!bytes_out)
@@ -321,8 +333,8 @@ int protocol::message_transmit_entropy_data(unsigned char *bytes_in, unsigned in
 				error_exit("out of memory");
 			lock_mem(temp_buffer, with_hash_n);
 
-			DATA_HASH_FUNC(bytes_in, cur_n_bytes, temp_buffer);
-			memcpy(&temp_buffer[DATA_HASH_LEN], bytes_in, cur_n_bytes);
+			mac_hasher -> do_hash(bytes_in, cur_n_bytes, temp_buffer);
+			memcpy(&temp_buffer[hash_len], bytes_in, cur_n_bytes);
 
 			stream_cipher -> encrypt(temp_buffer, with_hash_n, bytes_out);
 
@@ -508,7 +520,9 @@ int protocol::request_bytes(unsigned char *where_to, unsigned int n_bits, bool f
 				continue;
 			}
 
-			int xmit_bytes = will_get_n_bytes + DATA_HASH_LEN;
+			int hash_len = mac_hasher -> get_hash_size();
+			int xmit_bytes = will_get_n_bytes + hash_len;
+			// printf("bytes: %d\n", xmit_bytes);
 			unsigned char *buffer_in = reinterpret_cast<unsigned char *>(malloc(xmit_bytes));
 			if (!buffer_in)
 				error_exit("out of memory allocating %d bytes", will_get_n_bytes);
@@ -534,24 +548,25 @@ int protocol::request_bytes(unsigned char *where_to, unsigned int n_bits, bool f
 			stream_cipher -> decrypt(buffer_in, xmit_bytes, temp_buffer);
 
 			// verify data is correct
-			unsigned char hash[DATA_HASH_LEN] = { 0 };
-			DATA_HASH_FUNC(&temp_buffer[DATA_HASH_LEN], will_get_n_bytes, hash);
+			unsigned char *hash = reinterpret_cast<unsigned char *>(malloc(hash_len));
+			mac_hasher -> do_hash(&temp_buffer[hash_len], will_get_n_bytes, hash);
 
-			// printf("in  : "); hexdump(temp_buffer, 16);
-			// printf("calc: "); hexdump(hash, 16);
+			// printf("in  : "); hexdump(temp_buffer, hash_len);
+			// printf("calc: "); hexdump(hash, hash_len);
+			// printf("data: "); hexdump(temp_buffer + hash_len, 8);
 
-			// printf("data: "); hexdump(temp_buffer + DATA_HASH_LEN, 8);
-
-			if (memcmp(hash, temp_buffer, 16) != 0)
+			if (memcmp(hash, temp_buffer, hash_len) != 0)
 				error_exit("Data corrupt!");
 
-			memcpy(where_to, &temp_buffer[DATA_HASH_LEN], will_get_n_bytes);
+			memcpy(where_to, &temp_buffer[hash_len], will_get_n_bytes);
 
 			memset(temp_buffer, 0x00, xmit_bytes);
 			unlock_mem(temp_buffer, xmit_bytes);
 			free(temp_buffer);
 
 			free(buffer_in);
+
+			free(hash);
 
 			return will_get_n_bytes;
 		}

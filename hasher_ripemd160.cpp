@@ -1,4 +1,5 @@
 // SVN: $Revision$
+#include <string>
 #include <openssl/ripemd.h>
 
 #include "hasher.h"
@@ -10,6 +11,11 @@ hasher_ripemd160::hasher_ripemd160()
 
 hasher_ripemd160::~hasher_ripemd160()
 {
+}
+
+std::string hasher_ripemd160::get_name()
+{
+	return "ripemd160";
 }
 
 int hasher_ripemd160::get_hash_size() const

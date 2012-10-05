@@ -11,9 +11,6 @@
 
 #define DEFAULT_COMM_TO 15
 
-#define DATA_HASH_FUNC(x, y, z) SHA256(x, y, z)
-#define DATA_HASH_LEN SHA256_DIGEST_LENGTH
-
 int recv_length_data(int fd, char **data, unsigned int *len, double to);
 int send_length_data(int fd, const char *data, unsigned int len, double to);
 void make_msg(unsigned char *where_to, unsigned int code, unsigned int value);
@@ -35,6 +32,7 @@ private:
 	long long unsigned ivec_counter, challenge;
 
 	encrypt_stream *stream_cipher;
+	hasher *mac_hasher;
 
 	void do_encrypt(unsigned char *buffer_in, unsigned char *buffer_out, int n_bytes);
 	void do_decrypt(unsigned char *buffer_in, unsigned char *buffer_out, int n_bytes);

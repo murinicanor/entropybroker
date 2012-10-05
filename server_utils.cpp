@@ -12,6 +12,7 @@
 #include "utils.h"
 #include "log.h"
 #include "encrypt_stream.h"
+#include "hasher.h"
 #include "protocol.h"
 
 long int byte_cnt = 0, total_byte_cnt = 0;

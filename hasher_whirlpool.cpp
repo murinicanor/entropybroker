@@ -1,4 +1,5 @@
 // SVN: $Revision$
+#include <string>
 #include <openssl/whrlpool.h>
 
 #include "hasher.h"
@@ -10,6 +11,11 @@ hasher_whirlpool::hasher_whirlpool()
 
 hasher_whirlpool::~hasher_whirlpool()
 {
+}
+
+std::string hasher_whirlpool::get_name()
+{
+	return "whirlpool";
 }
 
 int hasher_whirlpool::get_hash_size() const

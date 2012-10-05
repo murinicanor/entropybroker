@@ -1,6 +1,5 @@
 // SVN: $Revision$
 #include <stdio.h>
-#include <openssl/sha.h>
 #include <vector>
 #include <string>
 #include <map>

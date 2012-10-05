@@ -1,5 +1,4 @@
 // SVN: $Revision$
-#include <openssl/sha.h>
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -16,20 +15,20 @@
 #include "random_source.h"
 #include "utils.h"
 #include "log.h"
+#include "hasher.h"
 #include "encrypt_stream.h"
 #include "protocol.h"
 #include "users.h"
 
-int auth_eb_user(int fd, int to, users *user_map, std::string & password, long long unsigned int *challenge, bool is_proxy_auth, bool *is_server_in, std::string & type, random_source_t rs, encrypt_stream *es)
+int auth_eb_user(int fd, int to, users *user_map, std::string & password, long long unsigned int *challenge, bool is_proxy_auth, bool *is_server_in, std::string & type, random_source_t rs, encrypt_stream *es, hasher *mac, std::string handshake_hash)
 {
 	const char *ts = is_proxy_auth ? "Proxy-auth" : "Connection";
 
 	/* Inform the client about the hash-functions and ciphers that are used */
-	std::string hash_handshake = "sha512";
-	std::string mac_data = "sha256";
+	std::string mac_data = mac -> get_name();
 	std::string cipher_data = es -> get_name();
 
-	if (send_length_data(fd, hash_handshake.c_str(), hash_handshake.size(), to) == -1)
+	if (send_length_data(fd, handshake_hash.c_str(), handshake_hash.size(), to) == -1)
 	{
 		dolog(LOG_INFO, "%s failure sending handshake hash (fd: %d)", ts, fd);
 		return -1;
@@ -94,21 +93,32 @@ int auth_eb_user(int fd, int to, users *user_map, std::string & password, long l
 	/////
 
 	/* receive hashed password */
-	char hash_cmp_str[256], hash_cmp[SHA512_DIGEST_LENGTH];
-	snprintf(hash_cmp_str, sizeof hash_cmp_str, "%s %s", rnd_str, password.c_str());
+	hasher *hh = hasher::select_hasher(handshake_hash);
+	int hash_len = hh -> get_hash_size();
 
-	SHA512((const unsigned char *)hash_cmp_str, strlen(hash_cmp_str), reinterpret_cast<unsigned char *>(hash_cmp));
+	char hash_cmp_str[256], *hash_cmp = reinterpret_cast<char *>(malloc(hash_len)), *hash_in = reinterpret_cast<char *>(malloc(hash_len));
+	int hash_cmp_str_len = snprintf(hash_cmp_str, sizeof hash_cmp_str, "%s %s", rnd_str, password.c_str());
 
-	char hash_in[SHA512_DIGEST_LENGTH];
-	if (READ_TO(fd, hash_in, SHA512_DIGEST_LENGTH, to) != SHA512_DIGEST_LENGTH)
+	if (!hash_cmp || !hash_in)
+		error_exit("out of memory");
+
+	hh -> do_hash((unsigned char *)hash_cmp_str, hash_cmp_str_len, reinterpret_cast<unsigned char *>(hash_cmp));
+
+	if (READ_TO(fd, hash_in, hash_len, to) != hash_len)
 	{
 		dolog(LOG_INFO, "%s receiving hash failed (fd: %d)", ts, fd);
+		free(hash_cmp);
+		free(hash_in);
+		delete hh;
 		return -1;
 	}
 
-	if (!user_known || memcmp(hash_cmp, hash_in, SHA512_DIGEST_LENGTH) != 0)
+	if (!user_known || memcmp(hash_cmp, hash_in, hash_len) != 0)
 	{
 		dolog(LOG_INFO, "%s authentication failed! (fd: %d)", ts, fd);
+		free(hash_cmp);
+		free(hash_in);
+		delete hh;
 		return -1;
 	}
 	/////
@@ -141,7 +151,7 @@ int auth_eb_user(int fd, int to, users *user_map, std::string & password, long l
 	return 0;
 }
 
-int auth_eb(int fd, int to, users *user_map, std::string & password, long long unsigned int *challenge, bool *is_server_in, std::string & type, random_source_t rs, encrypt_stream *es)
+int auth_eb(int fd, int to, users *user_map, std::string & password, long long unsigned int *challenge, bool *is_server_in, std::string & type, random_source_t rand_src, encrypt_stream *enc, hasher *mac, std::string handshake_hash)
 {
 	char prot_ver[4 + 1] = { 0 };
 	snprintf(prot_ver, sizeof prot_ver, "%04d", PROTOCOL_VERSION);
@@ -152,7 +162,7 @@ int auth_eb(int fd, int to, users *user_map, std::string & password, long long u
 		return -1;
 	}
 
-	return auth_eb_user(fd, to, user_map, password, challenge, false, is_server_in, type, rs, es);
+	return auth_eb_user(fd, to, user_map, password, challenge, false, is_server_in, type, rand_src, enc, mac, handshake_hash);
 }
 
 bool get_auth_from_file(char *filename, std::string & username, std::string & password)
@@ -181,7 +191,7 @@ bool get_auth_from_file(char *filename, std::string & username, std::string & pa
 	return true;
 }
 
-int auth_client_server_user(int fd, int to, std::string & username, std::string & password, long long unsigned int *challenge, bool is_server, std::string type, std::string & cd)
+int auth_client_server_user(int fd, int to, std::string & username, std::string & password, long long unsigned int *challenge, bool is_server, std::string type, std::string & cd, std::string & mh)
 {
 	char *hash_handshake = NULL;
 	unsigned int hash_handshake_size = 0;
@@ -190,8 +200,6 @@ int auth_client_server_user(int fd, int to, std::string & username, std::string 
 		dolog(LOG_INFO, "Connection for fd %d closed (t1)", fd);
 		return -1;
 	}
-	if (strcmp(hash_handshake, "sha512") != 0)
-		error_exit("Server uses unsupported (%s) hash function for password hash (sha512 expected)");
 	char *mac_data = NULL;
 	unsigned int mac_data_size = 0;
 	if (recv_length_data(fd, &mac_data, &mac_data_size, to) == -1)
@@ -199,8 +207,7 @@ int auth_client_server_user(int fd, int to, std::string & username, std::string 
 		dolog(LOG_INFO, "Connection for fd %d closed (t2)", fd);
 		return -1;
 	}
-	if (strcmp(mac_data, "sha256") != 0)
-		error_exit("Server uses unsupported (%s) hash function for data mac (sha256 expected)");
+	mh.assign(mac_data);
 	char *cipher_data = NULL;
 	unsigned int cipher_data_size = 0;
 	if (recv_length_data(fd, &cipher_data, &cipher_data_size, to) == -1)
@@ -208,9 +215,7 @@ int auth_client_server_user(int fd, int to, std::string & username, std::string 
 		dolog(LOG_INFO, "Connection for fd %d closed (t3)", fd);
 		return -1;
 	}
-	if (strcmp(cipher_data, "blowfish") != 0)
-		error_exit("Server uses unsupported (%s) cipher function for data encryption (blowfish expected)");
-	cd = std::string(cipher_data);
+	cd.assign(cipher_data);
 	printf("%s / %s / %s\n", hash_handshake, mac_data, cipher_data);
 
 	char *rnd_str = NULL;
@@ -235,17 +240,32 @@ int auth_client_server_user(int fd, int to, std::string & username, std::string 
 		return -1;
 	}
 
-	char hash_cmp_str[256], hash_cmp[SHA512_DIGEST_LENGTH];
-	snprintf(hash_cmp_str, sizeof hash_cmp_str, "%s %s", rnd_str, password.c_str());
+	hasher *hh = hasher::select_hasher(hash_handshake);
+	int hash_len = hh -> get_hash_size();
+
+	char hash_cmp_str[256], *hash_cmp = reinterpret_cast<char *>(malloc(hash_len)), *hash_in = reinterpret_cast<char *>(malloc(hash_len));
+	int hash_cmp_str_len = snprintf(hash_cmp_str, sizeof hash_cmp_str, "%s %s", rnd_str, password.c_str());
 	free(rnd_str);
 
-	SHA512((const unsigned char *)hash_cmp_str, strlen(hash_cmp_str), reinterpret_cast<unsigned char *>(hash_cmp));
+	if (!hash_cmp || !hash_in)
+		error_exit("out of memory");
 
-	if (WRITE_TO(fd, hash_cmp, SHA512_DIGEST_LENGTH, to) == -1)
+	hh -> do_hash((unsigned char *)hash_cmp_str, hash_cmp_str_len, reinterpret_cast<unsigned char *>(hash_cmp));
+
+	if (WRITE_TO(fd, hash_cmp, hash_len, to) == -1)
 	{
 		dolog(LOG_INFO, "Connection for fd %d closed (a3)", fd);
+
+		free(hash_cmp);
+		free(hash_in);
+		delete hh;
+
 		return -1;
 	}
+
+	free(hash_cmp);
+	free(hash_in);
+	delete hh;
 
 	char is_server_byte = is_server ? 1 : 0;
 	if (WRITE_TO(fd, &is_server_byte, 1, to) != 1)
@@ -265,7 +285,7 @@ int auth_client_server_user(int fd, int to, std::string & username, std::string 
 	return 0;
 }
 
-int auth_client_server(int fd, int to, std::string & username, std::string & password, long long unsigned int *challenge, bool is_server, std::string type, std::string & cd)
+int auth_client_server(int fd, int to, std::string & username, std::string & password, long long unsigned int *challenge, bool is_server, std::string type, std::string & cd, std::string &mh)
 {
 	char prot_ver[4 + 1] = { 0 };
 
@@ -278,5 +298,5 @@ int auth_client_server(int fd, int to, std::string & username, std::string & pas
 	if (eb_ver != PROTOCOL_VERSION)
 		error_exit("Broker server has unsupported protocol version %d! (expecting %d)", eb_ver, PROTOCOL_VERSION);
 
-	return auth_client_server_user(fd, to, username, password, challenge, is_server, type, cd);
+	return auth_client_server_user(fd, to, username, password, challenge, is_server, type, cd, mh);
 }

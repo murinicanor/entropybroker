@@ -19,6 +19,8 @@
 #include "kernel_prng_io.h"
 #include "utils.h"
 #include "log.h"
+#include "encrypt_stream.h"
+#include "hasher.h"
 #include "math.h"
 #include "protocol.h"
 #include "users.h"
