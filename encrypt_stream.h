@@ -1,15 +1,16 @@
 // SVN: $Revision$
 class encrypt_stream
 {
-private:
+protected:
 	unsigned char ivec[8];
 	int ivec_offset;
 
 public:
-	encrypt_stream(unsigned char ivec[8]);
-	virtual ~encrypt_stream() = 0;
+	encrypt_stream();
+	virtual ~encrypt_stream();
 
-	static encrypt_stream * select_cipher(std::string type, unsigned char *key, int key_len, unsigned char ivec[8]);
+	static encrypt_stream * select_cipher(std::string type);
+	void init(unsigned char *key, int key_len, unsigned char ivec[8]);
 
 	virtual std::string get_name() = 0;
 

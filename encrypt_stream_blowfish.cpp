@@ -1,9 +1,18 @@
 // SVN: $Revision$
+#include <string>
+#include <string.h>
+
 #include "encrypt_stream.h"
 #include "encrypt_stream_blowfish.h"
 
-encrypt_stream_blowfish::encrypt_stream_blowfish(unsigned char *key_in, int key_len, unsigned char ivec[8]) : encrypt_stream(ivec)
+encrypt_stream_blowfish::encrypt_stream_blowfish()
 {
+}
+
+void encrypt_stream_blowfish::init(unsigned char *key_in, int key_len, unsigned char ivec_in[8])
+{
+	memcpy(ivec, ivec_in, sizeof ivec);
+
 	BF_set_key(&key, key_len, key_in);
 }
 

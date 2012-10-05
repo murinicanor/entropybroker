@@ -15,10 +15,10 @@
 #include "log.h"
 #include "utils.h"
 #include "users.h"
+#include "encrypt_stream.h"
 #include "auth.h"
 #include "kernel_prng_io.h"
 #include "server_utils.h"
-#include "encrypt_stream.h"
 #include "protocol.h"
 
 int recv_length_data(int fd, char **data, unsigned int *len, double to)
@@ -103,14 +103,14 @@ protocol::protocol(std::vector<std::string> *hosts_in, std::string username_in, 
 {
 	host_index = 0;
 
+	stream_cipher = NULL;
+
         socket_fd = -1;
         sleep_9003 = 300;
 
 	pingnr = 0;
 
         ivec_counter = 0;
-        ivec_offset = 0;
-	memset(ivec, 0x00, sizeof ivec);
 	challenge = 13;
 }
 
@@ -120,16 +120,6 @@ protocol::~protocol()
 		close(socket_fd);
 }
 
-void protocol::do_decrypt(unsigned char *buffer_in, unsigned char *buffer_out, int n_bytes)
-{
-	BF_cfb64_encrypt(buffer_in, buffer_out, n_bytes, &key, ivec, &ivec_offset, BF_DECRYPT);
-}
-
-void protocol::do_encrypt(unsigned char *buffer_in, unsigned char *buffer_out, int n_bytes)
-{
-	BF_cfb64_encrypt(buffer_in, buffer_out, n_bytes, &key, ivec, &ivec_offset, BF_ENCRYPT);
-}
-
 void protocol::error_sleep(int count)
 {
 	long int sleep_micro_seconds = myrand(count * 1000000) + 1;
@@ -137,21 +127,6 @@ void protocol::error_sleep(int count)
 	dolog(LOG_WARNING, "Failed connecting (%s), sleeping for %f seconds", strerror(errno), double(sleep_micro_seconds) / 1000000.0);
 
 	usleep((long)sleep_micro_seconds);
-}
-
-void protocol::set_password(std::string password_in)
-{
-	int len = password_in.length();
-
-	BF_set_key(&key, len, reinterpret_cast<const unsigned char *>(password_in.c_str()));
-}
-
-void protocol::init_ivec(std::string password_in, long long unsigned int rnd, long long unsigned int counter)
-{
-	calc_ivec(password_in.c_str(), rnd, counter, ivec);
-
-	ivec_counter = 0;
-	ivec_offset = 0;
 }
 
 int protocol::reconnect_server_socket()
@@ -165,6 +140,9 @@ int protocol::reconnect_server_socket()
 	{
 		connect_msg = 1;
 
+		delete stream_cipher;
+
+		std::string cipher_data;
 		for(;;)
 		{
 			std::string host;
@@ -176,7 +154,7 @@ int protocol::reconnect_server_socket()
 			socket_fd = connect_to(host.c_str(), port);
 			if (socket_fd != -1)
 			{
-				if (auth_client_server(socket_fd, 10, username, password, &challenge, is_server, type) == 0)
+				if (auth_client_server(socket_fd, 10, username, password, &challenge, is_server, type, cipher_data) == 0)
 					break;
 
 				close(socket_fd);
@@ -203,8 +181,13 @@ int protocol::reconnect_server_socket()
 				count++;
 		}
 
-		set_password(password);
-		init_ivec(password, challenge, 0);
+		stream_cipher = encrypt_stream::select_cipher(cipher_data);
+
+		unsigned char ivec[8] = { 0 };
+		calc_ivec(password.c_str(), challenge, 0, ivec);
+
+		unsigned char *pw_char = reinterpret_cast<unsigned char *>(const_cast<char *>(password.c_str()));
+		stream_cipher -> init(pw_char, password.length(), ivec);
 	}
 
 	if (connect_msg)
@@ -341,7 +324,7 @@ int protocol::message_transmit_entropy_data(unsigned char *bytes_in, unsigned in
 			DATA_HASH_FUNC(bytes_in, cur_n_bytes, temp_buffer);
 			memcpy(&temp_buffer[DATA_HASH_LEN], bytes_in, cur_n_bytes);
 
-			do_encrypt(temp_buffer, bytes_out, with_hash_n);
+			stream_cipher -> encrypt(temp_buffer, with_hash_n, bytes_out);
 
 			memset(temp_buffer, 0x00, with_hash_n);
 			unlock_mem(temp_buffer, with_hash_n);
@@ -547,7 +530,8 @@ int protocol::request_bytes(unsigned char *where_to, unsigned int n_bits, bool f
 			// decrypt
 			unsigned char *temp_buffer = reinterpret_cast<unsigned char *>(malloc(xmit_bytes));
 			lock_mem(temp_buffer, will_get_n_bytes);
-			do_decrypt(buffer_in, temp_buffer, xmit_bytes);
+
+			stream_cipher -> decrypt(buffer_in, xmit_bytes, temp_buffer);
 
 			// verify data is correct
 			unsigned char hash[DATA_HASH_LEN] = { 0 };

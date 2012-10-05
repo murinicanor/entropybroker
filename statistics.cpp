@@ -19,13 +19,13 @@
 #include "fips140.h"
 #include "hasher_type.h"
 #include "stirrer_type.h"
+#include "encrypt_stream.h"
 #include "users.h"
 #include "config.h"
 #include "scc.h"
 #include "pools.h"
 #include "utils.h"
 #include "statistics.h"
-#include "encrypt_stream.h"
 #include "handle_client.h"
 
 statistics::statistics(char *file_in, fips140 *fips140_in, scc *scc_in, pools *pp_in) : file(file_in), pfips140(fips140_in), pscc(scc_in), ppools(pp_in)

@@ -1,13 +1,15 @@
 // SVN: $Revision$
 #include <openssl/blowfish.h>
 
-class encrypt_stream_blowfish
+class encrypt_stream_blowfish : public encrypt_stream
 {
 private:
 	BF_KEY key;
 
 public:
-	encrypt_stream_blowfish(unsigned char *key, int key_len, unsigned char ivec[8]);
+	encrypt_stream_blowfish();
+
+	void init(unsigned char *key, int key_len, unsigned char ivec[8]);
 
 	std::string get_name();
 

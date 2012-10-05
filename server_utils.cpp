@@ -11,6 +11,7 @@
 #include "random_source.h"
 #include "utils.h"
 #include "log.h"
+#include "encrypt_stream.h"
 #include "protocol.h"
 
 long int byte_cnt = 0, total_byte_cnt = 0;

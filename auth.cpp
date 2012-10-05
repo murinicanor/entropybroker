@@ -181,7 +181,7 @@ bool get_auth_from_file(char *filename, std::string & username, std::string & pa
 	return true;
 }
 
-int auth_client_server_user(int fd, int to, std::string & username, std::string & password, long long unsigned int *challenge, bool is_server, std::string type)
+int auth_client_server_user(int fd, int to, std::string & username, std::string & password, long long unsigned int *challenge, bool is_server, std::string type, std::string & cd)
 {
 	char *hash_handshake = NULL;
 	unsigned int hash_handshake_size = 0;
@@ -210,6 +210,7 @@ int auth_client_server_user(int fd, int to, std::string & username, std::string 
 	}
 	if (strcmp(cipher_data, "blowfish") != 0)
 		error_exit("Server uses unsupported (%s) cipher function for data encryption (blowfish expected)");
+	cd = std::string(cipher_data);
 	printf("%s / %s / %s\n", hash_handshake, mac_data, cipher_data);
 
 	char *rnd_str = NULL;
@@ -264,7 +265,7 @@ int auth_client_server_user(int fd, int to, std::string & username, std::string 
 	return 0;
 }
 
-int auth_client_server(int fd, int to, std::string & username, std::string & password, long long unsigned int *challenge, bool is_server, std::string type)
+int auth_client_server(int fd, int to, std::string & username, std::string & password, long long unsigned int *challenge, bool is_server, std::string type, std::string & cd)
 {
 	char prot_ver[4 + 1] = { 0 };
 
@@ -277,5 +278,5 @@ int auth_client_server(int fd, int to, std::string & username, std::string & pas
 	if (eb_ver != PROTOCOL_VERSION)
 		error_exit("Broker server has unsupported protocol version %d! (expecting %d)", eb_ver, PROTOCOL_VERSION);
 
-	return auth_client_server_user(fd, to, username, password, challenge, is_server, type);
+	return auth_client_server_user(fd, to, username, password, challenge, is_server, type, cd);
 }

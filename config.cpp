@@ -92,6 +92,8 @@ void load_config(const char *config, config_t *pconfig)
 
 	pconfig -> rs = RS_OPENSSL;
 
+	pconfig -> stream_cipher = "blowfish";
+
         for(;;)
         {
 		double parvald;

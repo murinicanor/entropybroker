@@ -127,8 +127,6 @@ int main(int argc, char *argv[])
 	config_t config;
 	int log_level = LOG_INFO;
 
-	memset(&config, 0x00, sizeof config);
-
 	printf("entropy_broker v " VERSION ", (C) 2009-2012 by folkert@vanheusden.com\n");
 	printf("SVN revision: $Revision$\n");
 
@@ -224,8 +222,6 @@ int main(int argc, char *argv[])
 		error_exit("Internal error: no stirrer (%d)", config.st);
 
 	pools *ppools = new pools(std::string(CACHE_DIR), config.max_number_of_mem_pools, config.max_number_of_disk_pools, config.min_store_on_disk_n, bce, config.pool_size_bytes, h, s, config.rs);
-
-	dolog(LOG_DEBUG, "Blowfish options: %s", BF_options());
 
 	if (!do_not_fork)
 	{

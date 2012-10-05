@@ -28,6 +28,7 @@
 #include "utils.h"
 #include "log.h"
 #include "math.h"
+#include "encrypt_stream.h"
 #include "protocol.h"
 #include "users.h"
 #include "auth.h"
@@ -47,12 +48,10 @@ typedef struct
 	int fd;
 	std::string host, type;
 
-        unsigned char ivec[8]; // used for data encryption
-        int ivec_offset;
         long long unsigned int challenge;
-        long long unsigned int ivec_counter; // required for CFB
+        long long unsigned int ivec_counter;
 
-        BF_KEY key;
+	encrypt_stream *sc;
 } proxy_client_t;
 
 typedef struct
@@ -200,7 +199,7 @@ int put_data(proxy_client_t *client, lookup_t *lt, bool is_A)
 	// FIXME lock_mem(buffer_out, cur_n_bytes);
 
 	// decrypt data
-	BF_cfb64_encrypt(buffer_in, buffer_out, in_len, &client -> key, client -> ivec, &client -> ivec_offset, BF_DECRYPT);
+	client -> sc -> decrypt(buffer_in, in_len, buffer_out);
 
 	unsigned char *entropy_data = &buffer_out[DATA_HASH_LEN];
 	int entropy_data_len = cur_n_bytes;
@@ -411,6 +410,7 @@ int main(int argc, char *argv[])
 	std::vector<std::string> hosts;
 	int log_level = LOG_INFO;
 	random_source_t rs = RS_OPENSSL;
+	std::string cipher = "blowfish";
 
 	printf("proxy_knuth_m, (C) 2009-2012 by folkert@vanheusden.com\n");
 
@@ -579,11 +579,13 @@ int main(int argc, char *argv[])
 
 				dolog(LOG_INFO, "new client: %s (fd: %d)", host.c_str(), new_socket_fd);
 
+				encrypt_stream *sc = encrypt_stream::select_cipher(cipher);
+
 				std::string client_password;
 				long long unsigned int challenge = 1;
 				bool is_server = false;
 				std::string type;
-				if (auth_eb(new_socket_fd, DEFAULT_COMM_TO, user_map, client_password, &challenge, &is_server, type, rs) == 0)
+				if (auth_eb(new_socket_fd, DEFAULT_COMM_TO, user_map, client_password, &challenge, &is_server, type, rs, sc) == 0)
 				{
 					dolog(LOG_INFO, "%s/%s %d/%d", host.c_str(), type.c_str(), new_socket_fd, is_server);
 					if (clients[0] -> fd != -1 && clients[1] -> fd != -1)
@@ -594,6 +596,9 @@ int main(int argc, char *argv[])
 						close(clients[1] -> fd);
 						clients[0] -> fd = -1;
 						clients[1] -> fd = -1;
+
+						delete clients[0] -> sc;
+						delete clients[1] -> sc;
 					}
 
 					proxy_client_t *pcp = NULL;
@@ -604,22 +609,20 @@ int main(int argc, char *argv[])
 						pcp = clients[1];
 
 					pcp -> fd = new_socket_fd;
-					pcp -> challenge = challenge;
-
-					char dummy_str[256];
-					snprintf(dummy_str, sizeof dummy_str, "%s", host.c_str());
-					pcp -> host = dummy_str;
 
 					pcp -> challenge = challenge;
 					pcp -> ivec_counter = 0;
-					pcp -> ivec_offset = 0;
-					calc_ivec(client_password.c_str(), pcp -> challenge, pcp -> ivec_counter, pcp -> ivec);
+					unsigned char ivec[8] = { 0 };
+					calc_ivec(client_password.c_str(), pcp -> challenge, pcp -> ivec_counter, ivec);
 
-					BF_set_key(&pcp -> key, client_password.length(), reinterpret_cast<const unsigned char *>(client_password.c_str()));
+					pcp -> sc = sc;
+					unsigned char *pw_char = reinterpret_cast<unsigned char *>(const_cast<char *>(client_password.c_str()));
+					pcp -> sc -> init(pw_char, client_password.length(), ivec);
 				}
 				else
 				{
 					close(new_socket_fd);
+					delete sc;
 				}
 			}
 		}

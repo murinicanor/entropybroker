@@ -243,11 +243,14 @@ void * thread(void *data)
 	if (p -> config -> enable_keepalive)
 		enable_tcp_keepalive(p -> socket_fd);
 
+	encrypt_stream *es = encrypt_stream::select_cipher(p -> config -> stream_cipher);
+	p -> stream_cipher = es;
+
 	for(;;)
 	{
 		long long unsigned int auth_rnd = 1;
 		std::string password;
-		bool ok = auth_eb(p -> socket_fd, p -> config -> communication_timeout, p -> pu, password, &auth_rnd, &p -> is_server, p -> type, p -> config -> rs) == 0;
+		bool ok = auth_eb(p -> socket_fd, p -> config -> communication_timeout, p -> pu, password, &auth_rnd, &p -> is_server, p -> type, p -> config -> rs, es) == 0;
 
 		if (!ok)
 		{
@@ -262,7 +265,7 @@ void * thread(void *data)
 
 		p -> password = strdup(password.c_str());
 
-		p -> stream_cipher = encrypt_stream::select_cipher(p -> config -> stream_cipher, reinterpret_cast<unsigned char *>(const_cast<char *>(password.c_str())), password.length(), ivec);
+		es -> init(reinterpret_cast<unsigned char *>(const_cast<char *>(password.c_str())), password.length(), ivec);
 
 		for(;;)
 		{
@@ -325,6 +328,8 @@ void * thread(void *data)
 	}
 
 	close(p -> to_main[1]);
+
+	delete es;
 
 	dolog(LOG_DEBUG, "End of thread (fd: %d)", p -> socket_fd);
 
