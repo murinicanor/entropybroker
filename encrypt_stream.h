@@ -1,9 +1,6 @@
 // SVN: $Revision$
 class encrypt_stream
 {
-protected:
-	int ivec_offset;
-
 public:
 	encrypt_stream();
 	virtual ~encrypt_stream();

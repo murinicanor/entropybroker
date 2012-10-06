@@ -4,7 +4,7 @@
 #include "encrypt_stream.h"
 #include "encrypt_stream_3des.h"
 
-encrypt_stream_3des::encrypt_stream_3des()
+encrypt_stream_3des::encrypt_stream_3des() : ivec_offset(0)
 {
 }
 

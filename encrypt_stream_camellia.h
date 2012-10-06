@@ -4,6 +4,7 @@
 class encrypt_stream_camellia : public encrypt_stream
 {
 private:
+	int ivec_offset;
 	unsigned char ivec[8];
 	CAMELLIA_KEY key;
 

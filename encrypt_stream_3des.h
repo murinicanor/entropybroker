@@ -4,6 +4,7 @@
 class encrypt_stream_3des : public encrypt_stream
 {
 private:
+	int ivec_offset;
 	DES_cblock iv;
         DES_key_schedule ks1, ks2, ks3;
 

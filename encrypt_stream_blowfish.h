@@ -4,6 +4,7 @@
 class encrypt_stream_blowfish : public encrypt_stream
 {
 private:
+	int ivec_offset;
 	unsigned char ivec[8];
 	BF_KEY key;
 

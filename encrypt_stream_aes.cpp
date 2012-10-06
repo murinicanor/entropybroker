@@ -7,7 +7,7 @@
 #include "encrypt_stream_aes.h"
 #include "utils.h"
 
-encrypt_stream_aes::encrypt_stream_aes()
+encrypt_stream_aes::encrypt_stream_aes() : ivec_offset(0)
 {
 }
 

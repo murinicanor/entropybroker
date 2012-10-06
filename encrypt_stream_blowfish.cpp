@@ -7,7 +7,7 @@
 #include "encrypt_stream_blowfish.h"
 #include "utils.h"
 
-encrypt_stream_blowfish::encrypt_stream_blowfish()
+encrypt_stream_blowfish::encrypt_stream_blowfish() : ivec_offset(0)
 {
 }
 

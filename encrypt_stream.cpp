@@ -12,7 +12,6 @@
 
 encrypt_stream::encrypt_stream()
 {
-	ivec_offset = 0;
 }
 
 encrypt_stream::~encrypt_stream()

@@ -4,6 +4,7 @@
 class encrypt_stream_aes : public encrypt_stream
 {
 private:
+	int ivec_offset;
 	unsigned char ivec[AES_BLOCK_SIZE];
 	AES_KEY key_enc, key_dec;
 

@@ -7,7 +7,7 @@
 #include "encrypt_stream_camellia.h"
 #include "utils.h"
 
-encrypt_stream_camellia::encrypt_stream_camellia()
+encrypt_stream_camellia::encrypt_stream_camellia() : ivec_offset(0)
 {
 }
 
