@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdio.h>
 
+#include "error.h"
 #include "encrypt_stream.h"
 #include "encrypt_stream_camellia.h"
 #include "utils.h"
@@ -18,7 +19,7 @@ int encrypt_stream_camellia::get_ivec_size()
 
 int encrypt_stream_camellia::get_key_size()
 {
-	return 256/8;
+	return CAMELLIA_MAX_KEY_SIZE;
 }
 
 bool encrypt_stream_camellia::init(unsigned char *key_in, int key_len, unsigned char *ivec_in)
@@ -29,7 +30,12 @@ bool encrypt_stream_camellia::init(unsigned char *key_in, int key_len, unsigned 
 
 	memcpy(ivec, ivec_in, sizeof ivec);
 
-	Camellia_set_key(key_in, key_len * 8, &key);
+	unsigned char temp_key[CAMELLIA_MAX_KEY_SIZE] = { 0 };
+	memcpy(temp_key, key_in, min(CAMELLIA_MAX_KEY_SIZE, key_len));
+
+	int rc = -1;
+	if ((rc = Camellia_set_key(temp_key, CAMELLIA_MAX_KEY_SIZE * 8, &key)) < 0)
+		error_exit("Camellia_set_key failed: %d", rc);
 
 	return true;
 }

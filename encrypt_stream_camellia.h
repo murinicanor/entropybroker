@@ -1,11 +1,13 @@
 // SVN: $Revision$
 #include <openssl/camellia.h>
 
+#define CAMELLIA_MAX_KEY_SIZE (256 / 8)
+
 class encrypt_stream_camellia : public encrypt_stream
 {
 private:
 	int ivec_offset;
-	unsigned char ivec[8];
+	unsigned char ivec[CAMELLIA_BLOCK_SIZE];
 	CAMELLIA_KEY key;
 
 public:
