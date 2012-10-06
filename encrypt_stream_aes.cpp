@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdio.h>
 
+#include "error.h"
 #include "encrypt_stream.h"
 #include "encrypt_stream_aes.h"
 #include "utils.h"
@@ -32,8 +33,11 @@ bool encrypt_stream_aes::init(unsigned char *key_in, int key_len, unsigned char 
 	unsigned char key_use[32] = { 0 };
 	memcpy(key_use, key_in, min(32, key_len));
 
-	AES_set_encrypt_key(key_use, 32 * 8, &key_enc);
-	AES_set_encrypt_key(key_use, 32 * 8, &key_dec); // due to the cfb used
+	int rc = -1;
+	if ((rc = AES_set_encrypt_key(key_use, 32 * 8, &key_enc)) < 0)
+		error_exit("AES_set_encrypt_key failed");
+	if ((rc = AES_set_encrypt_key(key_use, 32 * 8, &key_dec)) < 0) // due to the cfb used
+		error_exit("AES_set_encrypt_key failed");
 
 	return true;
 }
