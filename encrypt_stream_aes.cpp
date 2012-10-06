@@ -24,11 +24,12 @@ void encrypt_stream_aes::init(unsigned char *key_in, int key_len, unsigned char 
 
 	memcpy(ivec, ivec_in, sizeof ivec);
 
-	unsigned char key_use[32] = { 0 };
+	unsigned char key_use[32];
+	memset(key_use, 0x00, sizeof key_use);
 	memcpy(key_use, key_in, min(32, key_len));
 
 	AES_set_encrypt_key(key_use, 32 * 8, &key_enc);
-	AES_set_decrypt_key(key_use, 32 * 8, &key_dec);
+	AES_set_encrypt_key(key_use, 32 * 8, &key_dec); // due to the cfb used
 }
 
 void encrypt_stream_aes::encrypt(unsigned char *p, size_t len, unsigned char *p_out)
