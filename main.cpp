@@ -27,6 +27,7 @@
 #include "encrypt_stream_3des.h"
 #include "encrypt_stream_aes.h"
 #include "encrypt_stream_blowfish.h"
+#include "encrypt_stream_camellia.h"
 #include "stirrer_type.h"
 #include "stirrer.h"
 #include "stirrer_3des.h"
