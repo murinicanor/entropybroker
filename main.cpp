@@ -23,6 +23,10 @@
 #include "hasher_ripemd160.h"
 #include "hasher_sha512.h"
 #include "hasher_whirlpool.h"
+#include "encrypt_stream.h"
+#include "encrypt_stream_3des.h"
+#include "encrypt_stream_aes.h"
+#include "encrypt_stream_blowfish.h"
 #include "stirrer_type.h"
 #include "stirrer.h"
 #include "stirrer_3des.h"
@@ -33,7 +37,6 @@
 #include "fips140.h"
 #include "scc.h"
 #include "users.h"
-#include "encrypt_stream.h"
 #include "config.h"
 #include "pools.h"
 #include "statistics.h"
@@ -211,13 +214,13 @@ int main(int argc, char *argv[])
 
 	stirrer *s = NULL;
 	if (config.st == S_BLOWFISH)
-		s = new stirrer_blowfish(config.rs);
+		s = new stirrer_blowfish();
 	else if (config.st == S_AES)
-		s = new stirrer_aes(config.rs);
+		s = new stirrer_aes();
 	else if (config.st == S_3DES)
-		s = new stirrer_3des(config.rs);
+		s = new stirrer_3des();
 	else if (config.st == S_CAMELLIA)
-		s = new stirrer_camellia(config.rs);
+		s = new stirrer_camellia();
 	else
 		error_exit("Internal error: no stirrer (%d)", config.st);
 

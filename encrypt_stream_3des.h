@@ -1,14 +1,14 @@
 // SVN: $Revision$
-#include <openssl/aes.h>
+#include <openssl/des.h>
 
-class encrypt_stream_aes : public encrypt_stream
+class encrypt_stream_3des : public encrypt_stream
 {
 private:
-	unsigned char ivec[AES_BLOCK_SIZE];
-	AES_KEY key_enc, key_dec;
+	DES_cblock iv;
+        DES_key_schedule ks1, ks2, ks3;
 
 public:
-	encrypt_stream_aes();
+	encrypt_stream_3des();
 
 	int get_ivec_size();
 	int get_key_size();

@@ -16,7 +16,12 @@ int encrypt_stream_blowfish::get_ivec_size()
 	return BF_BLOCK;
 }
 
-void encrypt_stream_blowfish::init(unsigned char *key_in, int key_len, unsigned char *ivec_in)
+int encrypt_stream_blowfish::get_key_size()
+{
+	return 56;
+}
+
+bool encrypt_stream_blowfish::init(unsigned char *key_in, int key_len, unsigned char *ivec_in)
 {
 #ifdef CRYPTO_DEBUG
 	printf("KEY: "); hexdump(key_in, key_len);
@@ -25,6 +30,8 @@ void encrypt_stream_blowfish::init(unsigned char *key_in, int key_len, unsigned 
 	memcpy(ivec, ivec_in, sizeof ivec);
 
 	BF_set_key(&key, key_len, key_in);
+
+	return true;
 }
 
 void encrypt_stream_blowfish::encrypt(unsigned char *p, size_t len, unsigned char *p_out)

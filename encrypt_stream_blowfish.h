@@ -11,7 +11,9 @@ public:
 	encrypt_stream_blowfish();
 
 	int get_ivec_size();
-	void init(unsigned char *key, int key_len, unsigned char *ivec);
+	int get_key_size();
+
+	bool init(unsigned char *key, int key_len, unsigned char *ivec);
 
 	std::string get_name();
 

@@ -4,13 +4,13 @@
 class stirrer_3des : public stirrer
 {
 private:
-	void set_3des_key(DES_key_schedule *ks, unsigned char key_in[8]);
+	encrypt_stream_3des enc;
 
 public:
-	stirrer_3des(random_source_t rs);
+	stirrer_3des();
 	~stirrer_3des();
 
-	int get_ivec_size() const;
-	int get_stir_size() const;
+	int get_ivec_size();
+	int get_stir_size();
 	void do_stir(unsigned char *ivec, unsigned char *target, int target_size, unsigned char *data_in, int data_in_size, unsigned char *temp_buffer, bool direction);
 };
