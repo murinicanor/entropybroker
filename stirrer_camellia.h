@@ -1,6 +1,8 @@
 // SVN: $Revision$
 class stirrer_camellia : public stirrer
 {
+private:
+	encrypt_stream_camellia enc;
 public:
 	stirrer_camellia();
 	~stirrer_camellia();
