@@ -73,7 +73,7 @@ int auth_eb_user(int fd, int to, users *user_map, std::string & username_out, st
 		return -1;
 	}
 
-	dolog(LOG_INFO, "User '%s'[len: %d] requesting access", username, username_length);
+	dolog(LOG_INFO, "User '%s'[len: %d] requesting access (fd: %d)", username, username_length, fd);
 
 	if (username == NULL || username[0] == 0x00 || username_length == 0)
 	{

@@ -50,7 +50,9 @@ bool encrypt_stream_3des::init(unsigned char *key_in, int key_len, unsigned char
 	DES_set_key_unchecked(&dk, &ks3);
 
 	memcpy(iv, ivec_in, 8);
+#ifdef CRYPTO_DEBUG
 	printf("IVEC STRT2: "); hexdump(iv, 8);
+#endif
 
 	return true;
 }
