@@ -15,7 +15,7 @@ int encrypt_stream_3des::get_ivec_size()
 
 int encrypt_stream_3des::get_key_size()
 {
-	return 56;
+	return 8 * 3;
 }
 
 bool encrypt_stream_3des::init(unsigned char *key_in, int key_len, unsigned char *ivec_in)
