@@ -89,7 +89,12 @@ void egd_get(int fd, protocol *p, bool blocking)
 void egd_entropy_count(int fd)
 {
 	unsigned int count = 9999;
-	unsigned char reply[] = { (count >> 24) & 255, (count >> 16) & 255, (count >> 8) & 255, count & 255 };
+	unsigned char reply[4];
+
+	reply[0] = (count >> 24) & 255;
+	reply[1] = (count >> 16) & 255;
+	reply[2] = (count >> 8) & 255;
+	reply[3] = count & 255;
 
 	if (WRITE(fd, reply, 4) != 4)
 		dolog(LOG_INFO, "short write on egd client");
