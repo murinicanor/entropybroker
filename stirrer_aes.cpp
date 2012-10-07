@@ -37,7 +37,7 @@ void stirrer_aes::do_stir(unsigned char *ivec, unsigned char *target, int target
 
 	memcpy(temp_key, data_in, data_in_size);
 
-	enc.init(temp_key, 32, ivec);
+	enc.init(temp_key, 32, ivec, true);
 
 	enc.encrypt(target, target_size, temp_buffer);
 

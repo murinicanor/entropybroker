@@ -70,6 +70,7 @@ void forget_client_index(std::vector<client_t *> *clients, int nr, bool force)
 	delete p -> pfips140;
 	delete p -> pscc;
 
+	free(p -> username);
 	free(p -> password);
 
 	delete p;
@@ -251,8 +252,8 @@ void * thread(void *data)
 	for(;;)
 	{
 		long long unsigned int auth_rnd = 1;
-		std::string password;
-		bool ok = auth_eb(p -> socket_fd, p -> config -> communication_timeout, p -> pu, password, &auth_rnd, &p -> is_server, p -> type, p -> config -> rs, es, mh, p -> config -> hash_hasher) == 0;
+		std::string password, username;
+		bool ok = auth_eb(p -> socket_fd, p -> config -> communication_timeout, p -> pu, username, password, &auth_rnd, &p -> is_server, p -> type, p -> config -> rs, es, mh, p -> config -> hash_hasher) == 0;
 
 		if (!ok)
 		{
@@ -266,10 +267,15 @@ void * thread(void *data)
 		calc_ivec(password.c_str(), p -> challenge, p -> ivec_counter, es -> get_ivec_size(), ivec);
 		// printf("IVEC: "); hexdump(ivec, 8);
 
+		p -> username = strdup(username.c_str());
 		p -> password = strdup(password.c_str());
 
 		unsigned char *pw_char = reinterpret_cast<unsigned char *>(const_cast<char *>(password.c_str()));
-		es -> init(pw_char, password.length(), ivec);
+		if (!es -> init(pw_char, password.length(), ivec))
+		{
+			dolog(LOG_CRIT, "Password for %s too weak (fd: %d)", username.c_str(), p -> socket_fd);
+			break;
+		}
 
 		for(;;)
 		{

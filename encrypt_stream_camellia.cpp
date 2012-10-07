@@ -22,7 +22,7 @@ int encrypt_stream_camellia::get_key_size()
 	return CAMELLIA_MAX_KEY_SIZE;
 }
 
-bool encrypt_stream_camellia::init(unsigned char *key_in, int key_len, unsigned char *ivec_in)
+bool encrypt_stream_camellia::init(unsigned char *key_in, int key_len, unsigned char *ivec_in, bool force)
 {
 #ifdef CRYPTO_DEBUG
 	printf("KEY: "); hexdump(key_in, key_len);

@@ -18,7 +18,7 @@ typedef struct
 	bool ignore_rngtest_fips140, ignore_rngtest_scc;
 	double last_message, last_put_message;
 	double connected_since;
-	char *password;
+	char *username, *password;
 
 	fips140 *pfips140;
 	scc *pscc;

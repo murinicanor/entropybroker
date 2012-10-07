@@ -20,7 +20,7 @@
 #include "protocol.h"
 #include "users.h"
 
-int auth_eb_user(int fd, int to, users *user_map, std::string & password, long long unsigned int *challenge, bool is_proxy_auth, bool *is_server_in, std::string & type, random_source_t rs, encrypt_stream *es, hasher *mac, std::string handshake_hash)
+int auth_eb_user(int fd, int to, users *user_map, std::string & username_out, std::string & password, long long unsigned int *challenge, bool is_proxy_auth, bool *is_server_in, std::string & type, random_source_t rs, encrypt_stream *es, hasher *mac, std::string handshake_hash)
 {
 	const char *ts = is_proxy_auth ? "Proxy-auth" : "Connection";
 
@@ -82,7 +82,8 @@ int auth_eb_user(int fd, int to, users *user_map, std::string & password, long l
 		return -1;
 	}
 
-	bool user_known = user_map -> find_user(username, password);
+	username_out.assign(username);
+	bool user_known = user_map -> find_user(username_out, password);
 	if (!user_known)
 	{
 		dolog(LOG_WARNING, "User '%s' not known", username);
@@ -151,7 +152,7 @@ int auth_eb_user(int fd, int to, users *user_map, std::string & password, long l
 	return 0;
 }
 
-int auth_eb(int fd, int to, users *user_map, std::string & password, long long unsigned int *challenge, bool *is_server_in, std::string & type, random_source_t rand_src, encrypt_stream *enc, hasher *mac, std::string handshake_hash)
+int auth_eb(int fd, int to, users *user_map, std::string & username, std::string & password, long long unsigned int *challenge, bool *is_server_in, std::string & type, random_source_t rand_src, encrypt_stream *enc, hasher *mac, std::string handshake_hash)
 {
 	char prot_ver[4 + 1] = { 0 };
 	snprintf(prot_ver, sizeof prot_ver, "%04d", PROTOCOL_VERSION);
@@ -162,7 +163,7 @@ int auth_eb(int fd, int to, users *user_map, std::string & password, long long u
 		return -1;
 	}
 
-	return auth_eb_user(fd, to, user_map, password, challenge, false, is_server_in, type, rand_src, enc, mac, handshake_hash);
+	return auth_eb_user(fd, to, user_map, username, password, challenge, false, is_server_in, type, rand_src, enc, mac, handshake_hash);
 }
 
 bool get_auth_from_file(char *filename, std::string & username, std::string & password)

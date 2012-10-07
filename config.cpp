@@ -190,11 +190,11 @@ void load_config(const char *config, config_t *pconfig)
 		else if (strcmp(cmd, "stats_file") == 0)
 			pconfig -> stats_file = strdup(par);
 		else if (strcmp(cmd, "stream_cipher") == 0)
-			pconfig -> stream_cipher = strdup(par);
+			pconfig -> stream_cipher = par;
 		else if (strcmp(cmd, "mac_hasher") == 0)
-			pconfig -> mac_hasher = strdup(par);
+			pconfig -> mac_hasher = par;
 		else if (strcmp(cmd, "hash_hasher") == 0)
-			pconfig -> hash_hasher = strdup(par);
+			pconfig -> hash_hasher = par;
 		else if (strcmp(cmd, "prng_seed_file") == 0)
 		{
 			char *p_file = static_cast<char *>(malloc(strlen(VAR_DIR) + strlen(par) + 1 + 1));

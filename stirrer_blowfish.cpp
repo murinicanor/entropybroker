@@ -35,7 +35,7 @@ void stirrer_blowfish::do_stir(unsigned char *ivec, unsigned char *target, int t
 	if (data_in_size > get_stir_size())
 		error_exit("Invalid stir-size %d (expected: %d)", data_in_size, get_stir_size());
 
-	enc.init(data_in, data_in_size, ivec);
+	enc.init(data_in, data_in_size, ivec, true);
 
 	enc.encrypt(target, target_size, temp_buffer);
 

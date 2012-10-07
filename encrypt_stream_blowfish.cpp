@@ -21,7 +21,7 @@ int encrypt_stream_blowfish::get_key_size()
 	return 56;
 }
 
-bool encrypt_stream_blowfish::init(unsigned char *key_in, int key_len, unsigned char *ivec_in)
+bool encrypt_stream_blowfish::init(unsigned char *key_in, int key_len, unsigned char *ivec_in, bool force)
 {
 #ifdef CRYPTO_DEBUG
 	printf("KEY: "); hexdump(key_in, key_len);

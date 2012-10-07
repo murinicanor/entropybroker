@@ -587,13 +587,13 @@ int main(int argc, char *argv[])
 				encrypt_stream *enc = encrypt_stream::select_cipher(cipher);
 				hasher *mac = hasher::select_hasher(mac_hasher);
 
-				std::string client_password;
+				std::string client_username, client_password;
 				long long unsigned int challenge = 1;
 				bool is_server = false;
 				std::string type;
-				if (auth_eb(new_socket_fd, DEFAULT_COMM_TO, user_map, client_password, &challenge, &is_server, type, rs, enc, mac, handshake_hash) == 0)
+				if (auth_eb(new_socket_fd, DEFAULT_COMM_TO, user_map, client_username, client_password, &challenge, &is_server, type, rs, enc, mac, handshake_hash) == 0)
 				{
-					dolog(LOG_INFO, "%s/%s %d/%d", host.c_str(), type.c_str(), new_socket_fd, is_server);
+					dolog(LOG_INFO, "%s/%s %d/%d (%s)", host.c_str(), type.c_str(), new_socket_fd, is_server, client_username.c_str());
 					if (clients[0] -> fd != -1 && clients[1] -> fd != -1)
 					{
 						dolog(LOG_WARNING, "New connection with 2 clients connected: dropping all previous connections");

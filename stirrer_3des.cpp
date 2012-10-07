@@ -38,7 +38,7 @@ void stirrer_3des::do_stir(unsigned char *ivec, unsigned char *target, int targe
 
 	memcpy(temp_key, data_in, data_in_size);
 
-	enc.init(temp_key, 24, ivec);
+	enc.init(temp_key, 24, ivec, true);
 
 	enc.encrypt(target, target_size, temp_buffer);
 	memcpy(target, temp_buffer, target_size);

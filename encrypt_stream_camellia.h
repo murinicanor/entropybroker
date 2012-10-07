@@ -16,7 +16,7 @@ public:
 	int get_ivec_size();
 	int get_key_size();
 
-	bool init(unsigned char *key, int key_len, unsigned char *ivec);
+	bool init(unsigned char *key, int key_len, unsigned char *ivec, bool force=false);
 
 	std::string get_name();
 

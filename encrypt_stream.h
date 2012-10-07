@@ -10,7 +10,7 @@ public:
 	virtual int get_ivec_size() = 0;
 	virtual int get_key_size() = 0;
 
-	virtual bool init(unsigned char *key, int key_len, unsigned char *ivec) = 0;
+	virtual bool init(unsigned char *key, int key_len, unsigned char *ivec, bool force=false) = 0;
 
 	virtual std::string get_name() = 0;
 

@@ -22,7 +22,7 @@ int encrypt_stream_aes::get_key_size()
 	return 256 / 8;
 }
 
-bool encrypt_stream_aes::init(unsigned char *key_in, int key_len, unsigned char *ivec_in)
+bool encrypt_stream_aes::init(unsigned char *key_in, int key_len, unsigned char *ivec_in, bool force)
 {
 #ifdef CRYPTO_DEBUG
 	printf("KEY: "); hexdump(key_in, key_len);
