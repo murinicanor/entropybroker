@@ -38,7 +38,7 @@ const char *pid_file = PID_DIR "/eb_server_audio.pid";
 #define DEFAULT_SAMPLE_RATE			11025
 #define DEFAULT_CLICK_READ			(1 * DEFAULT_SAMPLE_RATE)
 
-#define max(x, y)	((x)>(y)?(x):(y))
+#define mymax(x, y)	((x)>(y)?(x):(y))
 
 void sig_handler(int sig)
 {

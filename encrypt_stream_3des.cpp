@@ -5,18 +5,26 @@
 #include "encrypt_stream_3des.h"
 #include "utils.h"
 
-encrypt_stream_3des::encrypt_stream_3des() : ivec_offset(0)
+encrypt_stream_3des::encrypt_stream_3des()
 {
+	enc = NULL;
+	dec = NULL;
+}
+
+encrypt_stream_3des::~encrypt_stream_3des()
+{
+	delete enc;
+	delete dec;
 }
 
 int encrypt_stream_3des::get_ivec_size()
 {
-	return 8;
+	return CryptoPP::DES_EDE3::BLOCKSIZE;
 }
 
 int encrypt_stream_3des::get_key_size()
 {
-	return 8 * 3;
+	return CryptoPP::DES_EDE3::DEFAULT_KEYLENGTH;
 }
 
 bool encrypt_stream_3des::init(unsigned char *key_in, int key_len, unsigned char *ivec_in, bool force)
@@ -26,48 +34,33 @@ bool encrypt_stream_3des::init(unsigned char *key_in, int key_len, unsigned char
 	printf("IVEC STRT: "); hexdump(ivec_in, 8);
 #endif
 
-	DES_cblock dk;
+	if (enc)
+		delete enc;
+	if (dec)
+		delete dec;
 
-	char temp_key[24] = { 0 };
-	memcpy(temp_key, key_in, key_len);
-
-	memcpy(dk, &temp_key[0], 8);
-	DES_set_odd_parity(&dk);
-	if (DES_is_weak_key(&dk) == 1 && !force)
-		return false;
-	DES_set_key_unchecked(&dk, &ks1);
-
-	memcpy(dk, &temp_key[8], 8);
-	DES_set_odd_parity(&dk);
-	if (DES_is_weak_key(&dk) == 1 && !force)
-		return false;
-	DES_set_key_unchecked(&dk, &ks2);
-
-	memcpy(dk, &temp_key[16], 8);
-	DES_set_odd_parity(&dk);
-	if (DES_is_weak_key(&dk) == 1 && !force)
-		return false;
-	DES_set_key_unchecked(&dk, &ks3);
-
-	memcpy(iv, ivec_in, 8);
-#ifdef CRYPTO_DEBUG
-	printf("IVEC STRT2: "); hexdump(iv, 8);
-#endif
+	enc = new CryptoPP::CFB_Mode<CryptoPP::DES_EDE3>::Encryption(key_in, key_len, ivec_in);
+	dec = new CryptoPP::CFB_Mode<CryptoPP::DES_EDE3>::Decryption(key_in, key_len, ivec_in);
 
 	return true;
+}
+
+std::string encrypt_stream_3des::get_name()
+{
+	return "3des";
 }
 
 void encrypt_stream_3des::encrypt(unsigned char *p, size_t len, unsigned char *p_out)
 {
 #ifdef CRYPTO_DEBUG
 	printf("ORG: "); hexdump(p, len);
-	printf("EIV %d before: ", ivec_offset); hexdump(iv, 8);
+	printf("EIV %d before: ", ivec_offset); hexdump(ivec, 8);
 #endif
 
-	DES_ede3_cfb64_encrypt(p, p_out, len, &ks1, &ks2, &ks3, &iv, &ivec_offset, DES_ENCRYPT);
+	enc -> ProcessData(p_out, p, len);
 
 #ifdef CRYPTO_DEBUG
-	printf("EIV %d after: ", ivec_offset); hexdump(iv, 8);
+	printf("EIV %d after: ", ivec_offset); hexdump(ivec, 8);
 	printf("ENC: "); hexdump(p_out, len);
 #endif
 }
@@ -76,18 +69,13 @@ void encrypt_stream_3des::decrypt(unsigned char *p, size_t len, unsigned char *p
 {
 #ifdef CRYPTO_DEBUG
 	printf("DEC: "); hexdump(p, len);
-	printf("EIV %d before: ", ivec_offset); hexdump(iv, 8);
+	printf("EIV %d before: ", ivec_offset); hexdump(ivec, 8);
 #endif
 
-	DES_ede3_cfb64_encrypt(p, p_out, len, &ks1, &ks2, &ks3, &iv, &ivec_offset, DES_DECRYPT);
+	dec -> ProcessData(p_out, p, len);
 
 #ifdef CRYPTO_DEBUG
-	printf("EIV %d after: ", ivec_offset); hexdump(iv, 8);
+	printf("EIV %d after: ", ivec_offset); hexdump(ivec, 8);
 	printf("ORG: "); hexdump(p_out, len);
 #endif
-}
-
-std::string encrypt_stream_3des::get_name()
-{
-	return "3des";
 }

@@ -372,7 +372,7 @@ int pools::find_non_full_pool(bool timed, double max_duration)
 		int index = abs(loop_index + index_offset) % n;
 
 		double working = get_ts() - start_ts;
-		double cur_max_duration = max(MIN_SLEEP, (max_duration - working) / double(n - index));
+		double cur_max_duration = mymax(MIN_SLEEP, (max_duration - working) / double(n - index));
 
 		pthread_cond_t *cond = NULL;
 		if (timed)
@@ -417,7 +417,7 @@ int pools::select_pool_to_add_to(bool timed, double max_time)
 		merge_pools();
 
 		if (pool_vector.size() >= max_n_mem_pools)
-			store_caches(max(0, int(pool_vector.size()) - int(min_store_on_disk_n)));
+			store_caches(mymax(0, int(pool_vector.size()) - int(min_store_on_disk_n)));
 
 		// see if the number of in-memory pools is reduced after the call to store_caches
 		// it might have not stored any on disk if the limit on the number of files has been reached
@@ -430,7 +430,7 @@ int pools::select_pool_to_add_to(bool timed, double max_time)
 		list_wunlock();
 		list_rlock();
 
-		double left = max(MIN_SLEEP, max_time - (get_ts() - start_ts));
+		double left = mymax(MIN_SLEEP, max_time - (get_ts() - start_ts));
 
 		index = find_non_full_pool(timed, left);
 		if (index == -1)
@@ -444,7 +444,7 @@ int pools::select_pool_to_add_to(bool timed, double max_time)
 			index = last_added_to;
 			my_mutex_unlock(&lat_lck);
 
-			left = max(MIN_SLEEP, max_time - (get_ts() - start_ts));
+			left = mymax(MIN_SLEEP, max_time - (get_ts() - start_ts));
 
 			if (pool_vector.at(index) -> timed_lock_object(left))
 				index = -1;
@@ -537,14 +537,14 @@ int pools::get_bits_from_pools(int n_bits_requested, unsigned char **buffer, boo
 	if (n == 0)
 	{
 		pool_block_size = h -> get_hash_size() / 2;
-		get_per_pool_n = max(pool_block_size, n_bits_requested);
+		get_per_pool_n = mymax(pool_block_size, n_bits_requested);
 	}
 	else
 	{
 		pool_block_size = pool_vector.at(0) -> get_get_size();
-		get_per_pool_n = max(pool_block_size, n_bits_requested / int(n));
+		get_per_pool_n = mymax(pool_block_size, n_bits_requested / int(n));
 	}
-	get_per_pool_n = min(get_per_pool_n, new_pool_size);
+	get_per_pool_n = mymin(get_per_pool_n, new_pool_size);
 
 	int index_offset = rand();
 	int round = 0;
@@ -642,7 +642,7 @@ int pools::add_bits_to_pools(unsigned char *data, int n_bytes, bool ignore_rngte
 			if (space_available <= pool_vector.at(index) -> get_get_size_in_bits())
 				space_available = pool_vector.at(index) -> get_pool_size();
 
-			unsigned int n_bytes_to_add = min(n_bytes, (space_available + 7) / 8);
+			unsigned int n_bytes_to_add = mymin(n_bytes, (space_available + 7) / 8);
 			dolog(LOG_DEBUG, "Adding %d bits to pool %d", n_bytes_to_add * 8, index);
 
 			if (verify_quality(data, n_bytes_to_add, ignore_rngtest_fips140, pfips, ignore_rngtest_scc, pscc))

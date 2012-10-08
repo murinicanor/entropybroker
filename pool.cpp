@@ -1,20 +1,4 @@
 // SVN: $Revision$
-/*
-  GPL 2 applies to entropybroker.
-
-  In addition, as a special exception, the copyright holders give
-  permission to link the code of portions of this program with the
-  OpenSSL library under certain conditions as described in each
-  individual source file, and distribute linked combinations
-  including the two.
-  You must obey the GNU General Public License in all respects
-  for all of the code used other than OpenSSL.  If you modify
-  file(s) with this exception, you may extend this exception to your
-  version of the file(s), but you are not obligated to do so.  If you
-  do not wish to do so, delete this exception statement from your
-  version.  If you delete this exception statement from all source
-  files in the program, then also delete it here.
-*/
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -141,7 +125,7 @@ pthread_cond_t * pool::timed_lock_object(double max_time)
 
 		clock_gettime(CLOCK_REALTIME, &abs_time);
 
-		double cur_time = min(max_time, 1.0);
+		double cur_time = mymin(max_time, 1.0);
 		abs_time.tv_sec += cur_time;
 		abs_time.tv_nsec += (cur_time - floor(cur_time)) * 1000000000L;
 
@@ -217,7 +201,7 @@ int pool::add_entropy_data(unsigned char *entropy_data, int n_bytes_in)
 	// this implementation is described in RFC 4086 (June 2005) chapter 6.2.1, second paragraph
 
 	// NOTE (or FIXME if you like): not entirely sure if it is good enough to use a
-	// cryptographical strong PRNG (the one from openssl) to set the ivec - could use "real"
+	// cryptographical strong PRNG to set the ivec - could use "real"
 	// entropy values for that instead
 
 	unsigned char *temp_buffer = (unsigned char *)malloc(pool_size_bytes);
@@ -232,7 +216,7 @@ int pool::add_entropy_data(unsigned char *entropy_data, int n_bytes_in)
 		// when adding data to the pool, we encrypt the pool using blowfish with
 		// the entropy-data as the encryption-key. blowfish allows keysizes with
 		// a maximum of 448 bits which is 56 bytes
-		int cur_to_add = min(n_bytes_in, s -> get_stir_size());
+		int cur_to_add = mymin(n_bytes_in, s -> get_stir_size());
 
 		s -> do_stir(cur_ivec, entropy_pool, pool_size_bytes, entropy_data, cur_to_add, temp_buffer, true);
 
@@ -277,8 +261,8 @@ int pool::get_entropy_data(unsigned char *entropy_data, int n_bytes_requested, b
 
 	n_given = n_bytes_requested;
 	if (!prng_ok)
-		n_given = min(n_given, bits_in_pool / 8);
-	n_given = min(n_given, half_hash_len);
+		n_given = mymin(n_given, bits_in_pool / 8);
+	n_given = mymin(n_given, half_hash_len);
 
 	if (n_given > 0)
 	{
@@ -295,7 +279,7 @@ int pool::get_entropy_data(unsigned char *entropy_data, int n_bytes_requested, b
 		int stir_size = s -> get_stir_size(), index = 0;
 		while(index < hash_len)
 		{
-			int cur_hash_n = min(hash_len - index, stir_size);
+			int cur_hash_n = mymin(hash_len - index, stir_size);
 
 			s -> do_stir(cur_ivec, entropy_pool, pool_size_bytes, dummy_hash_p, cur_hash_n, temp_buffer, false);
 
@@ -377,7 +361,7 @@ int pool::add_event(double ts, unsigned char *event_data, int n_event_data)
 	if (delta == 0)
 		n_bits_added = 0;
 	else
-		n_bits_added = max(0, min(MAX_EVENT_BITS, log(delta) / log(2.0)));
+		n_bits_added = mymax(0, mymin(MAX_EVENT_BITS, log(delta) / log(2.0)));
 
 	bits_in_pool += n_bits_added;
 	if (bits_in_pool > (pool_size_bytes * 8))
@@ -390,7 +374,7 @@ int pool::add_event(double ts, unsigned char *event_data, int n_event_data)
 
 	while(n_event_data > 0)
 	{
-		int cur_n_event_data = min(n_event_data, s -> get_stir_size());
+		int cur_n_event_data = mymin(n_event_data, s -> get_stir_size());
 
 		iv -> get(cur_ivec);
 

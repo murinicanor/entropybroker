@@ -7,18 +7,26 @@
 #include "encrypt_stream_blowfish.h"
 #include "utils.h"
 
-encrypt_stream_blowfish::encrypt_stream_blowfish() : ivec_offset(0)
+encrypt_stream_blowfish::encrypt_stream_blowfish()
 {
+	enc = NULL;
+	dec = NULL;
+}
+
+encrypt_stream_blowfish::~encrypt_stream_blowfish()
+{
+	delete enc;
+	delete dec;
 }
 
 int encrypt_stream_blowfish::get_ivec_size()
 {
-	return BF_BLOCK;
+	return CryptoPP::Blowfish::BLOCKSIZE;
 }
 
 int encrypt_stream_blowfish::get_key_size()
 {
-	return 56;
+	return CryptoPP::Blowfish::DEFAULT_KEYLENGTH;
 }
 
 bool encrypt_stream_blowfish::init(unsigned char *key_in, int key_len, unsigned char *ivec_in, bool force)
@@ -27,11 +35,20 @@ bool encrypt_stream_blowfish::init(unsigned char *key_in, int key_len, unsigned 
 	printf("KEY: "); hexdump(key_in, key_len);
 #endif
 
-	memcpy(ivec, ivec_in, sizeof ivec);
+	if (enc)
+		delete enc;
+	if (dec)
+		delete dec;
 
-	BF_set_key(&key, key_len, key_in);
+	enc = new CryptoPP::CFB_Mode<CryptoPP::Blowfish>::Encryption(key_in, key_len, ivec_in);
+	dec = new CryptoPP::CFB_Mode<CryptoPP::Blowfish>::Decryption(key_in, key_len, ivec_in);
 
 	return true;
+}
+
+std::string encrypt_stream_blowfish::get_name()
+{
+	return "blowfish";
 }
 
 void encrypt_stream_blowfish::encrypt(unsigned char *p, size_t len, unsigned char *p_out)
@@ -41,7 +58,7 @@ void encrypt_stream_blowfish::encrypt(unsigned char *p, size_t len, unsigned cha
 	printf("EIV %d before: ", ivec_offset); hexdump(ivec, 8);
 #endif
 
-	BF_cfb64_encrypt(p, p_out, len, &key, ivec, &ivec_offset, BF_ENCRYPT);
+	enc -> ProcessData(p_out, p, len);
 
 #ifdef CRYPTO_DEBUG
 	printf("EIV %d after: ", ivec_offset); hexdump(ivec, 8);
@@ -56,15 +73,10 @@ void encrypt_stream_blowfish::decrypt(unsigned char *p, size_t len, unsigned cha
 	printf("EIV %d before: ", ivec_offset); hexdump(ivec, 8);
 #endif
 
-	BF_cfb64_encrypt(p, p_out, len, &key, ivec, &ivec_offset, BF_DECRYPT);
+	dec -> ProcessData(p_out, p, len);
 
 #ifdef CRYPTO_DEBUG
 	printf("EIV %d after: ", ivec_offset); hexdump(ivec, 8);
 	printf("ORG: "); hexdump(p_out, len);
 #endif
-}
-
-std::string encrypt_stream_blowfish::get_name()
-{
-	return "blowfish";
 }

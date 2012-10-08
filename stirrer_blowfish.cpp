@@ -3,7 +3,6 @@
 #include <arpa/inet.h>
 #include <string>
 #include <arpa/inet.h>
-#include <openssl/blowfish.h>
 
 #include "error.h"
 #include "utils.h"

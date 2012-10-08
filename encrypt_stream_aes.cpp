@@ -8,18 +8,26 @@
 #include "encrypt_stream_aes.h"
 #include "utils.h"
 
-encrypt_stream_aes::encrypt_stream_aes() : ivec_offset(0)
+encrypt_stream_aes::encrypt_stream_aes()
 {
+	enc = NULL;
+	dec = NULL;
+}
+
+encrypt_stream_aes::~encrypt_stream_aes()
+{
+	delete enc;
+	delete dec;
 }
 
 int encrypt_stream_aes::get_ivec_size()
 {
-	return AES_BLOCK_SIZE;
+	return CryptoPP::AES::BLOCKSIZE;
 }
 
 int encrypt_stream_aes::get_key_size()
 {
-	return 256 / 8;
+	return CryptoPP::AES::DEFAULT_KEYLENGTH;
 }
 
 bool encrypt_stream_aes::init(unsigned char *key_in, int key_len, unsigned char *ivec_in, bool force)
@@ -28,18 +36,22 @@ bool encrypt_stream_aes::init(unsigned char *key_in, int key_len, unsigned char 
 	printf("KEY: "); hexdump(key_in, key_len);
 #endif
 
-	memcpy(ivec, ivec_in, sizeof ivec);
+	unsigned char key_use[CryptoPP::AES::DEFAULT_KEYLENGTH] = { 0 };
+	memcpy(key_use, key_in, mymin(CryptoPP::AES::DEFAULT_KEYLENGTH, key_len));
 
-	unsigned char key_use[32] = { 0 };
-	memcpy(key_use, key_in, min(32, key_len));
-
-	int rc = -1;
-	if ((rc = AES_set_encrypt_key(key_use, 32 * 8, &key_enc)) < 0)
-		error_exit("AES_set_encrypt_key failed");
-	if ((rc = AES_set_encrypt_key(key_use, 32 * 8, &key_dec)) < 0) // due to the cfb used
-		error_exit("AES_set_encrypt_key failed");
+	if (enc)
+		delete enc;
+	if (dec)
+		delete dec;
+	enc = new CryptoPP::CFB_Mode<CryptoPP::AES>::Encryption(key_use, CryptoPP::AES::DEFAULT_KEYLENGTH, ivec_in);
+	dec = new CryptoPP::CFB_Mode<CryptoPP::AES>::Decryption(key_use, CryptoPP::AES::DEFAULT_KEYLENGTH, ivec_in);
 
 	return true;
+}
+
+std::string encrypt_stream_aes::get_name()
+{
+	return "aes";
 }
 
 void encrypt_stream_aes::encrypt(unsigned char *p, size_t len, unsigned char *p_out)
@@ -49,7 +61,7 @@ void encrypt_stream_aes::encrypt(unsigned char *p, size_t len, unsigned char *p_
 	printf("EIV %d before: ", ivec_offset); hexdump(ivec, 8);
 #endif
 
-	AES_cfb128_encrypt(p, p_out, len, &key_enc, ivec, &ivec_offset, AES_ENCRYPT);
+	enc -> ProcessData(p_out, p, len);
 
 #ifdef CRYPTO_DEBUG
 	printf("EIV %d after: ", ivec_offset); hexdump(ivec, 8);
@@ -64,15 +76,10 @@ void encrypt_stream_aes::decrypt(unsigned char *p, size_t len, unsigned char *p_
 	printf("EIV %d before: ", ivec_offset); hexdump(ivec, 8);
 #endif
 
-	AES_cfb128_encrypt(p, p_out, len, &key_dec, ivec, &ivec_offset, AES_DECRYPT);
+	dec -> ProcessData(p_out, p, len);
 
 #ifdef CRYPTO_DEBUG
 	printf("EIV %d after: ", ivec_offset); hexdump(ivec, 8);
 	printf("ORG: "); hexdump(p_out, len);
 #endif
-}
-
-std::string encrypt_stream_aes::get_name()
-{
-	return "aes";
 }

@@ -1,6 +1,5 @@
 // SVN: $Revision$
 #include <string>
-#include <openssl/sha.h>
 
 #include "hasher.h"
 #include "hasher_sha512.h"
@@ -20,10 +19,10 @@ std::string hasher_sha512::get_name()
 
 int hasher_sha512::get_hash_size() const
 {
-	return SHA512_DIGEST_LENGTH;
+	return CryptoPP::SHA512::DIGESTSIZE;
 }
 
 void hasher_sha512::do_hash(unsigned char *in, int in_size, unsigned char *dest)
 {
-	SHA512(in, in_size, dest);
+	CryptoPP::SHA512().CalculateDigest(dest, in, in_size);
 }

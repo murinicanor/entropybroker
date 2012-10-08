@@ -247,7 +247,7 @@ int main(int argc, char *argv[])
 	for(;;)
 	{
 		unsigned char request[2], reply[1];
-		int bytes_to_read = min(255, min(sizeof bytes - index, read_bytes_per_interval));
+		int bytes_to_read = mymin(255, mymin(sizeof bytes - index, read_bytes_per_interval));
 
 		// gather random data from EGD
 		request[0] = 1;

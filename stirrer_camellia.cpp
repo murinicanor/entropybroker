@@ -2,7 +2,6 @@
 #include <string.h>
 #include <arpa/inet.h>
 #include <string>
-#include <openssl/camellia.h>
 
 #include "error.h"
 #include "utils.h"

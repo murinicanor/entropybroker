@@ -1,4 +1,6 @@
 // SVN: $Revision$
+#include <cryptopp/whrlpool.h>
+
 class hasher_whirlpool : public hasher
 {
 public:

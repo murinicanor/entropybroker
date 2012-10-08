@@ -197,7 +197,7 @@ int main(int argc, char *argv[])
 	lock_mem(buffer, sizeof buffer);
 	while(count > 0 || count == -1)
 	{
-		int n_bytes_to_get = min(block_size, min(count <= 0 ? 1249 : count, 1249));
+		int n_bytes_to_get = mymin(block_size, mymin(count <= 0 ? 1249 : count, 1249));
 		int n_bits_to_get = n_bytes_to_get * 8;
 
 		dolog(LOG_INFO, "will get %d bits", n_bits_to_get);

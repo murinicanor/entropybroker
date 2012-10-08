@@ -1,6 +1,5 @@
 // SVN: $Revision$
 #include <string>
-#include <openssl/md5.h>
 
 #include "hasher.h"
 #include "hasher_md5.h"
@@ -20,10 +19,10 @@ std::string hasher_md5::get_name()
 
 int hasher_md5::get_hash_size() const
 {
-	return MD5_DIGEST_LENGTH;
+	return CryptoPP::Weak::MD5::DIGESTSIZE;
 }
 
 void hasher_md5::do_hash(unsigned char *in, int in_size, unsigned char *dest)
 {
-	MD5(in, in_size, dest);
+	CryptoPP::Weak::MD5().CalculateDigest(dest, in, in_size);
 }

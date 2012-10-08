@@ -1,15 +1,16 @@
 // SVN: $Revision$
-#include <openssl/des.h>
+#include <cryptopp/modes.h>
+#include <cryptopp/des.h>
 
 class encrypt_stream_3des : public encrypt_stream
 {
 private:
-	int ivec_offset;
-	DES_cblock iv;
-        DES_key_schedule ks1, ks2, ks3;
+	CryptoPP::CFB_Mode<CryptoPP::DES_EDE3>::Encryption *enc;
+	CryptoPP::CFB_Mode<CryptoPP::DES_EDE3>::Decryption *dec;
 
 public:
 	encrypt_stream_3des();
+	~encrypt_stream_3des();
 
 	int get_ivec_size();
 	int get_key_size();
@@ -18,6 +19,6 @@ public:
 
 	std::string get_name();
 
-        void encrypt(unsigned char *p, size_t len, unsigned char *p_out); 
-        void decrypt(unsigned char *p, size_t len, unsigned char *p_out);
+	void encrypt(unsigned char *p_in, size_t len, unsigned char *p_out);
+	void decrypt(unsigned char *p_in, size_t len, unsigned char *p_out);
 };

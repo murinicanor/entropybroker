@@ -1,6 +1,6 @@
 // SVN: $Revision$
-#define min(x, y)       ((x)<(y)?(x):(y))
-#define max(x, y)       ((x)>(y)?(x):(y))
+#define mymin(x, y)       ((x)<(y)?(x):(y))
+#define mymax(x, y)       ((x)>(y)?(x):(y))
 
 extern pthread_mutexattr_t global_mutex_attr;
 

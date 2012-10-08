@@ -235,7 +235,7 @@ int main(int argc, char *argv[])
 				error_exit("Got data but also an ISO 7816 error code: %04x", code);
 		}
 
-		int n_to_add = min(sizeof bytes - index, 8);
+		int n_to_add = mymin(sizeof bytes - index, 8);
 		memcpy(&bytes[index], pbRecvBuffer, n_to_add);
 		index += n_to_add;
 

@@ -1,6 +1,5 @@
 // SVN: $Revision$
 #include <string>
-#include <openssl/ripemd.h>
 
 #include "hasher.h"
 #include "hasher_ripemd160.h"
@@ -20,10 +19,10 @@ std::string hasher_ripemd160::get_name()
 
 int hasher_ripemd160::get_hash_size() const
 {
-	return RIPEMD160_DIGEST_LENGTH;
+	return CryptoPP::RIPEMD160::DIGESTSIZE;
 }
 
 void hasher_ripemd160::do_hash(unsigned char *in, int in_size, unsigned char *dest)
 {
-	RIPEMD160(in, in_size, dest);
+	CryptoPP::RIPEMD160().CalculateDigest(dest, in, in_size);
 }

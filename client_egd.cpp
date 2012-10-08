@@ -73,7 +73,7 @@ void egd_get(int fd, protocol *p, bool blocking)
 		egd_get__failure(fd);
 	else
 	{
-		unsigned char msg = min(255, n_bytes);
+		unsigned char msg = mymin(255, n_bytes);
 		if (!blocking && WRITE(fd, &msg, 1) != 1)
 			dolog(LOG_INFO, "short write on egd client (# bytes)");
 		else if (WRITE(fd, buffer, msg) != msg)
@@ -344,7 +344,7 @@ int main(int argc, char *argv[])
 		if (t_listen_fd != -1)
 			FD_SET(t_listen_fd, &a_fds);
 
-		if (select(max(u_listen_fd, t_listen_fd) + 1, &a_fds, NULL, NULL, NULL) == -1)
+		if (select(mymax(u_listen_fd, t_listen_fd) + 1, &a_fds, NULL, NULL, NULL) == -1)
 		{
 			if (errno != EINTR)
 				error_exit("select() failed");

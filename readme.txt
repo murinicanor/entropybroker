@@ -38,7 +38,7 @@ Building
 	make everything install
 
 Files will be installed in  /usr/local/entropybroker 
-You need the OpenSSL and zlib development libraries.
+You need the Crypto++ and zlib development libraries.
 libasound2-dev is for eb_server_audio
 libusb-1.0-0-dev is for eb_server_usb
 libftdi-dev is for eb_server_ComScire_R2000KU

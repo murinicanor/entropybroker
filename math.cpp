@@ -66,7 +66,7 @@ int bit_count_estimator::determine_number_of_bits_of_data_shannon(unsigned char 
 	if (ent < 0.0)
 		ent=0.0;
 
-	ent = min(nbytesd * 8.0, ent);
+	ent = mymin(nbytesd * 8.0, ent);
 
 	return ent;
 }

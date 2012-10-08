@@ -289,9 +289,9 @@ void * thread(void *data)
 			FD_ZERO(&rfds);
 
 			FD_SET(p -> socket_fd, &rfds);
-			max_fd = max(max_fd, p -> socket_fd);
+			max_fd = mymax(max_fd, p -> socket_fd);
 			FD_SET(p -> to_thread[0], &rfds);
-			max_fd = max(max_fd, p -> to_thread[0]);
+			max_fd = mymax(max_fd, p -> to_thread[0]);
 
 			int rc = select(max_fd + 1, &rfds, NULL, NULL, &tv);
 			if (rc == -1)
@@ -555,19 +555,19 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 
 		FD_ZERO(&rfds);
 
-		dummy1_time = max(0, (last_statistics_emit + config -> statistics_interval) - now);
-		time_left = min(time_left, dummy1_time);
-		dummy1_time = max(0, (last_counters_reset + config -> reset_counters_interval) - now);
-		time_left = min(time_left, dummy1_time);
+		dummy1_time = mymax(0, (last_statistics_emit + config -> statistics_interval) - now);
+		time_left = mymin(time_left, dummy1_time);
+		dummy1_time = mymax(0, (last_counters_reset + config -> reset_counters_interval) - now);
+		time_left = mymin(time_left, dummy1_time);
 
 		for(unsigned int loop=0; loop<clients.size(); loop++)
 		{
 			FD_SET(clients.at(loop) -> to_main[0], &rfds);
-			max_fd = max(max_fd, clients.at(loop) -> to_main[0]);
+			max_fd = mymax(max_fd, clients.at(loop) -> to_main[0]);
 		}
 
 		FD_SET(listen_socket_fd, &rfds);
-		max_fd = max(max_fd, listen_socket_fd);
+		max_fd = mymax(max_fd, listen_socket_fd);
 
 		tv.tv_sec = time_left;
 		tv.tv_nsec = (time_left - double(tv.tv_sec)) * 1000000000.0;

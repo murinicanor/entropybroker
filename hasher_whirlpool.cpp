@@ -1,6 +1,5 @@
 // SVN: $Revision$
 #include <string>
-#include <openssl/whrlpool.h>
 
 #include "hasher.h"
 #include "hasher_whirlpool.h"
@@ -20,10 +19,10 @@ std::string hasher_whirlpool::get_name()
 
 int hasher_whirlpool::get_hash_size() const
 {
-	return WHIRLPOOL_DIGEST_LENGTH;
+	return CryptoPP::Whirlpool::DIGESTSIZE;
 }
 
 void hasher_whirlpool::do_hash(unsigned char *in, int in_size, unsigned char *dest)
 {
-	WHIRLPOOL(in, in_size, dest);
+	CryptoPP::Whirlpool().CalculateDigest(dest, in, in_size);
 }

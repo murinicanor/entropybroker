@@ -8,18 +8,26 @@
 #include "encrypt_stream_camellia.h"
 #include "utils.h"
 
-encrypt_stream_camellia::encrypt_stream_camellia() : ivec_offset(0)
+encrypt_stream_camellia::encrypt_stream_camellia()
 {
+	enc = NULL;
+	dec = NULL;
+}
+
+encrypt_stream_camellia::~encrypt_stream_camellia()
+{
+	delete enc;
+	delete dec;
 }
 
 int encrypt_stream_camellia::get_ivec_size()
 {
-	return CAMELLIA_BLOCK_SIZE;
+	return CryptoPP::Camellia::BLOCKSIZE;
 }
 
 int encrypt_stream_camellia::get_key_size()
 {
-	return CAMELLIA_MAX_KEY_SIZE;
+	return CryptoPP::Camellia::DEFAULT_KEYLENGTH;
 }
 
 bool encrypt_stream_camellia::init(unsigned char *key_in, int key_len, unsigned char *ivec_in, bool force)
@@ -28,16 +36,23 @@ bool encrypt_stream_camellia::init(unsigned char *key_in, int key_len, unsigned 
 	printf("KEY: "); hexdump(key_in, key_len);
 #endif
 
-	memcpy(ivec, ivec_in, sizeof ivec);
+	unsigned char temp_key[CryptoPP::Camellia::DEFAULT_KEYLENGTH] = { 0 };
+	memcpy(temp_key, key_in, mymin(CryptoPP::Camellia::DEFAULT_KEYLENGTH, key_len));
 
-	unsigned char temp_key[CAMELLIA_MAX_KEY_SIZE] = { 0 };
-	memcpy(temp_key, key_in, min(CAMELLIA_MAX_KEY_SIZE, key_len));
+	if (enc)
+		delete enc;
+	if (dec)
+		delete dec;
 
-	int rc = -1;
-	if ((rc = Camellia_set_key(temp_key, CAMELLIA_MAX_KEY_SIZE * 8, &key)) < 0)
-		error_exit("Camellia_set_key failed: %d", rc);
+	enc = new CryptoPP::CFB_Mode<CryptoPP::Camellia>::Encryption(temp_key, CryptoPP::Camellia::DEFAULT_KEYLENGTH, ivec_in);
+	dec = new CryptoPP::CFB_Mode<CryptoPP::Camellia>::Decryption(temp_key, CryptoPP::Camellia::DEFAULT_KEYLENGTH, ivec_in);
 
 	return true;
+}
+
+std::string encrypt_stream_camellia::get_name()
+{
+	return "camellia";
 }
 
 void encrypt_stream_camellia::encrypt(unsigned char *p, size_t len, unsigned char *p_out)
@@ -47,7 +62,7 @@ void encrypt_stream_camellia::encrypt(unsigned char *p, size_t len, unsigned cha
 	printf("EIV %d before: ", ivec_offset); hexdump(ivec, 8);
 #endif
 
-	Camellia_cfb8_encrypt(p, p_out, len, &key, ivec, &ivec_offset, CAMELLIA_ENCRYPT);
+	enc -> ProcessData(p_out, p, len);
 
 #ifdef CRYPTO_DEBUG
 	printf("EIV %d after: ", ivec_offset); hexdump(ivec, 8);
@@ -62,15 +77,10 @@ void encrypt_stream_camellia::decrypt(unsigned char *p, size_t len, unsigned cha
 	printf("EIV %d before: ", ivec_offset); hexdump(ivec, 8);
 #endif
 
-	Camellia_cfb8_encrypt(p, p_out, len, &key, ivec, &ivec_offset, CAMELLIA_DECRYPT);
+	dec -> ProcessData(p_out, p, len);
 
 #ifdef CRYPTO_DEBUG
 	printf("EIV %d after: ", ivec_offset); hexdump(ivec, 8);
 	printf("ORG: "); hexdump(p_out, len);
 #endif
-}
-
-std::string encrypt_stream_camellia::get_name()
-{
-	return "camellia";
 }

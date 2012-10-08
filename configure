@@ -23,12 +23,12 @@ if [ $? -ne 0 ] ; then
 fi
 echo \ OK
 
-echo -n \* checking for OpenSSL...
-g++ -O0 -o $FILE test_openssl.cpp 2> $FILE2
+echo -n \* checking for CryptoPP...
+g++ -O0 -o $FILE test_cryptopp.cpp 2> $FILE2
 if [ $? -ne 0 ] ; then
 	echo
-	echo \! OpenSSL was NOT detected
-	echo \! OpenSSL is required for entropy_broker
+	echo \! CryptoPP was NOT detected
+	echo \! CryptoPP is required for entropy_broker
 	echo
 	echo \! errors reported:
 	echo

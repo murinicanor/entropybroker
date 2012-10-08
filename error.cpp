@@ -9,7 +9,6 @@
 #include <signal.h>
 #include <syslog.h>
 #include <execinfo.h>
-#include <openssl/err.h>
 
 #include "log.h"
 #include "utils.h"
@@ -25,16 +24,6 @@ void error_exit(const char *format, ...)
 
 	dolog(LOG_EMERG, "FATAL|%s|%s\n", get_current_thread_name().c_str(), buffer);
 	dolog(LOG_EMERG, "FATAL|%s|errno at that time: %d (%s)", get_current_thread_name().c_str(), errno, strerror(errno));
-
-	ERR_load_crypto_strings();
-	for(;;)
-	{
-		unsigned long ose = ERR_get_error();
-		if (ose == 0)
-			break;
-
-		dolog(LOG_CRIT, "OpenSSL error: %s", ERR_error_string(ose, NULL));
-	}
 
 	void *trace[128];
 	int trace_size = backtrace(trace, 128);

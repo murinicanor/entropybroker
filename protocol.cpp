@@ -78,7 +78,7 @@ void calc_ivec(const char *password, long long unsigned int rnd, long long unsig
 	unsigned char *pcnt = reinterpret_cast<unsigned char *>(&counter);
 
 	memset(dest, 0x00, ivec_size);
-	memcpy(dest, password, min(strlen(password), ivec_size));
+	memcpy(dest, password, mymin(strlen(password), ivec_size));
 
 	unsigned int index_dest = 0, index_rnd = 0, rnd_len = sizeof rnd;
 	while(index_dest < ivec_size)

@@ -1,5 +1,7 @@
 // SVN: $Revision$
-class hasher_ripemd160 : public hasher
+#include <cryptopp/ripemd.h>
+
+class hasher_ripemd160: public hasher
 {
 public:
 	hasher_ripemd160();

@@ -1,16 +1,3 @@
-# GPL 2 applies to entropybroker.
-# In addition, as a special exception, the copyright holders give
-# permission to link the code of portions of this program with the
-# OpenSSL library under certain conditions as described in each
-# individual source file, and distribute linked combinations
-# including the two.
-# You must obey the GNU General Public License in all respects
-# for all of the code used other than OpenSSL.  If you modify
-# file(s) with this exception, you may extend this exception to your
-# version of the file(s), but you are not obligated to do so.  If you
-# do not wish to do so, delete this exception statement from your
-# version.  If you delete this exception statement from all source
-# files in the program, then also delete it here.
 # SVN: $Revision$
 
 include version
@@ -29,12 +16,12 @@ DEBUG= #-DCRYPTO_DEBUG #-D_DEBUG #-fprofile-arcs -ftest-coverage # -pg
 LINT=-Wshadow -Wall # -W -Wconversion -Wwrite-strings -Wunused
 PCSC_CFLAGS=`pkg-config --cflags libpcsclite`
 CXXFLAGS+=-O3 -ggdb -DVERSION=\"${VERSION}\" $(LINT) $(DEBUG) -DCONFIG=\"${ETC}/entropy_broker.conf\" -DCACHE_DIR=\"${CACHE}\" -DPID_DIR=\"${PID}\" -DVAR_DIR=\"${VAR}\" -rdynamic $(PCSC_CFLAGS)
-LDFLAGS+=$(DEBUG) -lcrypto -lrt -lz -lutil -rdynamic
+LDFLAGS+=$(DEBUG) -lcrypto -lrt -lz -lutil -rdynamic -lcryptopp
 
 all:
 	@echo targets:
 	@echo -------
-	@echo All targets \(except from 'plot'\) require the OpenSSL libraries.
+	@echo All targets \(except from 'plot'\) require the Crypto++ libraries.
 	@echo
 	@echo entropy_broker
 	@echo eb_server_audio           requires libasound2-dev, linux only

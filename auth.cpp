@@ -217,7 +217,7 @@ int auth_client_server_user(int fd, int to, std::string & username, std::string 
 		return -1;
 	}
 	cd.assign(cipher_data);
-	dolog(LOG_DEBUG, "handshake hash: %s, data mac: %s, data cipher: %s\n", hash_handshake, mac_data, cipher_data);
+	dolog(LOG_DEBUG, "handshake hash: %s, data mac: %s, data cipher: %s", hash_handshake, mac_data, cipher_data);
 
 	char *rnd_str = NULL;
 	unsigned int rnd_str_size = 0;
