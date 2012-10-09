@@ -122,9 +122,9 @@ int do_client_get(client_t *client, bool *no_bits)
 		dolog(LOG_INFO, "get|%s 0 bits requested", client -> host.c_str());
 		return -1;
 	}
-	if (cur_n_bits > 9992)
+	if (cur_n_bits > client -> config -> max_get_put_size)
 	{
-		dolog(LOG_WARNING, "get|%s client requested more than 9992 bits: %d", client -> host.c_str(), cur_n_bits);
+		dolog(LOG_WARNING, "get|%s client requested more than %d bits: %d", client -> host.c_str(), client -> config -> max_get_put_size, cur_n_bits);
 		return -1;
 	}
 
@@ -270,9 +270,9 @@ int do_client_put(client_t *client, bool *new_bits, bool *is_full)
 		dolog(LOG_INFO, "put|%s(%s) 0 bits requested", client -> host.c_str(), client -> type.c_str());
 		return -1;
 	}
-	if (cur_n_bits > 9992)
+	if (cur_n_bits > client -> config -> max_get_put_size)
 	{
-		dolog(LOG_WARNING, "put|%s(%s) client requested more than 9992 bits: %d", client -> host.c_str(), client -> type.c_str(), cur_n_bits);
+		dolog(LOG_WARNING, "put|%s(%s) client requested more than %d bits: %d", client -> host.c_str(), client -> type.c_str(), client -> config -> max_get_put_size, cur_n_bits);
 		return -1;
 	}
 

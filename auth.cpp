@@ -20,7 +20,7 @@
 #include "protocol.h"
 #include "users.h"
 
-int auth_eb_user(int fd, int to, users *user_map, std::string & username_out, std::string & password, long long unsigned int *challenge, bool is_proxy_auth, bool *is_server_in, std::string & type, random_source_t rs, encrypt_stream *es, hasher *mac, std::string handshake_hash)
+int auth_eb_user(int fd, int to, users *user_map, std::string & username_out, std::string & password, long long unsigned int *challenge, bool is_proxy_auth, bool *is_server_in, std::string & type, random_source_t rs, encrypt_stream *es, hasher *mac, std::string handshake_hash, int max_get_put_size)
 {
 	const char *ts = is_proxy_auth ? "Proxy-auth" : "Connection";
 
@@ -147,12 +147,21 @@ int auth_eb_user(int fd, int to, users *user_map, std::string & username_out, st
 	free(type_in);
 	/////
 
+	/* how many bits can be put/get in one go */
+	unsigned char max_get_put_size_bytes[4];
+	uint_to_uchar(max_get_put_size, max_get_put_size_bytes);
+	if (WRITE_TO(fd, max_get_put_size_bytes, 4, to) == -1)
+	{
+		dolog(LOG_INFO, "Connection closed (fd: %d)", fd);
+		return -1;
+	}
+
 	dolog(LOG_INFO, "%s authentication ok (fd: %d)", ts, fd);
 
 	return 0;
 }
 
-int auth_eb(int fd, int to, users *user_map, std::string & username, std::string & password, long long unsigned int *challenge, bool *is_server_in, std::string & type, random_source_t rand_src, encrypt_stream *enc, hasher *mac, std::string handshake_hash)
+int auth_eb(int fd, int to, users *user_map, std::string & username, std::string & password, long long unsigned int *challenge, bool *is_server_in, std::string & type, random_source_t rand_src, encrypt_stream *enc, hasher *mac, std::string handshake_hash, int max_get_put_size)
 {
 	char prot_ver[4 + 1] = { 0 };
 	snprintf(prot_ver, sizeof prot_ver, "%04d", PROTOCOL_VERSION);
@@ -163,7 +172,7 @@ int auth_eb(int fd, int to, users *user_map, std::string & username, std::string
 		return -1;
 	}
 
-	return auth_eb_user(fd, to, user_map, username, password, challenge, false, is_server_in, type, rand_src, enc, mac, handshake_hash);
+	return auth_eb_user(fd, to, user_map, username, password, challenge, false, is_server_in, type, rand_src, enc, mac, handshake_hash, max_get_put_size);
 }
 
 bool get_auth_from_file(char *filename, std::string & username, std::string & password)
@@ -192,7 +201,7 @@ bool get_auth_from_file(char *filename, std::string & username, std::string & pa
 	return true;
 }
 
-int auth_client_server_user(int fd, int to, std::string & username, std::string & password, long long unsigned int *challenge, bool is_server, std::string type, std::string & cd, std::string & mh)
+int auth_client_server_user(int fd, int to, std::string & username, std::string & password, long long unsigned int *challenge, bool is_server, std::string type, std::string & cd, std::string & mh, int *max_get_put_size)
 {
 	char *hash_handshake = NULL;
 	unsigned int hash_handshake_size = 0;
@@ -283,10 +292,18 @@ int auth_client_server_user(int fd, int to, std::string & username, std::string 
 		return -1;
 	}
 
+	unsigned char max_get_put_size_bytes[4];
+	if (READ_TO(fd, max_get_put_size_bytes, 4, to) != 4)
+	{
+		dolog(LOG_INFO, "Connection for fd %d closed (m3)", fd);
+		return -1;
+	}
+	*max_get_put_size = uchar_to_uint(max_get_put_size_bytes);
+
 	return 0;
 }
 
-int auth_client_server(int fd, int to, std::string & username, std::string & password, long long unsigned int *challenge, bool is_server, std::string type, std::string & cd, std::string &mh)
+int auth_client_server(int fd, int to, std::string & username, std::string & password, long long unsigned int *challenge, bool is_server, std::string type, std::string & cd, std::string &mh, int *max_get_put_size)
 {
 	char prot_ver[4 + 1] = { 0 };
 
@@ -299,5 +316,5 @@ int auth_client_server(int fd, int to, std::string & username, std::string & pas
 	if (eb_ver != PROTOCOL_VERSION)
 		error_exit("Broker server has unsupported protocol version %d! (expecting %d)", eb_ver, PROTOCOL_VERSION);
 
-	return auth_client_server_user(fd, to, username, password, challenge, is_server, type, cd, mh);
+	return auth_client_server_user(fd, to, username, password, challenge, is_server, type, cd, mh, max_get_put_size);
 }

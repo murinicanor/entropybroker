@@ -26,6 +26,8 @@ session setup:
 	- CB 4 bytes length of string (big endian):
 		- string containing description of client/server
 
+	- BC 4 bytes: max. number of bits allowed to get/put in one go
+
 loop:
 	- client/server send 4 bytes ascii containing a command-code:
 		0001: get bits

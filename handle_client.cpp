@@ -253,7 +253,7 @@ void * thread(void *data)
 	{
 		long long unsigned int auth_rnd = 1;
 		std::string password, username;
-		bool ok = auth_eb(p -> socket_fd, p -> config -> communication_timeout, p -> pu, username, password, &auth_rnd, &p -> is_server, p -> type, p -> config -> rs, es, mh, p -> config -> hash_hasher) == 0;
+		bool ok = auth_eb(p -> socket_fd, p -> config -> communication_timeout, p -> pu, username, password, &auth_rnd, &p -> is_server, p -> type, p -> config -> rs, es, mh, p -> config -> hash_hasher, p -> config -> max_get_put_size) == 0;
 
 		if (!ok)
 		{

@@ -44,6 +44,8 @@ public:
 	int get_get_size_in_bits() const;
 	int get_n_bits_in_pool() const;
 	int get_pool_size() const;
+	int get_pool_size_bytes() const;
+	unsigned char *expose_contents() const;
 	bool is_full() const;
 	bool is_almost_full() const;
 	int add_event(double ts, unsigned char *event_data, int n_event_data);

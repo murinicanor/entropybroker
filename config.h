@@ -41,6 +41,8 @@ typedef struct
 
 	char *prng_seed_file;
 
+	int max_get_put_size;
+
 	hasher_type ht;
 	stirrer_type st;
 

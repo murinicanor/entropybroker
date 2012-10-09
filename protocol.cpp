@@ -107,6 +107,8 @@ protocol::protocol(std::vector<std::string> *hosts_in, std::string username_in, 
 
         ivec_counter = 0;
 	challenge = 13;
+
+	max_get_put_size = 1249;
 }
 
 protocol::~protocol()
@@ -156,7 +158,7 @@ int protocol::reconnect_server_socket()
 			socket_fd = connect_to(host.c_str(), port);
 			if (socket_fd != -1)
 			{
-				if (auth_client_server(socket_fd, 10, username, password, &challenge, is_server, type, cipher_data, mac_hash) == 0)
+				if (auth_client_server(socket_fd, 10, username, password, &challenge, is_server, type, cipher_data, mac_hash, &max_get_put_size) == 0)
 					break;
 
 				close(socket_fd);
@@ -251,8 +253,8 @@ int protocol::sleep_interruptable(double how_long)
 
 int protocol::message_transmit_entropy_data(unsigned char *bytes_in, unsigned int n_bytes)
 {
-	if (n_bytes > 1249)
-		error_exit("message_transmit_entropy_data: too many bytes %d", n_bytes);
+	if (n_bytes > max_get_put_size) // FIXME while loop
+		error_exit("message_transmit_entropy_data: too many bytes %d, limit: %d", n_bytes, max_get_put_size);
 
 	int error_count = 0;
 	for(;;)
@@ -402,8 +404,8 @@ int protocol::request_bytes(unsigned char *where_to, unsigned int n_bits, bool f
 {
 	bool request_sent = false;
 
-	if (n_bits > 9999 || n_bits <= 0)
-		error_exit("Internal error: invalid bit count (%d)", n_bits);
+	if (n_bits > max_get_put_size || n_bits <= 0) // FIXME while loop
+		error_exit("Internal error: invalid bit count %d, limit: %d", n_bits, max_get_put_size);
 
 	unsigned char request[8];
 	make_msg(request, 1, n_bits); // 0001

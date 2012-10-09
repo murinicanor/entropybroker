@@ -319,6 +319,11 @@ int pool::get_pool_size() const
 	return pool_size_bytes * 8;
 }
 
+int pool::get_pool_size_bytes() const
+{
+	return pool_size_bytes;
+}
+
 bool pool::is_full() const
 {
 	return bits_in_pool == (pool_size_bytes * 8);
@@ -389,4 +394,9 @@ int pool::add_event(double ts, unsigned char *event_data, int n_event_data)
 	free(temp_buffer);
 
 	return n_bits_added;
+}
+
+unsigned char * pool::expose_contents() const
+{
+	return entropy_pool;
 }

@@ -87,6 +87,8 @@ void load_config(const char *config, config_t *pconfig)
 
 	pconfig -> prng_seed_file = NULL;
 
+	pconfig -> max_get_put_size = 1249;
+
 	pconfig -> ht = H_SHA512;
 	pconfig -> st = S_BLOWFISH;
 
@@ -185,6 +187,8 @@ void load_config(const char *config, config_t *pconfig)
 			pconfig -> ping_interval = parval;
 		else if (strcmp(cmd, "pool_size_in_bytes") == 0)
 			pconfig -> pool_size_bytes = parval;
+		else if (strcmp(cmd, "max_get_put_size") == 0)
+			pconfig -> max_get_put_size = parval;
 		else if (strcmp(cmd, "kernelpool_filled_interval") == 0)
 			pconfig -> kernelpool_filled_interval = parval;
 		else if (strcmp(cmd, "stats_file") == 0)

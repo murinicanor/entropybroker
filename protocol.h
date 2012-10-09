@@ -30,6 +30,8 @@ private:
 	int socket_fd;
 	int sleep_9003;
 	long long unsigned ivec_counter, challenge;
+	//
+	int max_get_put_size;
 
 	encrypt_stream *stream_cipher;
 	hasher *mac_hasher;
@@ -43,6 +45,7 @@ public:
 	protocol(std::vector<std::string> * hosts_in, std::string username, std::string password, bool is_server, std::string type, double comm_time_out);
 	~protocol();
 
+	int get_max_get_put_size() { return max_get_put_size; }
 	int sleep_interruptable(double how_long);
 	int message_transmit_entropy_data(unsigned char *bytes_in, unsigned int n_bytes);
 	int request_bytes(unsigned char *where_to, unsigned int n_bits, bool fail_on_no_bits);
