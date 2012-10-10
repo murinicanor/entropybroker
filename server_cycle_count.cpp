@@ -215,7 +215,7 @@ int main(int argc, char *argv[])
 	signal(SIGFPE, SIG_IGN);
 	signal(SIGSEGV, SIG_IGN);
 
-	unsigned char bytes[1249];
+	unsigned char bytes[4096];
 	lock_mem(bytes, sizeof bytes);
 
 	unsigned char byte = 0;

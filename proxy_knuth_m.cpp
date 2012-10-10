@@ -329,7 +329,7 @@ void * thread(void *pars)
 
 		while (p -> lt -> n_A > 0 && p -> lt -> n_B > 0 && !sig_quit)
 		{
-			int n_short = 1249 / sizeof(unsigned short);
+			int n_short = 4096 / sizeof(unsigned short);
 
 			int n = mymin(n_short, mymin(p -> lt -> n_A, p -> lt -> n_B));
 
@@ -412,7 +412,7 @@ int main(int argc, char *argv[])
 	std::string knuth_file = CACHE_DIR + std::string("/") + KNUTH_FILE;
 	std::vector<std::string> hosts;
 	int log_level = LOG_INFO;
-	random_source_t rs = RS_OPENSSL;
+	random_source_t rs = RS_CRYPTOPP;
 	std::string cipher = "blowfish", handshake_hash = "sha512", mac_hasher = "md5";
 
 	printf("proxy_knuth_m, (C) 2009-2012 by folkert@vanheusden.com\n");
@@ -591,7 +591,7 @@ int main(int argc, char *argv[])
 				long long unsigned int challenge = 1;
 				bool is_server = false;
 				std::string type;
-				if (auth_eb(new_socket_fd, DEFAULT_COMM_TO, user_map, client_username, client_password, &challenge, &is_server, type, rs, enc, mac, handshake_hash, 1249) == 0)
+				if (auth_eb(new_socket_fd, DEFAULT_COMM_TO, user_map, client_username, client_password, &challenge, &is_server, type, rs, enc, mac, handshake_hash, 4096) == 0)
 				{
 					dolog(LOG_INFO, "%s/%s %d/%d (%s)", host.c_str(), type.c_str(), new_socket_fd, is_server, client_username.c_str());
 					if (clients[0] -> fd != -1 && clients[1] -> fd != -1)

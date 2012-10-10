@@ -20,6 +20,6 @@ http://en.wikipedia.org/wiki/Twofish <--
 
 - abstraced prng to objects
 
-- configurable cipher/hash voor protocol
+- error_exit laat niks zien
 
 SVN: $Revision$

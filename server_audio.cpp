@@ -143,7 +143,7 @@ void main_loop(std::vector<std::string> * hosts, char *bytes_file, char show_bps
 	snd_pcm_t *chandle;
 	snd_pcm_format_t format;
 	int err;
-	unsigned char bytes[1249]; // 1249 * 8: 9992, must be less then 9999
+	unsigned char bytes[4096]; // 4096 * 8: 9992, must be less then 9999
 	int bytes_out = 0;
 
 	protocol *p = NULL;

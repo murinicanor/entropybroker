@@ -73,7 +73,7 @@ int main(int argc, char *argv[])
 	char *log_logfile = NULL;
 	int count = 0;
 	const char *file = NULL;
-	int block_size = 1249;
+	int block_size = 4096;
 	int sleep_time = 0;
 	char *prog = basename(strdup(argv[0]));
 	std::string username, password;
@@ -193,11 +193,11 @@ int main(int argc, char *argv[])
 	signal(SIGINT , sig_handler);
 	signal(SIGQUIT, sig_handler);
 
-	unsigned char buffer[1249];
+	unsigned char buffer[4096];
 	lock_mem(buffer, sizeof buffer);
 	while(count > 0 || count == -1)
 	{
-		int n_bytes_to_get = mymin(block_size, mymin(count <= 0 ? 1249 : count, 1249));
+		int n_bytes_to_get = mymin(block_size, mymin(count <= 0 ? 4096 : count, 4096));
 		int n_bits_to_get = n_bytes_to_get * 8;
 
 		dolog(LOG_INFO, "will get %d bits", n_bits_to_get);

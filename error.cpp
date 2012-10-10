@@ -22,15 +22,16 @@ void error_exit(const char *format, ...)
 	vsnprintf(buffer, sizeof buffer, format, ap);
 	va_end(ap);
 
+	set_loglevel(1);
 	dolog(LOG_EMERG, "FATAL|%s|%s\n", get_current_thread_name().c_str(), buffer);
 	dolog(LOG_EMERG, "FATAL|%s|errno at that time: %d (%s)", get_current_thread_name().c_str(), errno, strerror(errno));
 
 	void *trace[128];
 	int trace_size = backtrace(trace, 128);
 	char **messages = backtrace_symbols(trace, trace_size);
-	printf("\nExecution path:\n");
+	dolog(LOG_EMERG, "\nExecution path:\n");
 	for(int index=0; index<trace_size; ++index)
-		printf("%d %s\n", index, messages[index]);
+		dolog(LOG_EMERG, "%d %s\n", index, messages[index]);
 
 	exit(EXIT_FAILURE);
 }

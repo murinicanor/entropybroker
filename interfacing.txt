@@ -1,6 +1,6 @@
 Writing your own server/client
 ------------------------------
-- include <protocol.h>, <string>, <openssl/blowfish.h>
+- include <protocol.h>, <string>
 - instantiate a 'protocol'-class:
   protocol *p = new protocol(char *host, int port, std::string username, std::string password, bool is_server, std::string type);
       host + port = entropy broker

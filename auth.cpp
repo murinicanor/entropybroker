@@ -20,7 +20,7 @@
 #include "protocol.h"
 #include "users.h"
 
-int auth_eb_user(int fd, int to, users *user_map, std::string & username_out, std::string & password, long long unsigned int *challenge, bool is_proxy_auth, bool *is_server_in, std::string & type, random_source_t rs, encrypt_stream *es, hasher *mac, std::string handshake_hash, int max_get_put_size)
+int auth_eb_user(int fd, int to, users *user_map, std::string & username_out, std::string & password, long long unsigned int *challenge, bool is_proxy_auth, bool *is_server_in, std::string & type, random_source_t rs, encrypt_stream *es, hasher *mac, std::string handshake_hash, unsigned int max_get_put_size)
 {
 	const char *ts = is_proxy_auth ? "Proxy-auth" : "Connection";
 
@@ -161,7 +161,7 @@ int auth_eb_user(int fd, int to, users *user_map, std::string & username_out, st
 	return 0;
 }
 
-int auth_eb(int fd, int to, users *user_map, std::string & username, std::string & password, long long unsigned int *challenge, bool *is_server_in, std::string & type, random_source_t rand_src, encrypt_stream *enc, hasher *mac, std::string handshake_hash, int max_get_put_size)
+int auth_eb(int fd, int to, users *user_map, std::string & username, std::string & password, long long unsigned int *challenge, bool *is_server_in, std::string & type, random_source_t rand_src, encrypt_stream *enc, hasher *mac, std::string handshake_hash, unsigned int max_get_put_size)
 {
 	char prot_ver[4 + 1] = { 0 };
 	snprintf(prot_ver, sizeof prot_ver, "%04d", PROTOCOL_VERSION);
@@ -201,7 +201,7 @@ bool get_auth_from_file(char *filename, std::string & username, std::string & pa
 	return true;
 }
 
-int auth_client_server_user(int fd, int to, std::string & username, std::string & password, long long unsigned int *challenge, bool is_server, std::string type, std::string & cd, std::string & mh, int *max_get_put_size)
+int auth_client_server_user(int fd, int to, std::string & username, std::string & password, long long unsigned int *challenge, bool is_server, std::string type, std::string & cd, std::string & mh, unsigned int *max_get_put_size)
 {
 	char *hash_handshake = NULL;
 	unsigned int hash_handshake_size = 0;
@@ -303,7 +303,7 @@ int auth_client_server_user(int fd, int to, std::string & username, std::string 
 	return 0;
 }
 
-int auth_client_server(int fd, int to, std::string & username, std::string & password, long long unsigned int *challenge, bool is_server, std::string type, std::string & cd, std::string &mh, int *max_get_put_size)
+int auth_client_server(int fd, int to, std::string & username, std::string & password, long long unsigned int *challenge, bool is_server, std::string type, std::string & cd, std::string &mh, unsigned int *max_get_put_size)
 {
 	char prot_ver[4 + 1] = { 0 };
 

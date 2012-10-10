@@ -82,7 +82,7 @@ void help(void)
 
 int main(int argc, char *argv[])
 {
-	unsigned char bytes[1249];
+	unsigned char bytes[4096];
 	unsigned char byte = 0;
 	int bits = 0;
 	int c;

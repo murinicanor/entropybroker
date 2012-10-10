@@ -58,7 +58,7 @@ void help(void)
 
 int main(int argc, char *argv[])
 {
-	unsigned char bytes[1249];
+	unsigned char bytes[4096];
 	int read_fd = -1;
 	int c;
 	bool do_not_fork = false, log_console = false, log_syslog = false;
@@ -175,7 +175,7 @@ int main(int argc, char *argv[])
 	bool stats_error_reported = false;
 	for(;;)
 	{
-		int rc = q -> RandBytes(reinterpret_cast<char *>(bytes), 1249);
+		int rc = q -> RandBytes(reinterpret_cast<char *>(bytes), 4096);
 		if (rc != QNG_S_OK && rc != S_OK)
 		{
 			if (rc == QNG_E_STATS_EXCEPTION)
@@ -201,7 +201,7 @@ int main(int argc, char *argv[])
 		if (index == sizeof bytes)
 		{
 			if (show_bps)
-				update_showbps(1249);
+				update_showbps(4096);
 
 			if (bytes_file)
 				emit_buffer_to_file(bytes_file, bytes, index);

@@ -229,7 +229,7 @@ void help(void)
 
 int main(int argc, char *argv[])
 {
-	unsigned char bytes[1249];
+	unsigned char bytes[4096];
 	int read_fd = -1;
 	int c;
 	bool do_not_fork = false, log_console = false, log_syslog = false;
@@ -344,16 +344,16 @@ int main(int argc, char *argv[])
 	set_showbps_start_ts();
 	for(;;)
 	{
-		if (READ(read_fd, bytes, 1249) != 1249)
+		if (READ(read_fd, bytes, 4096) != 4096)
 			error_exit("error reading from input");
 
 		if (show_bps)
-			update_showbps(1249);
+			update_showbps(4096);
 
 		if (bytes_file)
-			emit_buffer_to_file(bytes_file, bytes, 1249);
+			emit_buffer_to_file(bytes_file, bytes, 4096);
 
-		if (p && p -> message_transmit_entropy_data(bytes, 1249) == -1)
+		if (p && p -> message_transmit_entropy_data(bytes, 4096) == -1)
 		{
 			dolog(LOG_INFO, "connection closed");
 			p -> drop();

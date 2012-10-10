@@ -129,8 +129,10 @@ void protocol::error_sleep(int count)
 	usleep((long)sleep_micro_seconds);
 }
 
-int protocol::reconnect_server_socket()
+reconnect_status_t protocol::reconnect_server_socket()
 {
+	reconnect_status_t rc = RSS_FAIL;
+
 	char connect_msg = 0;
 	int count = 1;
 
@@ -138,6 +140,8 @@ int protocol::reconnect_server_socket()
 	// connect to server
 	if (socket_fd == -1)
 	{
+		rc = RSS_NEW_CONNECTION;
+
 		connect_msg = 1;
 
 		delete stream_cipher;
@@ -198,11 +202,15 @@ int protocol::reconnect_server_socket()
 
 		mac_hasher = hasher::select_hasher(mac_hash);
 	}
+	else
+	{
+		rc = RSS_STILL_CONNECTED;
+	}
 
 	if (connect_msg)
 		dolog(LOG_INFO, "Connected");
 
-	return 0;
+	return rc;
 }
 
 int protocol::sleep_interruptable(double how_long)
@@ -253,97 +261,41 @@ int protocol::sleep_interruptable(double how_long)
 
 int protocol::message_transmit_entropy_data(unsigned char *bytes_in, unsigned int n_bytes)
 {
-	if (n_bytes > max_get_put_size) // FIXME while loop
+	if (n_bytes > max_get_put_size)
 		error_exit("message_transmit_entropy_data: too many bytes %d, limit: %d", n_bytes, max_get_put_size);
 
 	int error_count = 0;
-	for(;;)
+	while(n_bytes > 0)
 	{
-		unsigned char reply[8] = { 0 };
-		unsigned char header[8] = { 0 };
+		unsigned n_done = -1;
 
-		error_count++;
-		if (error_count > MAX_ERROR_SLEEP)
-			error_count = MAX_ERROR_SLEEP;
-
-                if (reconnect_server_socket() == -1)
-                        continue;
-
-                disable_nagle(socket_fd);
-                enable_tcp_keepalive(socket_fd);
-
-		dolog(LOG_DEBUG, "request to send %d bytes", n_bytes);
-
-		if ((n_bytes * 8) > 9999)
-			error_exit("internal error: too many bytes to transmit in 1 message (%d)", n_bytes);
-
-		make_msg(header, 2, n_bytes * 8); // 0002 xmit data request
-
-		// header
-		if (WRITE_TO(socket_fd, header, 8, comm_time_out) != 8)
+		for(;;)
 		{
-			dolog(LOG_INFO, "error transmitting header");
+			unsigned char reply[8] = { 0 };
+			unsigned char header[8] = { 0 };
 
-			close(socket_fd);
-			socket_fd = -1;
+			error_count++;
+			if (error_count > MAX_ERROR_SLEEP)
+				error_count = MAX_ERROR_SLEEP;
 
-			error_sleep(error_count);
-			continue;
-		}
+			reconnect_status_t rss = reconnect_server_socket();
+			if (rss == RSS_FAIL)
+				continue;
 
-		// ack from server?
-	ignore_unsollicited_msg: // we jump to this label when unsollicited msgs are
-		// received during data-transmission handshake
-		if (READ_TO(socket_fd, reply, 8, comm_time_out) != 8)
-		{
-			dolog(LOG_INFO, "error receiving ack/nack");
+			disable_nagle(socket_fd);
+			enable_tcp_keepalive(socket_fd);
 
-			close(socket_fd);
-			socket_fd = -1;
+			dolog(LOG_DEBUG, "request to send %d bytes", n_bytes);
 
-			error_sleep(error_count);
-			continue;
-		}
+			if ((n_bytes * 8) > 9999)
+				error_exit("internal error: too many bytes to transmit in 1 message (%d)", n_bytes);
 
-		unsigned int value = uchar_to_uint(&reply[4]);
+			make_msg(header, 2, mymin(max_get_put_size, n_bytes * 8)); // 0002 xmit data request
 
-		if (memcmp(reply, "0001", 4) == 0 || memcmp(reply, "9003", 4) == 0)                 // ACK
-		{
-			unsigned int cur_n_bytes = (value + 7) / 8;
-
-			if (cur_n_bytes > n_bytes)
+			// header
+			if (WRITE_TO(socket_fd, header, 8, comm_time_out) != 8)
 			{
-				dolog(LOG_CRIT, "server requesting more data than available");
-				return -1;
-			}
-
-			dolog(LOG_DEBUG, "Transmitting %d bytes", cur_n_bytes);
-
-			// encrypt data
-			int hash_len = mac_hasher -> get_hash_size();
-			int with_hash_n = cur_n_bytes + hash_len;
-
-			unsigned char *bytes_out = reinterpret_cast<unsigned char *>(malloc(with_hash_n));
-			if (!bytes_out)
-				error_exit("out of memory");
-			unsigned char *temp_buffer = reinterpret_cast<unsigned char *>(malloc(with_hash_n));
-			if (!temp_buffer)
-				error_exit("out of memory");
-			lock_mem(temp_buffer, with_hash_n);
-
-			mac_hasher -> do_hash(bytes_in, cur_n_bytes, temp_buffer);
-			memcpy(&temp_buffer[hash_len], bytes_in, cur_n_bytes);
-
-			stream_cipher -> encrypt(temp_buffer, with_hash_n, bytes_out);
-
-			memset(temp_buffer, 0x00, with_hash_n);
-			unlock_mem(temp_buffer, with_hash_n);
-			free(temp_buffer);
-
-			if (WRITE_TO(socket_fd, bytes_out, with_hash_n, comm_time_out) != with_hash_n)
-			{
-				dolog(LOG_INFO, "error transmitting data");
-				free(bytes_out);
+				dolog(LOG_INFO, "error transmitting header");
 
 				close(socket_fd);
 				socket_fd = -1;
@@ -352,49 +304,113 @@ int protocol::message_transmit_entropy_data(unsigned char *bytes_in, unsigned in
 				continue;
 			}
 
-			free(bytes_out);
-
-			if (memcmp(reply, "9003", 4) == 0)            // ACK but full
+			// ack from server?
+		ignore_unsollicited_msg: // we jump to this label when unsollicited msgs are
+			// received during data-transmission handshake
+			if (READ_TO(socket_fd, reply, 8, comm_time_out) != 8)
 			{
-				// only usefull for eb_proxy
-				dolog(LOG_DEBUG, "pool full, sleeping %d seconds (with ACK)", sleep_9003);
-				// same comments as for 9001 apply
-				sleep_interruptable(sleep_9003);
+				dolog(LOG_INFO, "error receiving ack/nack");
+
+				close(socket_fd);
+				socket_fd = -1;
+
+				error_sleep(error_count);
+				continue;
 			}
 
-			break;
-		}
-		else if (memcmp(reply, "9001", 4) == 0)            // NACK
-		{
-			dolog(LOG_DEBUG, "pool full, sleeping %d seconds", value);
+			unsigned int value = uchar_to_uint(&reply[4]);
 
-			sleep_9003 = (sleep_9003 + value * 2) / 2;
+			if (memcmp(reply, "0001", 4) == 0 || memcmp(reply, "9003", 4) == 0)                 // ACK
+			{
+				unsigned int cur_n_bytes = (value + 7) / 8;
 
-			// now we should sleep and wait for either the time
-			// to pass or a 0010 to come in. in reality we just
-			// sleep until the first message comes in and then
-			// continue; it'll only be 0010 anyway
-			sleep_interruptable(value);
-		}
-		else if (memcmp(reply, "0010", 4) == 0)            // there's a need for data
-		{
-			// this message can be received during transmission hand-
-			// shake as it might have been queued earlier
-			goto ignore_unsollicited_msg;
-		}
-		else if (memcmp(reply, "9004", 4) == 0)            // all pools full, only for provies
-			goto ignore_unsollicited_msg;
-		else if (memcmp(reply, "0009", 4) == 0)            // got data
-			goto ignore_unsollicited_msg;
-		else
-		{
-			dolog(LOG_CRIT, "garbage received: %s", reply);
+				if (cur_n_bytes > n_bytes)
+					error_exit("ERROR: server requesting more data than available");
 
-			error_sleep(error_count);
-			continue;
+				dolog(LOG_DEBUG, "Transmitting %d bytes", cur_n_bytes);
+
+				// encrypt data
+				int hash_len = mac_hasher -> get_hash_size();
+				int with_hash_n = cur_n_bytes + hash_len;
+
+				unsigned char *bytes_out = reinterpret_cast<unsigned char *>(malloc(with_hash_n));
+				if (!bytes_out)
+					error_exit("out of memory");
+				unsigned char *temp_buffer = reinterpret_cast<unsigned char *>(malloc(with_hash_n));
+				if (!temp_buffer)
+					error_exit("out of memory");
+				lock_mem(temp_buffer, with_hash_n);
+
+				mac_hasher -> do_hash(bytes_in, cur_n_bytes, temp_buffer);
+				memcpy(&temp_buffer[hash_len], bytes_in, cur_n_bytes);
+
+				stream_cipher -> encrypt(temp_buffer, with_hash_n, bytes_out);
+
+				memset(temp_buffer, 0x00, with_hash_n);
+				unlock_mem(temp_buffer, with_hash_n);
+				free(temp_buffer);
+
+				if (WRITE_TO(socket_fd, bytes_out, with_hash_n, comm_time_out) != with_hash_n)
+				{
+					dolog(LOG_INFO, "error transmitting data");
+					free(bytes_out);
+
+					close(socket_fd);
+					socket_fd = -1;
+
+					error_sleep(error_count);
+					continue;
+				}
+
+				free(bytes_out);
+
+				if (memcmp(reply, "9003", 4) == 0)            // ACK but full
+				{
+					// only usefull for eb_proxy
+					dolog(LOG_DEBUG, "pool full, sleeping %d seconds (with ACK)", sleep_9003);
+					// same comments as for 9001 apply
+					sleep_interruptable(sleep_9003);
+				}
+
+				n_done = cur_n_bytes;
+
+				break;
+			}
+			else if (memcmp(reply, "9001", 4) == 0)            // NACK
+			{
+				dolog(LOG_DEBUG, "pool full, sleeping %d seconds", value);
+
+				sleep_9003 = (sleep_9003 + value * 2) / 2;
+
+				// now we should sleep and wait for either the time
+				// to pass or a 0010 to come in. in reality we just
+				// sleep until the first message comes in and then
+				// continue; it'll only be 0010 anyway
+				sleep_interruptable(value);
+			}
+			else if (memcmp(reply, "0010", 4) == 0)            // there's a need for data
+			{
+				// this message can be received during transmission hand-
+				// shake as it might have been queued earlier
+				goto ignore_unsollicited_msg;
+			}
+			else if (memcmp(reply, "9004", 4) == 0)            // all pools full, only for provies
+				goto ignore_unsollicited_msg;
+			else if (memcmp(reply, "0009", 4) == 0)            // got data
+				goto ignore_unsollicited_msg;
+			else
+			{
+				dolog(LOG_CRIT, "garbage received: %s", reply);
+
+				error_sleep(error_count);
+				continue;
+			}
+
+			error_count = 1;
 		}
 
-		error_count = 1;
+		n_bytes -= n_done;
+		bytes_in += n_done;
 	}
 
 	return 0;
@@ -404,11 +420,8 @@ int protocol::request_bytes(unsigned char *where_to, unsigned int n_bits, bool f
 {
 	bool request_sent = false;
 
-	if (n_bits > max_get_put_size || n_bits <= 0) // FIXME while loop
-		error_exit("Internal error: invalid bit count %d, limit: %d", n_bits, max_get_put_size);
-
-	unsigned char request[8];
-	make_msg(request, 1, n_bits); // 0001
+	if (n_bits < 8)
+		error_exit("Internal error: must request at list 8 bits");
 
 	double sleep_trigger = -1;
 	int error_count = 0;
@@ -418,11 +431,14 @@ int protocol::request_bytes(unsigned char *where_to, unsigned int n_bits, bool f
 		if (error_count > MAX_ERROR_SLEEP)
 			error_count = MAX_ERROR_SLEEP;
 
-		if (socket_fd == -1)
+		reconnect_status_t rss = reconnect_server_socket();
+		if (rss == RSS_FAIL)
+                        error_exit("Failed to connect");
+		else if (rss == RSS_NEW_CONNECTION)
 			request_sent = false;
 
-                if (reconnect_server_socket() == -1)
-                        error_exit("Failed to connect");
+		unsigned char request[8];
+		make_msg(request, 1, mymin(max_get_put_size, n_bits)); // 0001
 
 		if (!request_sent || (sleep_trigger > 0.0 && get_ts() >= sleep_trigger))
 		{

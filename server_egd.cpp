@@ -92,7 +92,7 @@ void help(void)
 
 int main(int argc, char *argv[])
 {
-	unsigned char bytes[1249];
+	unsigned char bytes[4096];
 	int read_fd = -1;
 	int c;
 	bool do_not_fork = false, log_console = false, log_syslog = false;

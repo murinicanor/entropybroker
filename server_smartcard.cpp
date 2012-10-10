@@ -68,7 +68,7 @@ double gen_entropy_data(void)
 
 int main(int argc, char *argv[])
 {
-	unsigned char bytes[1249];
+	unsigned char bytes[4096];
 	int index = 0;
 	int c;
 	bool do_not_fork = false, log_console = false, log_syslog = false;

@@ -1,7 +1,7 @@
 // SVN: $Revision$
 #include <unistd.h>
 #include <string>
-#include <openssl/rand.h>
+#include <cryptopp/osrng.h>
 
 #include "error.h"
 #include "log.h"
@@ -10,12 +10,13 @@
 #include "kernel_prng_rw.h"
 #include "random_source.h"
 
+CryptoPP::AutoSeededRandomPool rng;
+
 void get_random(random_source_t rs, unsigned char *p, size_t n)
 {
-	if (rs == RS_OPENSSL)
+	if (rs == RS_CRYPTOPP)
 	{
-		if (RAND_bytes(p, n) == 0)
-			error_exit("RAND_bytes failed");
+		rng.GenerateBlock(p, n);
 	}
 	else if (rs == RS_DEV_URANDOM)
 	{
@@ -35,9 +36,6 @@ void get_random(random_source_t rs, unsigned char *p, size_t n)
 
 bool check_random_empty(random_source_t rs)
 {
-	if (rs == RS_OPENSSL)
-		return RAND_status() == 0 ? true : false;
-
 	// FIXME /dev/[u]random, check if kernel_rng_get_entropy_count() < write_threshold
 
 	return false;
@@ -45,30 +43,12 @@ bool check_random_empty(random_source_t rs)
 
 void seed_random(random_source_t rs, unsigned char *in, size_t n, double byte_count)
 {
-	if (rs == RS_OPENSSL)
-		RAND_add(in, n, byte_count);
 }
 
 void dump_random_state(random_source_t rs, char *file)
 {
-	if (rs == RS_OPENSSL)
-	{
-		if (RAND_write_file(file) == -1)
-		{
-			unlink(file);
-
-			dolog(LOG_INFO, "SSL PRNG seed file deleted: not enough entropy data");
-		}
-	}
 }
 
 void retrieve_random_state(random_source_t rs, char *file)
 {
-	if (file_exist(file))
-	{
-		if (rs == RS_OPENSSL)
-			RAND_load_file(file, -1);
-
-		unlink(file);
-	}
 }

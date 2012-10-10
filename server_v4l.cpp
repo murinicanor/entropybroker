@@ -357,7 +357,7 @@ int main(int argc, char *argv[])
 				int count = nunbiased;
 				while(count > 0)
 				{
-					int n_to_do = mymin(count, 1249);
+					int n_to_do = mymin(count, 4096);
 
 					if (p -> message_transmit_entropy_data(tempp, n_to_do) == -1)
 					{

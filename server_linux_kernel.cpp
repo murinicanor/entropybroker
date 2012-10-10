@@ -142,7 +142,7 @@ int main(int argc, char *argv[])
 	signal(SIGINT , sig_handler);
 	signal(SIGQUIT, sig_handler);
 
-	unsigned char bytes[1249];
+	unsigned char bytes[4096];
 	lock_mem(bytes, sizeof bytes);
 
 	init_showbps();

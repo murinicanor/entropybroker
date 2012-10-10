@@ -92,7 +92,7 @@ void load_config(const char *config, config_t *pconfig)
 	pconfig -> ht = H_SHA512;
 	pconfig -> st = S_BLOWFISH;
 
-	pconfig -> rs = RS_OPENSSL;
+	pconfig -> rs = RS_CRYPTOPP;
 
 	pconfig -> stream_cipher = "blowfish";
 	pconfig -> mac_hasher = "md5";
@@ -162,8 +162,8 @@ void load_config(const char *config, config_t *pconfig)
 		}
 		else if (strcmp(cmd, "random_source") == 0)
 		{
-			if (strcmp(par, "openssl") == 0)
-				pconfig -> rs = RS_OPENSSL;
+			if (strcmp(par, "cryptopp") == 0)
+				pconfig -> rs = RS_CRYPTOPP;
 			else if (strcmp(par, "dev_random") == 0)
 				pconfig -> rs = RS_DEV_RANDOM;
 			else if (strcmp(par, "dev_urandom") == 0)

@@ -61,4 +61,16 @@ void set_logging_parameters(bool console, char *file, bool sl, int ll)
 	log_file = file;
 	log_syslog = sl;
 	log_level = ll;
+
+	if (ll < 0)
+	{
+		ll = 0;
+
+		error_exit("Log level must be >= 0");
+	}
+}
+
+void set_loglevel(int ll)
+{
+	log_level = ll;
 }
