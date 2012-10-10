@@ -19,6 +19,6 @@ public:
 
 	std::string get_name();
 
-	void encrypt(unsigned char *p_in, size_t len, unsigned char *p_out);
-	void decrypt(unsigned char *p_in, size_t len, unsigned char *p_out);
+	void encrypt(unsigned char *p_in, int len, unsigned char *p_out);
+	void decrypt(unsigned char *p_in, int len, unsigned char *p_out);
 };

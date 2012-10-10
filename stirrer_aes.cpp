@@ -30,6 +30,9 @@ int stirrer_aes::get_ivec_size()
 
 void stirrer_aes::do_stir(unsigned char *ivec, unsigned char *target, int target_size, unsigned char *data_in, int data_in_size, unsigned char *temp_buffer, bool direction)
 {
+	my_assert(target_size > 0);
+	my_assert(data_in_size > 0);
+
 	unsigned char temp_key[32] = { 0 };
 
 	if (data_in_size > get_stir_size())

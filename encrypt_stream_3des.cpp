@@ -29,6 +29,8 @@ int encrypt_stream_3des::get_key_size()
 
 bool encrypt_stream_3des::init(unsigned char *key_in, int key_len, unsigned char *ivec_in, bool force)
 {
+	my_assert(key_len > 0);
+
 #ifdef CRYPTO_DEBUG
 	printf("KEY: "); hexdump(key_in, key_len);
 	printf("IVEC STRT: "); hexdump(ivec_in, 8);
@@ -50,8 +52,10 @@ std::string encrypt_stream_3des::get_name()
 	return "3des";
 }
 
-void encrypt_stream_3des::encrypt(unsigned char *p, size_t len, unsigned char *p_out)
+void encrypt_stream_3des::encrypt(unsigned char *p, int len, unsigned char *p_out)
 {
+	my_assert(len > 0);
+
 #ifdef CRYPTO_DEBUG
 	printf("ORG: "); hexdump(p, len);
 	printf("EIV %d before: ", ivec_offset); hexdump(ivec, 8);
@@ -65,8 +69,10 @@ void encrypt_stream_3des::encrypt(unsigned char *p, size_t len, unsigned char *p
 #endif
 }
 
-void encrypt_stream_3des::decrypt(unsigned char *p, size_t len, unsigned char *p_out)
+void encrypt_stream_3des::decrypt(unsigned char *p, int len, unsigned char *p_out)
 {
+	my_assert(len > 0);
+
 #ifdef CRYPTO_DEBUG
 	printf("DEC: "); hexdump(p, len);
 	printf("EIV %d before: ", ivec_offset); hexdump(ivec, 8);

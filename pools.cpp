@@ -463,6 +463,8 @@ int pools::get_bit_sum_unlocked(double max_duration)
 
 int pools::get_bits_from_pools(int n_bits_requested, unsigned char **buffer, bool allow_prng, bool ignore_rngtest_fips140, fips140 *pfips, bool ignore_rngtest_scc, scc *pscc, double max_duration)
 {
+	my_assert(n_bits_requested > 0);
+
 	pthread_testcancel();
 	pthread_check(pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL), "pthread_setcancelstate");
 
@@ -577,6 +579,8 @@ int pools::get_bits_from_pools(int n_bits_requested, unsigned char **buffer, boo
 
 int pools::add_bits_to_pools(unsigned char *data, int n_bytes, bool ignore_rngtest_fips140, fips140 *pfips, bool ignore_rngtest_scc, scc *pscc, double max_duration)
 {
+	my_assert(n_bytes > 0);
+
 	pthread_testcancel();
 	pthread_check(pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL), "pthread_setcancelstate");
 

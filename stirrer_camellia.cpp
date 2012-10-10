@@ -30,6 +30,9 @@ int stirrer_camellia::get_ivec_size()
 
 void stirrer_camellia::do_stir(unsigned char *ivec, unsigned char *target, int target_size, unsigned char *data_in, int data_in_size, unsigned char *temp_buffer, bool direction)
 {
+	my_assert(target_size > 0);
+	my_assert(data_in_size > 0);
+
 	if (data_in_size > get_stir_size())
 		error_exit("Invalid stir-size %d (expected: %d)", data_in_size, get_stir_size());
 

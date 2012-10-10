@@ -32,6 +32,8 @@ int encrypt_stream_camellia::get_key_size()
 
 bool encrypt_stream_camellia::init(unsigned char *key_in, int key_len, unsigned char *ivec_in, bool force)
 {
+	my_assert(key_len > 0);
+
 #ifdef CRYPTO_DEBUG
 	printf("KEY: "); hexdump(key_in, key_len);
 #endif
@@ -55,8 +57,10 @@ std::string encrypt_stream_camellia::get_name()
 	return "camellia";
 }
 
-void encrypt_stream_camellia::encrypt(unsigned char *p, size_t len, unsigned char *p_out)
+void encrypt_stream_camellia::encrypt(unsigned char *p, int len, unsigned char *p_out)
 {
+	my_assert(len > 0);
+
 #ifdef CRYPTO_DEBUG
 	printf("ORG: "); hexdump(p, len);
 	printf("EIV %d before: ", ivec_offset); hexdump(ivec, 8);
@@ -70,8 +74,10 @@ void encrypt_stream_camellia::encrypt(unsigned char *p, size_t len, unsigned cha
 #endif
 }
 
-void encrypt_stream_camellia::decrypt(unsigned char *p, size_t len, unsigned char *p_out)
+void encrypt_stream_camellia::decrypt(unsigned char *p, int len, unsigned char *p_out)
 {
+	my_assert(len > 0);
+
 #ifdef CRYPTO_DEBUG
 	printf("DEC: "); hexdump(p, len);
 	printf("EIV %d before: ", ivec_offset); hexdump(ivec, 8);

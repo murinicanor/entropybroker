@@ -14,6 +14,6 @@ public:
 
 	virtual std::string get_name() = 0;
 
-	virtual void encrypt(unsigned char *p_in, size_t len, unsigned char *p_out) = 0;
-	virtual void decrypt(unsigned char *p_in, size_t len, unsigned char *p_out) = 0;
+	virtual void encrypt(unsigned char *p_in, int len, unsigned char *p_out) = 0;
+	virtual void decrypt(unsigned char *p_in, int len, unsigned char *p_out) = 0;
 };
