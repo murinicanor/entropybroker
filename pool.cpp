@@ -186,6 +186,8 @@ void pool::dump(FILE *fh)
 
 int pool::add_entropy_data(unsigned char *entropy_data, int n_bytes_in)
 {
+	my_assert(n_bytes_in > 0);
+
 	int ivec_size = s -> get_ivec_size();
 	unsigned char *cur_ivec = (unsigned char *)malloc(ivec_size);
 	lock_mem(cur_ivec, ivec_size);
@@ -246,6 +248,8 @@ int pool::get_n_bits_in_pool() const
 
 int pool::get_entropy_data(unsigned char *entropy_data, int n_bytes_requested, bool prng_ok)
 {
+	my_assert(n_bytes_requested > 0);
+
 	unsigned char *temp_buffer = (unsigned char *)malloc(pool_size_bytes);
 	lock_mem(temp_buffer, pool_size_bytes);
 

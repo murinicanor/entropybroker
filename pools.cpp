@@ -531,7 +531,7 @@ int pools::get_bits_from_pools(int n_bits_requested, unsigned char **buffer, boo
 	{
 		// please note: it is not required that this offset is cryptographically
 		// random, it is only used to "spread the load" over all the pools
-		for(unsigned int loop_index=0; loop_index<n; loop_index++)
+		for(unsigned int loop_index=0; loop_index<n && n_to_do_bits > 0; loop_index++)
 		{
 			int index = abs(loop_index + index_offset) % n;
 

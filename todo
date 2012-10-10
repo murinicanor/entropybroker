@@ -22,4 +22,6 @@ http://en.wikipedia.org/wiki/Twofish <--
 
 - error_exit laat niks zien
 
+- servers: work in units given by broker
+
 SVN: $Revision$

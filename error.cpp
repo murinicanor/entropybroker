@@ -29,9 +29,9 @@ void error_exit(const char *format, ...)
 	void *trace[128];
 	int trace_size = backtrace(trace, 128);
 	char **messages = backtrace_symbols(trace, trace_size);
-	dolog(LOG_EMERG, "\nExecution path:\n");
+	dolog(LOG_EMERG, "Execution path:");
 	for(int index=0; index<trace_size; ++index)
-		dolog(LOG_EMERG, "%d %s\n", index, messages[index]);
+		dolog(LOG_EMERG, "%d %s", index, messages[index]);
 
 	exit(EXIT_FAILURE);
 }
