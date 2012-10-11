@@ -22,6 +22,7 @@
 #include "auth.h"
 #include "ivec.h"
 #include "stirrer.h"
+#include "pool_crypto.h"
 #include "pool.h"
 
 bool config_yes_no(char *what)
