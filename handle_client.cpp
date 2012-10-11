@@ -379,6 +379,9 @@ void register_new_client(int listen_socket_fd, std::vector<client_t *> *clients,
 
 		p -> pfips140 = new fips140();
 		p -> pscc = new scc();
+		if (!p -> pfips140 || !p -> pscc)
+			error_exit("failed allocating fips140/scc object");
+
 		p -> pfips140 -> set_user(p -> host.c_str());
 		p -> pscc     -> set_user(p -> host.c_str());
 		p -> pscc -> set_threshold(config -> scc_threshold);
@@ -399,6 +402,8 @@ void register_new_client(int listen_socket_fd, std::vector<client_t *> *clients,
 		p -> allow_prng = config -> allow_prng;
 
 		p -> pc = new pool_crypto(config -> st, config -> ht, config -> rs);
+		if (!p -> pc)
+			error_exit("failed allocating pool_crypto object");
 
 		pthread_check(pthread_mutex_init(&p -> stats_lck, &global_mutex_attr), "pthread_mutex_init");
 
@@ -553,6 +558,8 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 	dolog(LOG_INFO, "main|main-loop started");
 
 	users *user_map = new users(*config -> user_map);
+	if (!user_map)
+		error_exit("failed allocating users-object");
 
 	bool send_have_data = false, send_need_data = false, send_is_full = false;
 	for(;;)

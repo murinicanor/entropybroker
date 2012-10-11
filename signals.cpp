@@ -1,6 +1,8 @@
 // SVN: $Revision$
 #include <signal.h>
 #include <stdlib.h>
+#include <stdio.h>
+#include <execinfo.h>
 
 #include "error.h"
 
@@ -38,6 +40,20 @@ int is_SIGEXIT(void)
 	return signal_exit;
 }
 
+#ifdef HELGRIND
+void sigsegv_handler(int sig)
+{
+	void *trace[128];
+	int trace_size = backtrace(trace, 128);
+	char **messages = backtrace_symbols(trace, trace_size);
+	fprintf(stderr, "SIGSEGV\n");
+	for(int index=0; index<trace_size; ++index)
+		fprintf(stderr, "%d %s\n", index, messages[index]);
+
+	exit(1);
+}
+#endif
+
 void set_signal_handlers(void)
 {
 	signal(SIGPIPE, SIG_IGN);
@@ -50,4 +66,8 @@ void set_signal_handlers(void)
 	signal(SIGINT , signal_handler);
 
 	signal(SIGUSR2, signal_handler);
+
+#ifdef HELGRIND
+	signal(SIGSEGV, sigsegv_handler);
+#endif
 }
