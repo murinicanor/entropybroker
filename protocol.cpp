@@ -284,9 +284,6 @@ int protocol::message_transmit_entropy_data(unsigned char *bytes_in, unsigned in
 
 			dolog(LOG_DEBUG, "request to send %d bytes", n_bytes);
 
-			if ((n_bytes * 8) > 9999)
-				error_exit("internal error: too many bytes to transmit in 1 message (%d)", n_bytes);
-
 			make_msg(header, 2, mymin(max_get_put_size, n_bytes * 8)); // 0002 xmit data request
 
 			// header
