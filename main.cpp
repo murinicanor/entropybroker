@@ -165,9 +165,10 @@ int main(int argc, char *argv[])
 	set_signal_handlers();
 
 	pool_crypto pc(config.st, config.ht, config.rs);
+
 	seed(ppools, &pc);
 
-	main_loop(ppools, &config, eb_output_fips140, eb_output_scc);
+	main_loop(ppools, &config, eb_output_fips140, eb_output_scc, &pc);
 
 	printf("Dumping pool contents to cache-file\n");
 	delete ppools;

@@ -24,14 +24,14 @@
 #include "ivec.h"
 #include "hasher.h"
 #include "stirrer.h"
-#include "pool_crypto.h"
-#include "pool.h"
 #include "fips140.h"
 #include "hasher_type.h"
 #include "stirrer_type.h"
 #include "users.h"
 #include "encrypt_stream.h"
 #include "encrypt_stream_blowfish.h"
+#include "pool_crypto.h"
+#include "pool.h"
 #include "config.h"
 #include "scc.h"
 #include "pools.h"
@@ -388,7 +388,7 @@ void register_new_client(int listen_socket_fd, std::vector<client_t *> *clients,
 		p -> ignore_rngtest_scc = config -> ignore_rngtest_scc;
 		p -> allow_prng = config -> allow_prng;
 
-		p -> pc = new pool_crypto(config.st, config.ht, config.rs);
+		p -> pc = new pool_crypto(config -> st, config -> ht, config -> rs);
 
 		pthread_check(pthread_mutex_init(&p -> stats_lck, &global_mutex_attr), "pthread_mutex_init");
 
@@ -529,7 +529,7 @@ void terminate_threads(std::vector<client_t *> *clients)
 	}
 }
 
-void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc *eb_output_scc)
+void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc *eb_output_scc, pool_crypto *pc)
 {
 	std::vector<client_t *> clients;
 	double last_counters_reset = get_ts();
@@ -650,7 +650,7 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 
 		if (config -> allow_event_entropy_addition)
 		{
-			int event_bits = ppools -> add_event(now, reinterpret_cast<unsigned char *>(&rfds), sizeof rfds, double(config -> communication_timeout) * 0.05);
+			int event_bits = ppools -> add_event(now, reinterpret_cast<unsigned char *>(&rfds), sizeof rfds, double(config -> communication_timeout) * 0.05, pc);
 
 			if (event_bits > 0)
 				dolog(LOG_DEBUG, "main|added %d bits of event-entropy to pool", event_bits);

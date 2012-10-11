@@ -15,11 +15,11 @@
 #include "ivec.h"
 #include "hasher.h"
 #include "stirrer.h"
-#include "pool_crypto.h"
-#include "pool.h"
 #include "fips140.h"
 #include "hasher_type.h"
 #include "stirrer_type.h"
+#include "pool_crypto.h"
+#include "pool.h"
 #include "users.h"
 #include "encrypt_stream.h"
 #include "config.h"
@@ -145,7 +145,7 @@ int do_client_get(client_t *client, bool *no_bits)
 	dolog(LOG_DEBUG, "get|%s memory allocated, retrieving bits", client -> host.c_str());
 
 	unsigned char *temp_buffer = NULL;
-	cur_n_bits = client -> ppools -> get_bits_from_pools(cur_n_bits, &temp_buffer, client -> allow_prng, client -> ignore_rngtest_fips140, client -> output_fips140, client -> ignore_rngtest_scc, client -> output_scc, double(client -> config -> communication_timeout) * 0.9);
+	cur_n_bits = client -> ppools -> get_bits_from_pools(cur_n_bits, &temp_buffer, client -> allow_prng, client -> ignore_rngtest_fips140, client -> output_fips140, client -> ignore_rngtest_scc, client -> output_scc, double(client -> config -> communication_timeout) * 0.9, client -> pc);
 	if (cur_n_bits == 0)
 	{
 		free(temp_buffer);
@@ -235,7 +235,7 @@ int do_client_put(client_t *client, bool *new_bits, bool *is_full)
 
 	*new_bits = false;
 
-	if (client -> ppools -> all_pools_full(double(client -> config -> communication_timeout) * 0.9))
+	if (client -> ppools -> all_pools_full(double(client -> config -> communication_timeout) * 0.9, client -> pc))
 	{
 		*is_full = true;
 
@@ -325,7 +325,7 @@ int do_client_put(client_t *client, bool *new_bits, bool *is_full)
 	{
 		client -> last_put_message = now;
 
-		int n_bits_added = client -> ppools -> add_bits_to_pools(entropy_data, entropy_data_len, client -> ignore_rngtest_fips140, client -> pfips140, client -> ignore_rngtest_scc, client -> pscc, double(client -> config -> communication_timeout) * 0.9);
+		int n_bits_added = client -> ppools -> add_bits_to_pools(entropy_data, entropy_data_len, client -> ignore_rngtest_fips140, client -> pfips140, client -> ignore_rngtest_scc, client -> pscc, double(client -> config -> communication_timeout) * 0.9, client -> pc);
 		if (n_bits_added == -1)
 			dolog(LOG_CRIT, "put|%s error while adding data to pools", client -> host.c_str());
 		else
