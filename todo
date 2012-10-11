@@ -24,4 +24,6 @@ http://en.wikipedia.org/wiki/Twofish <--
 
 - servers: work in units given by broker
 
+- random: in object en niet meer met global lock
+
 SVN: $Revision$

@@ -23,7 +23,7 @@ void error_exit(const char *format, ...)
 	va_end(ap);
 
 	set_loglevel(1);
-	dolog(LOG_EMERG, "FATAL|%s|%s\n", get_current_thread_name().c_str(), buffer);
+	dolog(LOG_EMERG, "FATAL|%s|%s", get_current_thread_name().c_str(), buffer);
 	dolog(LOG_EMERG, "FATAL|%s|errno at that time: %d (%s)", get_current_thread_name().c_str(), errno, strerror(errno));
 
 	void *trace[128];

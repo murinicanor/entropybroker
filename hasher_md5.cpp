@@ -24,5 +24,6 @@ int hasher_md5::get_hash_size() const
 
 void hasher_md5::do_hash(unsigned char *in, int in_size, unsigned char *dest)
 {
+	// FIXME thread safe?
 	CryptoPP::Weak::MD5().CalculateDigest(dest, in, in_size);
 }

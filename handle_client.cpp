@@ -252,6 +252,10 @@ void * thread(void *data)
 	hasher *mh = hasher::select_hasher(p -> config -> mac_hasher);
 	p -> mac_hasher = mh;
 
+	unsigned char *ivec = reinterpret_cast<unsigned char *>(malloc(es -> get_ivec_size()));
+	if (!ivec)
+		error_exit("malloc failure");
+
 	for(;;)
 	{
 		long long unsigned int auth_rnd = 1;
@@ -266,7 +270,6 @@ void * thread(void *data)
 
 		p -> challenge = auth_rnd;
 		p -> ivec_counter = 0;
-		unsigned char ivec[8];
 		calc_ivec(password.c_str(), p -> challenge, p -> ivec_counter, es -> get_ivec_size(), ivec);
 		// printf("IVEC: "); hexdump(ivec, 8);
 
@@ -341,6 +344,8 @@ void * thread(void *data)
 
 		break;
 	}
+
+	free(ivec);
 
 	close(p -> to_main[1]);
 

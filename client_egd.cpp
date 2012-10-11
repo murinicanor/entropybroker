@@ -122,13 +122,10 @@ void egd_put(int fd, protocol *p)
 		return;
 	}
 
-	int socket_fd = -1;
 	(void)p -> message_transmit_entropy_data(reinterpret_cast<unsigned char *>(buffer), byte_cnt);
 
 	memset(buffer, 0x00, sizeof buffer);
 	unlock_mem(buffer, sizeof buffer);
-
-	close(socket_fd);
 }
 
 void handle_client(int fd, protocol *p)
