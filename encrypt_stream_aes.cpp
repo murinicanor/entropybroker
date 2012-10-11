@@ -8,7 +8,7 @@
 #include "encrypt_stream_aes.h"
 #include "utils.h"
 
-pthread_mutex_t lock_aes = PTHREAD_MUTEX_INITIALIZER;
+//pthread_mutex_t lock_aes = PTHREAD_MUTEX_INITIALIZER;
 
 encrypt_stream_aes::encrypt_stream_aes()
 {
@@ -43,14 +43,14 @@ bool encrypt_stream_aes::init(unsigned char *key_in, int key_len, unsigned char 
 	unsigned char key_use[CryptoPP::AES::DEFAULT_KEYLENGTH] = { 0 };
 	memcpy(key_use, key_in, mymin(CryptoPP::AES::DEFAULT_KEYLENGTH, key_len));
 
-	pthread_check(pthread_mutex_lock(&lock_aes), "pthread_mutex_lock");
+//	pthread_check(pthread_mutex_lock(&lock_aes), "pthread_mutex_lock");
 	if (enc)
 		delete enc;
 	if (dec)
 		delete dec;
 	enc = new CryptoPP::CFB_Mode<CryptoPP::AES>::Encryption(key_use, CryptoPP::AES::DEFAULT_KEYLENGTH, ivec_in);
 	dec = new CryptoPP::CFB_Mode<CryptoPP::AES>::Decryption(key_use, CryptoPP::AES::DEFAULT_KEYLENGTH, ivec_in);
-	pthread_check(pthread_mutex_unlock(&lock_aes), "pthread_mutex_lock");
+//	pthread_check(pthread_mutex_unlock(&lock_aes), "pthread_mutex_lock");
 
 	return true;
 }
@@ -69,9 +69,9 @@ void encrypt_stream_aes::encrypt(unsigned char *p, int len, unsigned char *p_out
 	printf("EIV %d before: ", ivec_offset); hexdump(ivec, 8);
 #endif
 
-	pthread_check(pthread_mutex_lock(&lock_aes), "pthread_mutex_lock");
+//	pthread_check(pthread_mutex_lock(&lock_aes), "pthread_mutex_lock");
 	enc -> ProcessData(p_out, p, len);
-	pthread_check(pthread_mutex_unlock(&lock_aes), "pthread_mutex_lock");
+//	pthread_check(pthread_mutex_unlock(&lock_aes), "pthread_mutex_lock");
 
 #ifdef CRYPTO_DEBUG
 	printf("EIV %d after: ", ivec_offset); hexdump(ivec, 8);
@@ -88,9 +88,9 @@ void encrypt_stream_aes::decrypt(unsigned char *p, int len, unsigned char *p_out
 	printf("EIV %d before: ", ivec_offset); hexdump(ivec, 8);
 #endif
 
-	pthread_check(pthread_mutex_lock(&lock_aes), "pthread_mutex_lock");
+//	pthread_check(pthread_mutex_lock(&lock_aes), "pthread_mutex_lock");
 	dec -> ProcessData(p_out, p, len);
-	pthread_check(pthread_mutex_unlock(&lock_aes), "pthread_mutex_lock");
+//	pthread_check(pthread_mutex_unlock(&lock_aes), "pthread_mutex_lock");
 
 #ifdef CRYPTO_DEBUG
 	printf("EIV %d after: ", ivec_offset); hexdump(ivec, 8);
