@@ -236,8 +236,8 @@ void * thread(void *data)
 {
 	client_t *p = (client_t *)data;
 
-	set_thread_name(p -> host.c_str());
-	// pthread_check(pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL), "pthread_setcanceltype");
+	set_thread_name(p -> host);
+
 	pthread_check(pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL), "pthread_setcancelstate");
 
 	if (p -> config -> disable_nagle)
@@ -271,6 +271,8 @@ void * thread(void *data)
 		// printf("IVEC: "); hexdump(ivec, 8);
 
 		p -> username = strdup(username.c_str());
+		set_thread_name(username + "/" + p -> host);
+
 		p -> password = strdup(password.c_str());
 
 		unsigned char *pw_char = reinterpret_cast<unsigned char *>(const_cast<char *>(password.c_str()));
