@@ -369,6 +369,9 @@ void register_new_client(int listen_socket_fd, std::vector<client_t *> *clients,
 		if (!p)
 			error_exit("memory allocation error");
 
+		p -> username = NULL;
+		p -> password = NULL;
+
 		p -> socket_fd = new_socket_fd;
 		p -> host = host;
 		p -> type = "?";
