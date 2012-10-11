@@ -22,13 +22,14 @@
 #include "ivec.h"
 #include "hasher.h"
 #include "stirrer.h"
+#include "pool_crypto.h"
 #include "pool.h"
 #include "utils.h"
 #include "fips140.h"
 #include "scc.h"
 #include "pools.h"
 
-pools::pools(std::string cache_dir_in, unsigned int max_n_mem_pools_in, unsigned int max_n_disk_pools_in, unsigned int min_store_on_disk_n_in, bit_count_estimator *bce_in, int new_pool_size_in_bytes, hasher *hclass, stirrer *sclass, random_source_t rs_in) : cache_dir(cache_dir_in), max_n_mem_pools(max_n_mem_pools_in), max_n_disk_pools(max_n_disk_pools_in), min_store_on_disk_n(min_store_on_disk_n_in), disk_limit_reached_notified(false), bce(bce_in), h(hclass), s(sclass), rs(rs_in)
+pools::pools(std::string cache_dir_in, unsigned int max_n_mem_pools_in, unsigned int max_n_disk_pools_in, unsigned int min_store_on_disk_n_in, bit_count_estimator *bce_in, int new_pool_size_in_bytes) : cache_dir(cache_dir_in), max_n_mem_pools(max_n_mem_pools_in), max_n_disk_pools(max_n_disk_pools_in), min_store_on_disk_n(min_store_on_disk_n_in), disk_limit_reached_notified(false), bce(bce_in)
 {
 	pthread_check(pthread_rwlock_init(&list_lck, NULL), "pthread_rwlock_init");
 	is_w_locked = false;
@@ -149,7 +150,7 @@ void pools::store_caches(unsigned int keep_n)
 	}
 }
 
-bool pools::load_caches(unsigned int load_n_bits)
+bool pools::load_caches(unsigned int load_n_bits, pool_crypto *pc)
 {
 	dolog(LOG_DEBUG, "Loading %d bits from pools", load_n_bits);
 
@@ -168,7 +169,7 @@ bool pools::load_caches(unsigned int load_n_bits)
 
 		while(!feof(fh))
 		{
-			pool *new_pool = new pool(++files_loaded, fh, bce, h, s, rs);
+			pool *new_pool = new pool(++files_loaded, fh, bce, pc);
 			pool_vector.push_back(new_pool);
 
 			if (new_pool -> timed_lock_object(1.0) == NULL) // will always succeed due to writelock on list
@@ -230,7 +231,7 @@ void pools::flush_empty_pools()
 		dolog(LOG_DEBUG, "Deleted %d empty pool(s), new count: %d", deleted, pool_vector.size());
 }
 
-void pools::merge_pools()
+void pools::merge_pools(pool_crypto *pc)
 {
 	if (pool_vector.empty())
 		return;
@@ -264,7 +265,7 @@ void pools::merge_pools()
 
 			int data_size = pool_vector.at(i2) -> get_pool_size_bytes();
 			unsigned char *data = pool_vector.at(i2) -> expose_contents();
-			pool_vector.at(i1) -> add_entropy_data(data, data_size);
+			pool_vector.at(i1) -> add_entropy_data(data, data_size, pc);
 
 			pool_vector.at(i2) -> unlock_object();
 
@@ -337,7 +338,7 @@ bool pools::verify_quality(unsigned char *data, int n, bool ignore_rngtest_fips1
 }
 
 // returns a locked pool
-int pools::find_non_full_pool(bool timed, double max_duration)
+int pools::find_non_full_pool(bool timed, double max_duration, pool_crypto *pc)
 {
 	double start_ts = get_ts();
 
@@ -361,7 +362,7 @@ int pools::find_non_full_pool(bool timed, double max_duration)
 
 		if (!cond)
 		{
-			if (!pool_vector.at(index) -> is_almost_full())
+			if (!pool_vector.at(index) -> is_almost_full(pc))
 				return index;
 
 			pool_vector.at(index) -> unlock_object();
@@ -372,15 +373,15 @@ int pools::find_non_full_pool(bool timed, double max_duration)
 }
 
 // returns a locked pool
-int pools::select_pool_to_add_to(bool timed, double max_time)
+int pools::select_pool_to_add_to(bool timed, double max_time, pool_crypto *pc)
 {
 	double start_ts = get_ts();
 
 	list_rlock();
 
-	int index = find_non_full_pool(timed, max_time);
+	int index = find_non_full_pool(timed, max_time, pc);
 
-	if (index == -1 || pool_vector.at(index) -> is_almost_full())
+	if (index == -1 || pool_vector.at(index) -> is_almost_full(pc))
 	{
 		// unlock the object because it is not usable (it is full)
 		// and we might go and shuffle the pools (flush/merge)
@@ -393,7 +394,7 @@ int pools::select_pool_to_add_to(bool timed, double max_time)
 		// wlock), there may already be a non-empty pool: that is not a problem
 
 		flush_empty_pools();
-		merge_pools();
+		merge_pools(pc);
 
 		if (pool_vector.size() >= max_n_mem_pools)
 			store_caches(mymax(0, int(pool_vector.size()) - int(min_store_on_disk_n)));
@@ -403,7 +404,7 @@ int pools::select_pool_to_add_to(bool timed, double max_time)
 		if (pool_vector.size() < max_n_mem_pools)
 		{
 			dolog(LOG_DEBUG, "Adding empty pool to queue (new number of pools: %d)", pool_vector.size() + 1);
-			pool_vector.push_back(new pool(new_pool_size, bce, h, s, rs));
+			pool_vector.push_back(new pool(new_pool_size, bce, pc));
 		}
 
 		list_wunlock();
@@ -411,7 +412,7 @@ int pools::select_pool_to_add_to(bool timed, double max_time)
 
 		double left = mymax(MIN_SLEEP, max_time - (get_ts() - start_ts));
 
-		index = find_non_full_pool(timed, left);
+		index = find_non_full_pool(timed, left, pc);
 		if (index == -1)
 		{
 			// this can happen if
@@ -461,7 +462,7 @@ int pools::get_bit_sum_unlocked(double max_duration)
 	return bit_count;
 }
 
-int pools::get_bits_from_pools(int n_bits_requested, unsigned char **buffer, bool allow_prng, bool ignore_rngtest_fips140, fips140 *pfips, bool ignore_rngtest_scc, scc *pscc, double max_duration)
+int pools::get_bits_from_pools(int n_bits_requested, unsigned char **buffer, bool allow_prng, bool ignore_rngtest_fips140, fips140 *pfips, bool ignore_rngtest_scc, scc *pscc, double max_duration, pool_crypto *pc)
 {
 	my_assert(n_bits_requested > 0);
 
@@ -500,12 +501,12 @@ int pools::get_bits_from_pools(int n_bits_requested, unsigned char **buffer, boo
 		list_wlock();
 
 		flush_empty_pools();
-		merge_pools();
+		merge_pools(pc);
 
 		// due to the un- and relock this might have changed
 		// also merging pools might change this value
 		bits_needed_to_load = n_bits_requested - get_bit_sum_unlocked(max_duration);
-		have_bits = load_caches(bits_needed_to_load);
+		have_bits = load_caches(bits_needed_to_load, pc);
 
 		list_wunlock();
 		pthread_testcancel();
@@ -517,12 +518,12 @@ int pools::get_bits_from_pools(int n_bits_requested, unsigned char **buffer, boo
 	int pool_block_size = -1, get_per_pool_n = -1;
 	if (n == 0)
 	{
-		pool_block_size = h -> get_hash_size() / 2;
+		pool_block_size = pc -> get_hasher() -> get_hash_size() / 2;
 		get_per_pool_n = mymax(pool_block_size, n_bits_requested);
 	}
 	else
 	{
-		pool_block_size = pool_vector.at(0) -> get_get_size();
+		pool_block_size = pool_vector.at(0) -> get_get_size(pc);
 		get_per_pool_n = mymax(pool_block_size, n_bits_requested / int(n));
 	}
 	get_per_pool_n = mymin(get_per_pool_n, new_pool_size);
@@ -550,7 +551,7 @@ int pools::get_bits_from_pools(int n_bits_requested, unsigned char **buffer, boo
 				int cur_n_to_get_bits = (round > 0 && allow_prng) ? get_per_pool_n : n_to_do_bits;
 				int cur_n_to_get_bytes = (cur_n_to_get_bits + 7) / 8;
 
-				unsigned int got_n_bytes = pool_vector.at(index) -> get_entropy_data(cur_p, cur_n_to_get_bytes, round > 0 ? allow_prng : false);
+				unsigned int got_n_bytes = pool_vector.at(index) -> get_entropy_data(cur_p, cur_n_to_get_bytes, round > 0 ? allow_prng : false, pc);
 				unsigned int got_n_bits = got_n_bytes * 8;
 
 				if (got_n_bits > 0 && verify_quality(cur_p, got_n_bytes, ignore_rngtest_fips140, pfips, ignore_rngtest_scc, pscc))
@@ -577,7 +578,7 @@ int pools::get_bits_from_pools(int n_bits_requested, unsigned char **buffer, boo
 	return n_bits_retrieved;
 }
 
-int pools::add_bits_to_pools(unsigned char *data, int n_bytes, bool ignore_rngtest_fips140, fips140 *pfips, bool ignore_rngtest_scc, scc *pscc, double max_duration)
+int pools::add_bits_to_pools(unsigned char *data, int n_bytes, bool ignore_rngtest_fips140, fips140 *pfips, bool ignore_rngtest_scc, scc *pscc, double max_duration, pool_crypto *pc)
 {
 	my_assert(n_bytes > 0);
 
@@ -606,7 +607,7 @@ int pools::add_bits_to_pools(unsigned char *data, int n_bytes, bool ignore_rngte
 
 		double time_left = calc_time_left(start_ts, start_n - n_bytes, start_n, max_duration);
 
-		int index = select_pool_to_add_to(round > 0, time_left); // returns a locked object
+		int index = select_pool_to_add_to(round > 0, time_left, pc); // returns a locked object
 		// the list is now read-locked
 
 		if (index == -1)
@@ -622,14 +623,14 @@ int pools::add_bits_to_pools(unsigned char *data, int n_bytes, bool ignore_rngte
 			int space_available = pool_vector.at(index) -> get_pool_size() - pool_vector.at(index) -> get_n_bits_in_pool();
 			// in that case we're already mixing in so we can change all data anyway
 			// this only happens when all pools are full
-			if (space_available <= pool_vector.at(index) -> get_get_size_in_bits())
+			if (space_available <= pool_vector.at(index) -> get_get_size_in_bits(pc))
 				space_available = pool_vector.at(index) -> get_pool_size();
 
 			unsigned int n_bytes_to_add = mymin(n_bytes, (space_available + 7) / 8);
 			dolog(LOG_DEBUG, "Adding %d bits to pool %d", n_bytes_to_add * 8, index);
 
 			if (verify_quality(data, n_bytes_to_add, ignore_rngtest_fips140, pfips, ignore_rngtest_scc, pscc))
-				n_bits_added += pool_vector.at(index) -> add_entropy_data(data, n_bytes_to_add);
+				n_bits_added += pool_vector.at(index) -> add_entropy_data(data, n_bytes_to_add, pc);
 
 			n_bytes -= n_bytes_to_add;
 			data += n_bytes_to_add;
@@ -661,18 +662,18 @@ int pools::get_bit_sum(double max_duration)
 	return bit_count;
 }
 
-int pools::add_event(long double event, unsigned char *event_data, int n_event_data, double max_time)
+int pools::add_event(long double event, unsigned char *event_data, int n_event_data, double max_time, pool_crypto *pc)
 {
 	pthread_testcancel();
 	pthread_check(pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL), "pthread_setcancelstate");
 
-	int index = select_pool_to_add_to(true, max_time); // returns a locked object
+	int index = select_pool_to_add_to(true, max_time, pc); // returns a locked object
 	// the list is now read-locked and the object as well
 
 	int rc = 0;
 	if (index != -1)
 	{
-		rc = pool_vector.at(index) -> add_event(event, event_data, n_event_data);
+		rc = pool_vector.at(index) -> add_event(event, event_data, n_event_data, pc);
 
 		pool_vector.at(index) -> unlock_object();
 	}
@@ -685,7 +686,7 @@ int pools::add_event(long double event, unsigned char *event_data, int n_event_d
 	return rc;
 }
 
-bool pools::all_pools_full(double max_duration)
+bool pools::all_pools_full(double max_duration, pool_crypto *pc)
 {
 	pthread_testcancel();
 	pthread_check(pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL), "pthread_setcancelstate");
@@ -708,7 +709,7 @@ bool pools::all_pools_full(double max_duration)
 
 			if (!pool_vector.at(loop) -> timed_lock_object(time_left))
 			{
-				if (!pool_vector.at(loop) -> is_almost_full())
+				if (!pool_vector.at(loop) -> is_almost_full(pc))
 				{
 					pool_vector.at(loop) -> unlock_object();
 

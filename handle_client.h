@@ -28,6 +28,8 @@ typedef struct
 	encrypt_stream *stream_cipher;
 	hasher *mac_hasher;
 
+	pool_crypto *pc;
+
 	int bits_sent, bits_recv;
 	pthread_mutex_t stats_lck;
 

@@ -24,6 +24,7 @@
 #include "ivec.h"
 #include "hasher.h"
 #include "stirrer.h"
+#include "pool_crypto.h"
 #include "pool.h"
 #include "fips140.h"
 #include "hasher_type.h"
@@ -72,6 +73,8 @@ void forget_client_index(std::vector<client_t *> *clients, int nr, bool force)
 
 	free(p -> username);
 	free(p -> password);
+
+	delete p -> pc;
 
 	delete p;
 	clients -> erase(clients -> begin() + nr);
@@ -384,6 +387,8 @@ void register_new_client(int listen_socket_fd, std::vector<client_t *> *clients,
 		p -> ignore_rngtest_fips140 = config -> ignore_rngtest_fips140;
 		p -> ignore_rngtest_scc = config -> ignore_rngtest_scc;
 		p -> allow_prng = config -> allow_prng;
+
+		p -> pc = new pool_crypto(config.st, config.ht, config.rs);
 
 		pthread_check(pthread_mutex_init(&p -> stats_lck, &global_mutex_attr), "pthread_mutex_init");
 

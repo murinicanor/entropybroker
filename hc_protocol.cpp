@@ -15,6 +15,7 @@
 #include "ivec.h"
 #include "hasher.h"
 #include "stirrer.h"
+#include "pool_crypto.h"
 #include "pool.h"
 #include "fips140.h"
 #include "hasher_type.h"

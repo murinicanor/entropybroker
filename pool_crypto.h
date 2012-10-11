@@ -7,7 +7,7 @@ private:
 	random_source_t rs;
 
 public:
-	pool_crypto(stirrer *s, hasher *h, random_source_t *rs_in);
+	pool_crypto(stirrer_type st, hasher_type ht, random_source_t rs);
 	~pool_crypto();
 
 	stirrer * get_stirrer() { return s; }

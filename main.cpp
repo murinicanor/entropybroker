@@ -33,6 +33,7 @@
 #include "stirrer_aes.h"
 #include "stirrer_blowfish.h"
 #include "stirrer_camellia.h"
+#include "pool_crypto.h"
 #include "pool.h"
 #include "fips140.h"
 #include "scc.h"
@@ -48,14 +49,14 @@
 
 const char *pid_file = PID_DIR "/entropy_broker.pid";
 
-void seed(pools *ppools)
+void seed(pools *ppools, pool_crypto *pc)
 {
 	int n = 0, dummy;
 
-	n += ppools -> add_event(get_ts_ns(), NULL, 0, 0.005); 
+	n += ppools -> add_event(get_ts_ns(), NULL, 0, 0.005, pc); 
 
 	dummy = getpid();
-	n += ppools -> add_event(get_ts_ns(), (unsigned char *)&dummy, sizeof dummy, 0.005);
+	n += ppools -> add_event(get_ts_ns(), (unsigned char *)&dummy, sizeof dummy, 0.005, pc);
 
 	dolog(LOG_DEBUG, "added %d bits of startup-event-entropy to pool", n);
 }
@@ -151,31 +152,7 @@ int main(int argc, char *argv[])
 	get_random(config.rs, reinterpret_cast<unsigned char *>(&rand_seed), sizeof rand_seed);
 	srand(rand_seed);
 
-	hasher *h = NULL;
-	if (config.ht == H_SHA512)
-		h = new hasher_sha512();
-	else if (config.ht == H_MD5)
-		h = new hasher_md5();
-	else if (config.ht == H_RIPEMD160)
-		h = new hasher_ripemd160();
-	else if (config.ht == H_WHIRLPOOL)
-		h = new hasher_whirlpool();
-	else
-		error_exit("Internal error: no hasher (%d)", config.ht);
-
-	stirrer *s = NULL;
-	if (config.st == S_BLOWFISH)
-		s = new stirrer_blowfish();
-	else if (config.st == S_AES)
-		s = new stirrer_aes();
-	else if (config.st == S_3DES)
-		s = new stirrer_3des();
-	else if (config.st == S_CAMELLIA)
-		s = new stirrer_camellia();
-	else
-		error_exit("Internal error: no stirrer (%d)", config.st);
-
-	pools *ppools = new pools(std::string(CACHE_DIR), config.max_number_of_mem_pools, config.max_number_of_disk_pools, config.min_store_on_disk_n, bce, config.pool_size_bytes, h, s, config.rs);
+	pools *ppools = new pools(std::string(CACHE_DIR), config.max_number_of_mem_pools, config.max_number_of_disk_pools, config.min_store_on_disk_n, bce, config.pool_size_bytes);
 
 	if (!do_not_fork)
 	{
@@ -187,7 +164,8 @@ int main(int argc, char *argv[])
 
 	set_signal_handlers();
 
-	seed(ppools);
+	pool_crypto pc(config.st, config.ht, config.rs);
+	seed(ppools, &pc);
 
 	main_loop(ppools, &config, eb_output_fips140, eb_output_scc);
 
@@ -197,8 +175,6 @@ int main(int argc, char *argv[])
 	delete bce;
 	delete eb_output_fips140;
 	delete eb_output_scc;
-	delete h;
-	delete s;
 
 	if (config.prng_seed_file)
 		dump_random_state(config.rs, config.prng_seed_file);
