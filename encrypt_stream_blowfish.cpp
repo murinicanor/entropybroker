@@ -7,8 +7,6 @@
 #include "encrypt_stream_blowfish.h"
 #include "utils.h"
 
-pthread_mutex_t lock_blowfish = PTHREAD_MUTEX_INITIALIZER;
-
 encrypt_stream_blowfish::encrypt_stream_blowfish()
 {
 	enc = NULL;
@@ -39,7 +37,6 @@ bool encrypt_stream_blowfish::init(unsigned char *key_in, int key_len, unsigned 
 	printf("KEY: "); hexdump(key_in, key_len);
 #endif
 
-	pthread_check(pthread_mutex_lock(&lock_blowfish), "pthread_mutex_lock");
 	if (enc)
 		delete enc;
 	if (dec)
@@ -47,7 +44,6 @@ bool encrypt_stream_blowfish::init(unsigned char *key_in, int key_len, unsigned 
 
 	enc = new CryptoPP::CFB_Mode<CryptoPP::Blowfish>::Encryption(key_in, key_len, ivec_in);
 	dec = new CryptoPP::CFB_Mode<CryptoPP::Blowfish>::Decryption(key_in, key_len, ivec_in);
-	pthread_check(pthread_mutex_unlock(&lock_blowfish), "pthread_mutex_lock");
 
 	return true;
 }
@@ -66,9 +62,7 @@ void encrypt_stream_blowfish::encrypt(unsigned char *p, int len, unsigned char *
 	printf("EIV %d before: ", ivec_offset); hexdump(ivec, 8);
 #endif
 
-	pthread_check(pthread_mutex_lock(&lock_blowfish), "pthread_mutex_lock");
 	enc -> ProcessData(p_out, p, len);
-	pthread_check(pthread_mutex_unlock(&lock_blowfish), "pthread_mutex_lock");
 
 #ifdef CRYPTO_DEBUG
 	printf("EIV %d after: ", ivec_offset); hexdump(ivec, 8);
@@ -85,9 +79,7 @@ void encrypt_stream_blowfish::decrypt(unsigned char *p, int len, unsigned char *
 	printf("EIV %d before: ", ivec_offset); hexdump(ivec, 8);
 #endif
 
-	pthread_check(pthread_mutex_lock(&lock_blowfish), "pthread_mutex_lock");
 	dec -> ProcessData(p_out, p, len);
-	pthread_check(pthread_mutex_unlock(&lock_blowfish), "pthread_mutex_lock");
 
 #ifdef CRYPTO_DEBUG
 	printf("EIV %d after: ", ivec_offset); hexdump(ivec, 8);

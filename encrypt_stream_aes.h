@@ -2,8 +2,6 @@
 #include <cryptopp/modes.h>
 #include <cryptopp/aes.h>
 
-extern pthread_mutex_t lock_aes;
-
 class encrypt_stream_aes : public encrypt_stream
 {
 private:
