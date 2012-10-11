@@ -2,6 +2,8 @@
 #include <cryptopp/modes.h>
 #include <cryptopp/camellia.h>
 
+extern pthread_mutex_t lock_camellia;
+
 class encrypt_stream_camellia : public encrypt_stream
 {
 private:

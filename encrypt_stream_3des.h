@@ -2,6 +2,8 @@
 #include <cryptopp/modes.h>
 #include <cryptopp/des.h>
 
+extern pthread_mutex_t lock_3des;
+
 class encrypt_stream_3des : public encrypt_stream
 {
 private:

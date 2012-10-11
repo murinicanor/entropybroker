@@ -12,11 +12,15 @@
 
 CryptoPP::AutoSeededRandomPool rng;
 
+pthread_mutex_t lock_rand = PTHREAD_MUTEX_INITIALIZER;
+
 void get_random(random_source_t rs, unsigned char *p, size_t n)
 {
 	if (rs == RS_CRYPTOPP)
 	{
+		pthread_check(pthread_mutex_lock(&lock_rand), "pthread_mutex_lock");
 		rng.GenerateBlock(p, n);
+		pthread_check(pthread_mutex_unlock(&lock_rand), "pthread_mutex_lock");
 	}
 	else if (rs == RS_DEV_URANDOM)
 	{

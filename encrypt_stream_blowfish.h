@@ -2,6 +2,8 @@
 #include <cryptopp/modes.h>
 #include <cryptopp/blowfish.h>
 
+extern pthread_mutex_t lock_blowfish;
+
 class encrypt_stream_blowfish : public encrypt_stream
 {
 private:
