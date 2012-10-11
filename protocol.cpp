@@ -261,9 +261,6 @@ int protocol::sleep_interruptable(double how_long)
 
 int protocol::message_transmit_entropy_data(unsigned char *bytes_in, unsigned int n_bytes)
 {
-	if (n_bytes > max_get_put_size)
-		error_exit("message_transmit_entropy_data: too many bytes %d, limit: %d", n_bytes, max_get_put_size);
-
 	int error_count = 0;
 	while(n_bytes > 0)
 	{
