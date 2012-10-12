@@ -269,7 +269,7 @@ void * thread(void *data)
 			break;
 		}
 
-		dolog(LOG_INFO, "Thread id: %d, fd: %d, user: %s, type: %s, host: %s", gettid(), p -> socket_fd, p -> username, p -> type.c_str(), p -> host.c_str());
+		dolog(LOG_INFO, "Thread id: %d, fd: %d, user: %s, type: %s, host: %s", gettid(), p -> socket_fd, username.c_str(), p -> type.c_str(), p -> host.c_str());
 
 		p -> challenge = auth_rnd;
 		p -> ivec_counter = 0;
