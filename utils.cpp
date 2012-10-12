@@ -22,6 +22,9 @@
 #include <sys/resource.h>
 #include <fcntl.h>
 #include <sys/stat.h>
+#ifdef linux
+#include <sys/syscall.h>
+#endif
 
 #include "error.h"
 #include "log.h"
@@ -721,3 +724,14 @@ bool send_uint(int fd, unsigned int value, double to)
 
 	return true;
 }
+
+#ifdef linux
+pid_t gettid()
+{
+	pid_t tid = (pid_t) syscall (SYS_gettid);
+
+	return tid;
+}
+#else
+#define gettid() 0
+#endif

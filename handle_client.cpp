@@ -13,6 +13,7 @@
 #include <unistd.h>
 #include <sys/time.h>
 #include <sys/resource.h>
+#include <sys/types.h>
 #include <vector>
 #include <string>
 #include <map>
@@ -268,6 +269,8 @@ void * thread(void *data)
 			break;
 		}
 
+		dolog(LOG_INFO, "Thread id: %d, fd: %d, user: %s, type: %s, host: %s", gettid(), p -> socket_fd, p -> username, p -> type.c_str(), p -> host.c_str());
+
 		p -> challenge = auth_rnd;
 		p -> ivec_counter = 0;
 		calc_ivec(password.c_str(), p -> challenge, p -> ivec_counter, es -> get_ivec_size(), ivec);
@@ -306,6 +309,12 @@ void * thread(void *data)
 			max_fd = mymax(max_fd, p -> to_thread[0]);
 
 			int rc = select(max_fd + 1, &rfds, NULL, NULL, &tv);
+
+			// if (rc == -1)
+			// 	dolog(LOG_DEBUG, "select: -1, %s (%d)", strerror(errno), errno);
+			// else
+			// 	dolog(LOG_DEBUG, "select: %d, ls %d|%d", rc, FD_ISSET(p -> socket_fd, &rfds), FD_ISSET(p -> to_thread[0], &rfds));
+
 			if (rc == -1)
 			{
 				if (errno == EINTR)
@@ -612,6 +621,11 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 
 		int rc = pselect(max_fd + 1, &rfds, NULL, NULL, &tv, &sig_set);
 
+		// if (rc == -1)
+		// 	dolog(LOG_DEBUG, "pselect: -1, %s (%d) %f", strerror(errno), errno, time_left);
+		// else
+		// 	dolog(LOG_DEBUG, "pselect: %d, ls %d %f", rc, FD_ISSET(listen_socket_fd, &rfds), time_left);
+
 		if (is_SIGHUP())
 		{
 			dolog(LOG_DEBUG, "Got SIGHUP");
@@ -623,7 +637,6 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 		if (is_SIGEXIT())
 		{
 			dolog(LOG_INFO, "Program stopping due to either SIGTERM, SIGQUIT or SIGINT");
-			unlink(pid_file);
 			break;
 		}
 
