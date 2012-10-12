@@ -582,11 +582,17 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 
 		double time_left = 300.0, dummy1_time = -1.0;
 
-		dummy1_time = mymax(0, (last_statistics_emit + config -> statistics_interval) - now);
-		time_left = mymin(time_left, dummy1_time);
+		if (config -> statistics_interval > 0)
+		{
+			dummy1_time = mymax(0, (last_statistics_emit + config -> statistics_interval) - now);
+			time_left = mymin(time_left, dummy1_time);
+		}
 
-		dummy1_time = mymax(0, (last_counters_reset + config -> reset_counters_interval) - now);
-		time_left = mymin(time_left, dummy1_time);
+		if (config -> reset_counters_interval > 0)
+		{
+			dummy1_time = mymax(0, (last_counters_reset + config -> reset_counters_interval) - now);
+			time_left = mymin(time_left, dummy1_time);
+		}
 
 		for(unsigned int loop=0; loop<clients.size(); loop++)
 		{
@@ -628,6 +634,8 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 
 			if (errno == EINTR)
 				continue;
+
+			dolog(LOG_DEBUG, "select returned with -1, errno: %s (%d)", strerror(errno), errno);
 		}
 
 		if ((last_counters_reset + double(config -> reset_counters_interval)) <= get_ts() || force_stats)
