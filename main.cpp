@@ -141,6 +141,8 @@ int main(int argc, char *argv[])
 	if (stats_file)
 		config.stats_file = stats_file;
 
+	dolog(LOG_DEBUG, "Main thread id: %ld", gettid());
+
 	eb_output_scc -> set_threshold(config.scc_threshold);
 
 	if (config.prng_seed_file)

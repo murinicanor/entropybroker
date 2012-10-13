@@ -226,7 +226,6 @@ int WRITE_TO(int fd, const char *whereto, size_t len, double to)
 
 		if (FD_ISSET(fd, &wfds))	// should always evaluate to true at this point
 		{
-
 			rc = write(fd, whereto, len);
 
 			if (rc == -1)

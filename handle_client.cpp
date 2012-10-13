@@ -290,6 +290,8 @@ void * thread(void *data)
 
 		for(;;)
 		{
+			dolog(LOG_DEBUG, "loop %d, %d", gettid(), p -> socket_fd);
+
 			struct timeval tv;
 
 			tv.tv_sec = p -> config -> communication_session_timeout;
@@ -333,6 +335,8 @@ void * thread(void *data)
 			{
 				bool no_bits = false, new_bits = false, is_full = false;
 
+				dolog(LOG_DEBUG, "process fd: %d", p -> socket_fd);
+
 				if (do_client(p, &no_bits, &new_bits, &is_full) == -1)
 				{
 					dolog(LOG_INFO, "Terminating connection with %s (fd: %d)", p -> host.c_str(), p -> socket_fd);
@@ -344,12 +348,16 @@ void * thread(void *data)
 					dolog(LOG_CRIT, "Thread connection to main thread lost (1)");
 					break;
 				}
+
+				dolog(LOG_DEBUG, "finished processing fd: %d", p -> socket_fd);
 			}
 
 			if (FD_ISSET(p -> to_thread[0], &rfds))
 			{
+				dolog(LOG_DEBUG, "process from main to fd: %d", p -> socket_fd);
 				if (send_request_from_main_to_clients(p) != 0)
 					break;
+				dolog(LOG_DEBUG, "process finished from main to fd: %d", p -> socket_fd);
 			}
 		}
 
@@ -577,6 +585,8 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 	bool send_have_data = false, send_need_data = false, send_is_full = false;
 	for(;;)
 	{
+		dolog(LOG_DEBUG, "main-loop");
+
 		fd_set rfds;
 		double now = get_ts();
 		struct timespec tv;
