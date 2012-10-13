@@ -406,7 +406,9 @@ int pool::add_event(double ts, unsigned char *event_data, int n_event_data, pool
 	return n_bits_added;
 }
 
-unsigned char * pool::expose_contents() const
+unsigned char * pool::expose_contents()
 {
+	bits_in_pool = 0;
+
 	return entropy_pool;
 }

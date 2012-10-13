@@ -233,52 +233,109 @@ void pools::flush_empty_pools()
 		dolog(LOG_DEBUG, "Deleted %d empty pool(s), new count: %d", deleted, pool_vector.size());
 }
 
+typedef struct
+{
+	int index;
+	int n_bits;
+	bool remove;
+}
+merge_t;
+
+int merge_compare_bits(const void *a, const void *b)
+{
+	merge_t *ma = (merge_t *)a;
+	merge_t *mb = (merge_t *)b;
+
+	return ma -> n_bits - mb -> n_bits;
+}
+
+int merge_compare_remove(const void *a, const void *b)
+{
+	merge_t *ma = (merge_t *)a;
+	merge_t *mb = (merge_t *)b;
+
+	if (ma -> remove && mb -> remove)
+		return ma -> index - mb -> index;
+
+	int va = ma -> remove ? 1 : 0;
+	int vb = mb -> remove ? 1 : 0;
+
+	return va - vb;
+}
+
 void pools::merge_pools(pool_crypto *pc)
 {
 	if (pool_vector.empty())
 		return;
 
+	dolog(LOG_INFO, "****************** MERGE ******************");
+
 	int n_merged = 0;
+	int n_in = pool_vector.size();
 
-	for(int i1=0; i1 < (int(pool_vector.size()) - 1); i1++)
+	int process_n = 0;
+	merge_t *list = reinterpret_cast<merge_t *>(malloc(n_in * sizeof(merge_t)));
+	for(int index=0; index<n_in; index++)
 	{
-		if (pool_vector.at(i1) -> timed_lock_object(1.0))
+		if (pool_vector.at(index) -> timed_lock_object(0.01))
 			continue;
 
-		if (pool_vector.at(i1) -> is_full())
+		list[process_n].index = index;
+		list[process_n].n_bits = pool_vector.at(index) -> get_n_bits_in_pool();
+		list[process_n].remove = false;
+
+		if (list[process_n].n_bits > 0)
+			process_n++;
+		else
+			pool_vector.at(index) -> unlock_object();
+	}
+
+	dolog(LOG_DEBUG, "process n: %d", process_n);
+
+	if (process_n > 0)
+	{
+		qsort(list, process_n, sizeof(merge_t), merge_compare_bits);
+
+		int stir_size = pc -> get_stirrer() -> get_stir_size();
+
+		int add_index = -1, max_n_bits = -1;;
+		for(int index=0; index<process_n; index++)
 		{
-			pool_vector.at(i1) -> unlock_object();
-			continue;
-		}
-
-		int i1_size = pool_vector.at(i1) -> get_n_bits_in_pool();
-
-		for(int i2=(int(pool_vector.size()) - 1); i2 >= (i1 + 1); i2--)
-		{
-			if (pool_vector.at(i2) -> timed_lock_object(1.0))
-				continue;
-
-			int i2_size = pool_vector.at(i2) -> get_n_bits_in_pool();
-			if (i1_size + i2_size > pool_vector.at(i1) -> get_pool_size())
+			if (add_index == -1)
 			{
-				pool_vector.at(i2) -> unlock_object();
-				continue;
+				add_index = index++;
+				max_n_bits = pool_vector.at(list[add_index].index) -> get_pool_size();
+
+				if (index == process_n)
+					break;
 			}
 
-			int data_size = pool_vector.at(i2) -> get_pool_size_bytes();
-			unsigned char *data = pool_vector.at(i2) -> expose_contents();
-			pool_vector.at(i1) -> add_entropy_data(data, data_size, pc);
+			if (list[add_index].n_bits + list[index].n_bits > max_n_bits + stir_size)
+			{
+				add_index = -1;
+				index--;
+			}
+			else
+			{
+				int i1 = list[add_index].index;
+				int i2 = list[index].index;
 
-			pool_vector.at(i2) -> unlock_object();
+				int data_size = pool_vector.at(i2) -> get_pool_size_bytes();
+				unsigned char *data = pool_vector.at(i2) -> expose_contents();
 
-			delete pool_vector.at(i2);
-			pool_vector.erase(pool_vector.begin() + i2);
+				pool_vector.at(i1) -> add_entropy_data(data, data_size, pc);
 
-			n_merged++;
+				list[index].remove = true;
+
+				n_merged++;
+			}
 		}
-
-		pool_vector.at(i1) -> unlock_object();
 	}
+
+	for(int index=0; index<process_n; index++)
+		pool_vector.at(list[index].index) -> unlock_object();
+
+	free(list);
 
 	if (n_merged)
 		dolog(LOG_INFO, "%d pool(s) merged, new count: %d", n_merged, pool_vector.size());
@@ -395,8 +452,8 @@ int pools::select_pool_to_add_to(bool timed, double max_time, pool_crypto *pc)
 		// at this point (due to context switching between the unlock and the
 		// wlock), there may already be a non-empty pool: that is not a problem
 
-		flush_empty_pools();
 		merge_pools(pc);
+		flush_empty_pools();
 
 		if (pool_vector.size() >= max_n_mem_pools)
 			store_caches(mymax(0, int(pool_vector.size()) - int(min_store_on_disk_n)));
@@ -502,8 +559,8 @@ int pools::get_bits_from_pools(int n_bits_requested, unsigned char **buffer, boo
 		pthread_testcancel();
 		list_wlock();
 
-		flush_empty_pools();
 		merge_pools(pc);
+		flush_empty_pools();
 
 		// due to the un- and relock this might have changed
 		// also merging pools might change this value

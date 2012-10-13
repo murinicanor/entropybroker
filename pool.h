@@ -43,7 +43,7 @@ public:
 	int get_n_bits_in_pool() const;
 	int get_pool_size() const;
 	int get_pool_size_bytes() const;
-	unsigned char *expose_contents() const;
+	unsigned char *expose_contents(); // resets bit count to zero
 	bool is_full() const;
 	bool is_almost_full(pool_crypto *pc) const;
 	int add_event(double ts, unsigned char *event_data, int n_event_data, pool_crypto *pc);
