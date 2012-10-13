@@ -237,7 +237,6 @@ typedef struct
 {
 	int index;
 	int n_bits;
-	bool remove;
 }
 merge_t;
 
@@ -247,20 +246,6 @@ int merge_compare_bits(const void *a, const void *b)
 	merge_t *mb = (merge_t *)b;
 
 	return ma -> n_bits - mb -> n_bits;
-}
-
-int merge_compare_remove(const void *a, const void *b)
-{
-	merge_t *ma = (merge_t *)a;
-	merge_t *mb = (merge_t *)b;
-
-	if (ma -> remove && mb -> remove)
-		return ma -> index - mb -> index;
-
-	int va = ma -> remove ? 1 : 0;
-	int vb = mb -> remove ? 1 : 0;
-
-	return va - vb;
 }
 
 void pools::merge_pools(pool_crypto *pc)
@@ -282,7 +267,6 @@ void pools::merge_pools(pool_crypto *pc)
 
 		list[process_n].index = index;
 		list[process_n].n_bits = pool_vector.at(index) -> get_n_bits_in_pool();
-		list[process_n].remove = false;
 
 		if (list[process_n].n_bits > 0)
 			process_n++;
@@ -324,8 +308,6 @@ void pools::merge_pools(pool_crypto *pc)
 				unsigned char *data = pool_vector.at(i2) -> expose_contents();
 
 				pool_vector.at(i1) -> add_entropy_data(data, data_size, pc);
-
-				list[index].remove = true;
 
 				n_merged++;
 			}
