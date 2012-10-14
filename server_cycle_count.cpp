@@ -38,14 +38,15 @@ inline unsigned long long GetCC(void)
 typedef struct
 {
 	char *buffer;
-	int index;
+	volatile int index;
 	int cache_size, cache_line_size;
+	volatile int a;
 } fiddle_state_t;
 
 void fiddle(fiddle_state_t *p)
 {
 	// trigger cache misses etc
-	int a = (p -> buffer)[p -> index]++;
+	p -> a += (p -> buffer)[p -> index]++;
 
 	p -> index += p -> cache_line_size;
 
@@ -53,7 +54,7 @@ void fiddle(fiddle_state_t *p)
 		p -> index -= p -> cache_size * 3;
 
 	// trigger an occasional exception
-	a /= (p -> buffer)[p -> index];
+	p -> a /= (p -> buffer)[p -> index];
 }
 
 int get_cache_size()

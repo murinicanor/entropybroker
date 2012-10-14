@@ -134,9 +134,7 @@ reconnect_status_t protocol::reconnect_server_socket()
 	reconnect_status_t rc = RSS_FAIL;
 
 	char connect_msg = 0;
-	int count = 1;
 
-	unsigned int host_try_count = 0;
 	// connect to server
 	if (socket_fd == -1)
 	{
@@ -150,6 +148,8 @@ reconnect_status_t protocol::reconnect_server_socket()
 		delete mac_hasher;
 		mac_hasher = NULL;
 
+		unsigned int host_try_count = 0;
+		int count = 1;
 		std::string cipher_data, mac_hash;
 		for(;;)
 		{
