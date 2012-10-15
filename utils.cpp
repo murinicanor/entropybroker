@@ -51,7 +51,12 @@ long double get_ts_ns()
 
 double get_ts()
 {
-	return double(get_ts_ns());
+        struct timeval ts;
+
+        if (gettimeofday(&ts, NULL) == -1)
+                error_exit("gettimeofday failed");
+
+        return double(ts.tv_sec) + double(ts.tv_usec) / 1000000.0;
 }
 
 int READ(int fd, char *whereto, size_t len)

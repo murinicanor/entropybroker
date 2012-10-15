@@ -53,12 +53,14 @@ int bit_count_estimator::determine_number_of_bits_of_data_shannon(unsigned char 
 	for(unsigned int loop=0; loop<n_bytes; loop++)
 		cnts[data[loop]]++;
 
-	for(unsigned int loop=0; loop<256;loop++)
+	for(unsigned int loop=0; loop<256; loop++)
 	{
-		double prob = double(cnts[loop]) / nbytesd;
+		if (cnts[loop])
+		{
+			double prob = double(cnts[loop]) / nbytesd;
 
-		if (prob > 0.0)
 			ent += prob * (log(1.0 / prob) / log2);
+		}
 	}
 
 	ent *= nbytesd;

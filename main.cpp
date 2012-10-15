@@ -132,6 +132,8 @@ int main(int argc, char *argv[])
 	(void)umask(0177);
 	no_core();
 
+	fips140_init();
+
 	pthread_check(pthread_mutexattr_init(&global_mutex_attr), "pthread_mutexattr_init");
 	pthread_check(pthread_mutexattr_settype(&global_mutex_attr, PTHREAD_MUTEX_ERRORCHECK), "pthread_mutexattr_settype");
 

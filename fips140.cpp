@@ -38,25 +38,30 @@
 #include "log.h"
 #include "fips140.h"
 
-fips140::fips140() : user(NULL)
+/* array with numberofbitssetto1 */
+static unsigned char fips140_bit1cnt[256];
+
+void fips140_init()
 {
-	int loop, bit;
-
-	memset(fips140_bit1cnt, 0x00, sizeof fips140_bit1cnt);
-	memset(fips140_rval, 0x00, sizeof fips140_rval);
-	memset(fips140_pokerbuf, 0x00, sizeof fips140_pokerbuf);
-
-	fips140_p = fips140_nbits = fips140_nnewbits = fips140_n1 = 0;
-
 	/* generate table with number of bits-set-to-1 for each number */
-	for(loop=0; loop<256; loop++)
+	memset(fips140_bit1cnt, 0x00, sizeof fips140_bit1cnt);
+
+	for(int loop=0; loop<256; loop++)
 	{
-		for(bit=1; bit<256; bit<<=1)
+		for(int bit=1; bit<256; bit<<=1)
 		{
 			if (loop & bit)
 				fips140_bit1cnt[loop]++;
 		}
 	}
+}
+
+fips140::fips140() : user(NULL)
+{
+	memset(fips140_rval, 0x00, sizeof fips140_rval);
+	memset(fips140_pokerbuf, 0x00, sizeof fips140_pokerbuf);
+
+	fips140_p = fips140_nbits = fips140_nnewbits = fips140_n1 = 0;
 
 	stats_t.monobit = stats_t.poker = stats_t.longrun = stats_t.runs = 0;
 

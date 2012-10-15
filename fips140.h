@@ -1,9 +1,6 @@
 // SVN: $Revision$
 class fips140
 {
-	/* array with numberofbitssetto1 */
-	char fips140_bit1cnt[256];
-
 	/* ringbuffer of 20000 bits */
 	unsigned char fips140_rval[20000/8];
 	/* point to current, ehr, thing */
@@ -38,6 +35,8 @@ public:
 	fips140();
 	~fips140();
 
+	static void init();
+
 	void set_fips_version(int version);
 	void set_user(const char *puser);
 
@@ -45,3 +44,5 @@ public:
 	bool is_ok();
 	char *stats();
 };
+
+void fips140_init();
