@@ -11,7 +11,6 @@
 #include "random_source.h"
 #include "log.h"
 #include "math.h"
-#include "ivec.h"
 #include "hasher.h"
 #include "stirrer.h"
 #include "fips140.h"

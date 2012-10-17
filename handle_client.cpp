@@ -22,7 +22,6 @@
 #include "random_source.h"
 #include "log.h"
 #include "math.h"
-#include "ivec.h"
 #include "hasher.h"
 #include "stirrer.h"
 #include "fips140.h"
@@ -261,7 +260,7 @@ void * thread(void *data)
 	{
 		long long unsigned int auth_rnd = 1;
 		std::string password, username;
-		bool ok = auth_eb(p -> socket_fd, p -> config -> communication_timeout, p -> pu, username, password, &auth_rnd, &p -> is_server, p -> type, p -> config -> rs, es, mh, p -> config -> hash_hasher, p -> config -> max_get_put_size) == 0;
+		bool ok = auth_eb(p -> socket_fd, p -> config -> communication_timeout, p -> pu, username, password, &auth_rnd, &p -> is_server, p -> type, p -> pc -> get_random_source(), es, mh, p -> config -> hash_hasher, p -> config -> max_get_put_size) == 0;
 
 		if (!ok)
 		{
@@ -277,7 +276,7 @@ void * thread(void *data)
 		// printf("IVEC: "); hexdump(ivec, 8);
 
 		p -> username = strdup(username.c_str());
-		set_thread_name(username + "/" + p -> host);
+		set_thread_name(username + "_" + p -> host);
 
 		p -> password = strdup(password.c_str());
 

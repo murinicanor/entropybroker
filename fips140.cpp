@@ -39,9 +39,9 @@
 #include "fips140.h"
 
 /* array with numberofbitssetto1 */
-static unsigned char fips140_bit1cnt[256];
+unsigned char fips140::fips140_bit1cnt[256];
 
-void fips140_init()
+void fips140::init()
 {
 	/* generate table with number of bits-set-to-1 for each number */
 	memset(fips140_bit1cnt, 0x00, sizeof fips140_bit1cnt);

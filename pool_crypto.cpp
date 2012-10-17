@@ -22,7 +22,7 @@
 #include "random_source.h"
 #include "pool_crypto.h"
 
-pool_crypto::pool_crypto(stirrer_type st, hasher_type ht, random_source_t rs_in)
+pool_crypto::pool_crypto(stirrer_type st, hasher_type ht, random_source_t rst)
 {
 	if (ht == H_SHA512)
 		h = new hasher_sha512();
@@ -46,11 +46,12 @@ pool_crypto::pool_crypto(stirrer_type st, hasher_type ht, random_source_t rs_in)
 	else
 		error_exit("Internal error: no stirrer (%d)", st);
 
-	rs = rs_in;
+	rs = new random_source(rst);
 }
 
 pool_crypto::~pool_crypto()
 {
 	delete s;
 	delete h;
+	delete rs;
 }

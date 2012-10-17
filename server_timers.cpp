@@ -76,7 +76,6 @@ inline double gen_entropy_data(int sl)
 int main(int argc, char *argv[])
 {
 	unsigned char bytes[4096];
-	unsigned char byte = 0;
 	int bits = 0, index = 0;
 	int c;
 	bool do_not_fork = false, log_console = false, log_syslog = false;
@@ -175,6 +174,7 @@ int main(int argc, char *argv[])
 	init_showbps();
 	set_showbps_start_ts();
 
+	unsigned char byte = 0;
 	int equal_cnt = 0;
 	for(;;)
 	{

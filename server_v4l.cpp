@@ -154,7 +154,6 @@ int main(int argc, char *argv[])
 	bool do_not_fork = false, log_console = false, log_syslog = false;
 	char *log_logfile = NULL;
 	char *device = NULL;
-	unsigned char byte = 0;
 	char *bytes_file = NULL;
 	int loop;
 	bool show_bps = false;
@@ -276,6 +275,8 @@ int main(int argc, char *argv[])
 
 	init_showbps();
 	set_showbps_start_ts();
+
+	unsigned char byte = 0;
 	for(;;)
 	{
 		img1 = (unsigned char *)malloc(io_buffer_len);

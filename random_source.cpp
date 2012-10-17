@@ -1,7 +1,6 @@
 // SVN: $Revision$
 #include <unistd.h>
 #include <string>
-#include <cryptopp/osrng.h>
 
 #include "error.h"
 #include "log.h"
@@ -10,17 +9,26 @@
 #include "kernel_prng_rw.h"
 #include "random_source.h"
 
-CryptoPP::AutoSeededRandomPool rng;
+random_source::random_source(random_source_t rs_in) : rs(rs_in)
+{
+}
 
-pthread_mutex_t lock_rand = PTHREAD_MUTEX_INITIALIZER;
+random_source::random_source(random_source_t rs_in, std::string state_file_in) : rs(rs_in), state_file(state_file_in)
+{
+	retrieve_state(state_file_in);
+}
 
-void get_random(random_source_t rs, unsigned char *p, size_t n)
+random_source::~random_source()
+{
+	if (state_file.length() > 0)
+		dump_state(state_file);
+}
+
+void random_source::get(unsigned char *p, size_t n)
 {
 	if (rs == RS_CRYPTOPP)
 	{
-		pthread_check(pthread_mutex_lock(&lock_rand), "pthread_mutex_lock");
 		rng.GenerateBlock(p, n);
-		pthread_check(pthread_mutex_unlock(&lock_rand), "pthread_mutex_lock");
 	}
 	else if (rs == RS_DEV_URANDOM)
 	{
@@ -38,21 +46,21 @@ void get_random(random_source_t rs, unsigned char *p, size_t n)
 	}
 }
 
-bool check_random_empty(random_source_t rs)
+bool random_source::check_empty()
 {
 	// FIXME /dev/[u]random, check if kernel_rng_get_entropy_count() < write_threshold
 
 	return false;
 }
 
-void seed_random(random_source_t rs, unsigned char *in, size_t n, double byte_count)
+void random_source::seed(unsigned char *in, size_t n, double byte_count)
 {
 }
 
-void dump_random_state(random_source_t rs, char *file)
+void random_source::dump_state(std::string file)
 {
 }
 
-void retrieve_random_state(random_source_t rs, char *file)
+void random_source::retrieve_state(std::string file)
 {
 }

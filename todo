@@ -26,24 +26,8 @@ http://en.wikipedia.org/wiki/Twofish <--
 
 - random: in object en niet meer met global lock
 
-- merge optimizen:
-  - get list of bit counts
-  - sort van klein naar groot
-  - dan door lijst en dan steeds 2 of meer combineren
-    int addtoindex = -1;
-    while(nr < aantal)
-    {
-	if (index == -1) {
-		addtoindex = id[nr++];
-		if (nr == aantal)
-			break;
-	}
-	
-	int addfromindex = id[nr++];
+- dump random states to state-file(s?)
 
-	add addfromindex to addtoindex;
-	if (addtoindex == full)
-		addtoindex = -1;
-    }
+- cryptopp does not handle EAGAIN of /dev/urandom
 
 SVN: $Revision$

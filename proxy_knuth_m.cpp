@@ -53,6 +53,7 @@ typedef struct
 
 	encrypt_stream *sc;
 	hasher *mac;
+	random_source *rs;
 } proxy_client_t;
 
 typedef struct
@@ -412,7 +413,7 @@ int main(int argc, char *argv[])
 	std::string knuth_file = CACHE_DIR + std::string("/") + KNUTH_FILE;
 	std::vector<std::string> hosts;
 	int log_level = LOG_INFO;
-	random_source_t rs = RS_CRYPTOPP;
+	random_source_t rst = RS_CRYPTOPP;
 	std::string cipher = "blowfish", handshake_hash = "sha512", mac_hasher = "md5";
 
 	printf("proxy_knuth_m, (C) 2009-2012 by folkert@vanheusden.com\n");
@@ -571,6 +572,7 @@ int main(int argc, char *argv[])
 
 					delete clients[client_index] -> sc;
 					delete clients[client_index] -> mac;
+					delete clients[client_index] -> rs;
 				}
 			}
 		}
@@ -586,6 +588,7 @@ int main(int argc, char *argv[])
 
 				encrypt_stream *enc = encrypt_stream::select_cipher(cipher);
 				hasher *mac = hasher::select_hasher(mac_hasher);
+				random_source *rs = new random_source(rst);
 
 				std::string client_username, client_password;
 				long long unsigned int challenge = 1;
@@ -607,6 +610,8 @@ int main(int argc, char *argv[])
 						delete clients[1] -> sc;
 						delete clients[0] -> mac;
 						delete clients[1] -> mac;
+						delete clients[0] -> rs;
+						delete clients[1] -> rs;
 					}
 
 					proxy_client_t *pcp = NULL;
@@ -628,12 +633,14 @@ int main(int argc, char *argv[])
 					pcp -> sc -> init(pw_char, client_password.length(), ivec);
 
 					pcp -> mac = mac;
+					pcp -> rs = rs;
 				}
 				else
 				{
 					close(new_socket_fd);
 					delete enc;
 					delete mac;
+					delete rs;
 				}
 			}
 		}

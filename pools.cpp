@@ -19,7 +19,6 @@
 #include "random_source.h"
 #include "log.h"
 #include "math.h"
-#include "ivec.h"
 #include "hasher_type.h"
 #include "hasher.h"
 #include "stirrer_type.h"
@@ -253,8 +252,6 @@ void pools::merge_pools(pool_crypto *pc)
 	if (pool_vector.empty())
 		return;
 
-	dolog(LOG_INFO, "****************** MERGE ******************");
-
 	int n_merged = 0;
 	int n_in = pool_vector.size();
 
@@ -273,8 +270,6 @@ void pools::merge_pools(pool_crypto *pc)
 		else
 			pool_vector.at(index) -> unlock_object();
 	}
-
-	dolog(LOG_DEBUG, "process n: %d", process_n);
 
 	if (process_n > 0)
 	{
@@ -445,6 +440,7 @@ int pools::select_pool_to_add_to(bool timed, double max_time, pool_crypto *pc)
 		if (pool_vector.size() < max_n_mem_pools)
 		{
 			dolog(LOG_DEBUG, "Adding empty pool to queue (new number of pools: %d)", pool_vector.size() + 1);
+
 			pool_vector.push_back(new pool(new_pool_size, bce, pc));
 		}
 

@@ -28,6 +28,8 @@ class fips140
 	int fips_version;
 	char *user;
 
+	static unsigned char fips140_bit1cnt[256];
+
 	bool fips140_shorttest();
 	bool fips140_longtest();
 
@@ -44,5 +46,3 @@ public:
 	bool is_ok();
 	char *stats();
 };
-
-void fips140_init();

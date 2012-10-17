@@ -15,7 +15,6 @@
 #include "error.h"
 #include "random_source.h"
 #include "math.h"
-#include "ivec.h"
 #include "hasher_type.h"
 #include "hasher.h"
 #include "hasher_md5.h"
@@ -132,7 +131,7 @@ int main(int argc, char *argv[])
 	(void)umask(0177);
 	no_core();
 
-	fips140_init();
+	fips140::init();
 
 	pthread_check(pthread_mutexattr_init(&global_mutex_attr), "pthread_mutexattr_init");
 	pthread_check(pthread_mutexattr_settype(&global_mutex_attr, PTHREAD_MUTEX_ERRORCHECK), "pthread_mutexattr_settype");
@@ -147,16 +146,18 @@ int main(int argc, char *argv[])
 
 	eb_output_scc -> set_threshold(config.scc_threshold);
 
-	if (config.prng_seed_file)
-		retrieve_random_state(config.rs, config.prng_seed_file);
-
 	bit_count_estimator *bce = new bit_count_estimator(config.bitcount_estimator);
 
+	// random
+	pool_crypto pc(config.st, config.ht, config.rs);
+
 	unsigned int rand_seed = 11;
-	get_random(config.rs, reinterpret_cast<unsigned char *>(&rand_seed), sizeof rand_seed);
+	pc.get_random_source() -> get(reinterpret_cast<unsigned char *>(&rand_seed), sizeof rand_seed);
 	srand(rand_seed);
 
 	pools *ppools = new pools(std::string(CACHE_DIR), config.max_number_of_mem_pools, config.max_number_of_disk_pools, config.min_store_on_disk_n, bce, config.pool_size_bytes);
+
+	seed(ppools, &pc);
 
 	if (!do_not_fork)
 	{
@@ -168,10 +169,6 @@ int main(int argc, char *argv[])
 
 	set_signal_handlers();
 
-	pool_crypto pc(config.st, config.ht, config.rs);
-
-	seed(ppools, &pc);
-
 	main_loop(ppools, &config, eb_output_fips140, eb_output_scc, &pc);
 
 	printf("Dumping pool contents to cache-file\n");
@@ -180,9 +177,6 @@ int main(int argc, char *argv[])
 	delete bce;
 	delete eb_output_fips140;
 	delete eb_output_scc;
-
-	if (config.prng_seed_file)
-		dump_random_state(config.rs, config.prng_seed_file);
 
 	unlink(pid_file);
 

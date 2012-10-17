@@ -20,7 +20,6 @@
 #include "config.h"
 #include "log.h"
 #include "auth.h"
-#include "ivec.h"
 #include "stirrer.h"
 #include "pool_crypto.h"
 #include "pool.h"

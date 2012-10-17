@@ -16,7 +16,6 @@ private:
 	int bits_in_pool;
 	event_state_t state;
 	bit_count_estimator *bce;
-	ivec *iv;
 
 	pthread_mutex_t lck;
 	pthread_cond_t cond;
