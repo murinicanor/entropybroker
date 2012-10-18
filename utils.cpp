@@ -620,7 +620,9 @@ void set_thread_name(std::string name)
 	}
 
 	// ignore pthread errors: at least under helgrind this would always fail
-        pthread_setname_np(pthread_self(), dummy);
+        int rc = pthread_setname_np(pthread_self(), dummy);
+	if (rc)
+		dolog(LOG_WARNING, "set_thread_name(%s) failed: %s (%d)", dummy, strerror(rc), rc);
 
 	free(dummy);
 }
