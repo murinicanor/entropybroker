@@ -62,6 +62,11 @@ pools::~pools()
 	pthread_check(pthread_rwlock_destroy(&list_lck), "pthread_rwlock_destroy");
 }
 
+double calc_time_left(double start_ts, double max_time)
+{
+	return mymax(MIN_SLEEP, max_time - (get_ts() - start_ts));
+}
+
 double calc_time_left(double start_ts, unsigned int cur, unsigned int n, double max_duration)
 {
 	double now_ts = get_ts();
@@ -391,8 +396,7 @@ int pools::find_non_full_pool(bool timed, double max_duration, pool_crypto *pc)
 		pthread_cond_t *cond = NULL;
 		if (timed)
 		{
-			double working = get_ts() - start_ts;
-			double cur_max_duration = mymax(MIN_SLEEP, (max_duration - working) / double(n - index));
+			double cur_max_duration = calc_time_left(start_ts, loop_index, n, max_duration);
 
 			cond = pool_vector.at(index) -> timed_lock_object(cur_max_duration);
 		}
@@ -417,7 +421,7 @@ int pools::select_pool_to_add_to(bool timed, double max_time, pool_crypto *pc)
 	double start_ts = timed ? get_ts() : 0.0;
 
 	list_rlock();
-	double left = timed ? mymax(MIN_SLEEP, max_time - (get_ts() - start_ts)) : -1.0;
+	double left = timed ? calc_time_left(start_ts, max_time) : -1.0;
 
 	int index = find_non_full_pool(timed, left, pc);
 
@@ -448,7 +452,7 @@ int pools::select_pool_to_add_to(bool timed, double max_time, pool_crypto *pc)
 		list_wunlock();
 		list_rlock();
 
-		left = timed ? mymax(MIN_SLEEP, max_time - (get_ts() - start_ts)) : -1.0;
+		left = timed ? calc_time_left(start_ts, max_time) :  -1.0;
 
 		index = find_non_full_pool(timed, left, pc);
 		if (index == -1)
@@ -462,7 +466,7 @@ int pools::select_pool_to_add_to(bool timed, double max_time, pool_crypto *pc)
 			index = last_added_to;
 			my_mutex_unlock(&lat_lck);
 
-			left = mymax(MIN_SLEEP, max_time - (get_ts() - start_ts));
+			left = calc_time_left(start_ts, max_time);
 
 			if (pool_vector.at(index) -> timed_lock_object(left))
 				index = -1;
@@ -574,7 +578,7 @@ int pools::get_bits_from_pools(int n_bits_requested, unsigned char **buffer, boo
 		{
 			int index = abs(loop_index + index_offset) % n;
 
-			double time_left = calc_time_left(start_ts, index, n, max_duration);
+			double time_left = calc_time_left(start_ts, loop_index, n, max_duration);
 
 			pthread_cond_t *cond = NULL;
 			if (round > 0)
