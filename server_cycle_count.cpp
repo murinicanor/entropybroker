@@ -96,6 +96,10 @@ void sig_handler(int sig)
 	exit(0);
 }
 
+void sig_handler_ign(int sig)
+{
+}
+
 void help(void)
 {
 	printf("-I host   entropy_broker host to connect to\n");
@@ -208,13 +212,12 @@ int main(int argc, char *argv[])
 	signal(SIGTERM, sig_handler);
 	signal(SIGINT , sig_handler);
 	signal(SIGQUIT, sig_handler);
+	signal(SIGFPE,  sig_handler_ign);
+	signal(SIGSEGV, sig_handler_ign);
 
 	protocol *p = NULL;
 	if (!hosts.empty())
 		p = new protocol(&hosts, username, password, true, server_type, DEFAULT_COMM_TO);
-
-	signal(SIGFPE, SIG_IGN);
-	signal(SIGSEGV, SIG_IGN);
 
 	unsigned char bytes[4096];
 	lock_mem(bytes, sizeof bytes);

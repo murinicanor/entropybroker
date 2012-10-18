@@ -160,6 +160,9 @@ install_redhat_init:
 clean:
 	rm -rf $(OBJSeb) $(OBJSsa) $(OBJSst) $(OBJSsv) $(OBJSss)$(OBJSse) $(OBJSclk) $(OBJSte) $(OBJSsk) $(OBJScf) $(OBJSpf) $(OBJSep) $(OBJSsu) $(OBJScsr2000ku) $(OBJScle) $(OBJSse) $(OBJSpkm) $(OBJSpkb) $(OBJSscc) $(OBJSpicc) plot.o core *.da *.gcov *.bb* $(BINARIES) cov-int
 
+distclean: clean
+	rm -f makefile.inc
+
 package:
 	mkdir eb-$(VERSION) eb-$(VERSION)/ComScire_R2000KU
 	cp *.cpp *.h entropy_broker.conf Makefile bin_to_values.pl do_fft.sh auth.txt network_protocol.txt users.txt readme.txt design.txt interfacing.txt license.* eb-$(VERSION)
