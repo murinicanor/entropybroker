@@ -370,6 +370,7 @@ void * thread(void *data)
 	close(p -> to_main[1]);
 
 	delete es;
+	delete mh;
 
 	dolog(LOG_DEBUG, "End of thread (fd: %d)", p -> socket_fd);
 

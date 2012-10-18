@@ -122,6 +122,9 @@ int auth_eb_user(int fd, int to, users *user_map, std::string & username_out, st
 		delete hh;
 		return -1;
 	}
+	free(hash_cmp);
+	free(hash_in);
+	delete hh;
 	/////
 
 	/* receive a byte which indicates if the other end is a client or a server */

@@ -148,6 +148,7 @@ void load_config(const char *config, config_t *pconfig)
 			else
 				sprintf(p_file, "%s/%s", cur_dir, par);
 			dolog(LOG_INFO, "Load users from %s", p_file);
+			delete pconfig -> user_map;
 			pconfig -> user_map = new std::string(p_file);
 			free(p_file);
 		}

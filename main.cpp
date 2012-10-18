@@ -178,6 +178,8 @@ int main(int argc, char *argv[])
 	delete eb_output_fips140;
 	delete eb_output_scc;
 
+	delete config.user_map;
+
 	unlink(pid_file);
 
 	printf("Finished\n");
