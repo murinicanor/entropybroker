@@ -219,7 +219,7 @@ int main(int argc, char *argv[])
 	unsigned char bytes[4096];
 	lock_mem(bytes, sizeof bytes);
 
-	unsigned char byte = 0;
+	unsigned char cur_byte = 0;
 	int bits = 0;
 	int index = 0;
 
@@ -239,16 +239,16 @@ int main(int argc, char *argv[])
 		int A = int(b - a);
 		int B = int(d - c);
 
-		byte <<= 1;
+		cur_byte <<= 1;
 
 		if (A >= B)
-			byte |= 1;
+			cur_byte |= 1;
 			
 		bits++;
 
 		if (bits == 8)
 		{
-			bytes[index++] = byte;
+			bytes[index++] = cur_byte;
 			bits = 0;
 
 			if (index == sizeof bytes)

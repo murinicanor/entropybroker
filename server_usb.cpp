@@ -83,7 +83,7 @@ void help(void)
 int main(int argc, char *argv[])
 {
 	unsigned char bytes[4096];
-	unsigned char byte = 0;
+	unsigned char cur_byte = 0;
 	int bits = 0;
 	int c;
 	bool do_not_fork = false, log_console = false, log_syslog = false;
@@ -226,13 +226,13 @@ int main(int argc, char *argv[])
 		if (t1 == t2)
 			continue;
 
-		byte <<= 1;
+		cur_byte <<= 1;
 		if (t1 > t2)
-			byte |= 1;
+			cur_byte |= 1;
 
 		if (++bits == 8)
 		{
-			bytes[index++] = byte;
+			bytes[index++] = cur_byte;
 			bits = 0;
 
 			if (index == sizeof bytes)

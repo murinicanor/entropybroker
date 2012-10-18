@@ -11,8 +11,15 @@ typedef struct
 class pool
 {
 private:
-	unsigned char *entropy_pool;
+	unsigned char *entropy_pool, *entropy_pool_temp;
 	int pool_size_bytes;
+
+	unsigned char *ivec;
+	int ivec_size;
+
+	unsigned char *hash;
+	int hash_len;
+
 	int bits_in_pool;
 	event_state_t state;
 	bit_count_estimator *bce;
@@ -20,8 +27,7 @@ private:
 	pthread_mutex_t lck;
 	pthread_cond_t cond;
 
-	unsigned char *alloc_ivec(pool_crypto *pc);
-	void free_ivec(pool_crypto *pc, unsigned char *ivec);
+	void pool_init(pool_crypto *pc);
 
 public:
 	pool(int new_pool_size_bytes, bit_count_estimator *bce, pool_crypto *pc);
@@ -40,13 +46,13 @@ public:
 	int add_entropy_data(unsigned char *entropy_data, int n_bytes, pool_crypto *pc, int is_n_bits = -1);
 	/* returns number of bytes returned, set prng_ok to also return data when pool empty */
 	int get_entropy_data(unsigned char *entropy_data, int n_bytes_requested, bool prng_ok, pool_crypto *pc);
-	int get_get_size(pool_crypto *pc) const;
-	int get_get_size_in_bits(pool_crypto *pc) const;
+	int get_get_size() const;
+	int get_get_size_in_bits() const;
 	int get_n_bits_in_pool() const;
 	int get_pool_size() const;
 	int get_pool_size_bytes() const;
 	unsigned char *expose_contents(); // resets bit count to zero
 	bool is_full() const;
-	bool is_almost_full(pool_crypto *pc) const;
+	bool is_almost_full() const;
 	int add_event(double ts, unsigned char *event_data, int n_event_data, pool_crypto *pc);
 };

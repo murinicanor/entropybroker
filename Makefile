@@ -81,7 +81,7 @@ OBJSpicc=server_smartcard.o utils.o kernel_prng_rw.o kernel_prng_io.o log.o erro
 everything: $(BINARIES)
 
 entropy_broker: $(OBJSeb)
-	$(CXX) $(LINT) $(OBJSeb) $(LDFLAGS) -o entropy_broker
+	$(CXX) $(LINT) $(OBJSeb) $(LDFLAGS) -pthread -o entropy_broker
 
 eb_server_audio: $(OBJSsa)
 	$(CXX) $(LINT) $(OBJSsa) $(LDFLAGS) -lasound -o eb_server_audio
