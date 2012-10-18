@@ -276,7 +276,7 @@ void * thread(void *data)
 		// printf("IVEC: "); hexdump(ivec, 8);
 
 		p -> username = strdup(username.c_str());
-		set_thread_name(username + "_" + p -> host);
+		set_thread_name(username + "_" + (p -> is_server ? "1":"0"));
 
 		p -> password = strdup(password.c_str());
 
