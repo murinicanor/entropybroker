@@ -568,7 +568,7 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 {
 	std::vector<client_t *> clients;
 	double last_counters_reset = get_ts();
-	double last_statistics_emit = get_ts();
+	double last_statistics_emit = last_counters_reset;
 	event_state_t event_state;
 	int listen_socket_fd = start_listen(config -> listen_adapter, config -> listen_port, config -> listen_queue_size);
 	statistics stats(config -> stats_file, eb_output_fips140, eb_output_scc, ppools);
@@ -628,6 +628,7 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 
 		int rc = pselect(max_fd + 1, &rfds, NULL, NULL, &tv, &sig_set);
 
+		now = get_ts();
 		// if (rc == -1)
 		// 	dolog(LOG_DEBUG, "pselect: -1, %s (%d) %f", strerror(errno), errno, time_left);
 		// else
@@ -658,7 +659,7 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 			dolog(LOG_DEBUG, "select returned with -1, errno: %s (%d)", strerror(errno), errno);
 		}
 
-		if ((last_counters_reset + double(config -> reset_counters_interval)) <= get_ts() || force_stats)
+		if ((last_counters_reset + double(config -> reset_counters_interval)) <= now || force_stats)
 		{
 			stats.emit_statistics_log(clients.size(), force_stats, config -> reset_counters_interval);
 
@@ -674,20 +675,18 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 				}
 			}
 
-			last_counters_reset = get_ts();
+			now = last_counters_reset = get_ts();
 		}
 
-		if ((config -> statistics_interval != 0 && (last_statistics_emit + double(config -> statistics_interval)) <= get_ts()) || force_stats)
+		if ((config -> statistics_interval != 0 && (last_statistics_emit + double(config -> statistics_interval)) <= now) || force_stats)
 		{
 			stats.emit_statistics_file(clients.size());
 
-			last_statistics_emit = get_ts();
+			now = last_statistics_emit = get_ts();
 		}
 
 		if (force_stats)
 		{
-			now = get_ts();
-
 			for(unsigned int loop=0; loop<clients.size(); loop++)
 			{
 				client_t *p = clients.at(loop);
@@ -699,6 +698,8 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 						p -> bits_sent, p -> bits_recv, (long int)(now - p -> last_message), (long int)(now - p -> connected_since));
 				my_mutex_unlock(&p -> stats_lck);
 			}
+
+			now = get_ts();
 		}
 
 		if (rc == 0)
@@ -706,8 +707,6 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 
 		if (config -> allow_event_entropy_addition)
 		{
-			now = get_ts();
-
 			int event_bits = ppools -> add_event(now, reinterpret_cast<unsigned char *>(&rfds), sizeof rfds, double(config -> communication_timeout) * 0.05, pc);
 
 			if (event_bits > 0)

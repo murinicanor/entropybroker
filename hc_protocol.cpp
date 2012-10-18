@@ -224,7 +224,6 @@ int do_client_get(client_t *client, bool *no_bits)
 
 int do_client_put(client_t *client, bool *new_bits, bool *is_full)
 {
-	double now = get_ts();
 	bool warn_all_full = false;
 
 	*new_bits = false;
@@ -233,7 +232,7 @@ int do_client_put(client_t *client, bool *new_bits, bool *is_full)
 	{
 		*is_full = true;
 
-		double last_submit_ago = now - client -> last_put_message;
+		double last_submit_ago = get_ts() - client -> last_put_message;
 		char full_allow_interval_submit = last_submit_ago >= client -> config -> when_pools_full_allow_submit_interval;
 
 		if (!(client -> config -> add_entropy_even_if_all_full || full_allow_interval_submit))
@@ -316,7 +315,7 @@ int do_client_put(client_t *client, bool *new_bits, bool *is_full)
 		dolog(LOG_WARNING, "Hash mismatch in retrieved entropy data!");
 	else
 	{
-		client -> last_put_message = now;
+		client -> last_put_message = get_ts();
 
 		int n_bits_added = client -> ppools -> add_bits_to_pools(entropy_data, entropy_data_len, client -> ignore_rngtest_fips140, client -> pfips140, client -> ignore_rngtest_scc, client -> pscc, double(client -> config -> communication_timeout) * 0.9, client -> pc);
 		if (n_bits_added == -1)

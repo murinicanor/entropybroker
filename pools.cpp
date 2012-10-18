@@ -176,14 +176,10 @@ bool pools::load_caches(unsigned int load_n_bits, pool_crypto *pc)
 		while(!feof(fh))
 		{
 			pool *new_pool = new pool(++files_loaded, fh, bce, pc);
+
+			bits_loaded += new_pool -> get_n_bits_in_pool();
+
 			pool_vector.push_back(new_pool);
-
-			if (new_pool -> timed_lock_object(1.0) == NULL) // will always succeed due to writelock on list
-			{
-				bits_loaded += new_pool -> get_n_bits_in_pool();
-
-				new_pool -> unlock_object();
-			}
 		}
 
 		if (unlink(cache_list.at(0).c_str()) == -1)
@@ -545,7 +541,6 @@ int pools::get_bits_from_pools(int n_bits_requested, unsigned char **buffer, boo
 
 		// due to the un- and relock this might have changed
 		// also merging pools might change this value
-		bits_needed_to_load = n_bits_requested - get_bit_sum_unlocked(max_duration);
 		have_bits = load_caches(bits_needed_to_load, pc);
 
 		list_wunlock();

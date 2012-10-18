@@ -96,22 +96,22 @@ int READ(int fd, unsigned char *whereto, size_t len)
 
 int READ_TO(int fd, char *whereto, size_t len, double to)
 {
-	long double end_ts = get_ts_ns() + to;
+	double end_ts = get_ts() + to;
 	ssize_t cnt=0;
 
 	while(len>0)
 	{
 		fd_set rfds;
 		struct timeval tv;
-		long double now_ts = get_ts_ns();
-		long double time_left = end_ts - now_ts;
+		double now_ts = get_ts();
+		double time_left = end_ts - now_ts;
 		ssize_t rc;
 
 		if (time_left <= 0.0)
 			return -1;
 
 		tv.tv_sec = time_left;
-		tv.tv_usec = (time_left - static_cast<long double>(tv.tv_sec)) * 1000000.0;
+		tv.tv_usec = (time_left - static_cast<double>(tv.tv_sec)) * 1000000.0;
 
 		FD_ZERO(&rfds);
 		FD_SET(fd, &rfds);
@@ -196,22 +196,22 @@ int WRITE(int fd, const unsigned char *whereto, size_t len)
 
 int WRITE_TO(int fd, const char *whereto, size_t len, double to)
 {
-	long double end_ts = get_ts_ns() + to;
+	double end_ts = get_ts() + to;
 	ssize_t cnt=0;
 
 	while(len>0)
 	{
 		fd_set wfds;
 		struct timeval tv;
-		long double now_ts = get_ts();
-		long double time_left = end_ts - now_ts;
+		double now_ts = get_ts();
+		double time_left = end_ts - now_ts;
 		ssize_t rc;
 
 		if (time_left <= 0.0)
 			return -1;
 
 		tv.tv_sec = time_left;
-		tv.tv_usec = (time_left - static_cast<long double>(tv.tv_sec)) * 1000000.0;
+		tv.tv_usec = (time_left - static_cast<double>(tv.tv_sec)) * 1000000.0;
 
 		FD_ZERO(&wfds);
 		FD_SET(fd, &wfds);
