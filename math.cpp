@@ -46,7 +46,6 @@ int bit_count_estimator::determine_number_of_bits_of_data_shannon(unsigned char 
 {
 	int cnts[256];
 	double ent = 0.0, nbytesd = double(n_bytes);
-	double log2 = log(2.0);
 
 	memset(cnts, 0x00, sizeof cnts);
 
@@ -59,7 +58,7 @@ int bit_count_estimator::determine_number_of_bits_of_data_shannon(unsigned char 
 		{
 			double prob = double(cnts[loop]) / nbytesd;
 
-			ent += prob * (log(1.0 / prob) / log2);
+			ent += prob * log2(1.0 / prob);
 		}
 	}
 

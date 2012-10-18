@@ -417,7 +417,7 @@ int pools::select_pool_to_add_to(bool timed, double max_time, pool_crypto *pc)
 
 	int index = find_non_full_pool(timed, max_time, pc);
 
-	if (index == -1 || pool_vector.at(index) -> is_almost_full(pc))
+	if (index == -1)
 	{
 		// unlock the object because it is not usable (it is full)
 		// and we might go and shuffle the pools (flush/merge)
@@ -428,9 +428,6 @@ int pools::select_pool_to_add_to(bool timed, double max_time, pool_crypto *pc)
 		list_wlock();
 		// at this point (due to context switching between the unlock and the
 		// wlock), there may already be a non-empty pool: that is not a problem
-
-		merge_pools(pc);
-		flush_empty_pools();
 
 		if (pool_vector.size() >= max_n_mem_pools)
 			store_caches(mymax(0, int(pool_vector.size()) - int(min_store_on_disk_n)));

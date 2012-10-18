@@ -18,16 +18,11 @@ http://en.wikipedia.org/wiki/Twofish <--
 
 - fips140 & scc in een wrapper 'verify_entropy'-class proppen
 
-- abstraced prng to objects
-
-- error_exit laat niks zien
-
 - servers: work in units given by broker
-
-- random: in object en niet meer met global lock
 
 - dump random states to state-file(s?)
 
-- cryptopp does not handle EAGAIN of /dev/urandom
+- merge alleen doen als
+   - n pools geraakt door get
 
 SVN: $Revision$
