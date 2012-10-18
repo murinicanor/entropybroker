@@ -44,6 +44,8 @@ unsigned int uchar_to_uint(unsigned char *in);
 bool recv_uint(int fd, unsigned int *value, double to);
 void uint_to_uchar(unsigned int value, unsigned char *out);
 bool send_uint(int fd, unsigned int value, double to);
+void *malloc_locked(size_t n);
+void free_locked(void *p, size_t n);
 
 void my_Assert(bool flag, int line, const char *file);
 #define my_assert(x) my_Assert(x, __LINE__,  __FILE__)

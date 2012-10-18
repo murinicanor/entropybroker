@@ -147,7 +147,7 @@ int do_client_get(client_t *client, bool *no_bits)
 	cur_n_bits = client -> ppools -> get_bits_from_pools(cur_n_bits, &temp_buffer, client -> allow_prng, client -> ignore_rngtest_fips140, client -> output_fips140, client -> ignore_rngtest_scc, client -> output_scc, double(client -> config -> communication_timeout) * 0.9, client -> pc);
 	if (cur_n_bits == 0)
 	{
-		free(temp_buffer);
+		free_locked(temp_buffer, cur_n_bytes + 1);
 
 		dolog(LOG_WARNING, "get|%s no bits in pools, sending deny", client -> host.c_str());
 		*no_bits = true;
@@ -164,8 +164,7 @@ int do_client_get(client_t *client, bool *no_bits)
 #ifdef CRYPTO_DEBUG
 	printf("bytes: %d\n", out_len);
 #endif
-	unsigned char *ent_buffer_in = reinterpret_cast<unsigned char *>(malloc(out_len));
-	lock_mem(ent_buffer_in, out_len);
+	unsigned char *ent_buffer_in = reinterpret_cast<unsigned char *>(malloc_locked(out_len));
 
 	memcpy(&ent_buffer_in[hash_len], temp_buffer, cur_n_bytes);
 	memset(ent_buffer_in, 0x00, hash_len);
@@ -187,9 +186,7 @@ int do_client_get(client_t *client, bool *no_bits)
 	printf("encr: "); hexdump(ent_buffer, 16);
 #endif
 
-	memset(temp_buffer, 0x00, cur_n_bytes);
-	unlock_mem(temp_buffer, cur_n_bytes);
-	free(temp_buffer);
+	free_locked(temp_buffer, cur_n_bytes + 1);
 
 	// update statistics for accounting
 	my_mutex_lock(&client -> stats_lck);
@@ -210,9 +207,7 @@ int do_client_get(client_t *client, bool *no_bits)
 
 	free(ent_buffer);
 
-	memset(ent_buffer_in, 0x00, cur_n_bytes);
-	unlock_mem(ent_buffer_in, cur_n_bytes);
-	free(ent_buffer_in);
+	free_locked(ent_buffer_in, cur_n_bytes);
 
 	int rc = 0;
 	if (WRITE_TO(client -> socket_fd, output_buffer, transmit_size, client -> config -> communication_timeout) != transmit_size)
@@ -304,10 +299,9 @@ int do_client_put(client_t *client, bool *new_bits, bool *is_full)
 		return -1;
 	}
 
-	unsigned char *buffer_out = reinterpret_cast<unsigned char *>(malloc(in_len));
+	unsigned char *buffer_out = reinterpret_cast<unsigned char *>(malloc_locked(in_len));
 	if (!buffer_out)
 		error_exit("%s error allocating %d bytes of memory", client -> host.c_str(), cur_n_bytes);
-	lock_mem(buffer_out, cur_n_bytes);
 
 	// decrypt data
 	client -> stream_cipher -> decrypt(buffer_in, in_len, buffer_out);
@@ -341,9 +335,7 @@ int do_client_put(client_t *client, bool *new_bits, bool *is_full)
 
 	free(hash);
 
-	memset(buffer_out, 0x00, cur_n_bytes);
-	unlock_mem(buffer_out, cur_n_bytes);
-	free(buffer_out);
+	free_locked(buffer_out, cur_n_bytes);
 
 	free(buffer_in);
 

@@ -276,19 +276,15 @@ int main(int argc, char *argv[])
 	init_showbps();
 	set_showbps_start_ts();
 
-	unsigned char byte = 0;
+	unsigned char cur_byte = 0;
 	for(;;)
 	{
-		img1 = (unsigned char *)malloc(io_buffer_len);
-		img2 = (unsigned char *)malloc(io_buffer_len);
-		unbiased = (unsigned char *)malloc(io_buffer_len);
+		img1 = reinterpret_cast<unsigned char *>(malloc_locked(io_buffer_len));
+		img2 = reinterpret_cast<unsigned char *>(malloc_locked(io_buffer_len));
+		unbiased = reinterpret_cast<unsigned char *>(malloc_locked(io_buffer_len));
 		if (!img1 || !img2 || !unbiased)
 			error_exit("out of memory");
 		struct v4l2_buffer buf;
-
-		lock_mem(img1, io_buffer_len);
-		lock_mem(img2, io_buffer_len);
-		lock_mem(unbiased, io_buffer_len);
 
 		/* take pictures */
 		dolog(LOG_DEBUG, "Smile!");
@@ -318,29 +314,24 @@ int main(int argc, char *argv[])
 			/* if the 2 difference are not correlated, add bit */
 			if ((diff1 & 1) != (diff2 & 1))
 			{
-				byte <<= 1;
+				cur_byte <<= 1;
 
 				if (diff1 & 1)
-					byte |= 1;
+					cur_byte |= 1;
 
 				nbits++;
 
 				if (nbits == 8)
 				{
-					unbiased[nunbiased++] = byte;
+					unbiased[nunbiased++] = cur_byte;
 
 					nbits = 0;
 				}
 			}
 		}
 
-		memset(img2, 0x00, io_buffer_len);
-		lock_mem(img2, io_buffer_len);
-		free(img2);
-
-		memset(img1, 0x00, io_buffer_len);
-		lock_mem(img1, io_buffer_len);
-		free(img1);
+		free_locked(img2, io_buffer_len);
+		free_locked(img1, io_buffer_len);
 
 		dolog(LOG_DEBUG, "got %d bytes of entropy", nunbiased);
 
@@ -375,9 +366,7 @@ int main(int argc, char *argv[])
 			set_showbps_start_ts();
 		}
 
-		memset(unbiased, 0x00, io_buffer_len);
-		lock_mem(unbiased, io_buffer_len);
-		free(unbiased);
+		free_locked(unbiased, io_buffer_len);
 	}
 
 	dolog(LOG_DEBUG, "Cleaning up");

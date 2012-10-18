@@ -739,3 +739,25 @@ pid_t gettid()
 #else
 #define gettid() 0
 #endif
+
+void *malloc_locked(size_t n)
+{
+	void *p = malloc(n);
+
+	if (p)
+		lock_mem(p, n);
+
+	return p;
+}
+
+void free_locked(void *p, size_t n)
+{
+	if (p)
+	{
+		memset(p, 0x00, n);
+
+		unlock_mem(p, n);
+	}
+
+	free(p);
+}

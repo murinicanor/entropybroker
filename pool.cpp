@@ -34,8 +34,8 @@ pool::pool(int new_pool_size_bytes, bit_count_estimator *bce_in, pool_crypto *pc
 	memset(&state, 0x00, sizeof state);
 
 	pool_size_bytes = new_pool_size_bytes;
-	entropy_pool = (unsigned char *)malloc(pool_size_bytes);
-	lock_mem(entropy_pool, pool_size_bytes);
+
+	entropy_pool = reinterpret_cast<unsigned char *>(malloc_locked(pool_size_bytes));
 
 	bits_in_pool = 0;
 
@@ -53,10 +53,9 @@ pool::pool(int pool_nr, FILE *fh, bit_count_estimator *bce_in, pool_crypto *pc) 
 	{
 		// FIXME throw an exception instead to prevent a 0-bits pool?
 		pool_size_bytes = DEFAULT_POOL_SIZE_BITS / 8;
-		entropy_pool = (unsigned char *)malloc(pool_size_bytes);
 		bits_in_pool = 0;
 
-		lock_mem(entropy_pool, pool_size_bytes);
+		entropy_pool = reinterpret_cast<unsigned char *>(malloc_locked(pool_size_bytes));
 
 		pc -> get_random_source() -> get(entropy_pool, pool_size_bytes);
 	}
@@ -70,8 +69,7 @@ pool::pool(int pool_nr, FILE *fh, bit_count_estimator *bce_in, pool_crypto *pc) 
 		if (pool_size_bytes < 0 || pool_size_bytes >= 4194304) // more than 4MB is ridiculous
 			error_exit("Corrupt dump? pool size is strange! %d", pool_size_bytes);
 
-		entropy_pool = (unsigned char *)malloc(pool_size_bytes);
-		lock_mem(entropy_pool, pool_size_bytes);
+		entropy_pool = reinterpret_cast<unsigned char *>(malloc_locked(pool_size_bytes));
 
 		int rc = -1;
 		if ((rc = fread(entropy_pool, 1, pool_size_bytes, fh)) != pool_size_bytes)
@@ -85,9 +83,7 @@ pool::pool(int pool_nr, FILE *fh, bit_count_estimator *bce_in, pool_crypto *pc) 
 
 pool::~pool()
 {
-	memset(entropy_pool, 0x00, pool_size_bytes);
-	unlock_mem(entropy_pool, pool_size_bytes);
-	free(entropy_pool);
+	free_locked(entropy_pool, pool_size_bytes);
 
 	pthread_check(pthread_mutex_destroy(&lck), "pthread_mutex_destroy");
 	pthread_check(pthread_cond_destroy(&cond), "pthread_cond_destroy");
@@ -180,31 +176,26 @@ int pool::add_entropy_data(unsigned char *entropy_data, int n_bytes_in, pool_cry
 {
 	my_assert(n_bytes_in > 0);
 
-	int ivec_size = pc -> get_stirrer() -> get_ivec_size();
-	unsigned char *cur_ivec = (unsigned char *)malloc(ivec_size);
-	lock_mem(cur_ivec, ivec_size);
-
 	// this implementation is described in RFC 4086 (June 2005) chapter 6.2.1, second paragraph
 
 	// NOTE (or FIXME if you like): not entirely sure if it is good enough to use a
 	// cryptographical strong PRNG to set the ivec - could use "real"
 	// entropy values for that instead
 
-	unsigned char *temp_buffer = (unsigned char *)malloc(pool_size_bytes);
-	lock_mem(temp_buffer, pool_size_bytes);
+	unsigned char *temp_buffer = reinterpret_cast<unsigned char *>(malloc_locked(pool_size_bytes));
 
 	int n_added = bce -> get_bit_count(entropy_data, n_bytes_in);
 
+	unsigned char *ivec = alloc_ivec(pc);
+
 	while(n_bytes_in > 0)
 	{
-		pc -> get_random_source() -> get(cur_ivec, ivec_size);
-
 		// when adding data to the pool, we encrypt the pool using blowfish with
 		// the entropy-data as the encryption-key. blowfish allows keysizes with
 		// a maximum of 448 bits which is 56 bytes
 		int cur_to_add = mymin(n_bytes_in, pc -> get_stirrer() -> get_stir_size());
 
-		pc -> get_stirrer() -> do_stir(cur_ivec, entropy_pool, pool_size_bytes, entropy_data, cur_to_add, temp_buffer, true);
+		pc -> get_stirrer() -> do_stir(ivec, entropy_pool, pool_size_bytes, entropy_data, cur_to_add, temp_buffer, true);
 
 		entropy_data += cur_to_add;
 		n_bytes_in -= cur_to_add;
@@ -214,13 +205,9 @@ int pool::add_entropy_data(unsigned char *entropy_data, int n_bytes_in, pool_cry
 	if (bits_in_pool > (pool_size_bytes * 8))
 		bits_in_pool = (pool_size_bytes * 8);
 
-	memset(temp_buffer, 0x00, pool_size_bytes);
-	unlock_mem(temp_buffer, pool_size_bytes);
-	free(temp_buffer);
+	free_locked(temp_buffer, pool_size_bytes);
 
-	memset(cur_ivec, 0x00, ivec_size);
-	unlock_mem(cur_ivec, ivec_size);
-	free(cur_ivec);
+	free_ivec(pc, ivec);
 
 	return n_added;
 }
@@ -230,25 +217,38 @@ int pool::get_n_bits_in_pool() const
 	return bits_in_pool;
 }
 
+unsigned char *pool::alloc_ivec(pool_crypto *pc)
+{
+	int ivec_size = pc -> get_stirrer() -> get_ivec_size();
+
+	unsigned char *ivec = reinterpret_cast<unsigned char *>(malloc_locked(ivec_size));
+
+	pc -> get_random_source() -> get(ivec, ivec_size);
+
+	return ivec;
+}
+
+void pool::free_ivec(pool_crypto *pc, unsigned char *ivec)
+{
+	int ivec_size = pc -> get_stirrer() -> get_ivec_size();
+
+	free_locked(ivec, ivec_size);
+}
+
 int pool::get_entropy_data(unsigned char *entropy_data, int n_bytes_requested, bool prng_ok, pool_crypto *pc)
 {
 	my_assert(n_bytes_requested > 0);
 
-	unsigned char *temp_buffer = (unsigned char *)malloc(pool_size_bytes);
-	lock_mem(temp_buffer, pool_size_bytes);
+	unsigned char *temp_buffer = reinterpret_cast<unsigned char *>(malloc_locked(pool_size_bytes));
 
 	// make sure the hash length is equal or less than 448 bits which is the maximum
 	// blowfish key size
 	int hash_len = pc -> get_hasher() -> get_hash_size();
 	int n_given, half_hash_len = hash_len / 2;;
-	unsigned char *hash = (unsigned char *)malloc(hash_len);
-	lock_mem(hash, hash_len);
 
-	int ivec_size = pc -> get_stirrer() -> get_ivec_size();
-	unsigned char *cur_ivec = (unsigned char *)malloc(ivec_size);
-	lock_mem(cur_ivec, ivec_size);
+	unsigned char *hash = reinterpret_cast<unsigned char *>(malloc_locked(hash_len));
 
-	pc -> get_random_source() -> get(cur_ivec, ivec_size);
+	unsigned char *ivec = alloc_ivec(pc);
 
 	n_given = n_bytes_requested;
 	if (!prng_ok)
@@ -272,7 +272,7 @@ int pool::get_entropy_data(unsigned char *entropy_data, int n_bytes_requested, b
 		{
 			int cur_hash_n = mymin(hash_len - index, stir_size);
 
-			pc -> get_stirrer() -> do_stir(cur_ivec, entropy_pool, pool_size_bytes, dummy_hash_p, cur_hash_n, temp_buffer, false);
+			pc -> get_stirrer() -> do_stir(ivec, entropy_pool, pool_size_bytes, dummy_hash_p, cur_hash_n, temp_buffer, false);
 
 			dummy_hash_p += cur_hash_n;
 			index += cur_hash_n;
@@ -284,17 +284,11 @@ int pool::get_entropy_data(unsigned char *entropy_data, int n_bytes_requested, b
 		memcpy(entropy_data, hash, n_given);
 	}
 
-	memset(temp_buffer, 0x00, pool_size_bytes);
-	unlock_mem(temp_buffer, pool_size_bytes);
-	free(temp_buffer);
+	free_locked(temp_buffer, pool_size_bytes);
 
-	memset(hash, 0x00, hash_len);
-	unlock_mem(hash, hash_len);
-	free(hash);
+	free_locked(hash, hash_len);
 
-	memset(cur_ivec, 0x00, ivec_size);
-	unlock_mem(cur_ivec, ivec_size);
-	free(cur_ivec);
+	free_ivec(pc, ivec);
 
 	return n_given;
 }
@@ -332,8 +326,7 @@ bool pool::is_almost_full(pool_crypto *pc) const
 /* taken from random driver from linux-kernel */
 int pool::add_event(double ts, unsigned char *event_data, int n_event_data, pool_crypto *pc)
 {
-	unsigned char *temp_buffer = (unsigned char *)malloc(pool_size_bytes);
-	lock_mem(temp_buffer, pool_size_bytes);
+	unsigned char *temp_buffer = reinterpret_cast<unsigned char *>(malloc_locked(pool_size_bytes));
 
 	int n_bits_added;
 	double delta, delta2, delta3;
@@ -367,31 +360,23 @@ int pool::add_event(double ts, unsigned char *event_data, int n_event_data, pool
 	if (bits_in_pool > (pool_size_bytes * 8))
 		bits_in_pool = (pool_size_bytes * 8);
 
-	int ivec_size = pc -> get_stirrer() -> get_ivec_size();
-	unsigned char *cur_ivec = (unsigned char *)malloc(ivec_size);
-	lock_mem(cur_ivec, ivec_size);
+	unsigned char *ivec = alloc_ivec(pc);
 
-	pc -> get_stirrer() -> do_stir(cur_ivec, entropy_pool, pool_size_bytes, (unsigned char *)&ts, sizeof ts, temp_buffer, true);
+	pc -> get_stirrer() -> do_stir(ivec, entropy_pool, pool_size_bytes, (unsigned char *)&ts, sizeof ts, temp_buffer, true);
 
 	while(n_event_data > 0)
 	{
 		int cur_n_event_data = mymin(n_event_data, pc -> get_stirrer() -> get_stir_size());
 
-		pc -> get_random_source() -> get(cur_ivec, ivec_size);
-
-		pc -> get_stirrer() -> do_stir(cur_ivec, entropy_pool, pool_size_bytes, event_data, cur_n_event_data, temp_buffer, true);
+		pc -> get_stirrer() -> do_stir(ivec, entropy_pool, pool_size_bytes, event_data, cur_n_event_data, temp_buffer, true);
 
 		event_data += cur_n_event_data;
 		n_event_data -= cur_n_event_data;
 	}
 
-	memset(temp_buffer, 0x00, pool_size_bytes);
-	unlock_mem(temp_buffer, pool_size_bytes);
-	free(temp_buffer);
+	free_locked(temp_buffer, pool_size_bytes);
 
-	memset(cur_ivec, 0x00, ivec_size);
-	unlock_mem(cur_ivec, ivec_size);
-	free(cur_ivec);
+	free_ivec(pc, ivec);
 
 	return n_bits_added;
 }

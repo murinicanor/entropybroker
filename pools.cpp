@@ -512,11 +512,9 @@ int pools::get_bits_from_pools(int n_bits_requested, unsigned char **buffer, boo
 	int n_to_do_bits = n_to_do_bytes * 8;
 	int n_bits_retrieved = 0;
 
-	unsigned char *cur_p = *buffer = (unsigned char *)malloc(n_to_do_bytes + 1);
+	unsigned char *cur_p = *buffer = reinterpret_cast<unsigned char *>(malloc_locked(n_to_do_bytes + 1));
 	if (!cur_p)
 		error_exit("transmit_bits_to_client memory allocation failure");
-
-	lock_mem(buffer, n_to_do_bytes);
 
 	// load bits from disk if needed
 	bool have_bits = true;

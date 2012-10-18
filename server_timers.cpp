@@ -174,7 +174,7 @@ int main(int argc, char *argv[])
 	init_showbps();
 	set_showbps_start_ts();
 
-	unsigned char byte = 0;
+	unsigned char cur_byte = 0;
 	int equal_cnt = 0;
 	for(;;)
 	{
@@ -196,13 +196,13 @@ int main(int argc, char *argv[])
 		}
 		equal_cnt = 0;
 
-		byte <<= 1;
+		cur_byte <<= 1;
 		if (t1 >= t2)
-			byte |= 1;
+			cur_byte |= 1;
 
 		if (++bits == 8)
 		{
-			bytes[index++] = byte;
+			bytes[index++] = cur_byte;
 			bits = 0;
 
 			if (index == sizeof bytes)

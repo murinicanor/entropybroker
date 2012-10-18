@@ -330,19 +330,16 @@ int protocol::message_transmit_entropy_data(unsigned char *bytes_in, unsigned in
 				unsigned char *bytes_out = reinterpret_cast<unsigned char *>(malloc(with_hash_n));
 				if (!bytes_out)
 					error_exit("out of memory");
-				unsigned char *temp_buffer = reinterpret_cast<unsigned char *>(malloc(with_hash_n));
+				unsigned char *temp_buffer = reinterpret_cast<unsigned char *>(malloc_locked(with_hash_n));
 				if (!temp_buffer)
 					error_exit("out of memory");
-				lock_mem(temp_buffer, with_hash_n);
 
 				mac_hasher -> do_hash(bytes_in, cur_n_bytes, temp_buffer);
 				memcpy(&temp_buffer[hash_len], bytes_in, cur_n_bytes);
 
 				stream_cipher -> encrypt(temp_buffer, with_hash_n, bytes_out);
 
-				memset(temp_buffer, 0x00, with_hash_n);
-				unlock_mem(temp_buffer, with_hash_n);
-				free(temp_buffer);
+				free_locked(temp_buffer, with_hash_n);
 
 				if (WRITE_TO(socket_fd, bytes_out, with_hash_n, comm_time_out) != with_hash_n)
 				{
@@ -552,8 +549,7 @@ int protocol::request_bytes(unsigned char *where_to, unsigned int n_bits, bool f
 			}
 
 			// decrypt
-			unsigned char *temp_buffer = reinterpret_cast<unsigned char *>(malloc(xmit_bytes));
-			lock_mem(temp_buffer, will_get_n_bytes);
+			unsigned char *temp_buffer = reinterpret_cast<unsigned char *>(malloc_locked(xmit_bytes));
 
 			stream_cipher -> decrypt(buffer_in, xmit_bytes, temp_buffer);
 
@@ -576,9 +572,7 @@ int protocol::request_bytes(unsigned char *where_to, unsigned int n_bits, bool f
 
 			memcpy(where_to, &temp_buffer[hash_len], will_get_n_bytes);
 
-			memset(temp_buffer, 0x00, xmit_bytes);
-			unlock_mem(temp_buffer, xmit_bytes);
-			free(temp_buffer);
+			free_locked(temp_buffer, xmit_bytes);
 
 			free(buffer_in);
 

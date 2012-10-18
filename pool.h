@@ -20,6 +20,9 @@ private:
 	pthread_mutex_t lck;
 	pthread_cond_t cond;
 
+	unsigned char *alloc_ivec(pool_crypto *pc);
+	void free_ivec(pool_crypto *pc, unsigned char *ivec);
+
 public:
 	pool(int new_pool_size_bytes, bit_count_estimator *bce, pool_crypto *pc);
 	pool(int pool_nr, FILE *fh, bit_count_estimator *bce, pool_crypto *pc);
