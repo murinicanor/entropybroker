@@ -172,7 +172,7 @@ void pool::dump(FILE *fh)
 	}
 }
 
-int pool::add_entropy_data(unsigned char *entropy_data, int n_bytes_in, pool_crypto *pc)
+int pool::add_entropy_data(unsigned char *entropy_data, int n_bytes_in, pool_crypto *pc, int is_n_bits)
 {
 	my_assert(n_bytes_in > 0);
 
@@ -184,7 +184,9 @@ int pool::add_entropy_data(unsigned char *entropy_data, int n_bytes_in, pool_cry
 
 	unsigned char *temp_buffer = reinterpret_cast<unsigned char *>(malloc_locked(pool_size_bytes));
 
-	int n_added = bce -> get_bit_count(entropy_data, n_bytes_in);
+	int n_added = is_n_bits;
+	if (n_added == -1)
+		n_added = bce -> get_bit_count(entropy_data, n_bytes_in);
 
 	unsigned char *ivec = alloc_ivec(pc);
 

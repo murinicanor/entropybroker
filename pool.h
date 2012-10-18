@@ -37,7 +37,7 @@ public:
 	void unlock_object();
 
 	/* -1 if not full, 0 if full */
-	int add_entropy_data(unsigned char *entropy_data, int n_bytes, pool_crypto *pc);
+	int add_entropy_data(unsigned char *entropy_data, int n_bytes, pool_crypto *pc, int is_n_bits = -1);
 	/* returns number of bytes returned, set prng_ok to also return data when pool empty */
 	int get_entropy_data(unsigned char *entropy_data, int n_bytes_requested, bool prng_ok, pool_crypto *pc);
 	int get_get_size(pool_crypto *pc) const;

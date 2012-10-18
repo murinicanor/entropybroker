@@ -302,7 +302,7 @@ void pools::merge_pools(pool_crypto *pc)
 				int data_size = pool_vector.at(i2) -> get_pool_size_bytes();
 				unsigned char *data = pool_vector.at(i2) -> expose_contents();
 
-				pool_vector.at(i1) -> add_entropy_data(data, data_size, pc);
+				pool_vector.at(i1) -> add_entropy_data(data, data_size, pc, list[index].n_bits);
 
 				n_merged++;
 			}
