@@ -376,7 +376,8 @@ bool pools::verify_quality(unsigned char *data, int n, bool ignore_rngtest_fips1
 // returns a locked pool
 int pools::find_non_full_pool(bool timed, double max_duration, pool_crypto *pc)
 {
-	double start_ts = get_ts();
+	// be carefull that start_ts is not used when timed == false!!!
+	double start_ts = timed ? get_ts() : 0;
 
 	// please note: it is not required that this offset is cryptographically
 	// random, it is only used to "spread the load" over all the pools
@@ -387,12 +388,14 @@ int pools::find_non_full_pool(bool timed, double max_duration, pool_crypto *pc)
 	{
 		int index = abs(loop_index + index_offset) % n;
 
-		double working = get_ts() - start_ts;
-		double cur_max_duration = mymax(MIN_SLEEP, (max_duration - working) / double(n - index));
-
 		pthread_cond_t *cond = NULL;
 		if (timed)
+		{
+			double working = get_ts() - start_ts;
+			double cur_max_duration = mymax(MIN_SLEEP, (max_duration - working) / double(n - index));
+
 			cond = pool_vector.at(index) -> timed_lock_object(cur_max_duration);
+		}
 		else
 			cond = pool_vector.at(index) -> lock_object();
 
@@ -411,11 +414,12 @@ int pools::find_non_full_pool(bool timed, double max_duration, pool_crypto *pc)
 // returns a locked pool
 int pools::select_pool_to_add_to(bool timed, double max_time, pool_crypto *pc)
 {
-	double start_ts = get_ts();
+	double start_ts = timed ? get_ts() : 0.0;
 
 	list_rlock();
+	double left = timed ? mymax(MIN_SLEEP, max_time - (get_ts() - start_ts)) : -1.0;
 
-	int index = find_non_full_pool(timed, max_time, pc);
+	int index = find_non_full_pool(timed, left, pc);
 
 	if (index == -1)
 	{
@@ -444,7 +448,7 @@ int pools::select_pool_to_add_to(bool timed, double max_time, pool_crypto *pc)
 		list_wunlock();
 		list_rlock();
 
-		double left = mymax(MIN_SLEEP, max_time - (get_ts() - start_ts));
+		left = timed ? mymax(MIN_SLEEP, max_time - (get_ts() - start_ts)) : -1.0;
 
 		index = find_non_full_pool(timed, left, pc);
 		if (index == -1)
