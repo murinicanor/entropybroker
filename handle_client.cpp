@@ -236,7 +236,7 @@ void * thread(void *data)
 {
 	client_t *p = (client_t *)data;
 
-	set_thread_name(p -> host);
+	set_thread_name("eb:cl_se");
 
 	pthread_check(pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL), "pthread_setcancelstate");
 

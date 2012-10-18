@@ -14,7 +14,7 @@ MAN=$(PREFIX)/share
 DOC=$(PREFIX)/doc
 
 CXX=g++
-DEBUG= -pg #-DHELGRIND #-DCRYPTO_DEBUG #-D_DEBUG #-fprofile-arcs -ftest-coverage # -pg
+DEBUG= # -pg #-DHELGRIND #-DCRYPTO_DEBUG #-D_DEBUG #-fprofile-arcs -ftest-coverage # -pg
 LINT=-Wshadow -Wall # -W -Wconversion -Wwrite-strings -Wunused
 CXXFLAGS+=-O3 -ggdb -DVERSION=\"${VERSION}\" $(LINT) $(DEBUG) -DCONFIG=\"${ETC}/entropy_broker.conf\" -DCACHE_DIR=\"${CACHE}\" -DPID_DIR=\"${PID}\" -DVAR_DIR=\"${VAR}\" -rdynamic $(PCSC_CFLAGS)
 LDFLAGS+=$(DEBUG) -lcrypto -lrt -lz -lutil -rdynamic -lcryptopp

@@ -613,7 +613,7 @@ void set_thread_name(std::string name)
 	if (!dummy)
 		error_exit("set_thread_name: out of memory");
 
-	if (name.length() > 13)
+	if (name.length() > 15)
 	{
 		dolog(LOG_DEBUG, "Truncating thread name '%s' to 16 characters", dummy);
 		dummy[16] = 0x00;
