@@ -58,6 +58,7 @@ g++ -O0 -o $FILE `pkg-config --cflags libpcsclite` test_pcsclite.cpp 2> /dev/nul
 if [ $? -eq 0 ] ; then
 	echo \+ libpcsclite-dev detected, enabling eb_server_smartcard
 	B2="$B2 eb_server_smartcard"
+	PCSC='PCSC_CFLAGS=`pkg-config --cflags libpcsclite`'
 else
 	echo \- libpcsclite-dev NOT found, disabling eb_server_smartcard
 fi
@@ -79,6 +80,7 @@ else
 fi
 
 echo B2=$B2 > makefile.inc
+echo $PCSC >> makefile.inc
 
 rm -f $FILE $FILE2
 

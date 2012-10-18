@@ -2,6 +2,8 @@
 
 include version
 
+-include makefile.inc
+
 PREFIX=/usr/local/entropybroker
 BIN=$(PREFIX)/bin
 ETC=$(PREFIX)/etc
@@ -14,7 +16,6 @@ DOC=$(PREFIX)/doc
 CXX=g++
 DEBUG= -pg #-DHELGRIND #-DCRYPTO_DEBUG #-D_DEBUG #-fprofile-arcs -ftest-coverage # -pg
 LINT=-Wshadow -Wall # -W -Wconversion -Wwrite-strings -Wunused
-PCSC_CFLAGS=`pkg-config --cflags libpcsclite`
 CXXFLAGS+=-O3 -ggdb -DVERSION=\"${VERSION}\" $(LINT) $(DEBUG) -DCONFIG=\"${ETC}/entropy_broker.conf\" -DCACHE_DIR=\"${CACHE}\" -DPID_DIR=\"${PID}\" -DVAR_DIR=\"${VAR}\" -rdynamic $(PCSC_CFLAGS)
 LDFLAGS+=$(DEBUG) -lcrypto -lrt -lz -lutil -rdynamic -lcryptopp
 
@@ -55,8 +56,6 @@ all:
 	@echo
 	@echo \*\*\*\*\* you need to run ./configure first \*\*\*\*\*
 	@echo
-
--include makefile.inc
 
 BINARIES=entropy_broker eb_server_timers eb_server_v4l eb_server_stream eb_client_linux_kernel eb_server_egd eb_client_egd eb_server_linux_kernel eb_client_file eb_server_push_file eb_server_ext_proc eb_proxy_knuth_m eb_proxy_knuth_b eb_server_cycle_count ${B2}
 
