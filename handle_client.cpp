@@ -289,8 +289,7 @@ void * thread(void *data)
 
 		for(;;)
 		{
-			dolog(LOG_DEBUG, "loop %d, %d", gettid(), p -> socket_fd);
-
+			// dolog(LOG_DEBUG, "loop %d, %d", gettid(), p -> socket_fd);
 			struct timeval tv;
 
 			tv.tv_sec = p -> config -> communication_session_timeout;
@@ -585,8 +584,6 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 	bool send_have_data = false, send_need_data = false, send_is_full = false;
 	for(;;)
 	{
-		dolog(LOG_DEBUG, "main-loop");
-
 		fd_set rfds;
 		double now = get_ts();
 		struct timespec tv;
