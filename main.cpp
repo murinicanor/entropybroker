@@ -180,6 +180,8 @@ int main(int argc, char *argv[])
 
 	delete config.user_map;
 
+	free(config.listen_adapter);
+
 	unlink(pid_file);
 
 	printf("Finished\n");
