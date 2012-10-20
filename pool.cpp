@@ -33,8 +33,6 @@ pool::pool(int new_pool_size_bytes, bit_count_estimator *bce_in, pool_crypto *pc
 	entropy_pool = reinterpret_cast<unsigned char *>(malloc_locked(pool_size_bytes));
 	bits_in_pool = 0;
 
-	pc -> get_random_source() -> get(entropy_pool, pool_size_bytes);
-
 	pool_init(pc);
 }
 
@@ -49,8 +47,6 @@ pool::pool(int pool_nr, FILE *fh, bit_count_estimator *bce_in, pool_crypto *pc) 
 		bits_in_pool = 0;
 
 		entropy_pool = reinterpret_cast<unsigned char *>(malloc_locked(pool_size_bytes));
-
-		pc -> get_random_source() -> get(entropy_pool, pool_size_bytes);
 	}
 	else
 	{
@@ -83,6 +79,7 @@ void pool::pool_init(pool_crypto *pc)
 
 	ivec_size = pc -> get_stirrer() -> get_ivec_size();
 	ivec = reinterpret_cast<unsigned char *>(malloc_locked(ivec_size));
+	pc -> get_random_source() -> get(ivec, ivec_size);
 
 	hash_len = pc -> get_hasher() -> get_hash_size();
 	hash = reinterpret_cast<unsigned char *>(malloc_locked(hash_len));
@@ -197,8 +194,6 @@ int pool::add_entropy_data(unsigned char *entropy_data, int n_bytes_in, pool_cry
 	int n_added = is_n_bits;
 	if (n_added == -1)
 		n_added = bce -> get_bit_count(entropy_data, n_bytes_in);
-
-	pc -> get_random_source() -> get(ivec, ivec_size);
 
 	while(n_bytes_in > 0)
 	{
