@@ -423,11 +423,6 @@ int pools::select_pool_to_add_to(bool timed, double max_time, pool_crypto *pc)
 
 	if (index == -1)
 	{
-		// unlock the object because it is not usable (it is full)
-		// and we might go and shuffle the pools (flush/merge)
-		if (index != -1)
-			pool_vector.at(index) -> unlock_object();
-
 		list_runlock();
 		list_wlock();
 		// at this point (due to context switching between the unlock and the
