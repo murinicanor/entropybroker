@@ -78,7 +78,10 @@ OBJSpkb=proxy_knuth_b.o utils.o kernel_prng_rw.o kernel_prng_io.o log.o error.o 
 OBJSscc=server_cycle_count.o utils.o kernel_prng_rw.o kernel_prng_io.o log.o error.o protocol.o server_utils.o auth.o my_pty.o users.o random_source.o encrypt_stream.o encrypt_stream_blowfish.o hasher.o hasher_md5.o hasher_ripemd160.o hasher_sha512.o hasher_whirlpool.o encrypt_stream_aes.o encrypt_stream_3des.o encrypt_stream_camellia.o
 OBJSpicc=server_smartcard.o utils.o kernel_prng_rw.o kernel_prng_io.o log.o error.o protocol.o server_utils.o auth.o my_pty.o users.o random_source.o encrypt_stream.o encrypt_stream_blowfish.o hasher.o hasher_md5.o hasher_ripemd160.o hasher_sha512.o hasher_whirlpool.o encrypt_stream_aes.o encrypt_stream_3des.o encrypt_stream_camellia.o
 
-everything: $(BINARIES)
+everything: $(BINARIES) makefile.inc
+
+makefile.inc:
+	./configure
 
 entropy_broker: $(OBJSeb)
 	$(CXX) $(LINT) $(OBJSeb) $(LDFLAGS) -pthread -o entropy_broker
