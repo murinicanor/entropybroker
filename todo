@@ -22,9 +22,8 @@ http://en.wikipedia.org/wiki/Twofish <--
 
 - dump random states to state-file(s?)
 
-- merge alleen doen als
-   - n pools geraakt door get
-
 - calc_time_left debuggen of 't vaak voorkomt dat time_left < 0
+
+- webserver
 
 SVN: $Revision$
