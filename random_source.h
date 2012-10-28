@@ -7,8 +7,9 @@ class random_source
 {
 private:
 	random_source_t rs;
-	CryptoPP::AutoSeededRandomPool rng;
+	CryptoPP::AutoSeededRandomPool *rng;
 	std::string state_file;
+	bool notified_errors;
 
 	void dump_state(std::string file);
 	void retrieve_state(std::string file);
