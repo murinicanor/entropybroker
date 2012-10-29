@@ -6,9 +6,6 @@
 
 - scsi-ping-entropyd
 
-http://www.cryptopp.com/
-http://en.wikipedia.org/wiki/Twofish <--
-
 - filter.cpp:
   - whitening 0/0 en 1/1 -> drop, 01=0bit, 10=1bit
   - what else? xoren met prng van openssl?
