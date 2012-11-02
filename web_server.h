@@ -7,4 +7,6 @@ private:
 public:
 	web_server(std::string listen_interface, int listen_port);
 	~web_server();
+
+	http_file * lookup_url(std::string url);
 };
