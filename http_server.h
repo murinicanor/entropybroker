@@ -1,6 +1,6 @@
 typedef enum { GET, POST } request_t;
 
-class httpserver
+class http_server
 {
 private:
 	int fd;
@@ -10,8 +10,8 @@ private:
 	int request_data_size;
 
 public:
-	httpserver(int fd);
-	~httpserver();
+	http_server(int fd);
+	~http_server();
 
 	request_t get_request_type();
 	std::vector<std::string> get_request_headers();
