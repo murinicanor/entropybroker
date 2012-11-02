@@ -14,10 +14,9 @@ public:
 	~http_server();
 
 	request_t get_request_type();
-	std::vector<std::string> get_request_headers();
-	int get_request_data_size();
-	unsigned char *get_request_data();
 
-	void send_response(std::vector<std::string> response_headers, unsigned char *response_data, int response_data_size);
+	http_bundle * get_request();
+
+	void send_response(http_bundle *response);
 	void terminate();
 };

@@ -15,22 +15,12 @@ request_t http_server::get_request_type()
 	return request_type;
 }
 
-std::vector<std::string> http_server::get_request_headers()
+http_bundle * http_server::get_request()
 {
-	return request_headers;
+	return new http_bundle(request_headers, request_data, request_data_size);
 }
 
-int http_server::get_request_data_size()
-{
-	return request_data_size;
-}
-
-unsigned char *http_server::get_request_data()
-{
-	return request_data;
-}
-
-void http_server::send_response(std::vector<std::string> response_headers, unsigned char *response_data, int response_data_len)
+void http_server::send_response(http_bundle *response)
 {
 	// FIXME
 }

@@ -5,7 +5,7 @@ class http_bundle
 	int data_len;
 
 public:
-	http_bundle();
+	http_bundle(std::vector<std::string> headers, unsigned char *data, int data_len);
 	~http_bundle();
 
 	std::vector<std::string> get_headers();

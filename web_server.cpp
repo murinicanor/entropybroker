@@ -21,3 +21,17 @@ http_file * web_server::lookup_url(std::string url)
 
 	return NULL;
 }
+
+void web_server::process_request(int fd)
+{
+	http_server hs(fd);
+
+	// get url
+	// get request type
+	// get request_details
+	// lookup_url -> file
+	// http_bundle *response = file -> do_request(request_type, request_details);
+	// hs.send_response(response);
+	// delete response;
+	// delete request_details;
+}
