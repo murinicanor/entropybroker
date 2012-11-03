@@ -1,1 +1,1 @@
-typedef enum { GET, POST } http_request_t;
+typedef enum { HR_FAIL, HR_GET, HR_POST } http_request_t;

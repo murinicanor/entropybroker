@@ -1,3 +1,5 @@
+#define HTTP_SERVER_READ_SIZE 4096
+
 class http_server
 {
 private:
