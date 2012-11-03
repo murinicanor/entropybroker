@@ -39,7 +39,7 @@ void my_yield();
 void pthread_check(int rc, const char *name);
 void pthread_check(int rc, const char *name, int ok[]);
 bool file_exist(const char *file);
-void split_string(char *in, char split, char ***out, int *n_out);
+void split_string(const char *in, const char *split, char ***out, int *n_out);
 unsigned int uchar_to_uint(unsigned char *in);
 bool recv_uint(int fd, unsigned int *value, double to);
 void uint_to_uchar(unsigned int value, unsigned char *out);

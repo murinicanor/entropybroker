@@ -666,8 +666,9 @@ bool file_exist(const char *file)
 	return true;
 }
 
-void split_string(char *in, char split, char ***out, int *n_out)
+void split_string(const char *in, const char *split, char ***out, int *n_out)
 {
+	int split_len = strlen(split);
 	char *copy_in = strdup(in), *dummy = copy_in;
 
 	for(;;)
@@ -677,7 +678,7 @@ void split_string(char *in, char split, char ***out, int *n_out)
 		(*n_out)++;
 		*out = reinterpret_cast<char **>(realloc(*out, *n_out * sizeof(char *)));
 
-		next = strchr(copy_in, split);
+		next = strstr(copy_in, split);
 		if (!next)
 		{
 			(*out)[*n_out - 1] = copy_in;
@@ -688,7 +689,7 @@ void split_string(char *in, char split, char ***out, int *n_out)
 
 		(*out)[*n_out - 1] = strdup(copy_in);
 
-		copy_in = next + 1;
+		copy_in = next + split_len;
 	}
 
 	free(dummy);

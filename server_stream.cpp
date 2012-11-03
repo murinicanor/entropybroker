@@ -43,7 +43,7 @@ void set_serial_parameters(int fd, char *pars_in)
 	int bps = B9600;
 	int bits = CS8;
 
-	split_string(pars_in, ',', &pars, &n_pars);
+	split_string(pars_in, ",", &pars, &n_pars);
 
 	// bps,bits
 	if (n_pars != 2)
