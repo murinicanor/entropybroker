@@ -7,8 +7,14 @@
 http_bundle::http_bundle(std::vector<std::string> headers_in, unsigned char *data_in, int data_len_in)
 {
 	headers = headers_in;
-	data = data_in;
-	data_len = data_len_in;
+
+	if (data_in)
+	{
+		data = reinterpret_cast<unsigned char *>(malloc(data_len_in));
+		memcpy(data, data_in, data_len_in);
+
+		data_len = data_len_in;
+	}
 }
 
 http_bundle::~http_bundle()

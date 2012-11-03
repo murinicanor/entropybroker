@@ -11,12 +11,8 @@ public:
 	http_server(int fd);
 	~http_server();
 
-	void run();
-
 	request_t get_request_type();
-
 	http_bundle * get_request();
 
-	void send_response(http_bundle *response);
-	void terminate();
+	void send_response(int status_code, http_bundle *response);
 };
