@@ -1,0 +1,32 @@
+#include <stdlib.h>
+#include <string>
+#include <vector>
+
+#include "http_bundle.h"
+
+http_bundle::http_bundle(std::vector<std::string> headers_in, unsigned char *data_in, int data_len_in)
+{
+	headers = headers_in;
+	data = data_in;
+	data_len = data_len_in;
+}
+
+http_bundle::~http_bundle()
+{
+	free(data);
+}
+
+std::vector<std::string> http_bundle::get_headers()
+{
+	return headers;
+}
+
+int http_bundle::get_data_len()
+{
+	return data_len;
+}
+
+unsigned char *http_bundle::get_data()
+{
+	return data;
+}

@@ -1,13 +1,23 @@
+#include <stdlib.h>
+#include <string>
+#include <unistd.h>
+#include <vector>
+
+#include "http_bundle.h"
 #include "http_server.h"
 
-http_server::http_server(int fd_in) : fd(fd_in), request_type(-1), request_data(NULL), request_data_len(0)
+http_server::http_server(int fd_in) : fd(fd_in), request_type(static_cast<request_t>(-1))
 {
-	// retrieve request FIXME
 }
 
 http_server::~http_server()
 {
 	free(request_data);
+}
+
+void run()
+{
+	// retrieve request FIXME
 }
 
 request_t http_server::get_request_type()

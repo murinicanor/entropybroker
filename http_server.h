@@ -1,5 +1,3 @@
-typedef enum { GET, POST } request_t;
-
 class http_server
 {
 private:
@@ -12,6 +10,8 @@ private:
 public:
 	http_server(int fd);
 	~http_server();
+
+	void run();
 
 	request_t get_request_type();
 
