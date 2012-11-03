@@ -3,10 +3,11 @@
 #include <unistd.h>
 #include <vector>
 
+#include "http_request_t.h"
 #include "http_bundle.h"
 #include "http_server.h"
 
-http_server::http_server(int fd_in) : fd(fd_in), request_type(static_cast<request_t>(-1))
+http_server::http_server(int fd_in) : fd(fd_in), request_type(static_cast<http_request_t>(-1))
 {
 }
 
@@ -15,7 +16,7 @@ http_server::~http_server()
 	free(request_data);
 }
 
-request_t http_server::get_request_type()
+http_request_t http_server::get_request_type()
 {
 	return request_type;
 }
