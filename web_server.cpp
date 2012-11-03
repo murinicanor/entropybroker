@@ -12,9 +12,10 @@
 #include "error.h"
 #include "log.h"
 #include "utils.h"
-#include "request_t.h"
+#include "http_request_t.h"
 #include "http_bundle.h"
 #include "http_file.h"
+#include "http_file_version.h"
 #include "http_server.h"
 #include "web_server.h"
 
@@ -38,12 +39,26 @@ void start_web_server(std::string listen_adapter, int listen_port)
 web_server::web_server(std::string listen_adapter, int listen_port)
 {
 	fd = start_listen(listen_adapter.c_str(), listen_port, 64);
+
+	add_object(new http_file_version());
 }
 
 web_server::~web_server()
 {
 	if (fd != -1)
 		close(fd);
+
+	std::map<std::string, http_file *>::iterator it = objects.begin();
+	while(it != objects.end())
+	{
+		delete it -> second;
+		it++;
+	}
+}
+
+void web_server::add_object(http_file *p)
+{
+	objects.insert(std::pair<std::string, http_file *>(p -> get_url(), p));
 }
 
 void * thread_wrapper_http_server(void *thread_data)

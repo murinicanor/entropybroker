@@ -8,6 +8,7 @@ private:
 	pthread_t *thread;
 
 	http_file * lookup_url(std::string url);
+	void add_object(http_file *p);
 
 public:
 	web_server(std::string listen_interface, int listen_port);

@@ -18,6 +18,14 @@ http_bundle::http_bundle(std::vector<std::string> headers_in, unsigned char *dat
 	}
 }
 
+http_bundle::http_bundle(std::vector<std::string> headers_in, char *data_in)
+{
+	headers = headers_in;
+
+	data = reinterpret_cast<unsigned char *>(strdup(data_in));
+	data_len = strlen(data_in);
+}
+
 http_bundle::~http_bundle()
 {
 	free(data);

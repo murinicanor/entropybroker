@@ -6,5 +6,5 @@ public:
 
 	std::string get_url();
 
-	http_bundle * do_request(request_t request_type, http_bundle *request_details);
+	http_bundle * do_request(http_request_t request_type, http_bundle *request_details);
 };
