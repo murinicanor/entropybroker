@@ -15,6 +15,8 @@
 #include "http_request_t.h"
 #include "http_bundle.h"
 #include "http_file.h"
+#include "http_file_root.h"
+#include "http_file_404.h"
 #include "http_file_version.h"
 #include "http_server.h"
 #include "web_server.h"
@@ -46,6 +48,8 @@ web_server::web_server(std::string listen_adapter, int listen_port)
 {
 	fd = start_listen(listen_adapter.c_str(), listen_port, 64);
 
+	add_object(new http_file_root());
+	add_object(new http_file_404());
 	add_object(new http_file_version());
 }
 
@@ -75,6 +79,7 @@ void * thread_wrapper_http_server(void *thread_data)
 
 	// get url
 	std::string url = hs -> get_request_url();
+	dolog(LOG_DEBUG, "Processing url: %s", url.c_str());
 
 	// get request type
 	http_request_t request_type = hs -> get_request_type();
@@ -84,11 +89,14 @@ void * thread_wrapper_http_server(void *thread_data)
 
 	// lookup_url -> file
 	http_file *obj = p_data -> p_server -> lookup_url(url); // not allocated, don't free it
+	if (!obj)
+		obj = p_data -> p_server -> lookup_url("/404.html"); // not allocated, don't free it
 
 	http_bundle *response = obj -> do_request(request_type, request_details);
 
 	std::vector<std::string> headers;
 	headers.push_back(("Content-Type: " + obj -> get_meta_type()).c_str());
+	headers.push_back("Connection: close");
 
 	hs -> send_response(200, &headers, response);
 

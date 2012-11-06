@@ -45,6 +45,10 @@
 #include "log.h"
 #include "signals.h"
 #include "auth.h"
+#include "http_request_t.h"
+#include "http_bundle.h"
+#include "http_file.h"
+#include "web_server.h"
 
 const char *pid_file = PID_DIR "/entropy_broker.pid";
 
@@ -168,6 +172,8 @@ int main(int argc, char *argv[])
 	write_pid(pid_file);
 
 	set_signal_handlers();
+
+	start_web_server("0.0.0.0", 48923);
 
 	main_loop(ppools, &config, eb_output_fips140, eb_output_scc, &pc);
 

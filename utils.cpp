@@ -683,7 +683,7 @@ void split_string(const char *in, const char *split, char ***out, int *n_out)
 		next = strstr(copy_in, split);
 		if (!next)
 		{
-			(*out)[*n_out - 1] = copy_in;
+			(*out)[*n_out - 1] = strdup(copy_in);
 			break;
 		}
 

@@ -27,9 +27,6 @@ std::string http_file_version::get_meta_type()
 http_bundle * http_file_version::do_request(http_request_t request_type, http_bundle *request_details)
 {
 	std::vector<std::string> reply_headers;
-	reply_headers.push_back("HTTP/1.0 200 Found\r\n");
-	reply_headers.push_back("Connection: close\r\n");
-	reply_headers.push_back("Content-Type: text/html\r\n");
 
 	http_bundle *result = new http_bundle(reply_headers, "<HTML><BODY>Entropy Broker v" VERSION "</BODY></HTML>");
 
