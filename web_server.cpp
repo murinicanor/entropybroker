@@ -92,15 +92,20 @@ void * thread_wrapper_http_server(void *thread_data)
 	if (!obj)
 		obj = p_data -> p_server -> lookup_url("/404.html"); // not allocated, don't free it
 
-	http_bundle *response = obj -> do_request(request_type, request_details);
+	if (!obj)
+		dolog(LOG_DEBUG, "URL not found");
+	else
+	{
+		http_bundle *response = obj -> do_request(request_type, request_details);
 
-	std::vector<std::string> headers;
-	headers.push_back(("Content-Type: " + obj -> get_meta_type()).c_str());
-	headers.push_back("Connection: close");
+		std::vector<std::string> headers;
+		headers.push_back(("Content-Type: " + obj -> get_meta_type()).c_str());
+		headers.push_back("Connection: close");
 
-	hs -> send_response(200, &headers, response);
+		hs -> send_response(200, &headers, response);
 
-	delete response;
+		delete response;
+	}
 
 	delete request_details;
 

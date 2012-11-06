@@ -1,4 +1,5 @@
 #include <errno.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string>
 #include <string.h>
@@ -123,6 +124,8 @@ bool http_server::send(const char *what)
 {
 	int len = strlen(what);
 
+	// printf("> %s", what);
+
 	return send((unsigned char *)what, len);
 }
 
@@ -136,23 +139,23 @@ bool http_server::send(unsigned char *p, int len)
 
 void http_server::send_response(int status_code, std::vector<std::string> *headers, http_bundle *response)
 {
-	bool fail = send(format("HTTP/1.0 %d\r\n", status_code).c_str());
-	if (headers && !fail)
+	bool ok = send(format("HTTP/1.0 %d\r\n", status_code).c_str());
+	if (headers && ok)
 	{
 		for(unsigned int index=0; index<headers -> size(); index++)
 		{
-			fail = send((headers -> at(index) + "\r\n").c_str());
-			if (fail)
+			ok = send((headers -> at(index) + "\r\n").c_str());
+			if (!ok)
 				break;
 		}
 	}
-	if (!fail)
-		fail = send(format("Content-Length: %d\r\n", response -> get_data_len()).c_str());
-	if (!fail)
-		fail = send("\r\n");
+	if (ok)
+		ok = send(format("Content-Length: %d\r\n", response -> get_data_len()).c_str());
+	if (ok)
+		ok = send("\r\n");
 
-	if (!fail)
-		fail = send(response -> get_data(), response -> get_data_len());
+	if (ok)
+		ok = send(response -> get_data(), response -> get_data_len());
 
 	close(fd);
 
