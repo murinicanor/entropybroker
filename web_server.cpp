@@ -19,6 +19,12 @@
 #include "http_server.h"
 #include "web_server.h"
 
+typedef struct
+{
+	web_server *p_server;
+	int fd;
+} client_t;
+
 void *start_web_server_thread_wrapper(void *p)
 {
 	web_server *ws = reinterpret_cast<web_server *>(p);
@@ -63,24 +69,38 @@ void web_server::add_object(http_file *p)
 
 void * thread_wrapper_http_server(void *thread_data)
 {
-	int fd = *reinterpret_cast<int *>(thread_data);
+	client_t *p_data = reinterpret_cast<client_t *>(thread_data);
 
-	http_server *hs = new http_server(fd);
+	http_server *hs = new http_server(p_data -> fd);
 
 	// get url
+	std::string url = hs -> get_request_url();
+
 	// get request type
+	http_request_t request_type = hs -> get_request_type();
+
 	// get request_details
+	http_bundle *request_details = hs -> get_request();
+
 	// lookup_url -> file
-	// http_bundle *response = file -> do_request(request_type, request_details);
-	// hs.send_response(response);
-	// delete response;
-	// delete request_details;
+	http_file *obj = p_data -> p_server -> lookup_url(url); // not allocated, don't free it
+
+	http_bundle *response = obj -> do_request(request_type, request_details);
+
+	std::vector<std::string> headers;
+	headers.push_back(("Content-Type: " + obj -> get_meta_type()).c_str());
+
+	hs -> send_response(200, &headers, response);
+
+	delete response;
+
+	delete request_details;
 
 	delete hs;
 
-	close(fd);
+	close(p_data -> fd);
 
-	free(thread_data);
+	delete p_data;
 
 	return NULL;
 }
@@ -89,22 +109,24 @@ void web_server::run(void)
 {
 	for(;;)
 	{
-		int *client_fd = reinterpret_cast<int *>(malloc(sizeof(int)));
+		int client_fd = accept(fd, NULL, NULL);
 
-		*client_fd = accept(fd, NULL, NULL);
-
-		if (*client_fd == -1)
+		if (client_fd == -1)
 		{
 			dolog(LOG_INFO, "web_server: accept failed: %s", strerror(errno));
 
 			continue;
 		}
 
-		std::string host = get_endpoint_name(*client_fd);
+		std::string host = get_endpoint_name(client_fd);
 
 		dolog(LOG_INFO, "web_server: connected with %s", host.c_str());
 
-		pthread_check(pthread_create(thread, NULL, thread_wrapper_http_server, reinterpret_cast<void *>(client_fd)), "pthread_create");
+		client_t *p_client = new client_t;
+		p_client -> p_server = this;
+		p_client -> fd = client_fd;
+
+		pthread_check(pthread_create(thread, NULL, thread_wrapper_http_server, reinterpret_cast<void *>(p_client)), "pthread_create");
 	}
 }
 

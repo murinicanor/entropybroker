@@ -19,6 +19,11 @@ std::string http_file_version::get_url()
 	return "/version.html";
 }
 
+std::string http_file_version::get_meta_type()
+{
+	return "text/html";
+}
+
 http_bundle * http_file_version::do_request(http_request_t request_type, http_bundle *request_details)
 {
 	std::vector<std::string> reply_headers;
