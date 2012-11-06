@@ -2,6 +2,7 @@
 #include <string>
 #include <pthread.h>
 #include <vector>
+#include <stdarg.h>
 #include <unistd.h>
 #include <signal.h>
 #include <errno.h>
@@ -26,6 +27,7 @@
 #include <sys/syscall.h>
 #endif
 
+#include "defines.h"
 #include "error.h"
 #include "log.h"
 #include "kernel_prng_rw.h"
@@ -763,4 +765,19 @@ void free_locked(void *p, size_t n)
 	}
 
 	free(p);
+}
+
+std::string format(const char *fmt, ...)
+{
+	char *buffer = NULL;
+        va_list ap;
+
+        va_start(ap, fmt);
+        (void)vasprintf(&buffer, fmt, ap);
+        va_end(ap);
+
+	std::string result = buffer;
+	free(buffer);
+
+	return result;
 }

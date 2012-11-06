@@ -7,6 +7,7 @@
 
 #include "log.h"
 #include "utils.h"
+#include "defines.h"
 #include "http_request_t.h"
 #include "http_bundle.h"
 #include "http_server.h"
@@ -78,7 +79,6 @@ http_server::http_server(int fd_in) : fd(fd_in), request_type(static_cast<http_r
 		}
 
 		// set request_type for GET/POST
-
 		if (request_headers.at(0).length() >= 4)
 		{
 			std::string req = request_headers.at(0).substr(0, 4);
@@ -106,9 +106,42 @@ http_bundle * http_server::get_request()
 	return new http_bundle(request_headers, request_data, request_data_size);
 }
 
-void http_server::send_response(int status_code, http_bundle *response)
+bool http_server::send(const char *what)
 {
-	// FIXME
+	int len = strlen(what);
 
-	std::string result;
+	return send((unsigned char *)what, len);
+}
+
+bool http_server::send(unsigned char *p, int len)
+{
+	if (WRITE_TO(fd, p, len, DEFAULT_COMM_TO) != len)
+		return false;
+
+	return true;
+}
+
+void http_server::send_response(int status_code, std::vector<std::string> *headers, http_bundle *response)
+{
+	bool fail = send(format("HTTP/1.0 %d\r\n", status_code).c_str());
+	if (headers && !fail)
+	{
+		for(unsigned int index=0; index<headers -> size(); index++)
+		{
+			fail = send((headers -> at(index) + "\r\n").c_str());
+			if (fail)
+				break;
+		}
+	}
+	if (!fail)
+		fail = send(format("Content-Length: %d\r\n", response -> get_data_len()).c_str());
+	if (!fail)
+		fail = send("\r\n");
+
+	if (!fail)
+		fail = send(response -> get_data(), response -> get_data_len());
+
+	close(fd);
+
+	fd = -1;
 }

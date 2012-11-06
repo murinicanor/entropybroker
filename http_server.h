@@ -9,6 +9,9 @@ private:
 	unsigned char *request_data;
 	int request_data_size;
 
+	bool send(unsigned char *p, int len);
+	bool send(const char *what);
+
 public:
 	http_server(int fd);
 	~http_server();
@@ -16,5 +19,5 @@ public:
 	http_request_t get_request_type();
 	http_bundle * get_request();
 
-	void send_response(int status_code, http_bundle *response);
+	void send_response(int status_code, std::vector<std::string> *headers, http_bundle *response);
 };

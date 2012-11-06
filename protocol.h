@@ -1,15 +1,5 @@
 // SVN: $Revision$
 #define PROTOCOL_VERSION 7
-#define TCP_SILENT_FAIL_TEST_INTERVAL 120
-#define MAX_ERROR_SLEEP 12
-
-#define MAX_IDLE_TIME 303
-
-#define DEFAULT_BROKER_PORT 55225
-
-#define DEFAULT_PROXY_LISTEN_PORT 12347
-
-#define DEFAULT_COMM_TO 15
 
 int recv_length_data(int fd, char **data, unsigned int *len, double to);
 int send_length_data(int fd, const char *data, unsigned int len, double to);

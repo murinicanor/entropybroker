@@ -8,6 +8,7 @@
 #include <map>
 #include <vector>
 
+#include "defines.h"
 #include "error.h"
 #include "random_source.h"
 #include "math.h"
