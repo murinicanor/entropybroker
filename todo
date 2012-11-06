@@ -23,4 +23,6 @@
 
 - webserver
 
+- hash for protocol (user password): Use bcrypt or PBKDF2 exclusively to hash anything you need to be secure.
+
 SVN: $Revision$

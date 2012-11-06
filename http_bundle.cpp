@@ -18,7 +18,7 @@ http_bundle::http_bundle(std::vector<std::string> headers_in, unsigned char *dat
 	}
 }
 
-http_bundle::http_bundle(std::vector<std::string> headers_in, char *data_in)
+http_bundle::http_bundle(std::vector<std::string> headers_in, const char *data_in)
 {
 	headers = headers_in;
 
