@@ -10,13 +10,14 @@ ETC=$(PREFIX)/etc
 VAR=$(PREFIX)/var
 CACHE=$(VAR)/cache
 PID=$(VAR)/run
-MAN=$(PREFIX)/share
+MAN=$(PREFIX)/share/man
+WEB=$(PREFIX)/share/eb/web
 DOC=$(PREFIX)/doc
 
 CXX=g++
 DEBUG= # -pg #-DHELGRIND #-DCRYPTO_DEBUG #-D_DEBUG #-fprofile-arcs -ftest-coverage # -pg
 LINT=-Wshadow -Wall # -W -Wconversion -Wwrite-strings -Wunused
-CXXFLAGS+=-O3 -ggdb -DVERSION=\"${VERSION}\" $(LINT) $(DEBUG) -DCONFIG=\"${ETC}/entropy_broker.conf\" -DCACHE_DIR=\"${CACHE}\" -DPID_DIR=\"${PID}\" -DVAR_DIR=\"${VAR}\" -rdynamic $(PCSC_CFLAGS)
+CXXFLAGS+=-O3 -ggdb -DVERSION=\"${VERSION}\" $(LINT) $(DEBUG) -DCONFIG=\"${ETC}/entropy_broker.conf\" -DCACHE_DIR=\"${CACHE}\" -DPID_DIR=\"${PID}\" -DVAR_DIR=\"${VAR}\" -DWEB_DIR=\"${WEB}\" -rdynamic $(PCSC_CFLAGS)
 LDFLAGS+=$(DEBUG) -lcrypto -lrt -lz -lutil -rdynamic -lcryptopp
 
 all:
@@ -59,7 +60,7 @@ all:
 
 BINARIES=entropy_broker eb_server_timers eb_server_v4l eb_server_stream eb_client_linux_kernel eb_server_egd eb_client_egd eb_server_linux_kernel eb_client_file eb_server_push_file eb_server_ext_proc eb_proxy_knuth_m eb_proxy_knuth_b eb_server_cycle_count ${B2}
 
-OBJSeb=auth.o pools.o statistics.o hc_protocol.o handle_client.o config.o error.o fips140.o kernel_prng_rw.o log.o protocol.o main.o math.o pool.o scc.o signals.o utils.o my_pty.o kernel_prng_io.o hasher.o stirrer.o hasher_sha512.o stirrer_blowfish.o stirrer_aes.o hasher_md5.o hasher_ripemd160.o stirrer_3des.o stirrer_camellia.o hasher_whirlpool.o users.o random_source.o encrypt_stream.o encrypt_stream_blowfish.o encrypt_stream_aes.o encrypt_stream_3des.o encrypt_stream_camellia.o pool_crypto.o http_bundle.o http_server.o http_file_root.o http_file_404.o http_file_version.o http_file.o web_server.o
+OBJSeb=auth.o pools.o statistics.o hc_protocol.o handle_client.o config.o error.o fips140.o kernel_prng_rw.o log.o protocol.o main.o math.o pool.o scc.o signals.o utils.o my_pty.o kernel_prng_io.o hasher.o stirrer.o hasher_sha512.o stirrer_blowfish.o stirrer_aes.o hasher_md5.o hasher_ripemd160.o stirrer_3des.o stirrer_camellia.o hasher_whirlpool.o users.o random_source.o encrypt_stream.o encrypt_stream_blowfish.o encrypt_stream_aes.o encrypt_stream_3des.o encrypt_stream_camellia.o pool_crypto.o http_bundle.o http_server.o http_file_root.o http_file_404.o http_file_version.o http_file.o http_file_file.o web_server.o
 OBJSsa=server_audio.o error.o utils.o kernel_prng_rw.o log.o protocol.o server_utils.o auth.o my_pty.o kernel_prng_io.o users.o random_source.o encrypt_stream.o encrypt_stream_blowfish.o hasher.o hasher_md5.o hasher_ripemd160.o hasher_sha512.o hasher_whirlpool.o encrypt_stream_aes.o encrypt_stream_3des.o encrypt_stream_camellia.o
 OBJSst=server_timers.o log.o utils.o error.o kernel_prng_rw.o protocol.o server_utils.o auth.o my_pty.o kernel_prng_io.o users.o random_source.o encrypt_stream.o encrypt_stream_blowfish.o hasher.o hasher_md5.o hasher_ripemd160.o hasher_sha512.o hasher_whirlpool.o encrypt_stream_aes.o encrypt_stream_3des.o encrypt_stream_camellia.o
 OBJSsv=server_v4l.o error.o log.o protocol.o kernel_prng_rw.o utils.o server_utils.o auth.o my_pty.o kernel_prng_io.o users.o random_source.o  encrypt_stream.o encrypt_stream_blowfish.o hasher.o hasher_md5.o hasher_ripemd160.o hasher_sha512.o hasher_whirlpool.o encrypt_stream_aes.o encrypt_stream_3des.o encrypt_stream_camellia.o
@@ -152,10 +153,12 @@ install:
 	test -e $(ETC)/entropy_broker.conf || cp entropy_broker.conf $(ETC)
 	test -e $(ETC)/entropy_broker.conf && cp entropy_broker.conf $(ETC)/entropy_broker.conf.dist
 	test -e $(ETC)/users.txt || (cp users.txt $(ETC) ; chmod 600 $(ETC)/users.txt)
-	mkdir -p $(MAN)/man/man8
-	cp doc/man/* $(MAN)/man/man8
+	mkdir -p $(MAN)/man8
+	cp doc/man/* $(MAN)/man8
 	mkdir -p $(DOC)/entropy_broker
 	cp *txt license.* $(DOC)/entropy_broker
+	mkdir -p $(WEB)
+	cp web/* $(WEB)
 
 install_redhat_init:
 	cp redhat/* /etc/init.d
@@ -173,6 +176,7 @@ package:
 	cp ComScire_R2000KU/*.[ch]pp ComScire_R2000KU/LICENSE eb-$(VERSION)/ComScire_R2000KU
 	tar cf - doc --exclude=.svn  | tar xvf - -C eb-$(VERSION)
 	tar cf - redhat --exclude=.svn  | tar xvf - -C eb-$(VERSION)
+	tar cf - web --exclude=.svn  | tar xvf - -C eb-$(VERSION)
 	tar czf eb-$(VERSION).tgz eb-$(VERSION)
 	rm -rf eb-$(VERSION)
 	#

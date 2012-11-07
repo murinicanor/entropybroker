@@ -15,6 +15,7 @@
 #include "http_request_t.h"
 #include "http_bundle.h"
 #include "http_file.h"
+#include "http_file_file.h"
 #include "http_file_root.h"
 #include "http_file_404.h"
 #include "http_file_version.h"
@@ -51,6 +52,7 @@ web_server::web_server(std::string listen_adapter, int listen_port)
 	add_object(new http_file_root());
 	add_object(new http_file_404());
 	add_object(new http_file_version());
+	add_object(new http_file_file("/stylesheet.css", "text/css", WEB_DIR "/stylesheet.css"));
 }
 
 web_server::~web_server()
