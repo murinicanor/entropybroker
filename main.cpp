@@ -173,9 +173,12 @@ int main(int argc, char *argv[])
 
 	set_signal_handlers();
 
-	start_web_server("0.0.0.0", 48923);
+	std::vector<client_t *> clients;
+	pthread_mutex_t clients_mutex;
 
-	main_loop(ppools, &config, eb_output_fips140, eb_output_scc, &pc);
+	start_web_server("0.0.0.0", 48923, &clients, &clients_mutex);
+
+	main_loop(&clients, &clients_mutex, ppools, &config, eb_output_fips140, eb_output_scc, &pc);
 
 	printf("Dumping pool contents to cache-file\n");
 	delete ppools;

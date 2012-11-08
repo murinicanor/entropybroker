@@ -48,4 +48,4 @@ typedef struct
 	unsigned char cmd;
 } msg_pair_t;
 
-void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc *eb_output_scc, pool_crypto *pc);
+void main_loop(std::vector<client_t *> *clients, pthread_mutex_t *clients_mutex, pools *ppools, config_t *config, fips140 *eb_output_fips140, scc *eb_output_scc, pool_crypto *pc);

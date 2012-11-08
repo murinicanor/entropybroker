@@ -12,11 +12,28 @@
 #include "error.h"
 #include "log.h"
 #include "utils.h"
+#include "hasher.h"
+#include "math.h"
+#include "stirrer.h"
+#include "random_source.h"
+#include "fips140.h"
+#include "scc.h"
+#include "hasher_type.h"
+#include "stirrer_type.h"
+#include "pool_crypto.h"
+#include "pool.h"
+#include "pools.h"
+#include "config.h"
+#include "encrypt_stream.h"
+#include "users.h"
+#include "statistics.h"
+#include "handle_client.h"
 #include "http_request_t.h"
 #include "http_bundle.h"
 #include "http_file.h"
 #include "http_file_file.h"
 #include "http_file_root.h"
+#include "http_file_stats.h"
 #include "http_file_404.h"
 #include "http_file_version.h"
 #include "http_server.h"
@@ -26,7 +43,7 @@ typedef struct
 {
 	web_server *p_server;
 	int fd;
-} client_t;
+} http_client_t;
 
 void *start_web_server_thread_wrapper(void *p)
 {
@@ -37,20 +54,21 @@ void *start_web_server_thread_wrapper(void *p)
 	return NULL;
 }
 
-void start_web_server(std::string listen_adapter, int listen_port)
+void start_web_server(std::string listen_adapter, int listen_port, std::vector<client_t *> *clients, pthread_mutex_t *clients_mutex)
 {
-	web_server *ws = new web_server(listen_adapter, listen_port);
+	web_server *ws = new web_server(listen_adapter, listen_port, clients, clients_mutex);
 
 	pthread_t thread;
 	pthread_check(pthread_create(&thread, NULL, start_web_server_thread_wrapper, ws), "pthread_create");
 }
 
-web_server::web_server(std::string listen_adapter, int listen_port)
+web_server::web_server(std::string listen_adapter, int listen_port, std::vector<client_t *> *clients_in, pthread_mutex_t *clients_mutex_in) : clients(clients_in), clients_mutex(clients_mutex_in)
 {
 	fd = start_listen(listen_adapter.c_str(), listen_port, 64);
 
 	add_object(new http_file_root());
 	add_object(new http_file_404());
+	add_object(new http_file_stats(clients, clients_mutex));
 	add_object(new http_file_version());
 	add_object(new http_file_file("/stylesheet.css", "text/css", WEB_DIR "/stylesheet.css"));
 }
@@ -75,7 +93,7 @@ void web_server::add_object(http_file *p)
 
 void * thread_wrapper_http_server(void *thread_data)
 {
-	client_t *p_data = reinterpret_cast<client_t *>(thread_data);
+	http_client_t *p_data = reinterpret_cast<http_client_t *>(thread_data);
 
 	http_server *hs = new http_server(p_data -> fd);
 
@@ -137,7 +155,7 @@ void web_server::run(void)
 
 		dolog(LOG_INFO, "web_server: connected with %s", host.c_str());
 
-		client_t *p_client = new client_t;
+		http_client_t *p_client = new http_client_t;
 		p_client -> p_server = this;
 		p_client -> fd = client_fd;
 

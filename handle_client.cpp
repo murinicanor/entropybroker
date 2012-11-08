@@ -564,9 +564,8 @@ void terminate_threads(std::vector<client_t *> *clients)
 	}
 }
 
-void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc *eb_output_scc, pool_crypto *pc)
+void main_loop(std::vector<client_t *> *clients, pthread_mutex_t *clients_mutex, pools *ppools, config_t *config, fips140 *eb_output_fips140, scc *eb_output_scc, pool_crypto *pc)
 {
-	std::vector<client_t *> clients;
 	double last_counters_reset = get_ts();
 	double last_statistics_emit = last_counters_reset;
 	event_state_t event_state;
@@ -610,11 +609,13 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 			time_left = mymin(time_left, dummy1_time);
 		}
 
-		for(unsigned int loop=0; loop<clients.size(); loop++)
+		my_mutex_lock(clients_mutex);
+		for(unsigned int loop=0; loop<clients -> size(); loop++)
 		{
-			FD_SET(clients.at(loop) -> to_main[0], &rfds);
-			max_fd = mymax(max_fd, clients.at(loop) -> to_main[0]);
+			FD_SET(clients -> at(loop) -> to_main[0], &rfds);
+			max_fd = mymax(max_fd, clients -> at(loop) -> to_main[0]);
 		}
+		my_mutex_unlock(clients_mutex);
 
 		FD_SET(listen_socket_fd, &rfds);
 		max_fd = mymax(max_fd, listen_socket_fd);
@@ -659,15 +660,16 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 			dolog(LOG_DEBUG, "select returned with -1, errno: %s (%d)", strerror(errno), errno);
 		}
 
+		my_mutex_lock(clients_mutex);
 		if ((last_counters_reset + double(config -> reset_counters_interval)) <= now || force_stats)
 		{
-			stats.emit_statistics_log(clients.size(), force_stats, config -> reset_counters_interval);
+			stats.emit_statistics_log(clients -> size(), force_stats, config -> reset_counters_interval);
 
 			if (!force_stats)
 			{
-				for(unsigned int loop=0; loop<clients.size(); loop++)
+				for(unsigned int loop=0; loop<clients -> size(); loop++)
 				{
-					client_t *p = clients.at(loop);
+					client_t *p = clients -> at(loop);
 
 					my_mutex_lock(&p -> stats_lck);
 					p -> bits_recv = p -> bits_sent = 0;
@@ -680,16 +682,16 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 
 		if ((config -> statistics_interval != 0 && (last_statistics_emit + double(config -> statistics_interval)) <= now) || force_stats)
 		{
-			stats.emit_statistics_file(clients.size());
+			stats.emit_statistics_file(clients -> size());
 
 			now = last_statistics_emit = get_ts();
 		}
 
 		if (force_stats)
 		{
-			for(unsigned int loop=0; loop<clients.size(); loop++)
+			for(unsigned int loop=0; loop<clients -> size(); loop++)
 			{
-				client_t *p = clients.at(loop);
+				client_t *p = clients -> at(loop);
 
 				my_mutex_lock(&p -> stats_lck);
 				dolog(LOG_DEBUG, "stats|%s (%s): %s, scc: %s | sent: %d, recv: %d | last msg: %ld seconds ago, %lds connected",
@@ -701,6 +703,7 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 
 			now = get_ts();
 		}
+		my_mutex_unlock(clients_mutex);
 
 		if (rc == 0)
 			continue;
@@ -713,40 +716,44 @@ void main_loop(pools *ppools, config_t *config, fips140 *eb_output_fips140, scc 
 				dolog(LOG_DEBUG, "main|added %d bits of event-entropy to pool", event_bits);
 		}
 
+		my_mutex_lock(clients_mutex);
 		std::vector<pthread_t *> delete_ids;
 		std::vector<msg_pair_t> msgs_clients;
 		std::vector<msg_pair_t> msgs_servers;
-		for(unsigned int loop=0; loop<clients.size(); loop++)
+		for(unsigned int loop=0; loop<clients -> size(); loop++)
 		{
 			// this way we go through each fd in the process_pipe_from_client_thread part
 			// so that we detect closed fds
-			if (rc > 0 && !FD_ISSET(clients.at(loop) -> to_main[0], &rfds))
+			if (rc > 0 && !FD_ISSET(clients -> at(loop) -> to_main[0], &rfds))
 				continue;
 
-			if (process_pipe_from_client_thread(clients.at(loop), &msgs_clients, &msgs_servers) == -1)
+			if (process_pipe_from_client_thread(clients -> at(loop), &msgs_clients, &msgs_servers) == -1)
 			{
-				dolog(LOG_INFO, "main|connection with %s/%s lost", clients.at(loop) -> host.c_str(), clients.at(loop) -> type.c_str());
+				dolog(LOG_INFO, "main|connection with %s/%s lost", clients -> at(loop) -> host.c_str(), clients -> at(loop) -> type.c_str());
 
-				delete_ids.push_back(&clients.at(loop) -> th);
+				delete_ids.push_back(&clients -> at(loop) -> th);
 			}
 		}
 
 		for(unsigned int loop=0; loop<delete_ids.size(); loop++)
-			forget_client_thread_id(&clients, delete_ids.at(loop), true);
+			forget_client_thread_id(clients, delete_ids.at(loop), true);
 
-		send_to_client_threads(&clients, &msgs_clients, false, &send_have_data, &send_need_data, &send_is_full);
-		send_to_client_threads(&clients, &msgs_servers, true, &send_have_data, &send_need_data, &send_is_full);
+		send_to_client_threads(clients, &msgs_clients, false, &send_have_data, &send_need_data, &send_is_full);
+		send_to_client_threads(clients, &msgs_servers, true, &send_have_data, &send_need_data, &send_is_full);
 
 		if (rc > 0 && FD_ISSET(listen_socket_fd, &rfds))
 		{
-			register_new_client(listen_socket_fd, &clients, user_map, config, ppools, &stats, eb_output_fips140, eb_output_scc);
+			register_new_client(listen_socket_fd, clients, user_map, config, ppools, &stats, eb_output_fips140, eb_output_scc);
 			send_have_data = send_need_data = send_is_full = false;
 		}
+		my_mutex_unlock(clients_mutex);
 	}
 
-	dolog(LOG_INFO, "Terminating %d threads...", clients.size());
+	my_mutex_lock(clients_mutex);
+	dolog(LOG_INFO, "Terminating %d threads...", clients -> size());
 
-	terminate_threads(&clients);
+	terminate_threads(clients);
+	my_mutex_unlock(clients_mutex);
 
 	delete user_map;
 
