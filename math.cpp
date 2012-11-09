@@ -4,11 +4,11 @@
 #include <stdlib.h>
 #include <arpa/inet.h>
 #include <string>
+#include <zlib.h>
 
 #include "error.h"
 #include "log.h"
 #include "utils.h"
-#include "zlib.h"
 #include "math.h"
 
 bit_count_estimator::bit_count_estimator(bit_count_estimator_type_t type_in)
