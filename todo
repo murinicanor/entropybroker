@@ -22,8 +22,8 @@
 - calc_time_left debuggen of 't vaak voorkomt dat time_left < 0
 
 - webserver
-  - per client stats in client_t -> stats ook updaten
-  - kloppen de scc stats wel?
+  - grafiekje aantal connecties gemiddeld
+  - bits uit/in gemiddeld grafiek
 
 - hash for protocol (user password): Use bcrypt or PBKDF2 exclusively to hash anything you need to be secure.
 
