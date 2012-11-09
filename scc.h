@@ -20,5 +20,5 @@ public:
 
 	void add(unsigned char byte);
 	bool is_ok();
-	char *stats();
+	std::string stats();
 };

@@ -103,6 +103,15 @@ int send_need_data(int fd, config_t *config)
 	return WRITE_TO(fd, buffer, 8, config -> communication_timeout) == 8 ? 0 : -1;
 }
 
+void update_client_fips140_scc(client_t *p, unsigned char *data, int n)
+{
+	for(int index=0; index<n; index++)
+	{
+		p -> pfips140 -> add(data[index]);
+		p -> pscc -> add(data[index]);
+	}
+}
+
 int do_client_get(client_t *client, bool *no_bits)
 {
 	int transmit_size;
@@ -190,15 +199,16 @@ int do_client_get(client_t *client, bool *no_bits)
 	printf("encr: "); hexdump(ent_buffer, 16);
 #endif
 
-	free_locked(temp_buffer, cur_n_bytes + 1);
-
 	// update statistics for accounting
 	my_mutex_lock(&client -> stats_lck);
+	update_client_fips140_scc(client, temp_buffer, cur_n_bytes);
 	client -> bits_sent += cur_n_bits;
 	my_mutex_unlock(&client -> stats_lck);
 
 	client -> stats_user -> track_sents(cur_n_bits);
 	client -> stats_glob -> track_sents(cur_n_bits);
+
+	free_locked(temp_buffer, cur_n_bytes + 1);
 
 	transmit_size = 4 + 4 + out_len;
 	unsigned char *output_buffer = reinterpret_cast<unsigned char *>(malloc(transmit_size));
@@ -329,6 +339,8 @@ int do_client_put(client_t *client, bool *new_bits, bool *is_full)
 			dolog(LOG_DEBUG, "put|%s %d bits mixed into pools", client -> host.c_str(), n_bits_added);
 
 		my_mutex_lock(&client -> stats_lck);
+		update_client_fips140_scc(client, entropy_data, entropy_data_len);
+
 		client -> bits_recv += n_bits_added;
 		my_mutex_unlock(&client -> stats_lck);
 

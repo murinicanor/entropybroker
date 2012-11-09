@@ -101,8 +101,10 @@ http_bundle * http_file_stats::do_request(http_request_t request_type, std::stri
 			content += format("<TR><TD>avg bits/get:</TD><TD>%f</TD></TR>\n", double(total_bits_sent) / double(n_sent));
 			content += format("<TR><TD>get bps:</TD><TD>%f</TD></TR>\n", double(total_bits_sent) / (now - pcs -> get_since_ts()));
 
+			my_mutex_lock(&p -> stats_lck);
 			content += std::string("<TR><TD>FIPS140 stats:</TD><TD>") + p -> pfips140 -> stats() + "</TD></TR>\n";
 			content += std::string("<TR><TD>SCC stats:</TD><TD>") + p -> pscc -> stats() + "</TD></TR>\n";
+			my_mutex_unlock(&p -> stats_lck);
 
 			content += "</TABLE>\n";
 		}

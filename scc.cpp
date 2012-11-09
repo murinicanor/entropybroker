@@ -2,6 +2,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
+#include <string>
 #include <stdio.h>
 
 #include "error.h"
@@ -103,11 +104,11 @@ bool scc::is_ok()
 	return rc;
 }
 
-char *scc::stats()
+std::string scc::stats()
 {
-	static char stats_buffer[4096];
+	char stats_buffer[128];
 
-	snprintf(stats_buffer, sizeof stats_buffer, "%f", get_cur_scc());
+	snprintf(stats_buffer, sizeof stats_buffer, "%f (%d)", get_cur_scc(), bytes_in);
 
 	return stats_buffer;
 }
