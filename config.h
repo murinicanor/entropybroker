@@ -48,6 +48,9 @@ typedef struct
 	std::string stream_cipher, mac_hasher, hash_hasher;
 
 	std::string *user_map;
+
+	std::string webserver_interface;
+	int webserver_port;
 } config_t;
 
 void load_config(const char *config, config_t *pconfig);

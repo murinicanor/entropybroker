@@ -99,6 +99,9 @@ void load_config(const char *config, config_t *pconfig)
 	pconfig -> mac_hasher = "md5";
 	pconfig -> hash_hasher = "sha512";
 
+	pconfig -> webserver_interface = "0.0.0.0";
+	pconfig -> webserver_port = -1;
+
         for(;;)
         {
 		double parvald;
@@ -177,6 +180,10 @@ void load_config(const char *config, config_t *pconfig)
 			pconfig -> listen_port = parval;
 		else if (strcmp(cmd, "listen_queue_size") == 0)
 			pconfig -> listen_queue_size = parval;
+		else if (strcmp(cmd, "webserver_interface") == 0)
+			pconfig -> webserver_interface = par;
+		else if (strcmp(cmd, "webserver_port") == 0)
+			pconfig -> webserver_port = parval;
 		else if (strcmp(cmd, "disable_nagle") == 0)
 			pconfig -> disable_nagle = config_yes_no(par);
 		else if (strcmp(cmd, "enable_keepalive") == 0)

@@ -178,7 +178,8 @@ int main(int argc, char *argv[])
 
 	statistics stats(config.stats_file, eb_output_fips140, eb_output_scc, ppools);
 
-	start_web_server("0.0.0.0", 48923, &clients, &clients_mutex, &stats, eb_output_fips140, eb_output_scc);
+	if (config.webserver_port >= 1)
+		start_web_server(config.webserver_interface, config.webserver_port, &clients, &clients_mutex, ppools, &stats, eb_output_fips140, eb_output_scc);
 
 	main_loop(&clients, &clients_mutex, ppools, &config, eb_output_fips140, eb_output_scc, &pc, &stats);
 

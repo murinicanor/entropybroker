@@ -766,3 +766,21 @@ bool pools::all_pools_full(double max_duration)
 
 	return rc;
 }
+
+int pools::get_memory_pool_count()
+{
+	list_rlock();
+	int n = pool_vector.size();
+	list_runlock();
+
+	return n;
+}
+
+int pools::get_disk_pool_count()
+{
+	list_rlock();
+	int n = cache_list.size();
+	list_runlock();
+
+	return n;
+}

@@ -54,21 +54,21 @@ void *start_web_server_thread_wrapper(void *p)
 	return NULL;
 }
 
-void start_web_server(std::string listen_adapter, int listen_port, std::vector<client_t *> *clients, pthread_mutex_t *clients_mutex, statistics *ps, fips140 *pfips140, scc *pscc)
+void start_web_server(std::string listen_adapter, int listen_port, std::vector<client_t *> *clients, pthread_mutex_t *clients_mutex, pools *ppools, statistics *ps, fips140 *pfips140, scc *pscc)
 {
-	web_server *ws = new web_server(listen_adapter, listen_port, clients, clients_mutex, ps, pfips140, pscc);
+	web_server *ws = new web_server(listen_adapter, listen_port, clients, clients_mutex, ppools, ps, pfips140, pscc);
 
 	pthread_t thread;
 	pthread_check(pthread_create(&thread, NULL, start_web_server_thread_wrapper, ws), "pthread_create");
 }
 
-web_server::web_server(std::string listen_adapter, int listen_port, std::vector<client_t *> *clients, pthread_mutex_t *clients_mutex, statistics *ps, fips140 *pfips140, scc *pscc)
+web_server::web_server(std::string listen_adapter, int listen_port, std::vector<client_t *> *clients, pthread_mutex_t *clients_mutex, pools *ppools, statistics *ps, fips140 *pfips140, scc *pscc)
 {
 	fd = start_listen(listen_adapter.c_str(), listen_port, 64);
 
 	add_object(new http_file_root());
 	add_object(new http_file_404());
-	add_object(new http_file_stats(clients, clients_mutex, ps, pfips140, pscc));
+	add_object(new http_file_stats(clients, clients_mutex, ppools, ps, pfips140, pscc));
 	add_object(new http_file_version());
 	add_object(new http_file_file("/stylesheet.css", "text/css", WEB_DIR "/stylesheet.css"));
 }

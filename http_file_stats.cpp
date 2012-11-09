@@ -25,7 +25,7 @@
 #include "http_file.h"
 #include "http_file_stats.h"
 
-http_file_stats::http_file_stats(std::vector<client_t *> *clients_in, pthread_mutex_t *clients_mutex_in, statistics *ps_in, fips140 *pfips140_in, scc *pscc_in) : clients(clients_in), clients_mutex(clients_mutex_in), ps(ps_in), pfips140(pfips140_in), pscc(pscc_in)
+http_file_stats::http_file_stats(std::vector<client_t *> *clients_in, pthread_mutex_t *clients_mutex_in, pools *ppools_in, statistics *ps_in, fips140 *pfips140_in, scc *pscc_in) : clients(clients_in), clients_mutex(clients_mutex_in), ppools(ppools_in), ps(ps_in), pfips140(pfips140_in), pscc(pscc_in)
 {
 }
 
@@ -111,6 +111,7 @@ http_bundle * http_file_stats::do_request(http_request_t request_type, std::stri
 	}
 	else
 	{
+		// PER USER STATS
 		content += "<TABLE>\n";
 		content += "<TR><TH>user</TH><TH>host</TH><TH>type</TH><TH>is server</TH><TH>connected since</TH><TH>bits sent</TH><TH>bits recv</TH></TR>\n";
 
@@ -148,8 +149,10 @@ http_bundle * http_file_stats::do_request(http_request_t request_type, std::stri
 		my_mutex_unlock(clients_mutex);
 
 		content += "</TABLE>\n";
+		content += format("Number of connected clients/servers: %d<BR>\n", clients -> size());
 		content += "<BR>\n";
 
+		// GLOBAL STATS
 		content += "<TABLE>\n";
 		content += "<TR><TD>running since:</TD><TD>" + time_to_str((time_t)ps -> get_start_ts()) + "</TD></TR>\n";
 		content += format("<TR><TD>duration:</TD><TD>%fs</TD></TR>\n", now - ps -> get_start_ts());
@@ -182,6 +185,17 @@ http_bundle * http_file_stats::do_request(http_request_t request_type, std::stri
 		content += std::string("<TR><TD>FIPS140 stats:</TD><TD>") + pfips140 -> stats() + "</TD></TR>\n";
 		content += std::string("<TR><TD>SCC stats:</TD><TD>") + pscc -> stats() + "</TD></TR>\n";
 
+		content += "</TABLE>\n";
+		content += "<BR>\n";
+
+		// POOL STATS
+		content += "<TABLE>\n";
+		int bit_sum = ppools -> get_bit_sum(1.0);
+		content += format("<TR><TD>in memory bit count:</TD><TD>%d</TD></TR>\n", bit_sum);
+		int mem_pools = ppools -> get_memory_pool_count();
+		content += format("<TR><TD>pools in memory:</TD><TD>%d</TD></TR>\n", mem_pools);
+		content += format("<TR><TD>avg bits/mem pool:</TD><TD>%f (def max: %)</TD></TR>\n", double(bit_sum) / double(mem_pools), DEFAULT_POOL_SIZE_BITS);
+		content += format("<TR><TD>pool files on disk:</TD><TD>%d</TD></TR>\n", ppools -> get_disk_pool_count());
 		content += "</TABLE>\n";
 	}
 

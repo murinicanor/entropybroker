@@ -44,4 +44,6 @@ public:
 	int get_bit_sum(double max_duration);
 	int add_event(long double event, unsigned char *event_data, int n_event_data, double max_time, pool_crypto *pc);
 	bool all_pools_full(double max_duration);
+	int get_memory_pool_count();
+	int get_disk_pool_count();
 };
