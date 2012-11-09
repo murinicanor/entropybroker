@@ -792,3 +792,16 @@ std::string format(const char *fmt, ...)
 
 	return result;
 }
+
+std::string time_to_str(time_t t)
+{
+	if (t == 0)
+		return "n/a";
+
+	struct tm *tm = localtime(&t);
+
+	char time_buffer[128];
+	strftime(time_buffer, sizeof time_buffer, "%a, %d %b %y %T %z", tm);
+
+	return std::string(time_buffer);
+}

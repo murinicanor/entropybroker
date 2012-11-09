@@ -345,6 +345,9 @@ int do_client(client_t *client, bool *no_bits, bool *new_bits, bool *is_full)
 {
 	char cmd[4];
 
+	double now = get_ts();
+	client -> last_message = now;
+
 	int rc = READ_TO(client -> socket_fd, cmd, 4, client -> config -> communication_timeout);
 	if (rc != 4)
 	{
@@ -358,6 +361,8 @@ int do_client(client_t *client, bool *no_bits, bool *new_bits, bool *is_full)
 	}
 	else if (memcmp(cmd, "0002", 4) == 0)	// PUT bits
 	{
+		client -> last_put_message = now;
+
 		return do_client_put(client, new_bits, is_full);
 	}
 	else

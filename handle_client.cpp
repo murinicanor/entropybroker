@@ -422,9 +422,9 @@ void register_new_client(int listen_socket_fd, std::vector<client_t *> *clients,
 		p -> pscc -> set_threshold(config -> scc_threshold);
 
 		double now = get_ts();
-		p -> last_message = now;
 		p -> connected_since = now;
-		p -> last_put_message = now;
+		p -> last_message = 0;
+		p -> last_put_message = 0;
 
 		p -> ivec_counter = 0;
 		p -> password = NULL;

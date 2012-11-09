@@ -70,14 +70,17 @@ http_bundle * http_file_stats::do_request(http_request_t request_type, std::stri
 			content += std::string("<TR><TD>type:</TD><TD>") + p -> type + "</TD></TR>\n";
 			content += std::string("<TR><TD>is server:</TD><TD>") + (p -> is_server ? "yes" : "no") + "</TD></TR>\n";
 
-			time_t t = (time_t)p -> connected_since;
-			struct tm *tm = localtime(&t);
-			char time_buffer[128];
-			strftime(time_buffer, sizeof time_buffer, "%a, %d %b %y %T %z", tm);
-			content += std::string("<TR><TD>connected since:</TD><TD>") + time_buffer + "</TD></TR>\n";
+			content += "<TR><TD>connected since:</TD><TD>" + time_to_str((time_t)p -> connected_since) + "</TD></TR>\n";
+			content += "<TR><TD>last message:</TD><TD>" + time_to_str((time_t)p -> last_message) + "</TD></TR>\n";
+			content += "<TR><TD>last put message:</TD><TD>" + time_to_str((time_t)p -> last_put_message) + "</TD></TR>\n";
 
-			content += format("<TR><TD>bits sent:</TD><TD>%d</TD></TR>", p -> bits_sent);
-			content += format("<TR><TD>bits recv:</TD><TD>%d</TD></TR>", p -> bits_recv);
+			my_mutex_lock(&p -> stats_lck);
+			content += format("<TR><TD>bits sent:</TD><TD>%d</TD></TR>\n", p -> bits_sent);
+			content += format("<TR><TD>bits recv:</TD><TD>%d</TD></TR>\n", p -> bits_recv);
+			my_mutex_unlock(&p -> stats_lck);
+
+			content += std::string("<TR><TD>FIPS140 stats:</TD><TD>") + p -> pfips140 -> stats() + "</TD></TR>\n";
+			content += std::string("<TR><TD>SCC stats:</TD><TD>") + p -> pscc -> stats() + "</TD></TR>\n";
 
 			content += "</TABLE>\n";
 		}
@@ -106,16 +109,14 @@ http_bundle * http_file_stats::do_request(http_request_t request_type, std::stri
 			content += p -> is_server ? "yes" : "no";
 			content += "</TD><TD>";
 
-			time_t t = (time_t)p -> connected_since;
-			struct tm *tm = localtime(&t);
-			char time_buffer[128];
-			strftime(time_buffer, sizeof time_buffer, "%a, %d %b %y %T %z", tm);
-			content += time_buffer;
+			content += time_to_str((time_t)p -> connected_since);
 
 			content += "</TD><TD>";
+			my_mutex_lock(&p -> stats_lck);
 			content += format("%d", p -> bits_sent);
 			content += "</TD><TD>";
 			content += format("%d", p -> bits_recv);
+			my_mutex_unlock(&p -> stats_lck);
 			content += "</TD></TR>\n";
 		}
 		my_mutex_unlock(clients_mutex);
