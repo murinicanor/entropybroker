@@ -19,6 +19,7 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 
+#include "defines.h"
 #include "error.h"
 #include "random_source.h"
 #include "utils.h"

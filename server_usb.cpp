@@ -20,6 +20,7 @@ extern "C" {
 const char *server_type = "server_usb v" VERSION;
 const char *pid_file = PID_DIR "/server_usb.pid";
 
+#include "defines.h"
 #include "error.h"
 #include "random_source.h"
 #include "utils.h"

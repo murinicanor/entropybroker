@@ -22,6 +22,7 @@
 #include <netdb.h>
 #include <pthread.h>
 
+#include "defines.h"
 #include "error.h"
 #include "random_source.h"
 #include "utils.h"

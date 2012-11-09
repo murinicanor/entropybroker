@@ -22,6 +22,7 @@
 const char *server_type = "server_ext_proc v" VERSION;
 const char *pid_file = PID_DIR "/server_ext_proc.pid";
 
+#include "defines.h"
 #include "error.h"
 #include "random_source.h"
 #include "utils.h"

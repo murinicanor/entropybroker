@@ -17,6 +17,7 @@
 const char *server_type = "server_stream v" VERSION;
 const char *pid_file = PID_DIR "/server_stream.pid";
 
+#include "defines.h"
 #include "error.h"
 #include "random_source.h"
 #include "utils.h"

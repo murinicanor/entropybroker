@@ -24,6 +24,7 @@
 const char *server_type = "eb_server_audio v" VERSION;
 const char *pid_file = PID_DIR "/eb_server_audio.pid";
 
+#include "defines.h"
 #include "error.h"
 #include "random_source.h"
 #include "utils.h"

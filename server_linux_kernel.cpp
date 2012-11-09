@@ -15,6 +15,7 @@
 const char *server_type = "server_kernel v" VERSION;
 const char *pid_file = PID_DIR "/server_kernel.pid";
 
+#include "defines.h"
 #include "error.h"
 #include "random_source.h"
 #include "utils.h"
