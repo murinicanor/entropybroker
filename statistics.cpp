@@ -171,7 +171,7 @@ void statistics::emit_statistics_file(int n_clients)
 		lock_all();
 		fprintf(fh, "%f %lld %lld %d %d %d %d %f %s\n", now, total_recv, total_sent,
 				total_recv_requests, total_sent_requests,
-				n_clients, total_n_bits, proc_usage, pscc -> stats());
+				n_clients, total_n_bits, proc_usage, pscc -> stats().c_str());
 		unlock_all();
 
 		fclose(fh);

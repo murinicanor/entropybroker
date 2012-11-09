@@ -709,8 +709,10 @@ void main_loop(std::vector<client_t *> *clients, pthread_mutex_t *clients_mutex,
 				my_mutex_lock(&p -> stats_lck);
 				dolog(LOG_DEBUG, "stats|%s (%s): %s, scc: %s | sent: %d, recv: %d | last msg: %ld seconds ago, %lds connected",
 						p -> host.c_str(), p -> type.c_str(), p -> pfips140 -> stats(),
-						p -> pscc -> stats(),
-						p -> bits_sent, p -> bits_recv, (long int)(now - p -> stats_user -> get_last_msg_ts()), (long int)(now - p -> stats_user -> get_since_ts()));
+						p -> pscc -> stats().c_str(),
+						p -> bits_sent, p -> bits_recv,
+						(long int)(now - p -> stats_user -> get_last_msg_ts()),
+						(long int)(now - p -> stats_user -> get_since_ts()));
 				my_mutex_unlock(&p -> stats_lck);
 			}
 
