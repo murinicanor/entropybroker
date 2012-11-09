@@ -111,10 +111,13 @@ void * thread_wrapper_http_server(void *thread_data)
 	// lookup_url -> file
 	http_file *obj = p_data -> p_server -> lookup_url(url); // not allocated, don't free it
 	if (!obj)
+	{
+		dolog(LOG_INFO, "URL not found");
 		obj = p_data -> p_server -> lookup_url("/404.html"); // not allocated, don't free it
+	}
 
 	if (!obj)
-		dolog(LOG_DEBUG, "URL not found");
+		dolog(LOG_INFO, "No object applicable found");
 	else
 	{
 		http_bundle *response = obj -> do_request(request_type, url, request_details);
