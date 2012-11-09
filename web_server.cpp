@@ -100,7 +100,7 @@ void * thread_wrapper_http_server(void *thread_data)
 
 	// get url
 	std::string url = hs -> get_request_url();
-	dolog(LOG_DEBUG, "Processing url: %s", url.c_str());
+	dolog(LOG_INFO, "Processing url: %s", url.c_str());
 
 	// get request type
 	http_request_t request_type = hs -> get_request_type();
