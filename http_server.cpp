@@ -150,6 +150,8 @@ void http_server::send_response(int status_code, std::vector<std::string> *heade
 		}
 	}
 	if (ok)
+		ok = send(format("Expires: Fri, 09 Nov 2012 14:55:30 GMT\r\n");
+	if (ok)
 		ok = send(format("Content-Length: %d\r\n", response -> get_data_len()).c_str());
 	if (ok)
 		ok = send("\r\n");
