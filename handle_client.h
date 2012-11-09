@@ -12,6 +12,7 @@ typedef struct
 
 	int socket_fd;
 	std::string host, type;
+	long long int id;
 	bool is_server;
 	int max_bits_per_interval;
 	bool allow_prng;
@@ -48,4 +49,5 @@ typedef struct
 	unsigned char cmd;
 } msg_pair_t;
 
+client_t *find_client_by_id(std::vector<client_t *> *clients, long long int id_in);
 void main_loop(std::vector<client_t *> *clients, pthread_mutex_t *clients_mutex, pools *ppools, config_t *config, fips140 *eb_output_fips140, scc *eb_output_scc, pool_crypto *pc);

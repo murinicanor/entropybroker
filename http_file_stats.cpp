@@ -1,3 +1,4 @@
+#include <map>
 #include <string>
 #include <time.h>
 #include <vector>
@@ -42,42 +43,86 @@ std::string http_file_stats::get_meta_type()
 	return "text/html";
 }
 
-http_bundle * http_file_stats::do_request(http_request_t request_type, http_bundle *request_details)
+http_bundle * http_file_stats::do_request(http_request_t request_type, std::string request_url, http_bundle *request_details)
 {
+	std::map<std::string, std::string> request_parameters = split_parameters(request_url);
+	std::map<std::string, std::string>::iterator it = request_parameters.find("id");
+	long int id = -1;
+	if (it != request_parameters.end())
+		id = atoll(it -> second.c_str());
+
 	std::vector<std::string> reply_headers;
 
 	std::string content = "<HTML><HEAD><link rel=\"stylesheet\" type=\"text/css\" media=\"screen\" href=\"stylesheet.css\"/></HEAD><BODY>\n";
-	content += "<TABLE>\n";
-	content += "<TR><TH>user</TH><TH>host</TH><TH>type</TH><TH>is server</TH><TH>connected since</TH><TH>bits sent</TH><TH>bits recv</TH></TR>\n";
 
-	for(unsigned int index=0; index<clients -> size(); index++)
+	if (id > 0)
 	{
-		client_t *p = clients -> at(index);
+		my_mutex_lock(clients_mutex);
 
-		content += "<TR><TD>";
-		content += p -> username;
-		content += "</TD><TD>";
-		content += p -> host;
-		content += "</TD><TD>";
-		content += p -> type;
-		content += "</TD><TD>";
-		content += p -> is_server ? "yes" : "no";
-		content += "</TD><TD>";
+		client_t *p = find_client_by_id(clients, id);
+		if (!p)
+			content += format("%lld is an unknown client id", id);
+		else
+		{
+			content += "<TABLE>\n";
+			content += std::string("<TR><TD>username:</TD><TD>") + p -> username + "</TD></TR>\n";
+			content += std::string("<TR><TD>host:</TD><TD>") + p -> host + "</TD></TR>\n";
+			content += std::string("<TR><TD>type:</TD><TD>") + p -> type + "</TD></TR>\n";
+			content += std::string("<TR><TD>is server:</TD><TD>") + (p -> is_server ? "yes" : "no") + "</TD></TR>\n";
 
-		time_t t = (time_t)p -> connected_since;
-		struct tm *tm = localtime(&t);
-		char time_buffer[128];
-		strftime(time_buffer, sizeof time_buffer, "%a, %d %b %y %T %z", tm);
-		content += time_buffer;
+			time_t t = (time_t)p -> connected_since;
+			struct tm *tm = localtime(&t);
+			char time_buffer[128];
+			strftime(time_buffer, sizeof time_buffer, "%a, %d %b %y %T %z", tm);
+			content += std::string("<TR><TD>connected since:</TD><TD>") + time_buffer + "</TD></TR>\n";
 
-		content += "</TD><TD>";
-		content += format("%d", p -> bits_sent);
-		content += "</TD><TD>";
-		content += format("%d", p -> bits_recv);
-		content += "</TD></TR>\n";
+			content += format("<TR><TD>bits sent:</TD><TD>%d</TD></TR>", p -> bits_sent);
+			content += format("<TR><TD>bits recv:</TD><TD>%d</TD></TR>", p -> bits_recv);
+
+			content += "</TABLE>\n";
+		}
+
+		my_mutex_unlock(clients_mutex);
+	}
+	else
+	{
+		content += "<TABLE>\n";
+		content += "<TR><TH>user</TH><TH>host</TH><TH>type</TH><TH>is server</TH><TH>connected since</TH><TH>bits sent</TH><TH>bits recv</TH></TR>\n";
+
+		my_mutex_lock(clients_mutex);
+		for(unsigned int index=0; index<clients -> size(); index++)
+		{
+			client_t *p = clients -> at(index);
+
+			content += "<TR><TD>";
+			content += p -> username;
+			content += "</TD><TD><A HREF=\"stats.html?id=";
+			content += format("%d", p -> id);
+			content += "\">";
+			content += p -> host;
+			content += "</A></TD><TD>";
+			content += p -> type;
+			content += "</TD><TD>";
+			content += p -> is_server ? "yes" : "no";
+			content += "</TD><TD>";
+
+			time_t t = (time_t)p -> connected_since;
+			struct tm *tm = localtime(&t);
+			char time_buffer[128];
+			strftime(time_buffer, sizeof time_buffer, "%a, %d %b %y %T %z", tm);
+			content += time_buffer;
+
+			content += "</TD><TD>";
+			content += format("%d", p -> bits_sent);
+			content += "</TD><TD>";
+			content += format("%d", p -> bits_recv);
+			content += "</TD></TR>\n";
+		}
+		my_mutex_unlock(clients_mutex);
+
+		content += "</TABLE>\n";
 	}
 
-	content += "</TABLE>\n";
 	content += "</BODY></HTML>\n";
 
 	return new http_bundle(reply_headers, content.c_str());

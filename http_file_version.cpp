@@ -1,3 +1,4 @@
+#include <map>
 #include <string>
 #include <vector>
 
@@ -24,7 +25,7 @@ std::string http_file_version::get_meta_type()
 	return "text/html";
 }
 
-http_bundle * http_file_version::do_request(http_request_t request_type, http_bundle *request_details)
+http_bundle * http_file_version::do_request(http_request_t request_type, std::string request_url, http_bundle *request_details)
 {
 	std::vector<std::string> reply_headers;
 

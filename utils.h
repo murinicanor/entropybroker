@@ -47,6 +47,7 @@ bool send_uint(int fd, unsigned int value, double to);
 void *malloc_locked(size_t n);
 void free_locked(void *p, size_t n);
 std::string format(const char *fmt, ...);
+int get_local_port(int fd);
 
 void my_Assert(bool flag, int line, const char *file);
 #define my_assert(x) my_Assert(x, __LINE__,  __FILE__)

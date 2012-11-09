@@ -22,6 +22,7 @@
 - calc_time_left debuggen of 't vaak voorkomt dat time_left < 0
 
 - webserver
+  - per client stats in client_t -> stats ook updaten
 
 - hash for protocol (user password): Use bcrypt or PBKDF2 exclusively to hash anything you need to be secure.
 

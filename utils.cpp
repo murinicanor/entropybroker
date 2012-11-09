@@ -535,6 +535,17 @@ void set_fd_nonblocking(int fd)
 		error_exit("problem setting fd %d non-blocking");
 }
 
+int get_local_port(int fd)
+{
+	struct sockaddr_in6 addr;
+	socklen_t addr_len = sizeof addr;
+
+	if (getsockname(fd, (struct sockaddr *)&addr, &addr_len) == -1)
+		return -1;
+
+	return ntohs(addr.sin6_port);
+}
+
 std::string get_endpoint_name(int fd)
 {
 	char buffer[4096] = { "?" };

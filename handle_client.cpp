@@ -46,6 +46,8 @@
 const char *pipe_cmd_str[] = { NULL, "have data (1)", "need data (2)", "is full (3)", "quit" };
 extern const char *pid_file;
 
+long long int client_id = 1;
+
 void forget_client_index(std::vector<client_t *> *clients, int nr, bool force)
 {
 	client_t *p = clients -> at(nr);
@@ -78,6 +80,17 @@ void forget_client_index(std::vector<client_t *> *clients, int nr, bool force)
 
 	delete p;
 	clients -> erase(clients -> begin() + nr);
+}
+
+client_t *find_client_by_id(std::vector<client_t *> *clients, long long int id_in)
+{
+	for(unsigned int index=0; index<clients -> size(); index++)
+	{
+		if (clients -> at(index) -> id == id_in)
+			return clients -> at(index);
+	}
+
+	return NULL;
 }
 
 void forget_client_thread_id(std::vector<client_t *> *clients, pthread_t *tid, bool force)
@@ -391,6 +404,8 @@ void register_new_client(int listen_socket_fd, std::vector<client_t *> *clients,
 
 		p -> username = NULL;
 		p -> password = NULL;
+
+		p -> id = client_id++;
 
 		p -> socket_fd = new_socket_fd;
 		p -> host = host;

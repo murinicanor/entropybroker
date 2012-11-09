@@ -116,7 +116,7 @@ void * thread_wrapper_http_server(void *thread_data)
 		dolog(LOG_DEBUG, "URL not found");
 	else
 	{
-		http_bundle *response = obj -> do_request(request_type, request_details);
+		http_bundle *response = obj -> do_request(request_type, url, request_details);
 
 		std::vector<std::string> headers;
 		headers.push_back(("Content-Type: " + obj -> get_meta_type()).c_str());
@@ -165,6 +165,10 @@ void web_server::run(void)
 
 http_file * web_server::lookup_url(std::string url)
 {
+	unsigned int parameters_pos = url.find('?');
+	if (parameters_pos != std::string::npos)
+		url = url.substr(0, parameters_pos);
+
 	std::map<std::string, http_file *>::iterator index = objects.find(url);
 
 	if (index != objects.end())

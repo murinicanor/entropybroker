@@ -12,5 +12,5 @@ public:
 
 	std::string get_meta_type();
 
-	http_bundle * do_request(http_request_t request_type, http_bundle *request_details);
+	http_bundle * do_request(http_request_t request_type, std::string request_url, http_bundle *request_details);
 };

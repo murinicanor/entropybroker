@@ -1,3 +1,4 @@
+#include <map>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <errno.h>
@@ -84,7 +85,7 @@ void http_file_file::load_file(unsigned char **p, int *len)
 	}
 }
 
-http_bundle * http_file_file::do_request(http_request_t request_type, http_bundle *request_details)
+http_bundle * http_file_file::do_request(http_request_t request_type, std::string request_url, http_bundle *request_details)
 {
 	unsigned char *data = NULL;
 	int data_len = 0;
