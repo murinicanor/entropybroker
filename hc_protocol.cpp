@@ -136,8 +136,8 @@ int do_client_get(client_t *client, bool *no_bits)
 	dolog(LOG_DEBUG, "get|%s is allowed to now receive %d bits", client -> host.c_str(), cur_n_bits);
 	if (cur_n_bits == 0)
 	{
-		client -> stats -> inc_n_times_quota();
-		return send_denied_quota(client -> socket_fd, client -> stats, client -> config);
+		client -> stats_user -> inc_n_times_quota();
+		return send_denied_quota(client -> socket_fd, client -> stats_glob, client -> config);
 	}
 	if (cur_n_bits < 0)
 		error_exit("cur_n_bits < 0");
@@ -154,8 +154,8 @@ int do_client_get(client_t *client, bool *no_bits)
 
 		dolog(LOG_WARNING, "get|%s no bits in pools, sending deny", client -> host.c_str());
 		*no_bits = true;
-		client -> stats -> inc_n_times_empty();
-		return send_denied_empty(client -> socket_fd, client -> stats, client -> config);
+		client -> stats_user -> inc_n_times_empty();
+		return send_denied_empty(client -> socket_fd, client -> stats_glob, client -> config);
 	}
 
 	if (cur_n_bits < 0)
@@ -197,7 +197,8 @@ int do_client_get(client_t *client, bool *no_bits)
 	client -> bits_sent += cur_n_bits;
 	my_mutex_unlock(&client -> stats_lck);
 
-	client -> stats -> track_sents(cur_n_bits);
+	client -> stats_user -> track_sents(cur_n_bits);
+	client -> stats_glob -> track_sents(cur_n_bits);
 
 	transmit_size = 4 + 4 + out_len;
 	unsigned char *output_buffer = reinterpret_cast<unsigned char *>(malloc(transmit_size));
@@ -236,9 +237,9 @@ int do_client_put(client_t *client, bool *new_bits, bool *is_full)
 	{
 		*is_full = true;
 
-		client -> stats -> inc_n_times_full();
+		client -> stats_user -> inc_n_times_full();
 
-		double last_submit_ago = get_ts() - client -> last_put_message;
+		double last_submit_ago = get_ts() - client -> stats_glob -> get_last_put_msg_ts();
 		char full_allow_interval_submit = last_submit_ago >= client -> config -> when_pools_full_allow_submit_interval;
 
 		if (!(client -> config -> add_entropy_even_if_all_full || full_allow_interval_submit))
@@ -248,7 +249,7 @@ int do_client_put(client_t *client, bool *new_bits, bool *is_full)
 			if (READ_TO(client -> socket_fd, dummy_buffer, 4, client -> config -> communication_timeout) != 4)	// flush number of bits
 				return -1;
 
-			return send_denied_full(client -> socket_fd, client -> stats, client -> config, client -> host);
+			return send_denied_full(client -> socket_fd, client -> stats_glob, client -> config, client -> host);
 		}
 
 		if (full_allow_interval_submit)
@@ -321,8 +322,6 @@ int do_client_put(client_t *client, bool *new_bits, bool *is_full)
 		dolog(LOG_WARNING, "Hash mismatch in retrieved entropy data!");
 	else
 	{
-		client -> last_put_message = get_ts();
-
 		int n_bits_added = client -> ppools -> add_bits_to_pools(entropy_data, entropy_data_len, client -> ignore_rngtest_fips140, client -> pfips140, client -> ignore_rngtest_scc, client -> pscc, double(client -> config -> communication_timeout) * 0.9, client -> pc);
 		if (n_bits_added == -1)
 			dolog(LOG_CRIT, "put|%s error while adding data to pools", client -> host.c_str());
@@ -333,7 +332,8 @@ int do_client_put(client_t *client, bool *new_bits, bool *is_full)
 		client -> bits_recv += n_bits_added;
 		my_mutex_unlock(&client -> stats_lck);
 
-		client -> stats -> track_recvs(n_bits_added);
+		client -> stats_user -> track_recvs(n_bits_added);
+		client -> stats_glob -> track_recvs(n_bits_added);
 
 		*new_bits = true;
 	}
@@ -352,7 +352,9 @@ int do_client(client_t *client, bool *no_bits, bool *new_bits, bool *is_full)
 	char cmd[4];
 
 	double now = get_ts();
-	client -> last_message = now;
+
+	client -> stats_user -> inc_msg_cnt();
+	client -> stats_glob -> inc_msg_cnt();
 
 	int rc = READ_TO(client -> socket_fd, cmd, 4, client -> config -> communication_timeout);
 	if (rc != 4)
@@ -363,19 +365,20 @@ int do_client(client_t *client, bool *no_bits, bool *new_bits, bool *is_full)
 
 	if (memcmp(cmd, "0001", 4) == 0)		// GET bits
 	{
+		client -> stats_user -> register_msg(false);
+		client -> stats_glob -> register_msg(false);
 		return do_client_get(client, no_bits);
 	}
 	else if (memcmp(cmd, "0002", 4) == 0)	// PUT bits
 	{
-		client -> last_put_message = now;
-
+		client -> stats_user -> register_msg(true);
+		client -> stats_glob -> register_msg(true);
 		return do_client_put(client, new_bits, is_full);
 	}
-	else
-	{
-		dolog(LOG_INFO, "client|%s command '%s' unknown", client -> host.c_str(), cmd);
-		return -1;
-	}
+
+	client -> stats_user -> register_msg(false);
+	client -> stats_glob -> register_msg(false);
+	dolog(LOG_INFO, "client|%s command '%s' unknown", client -> host.c_str(), cmd);
 
 	return -1;
 }

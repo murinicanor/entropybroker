@@ -3,9 +3,12 @@ class http_file_stats : public http_file
 private:
 	std::vector<client_t *> *clients;
 	pthread_mutex_t *clients_mutex;
+	statistics *ps;
+	fips140 *pfips140;
+	scc *pscc;
 
 public:
-	http_file_stats(std::vector<client_t *> *clients, pthread_mutex_t *clients_mutex);
+	http_file_stats(std::vector<client_t *> *clients_in, pthread_mutex_t *clients_mutex_in, statistics *ps_in, fips140 *pfips140_in, scc *pscc_in);
 	~http_file_stats();
 
 	std::string get_url();

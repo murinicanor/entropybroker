@@ -37,6 +37,8 @@ statistics::statistics(char *file_in, fips140 *fips140_in, scc *scc_in, pools *p
 	pthread_check(pthread_mutex_init(&times_quota_lck, &global_mutex_attr), "pthread_mutex_init");
 	pthread_check(pthread_mutex_init(&disconnects_lck, &global_mutex_attr), "pthread_mutex_init");
 	pthread_check(pthread_mutex_init(&timeouts_lck, &global_mutex_attr), "pthread_mutex_init");
+	pthread_check(pthread_mutex_init(&msg_cnt_lck, &global_mutex_attr), "pthread_mutex_init");
+	pthread_check(pthread_mutex_init(&time_lck, &global_mutex_attr), "pthread_mutex_init");
 
 	bps_cur = 0;
 
@@ -52,6 +54,9 @@ statistics::statistics(char *file_in, fips140 *fips140_in, scc *scc_in, pools *p
 	disconnects = 0;
 	timeouts = 0;
 
+	msg_cnt = 0;
+	last_message = last_put_message = connected_since = 0;
+
 	start_ts = get_ts();
 }
 
@@ -65,6 +70,8 @@ statistics::~statistics()
 	pthread_check(pthread_mutex_destroy(&times_quota_lck), "pthread_mutex_destroy");
 	pthread_check(pthread_mutex_destroy(&disconnects_lck), "pthread_mutex_destroy");
 	pthread_check(pthread_mutex_destroy(&timeouts_lck), "pthread_mutex_destroy");
+	pthread_check(pthread_mutex_destroy(&msg_cnt_lck), "pthread_mutex_destroy");
+	pthread_check(pthread_mutex_destroy(&time_lck), "pthread_mutex_destroy");
 }
 
 void statistics::inc_disconnects()
@@ -186,4 +193,125 @@ void statistics::emit_statistics_log(int n_clients, bool force_stats, int reset_
 	dolog(LOG_DEBUG, "stats|recv requests: %d, sent: %d, clients/servers: %u, bits: %d", total_recv_requests, total_sent_requests, n_clients, total_n_bits);
 	dolog(LOG_DEBUG, "stats|%s, scc: %s", pfips140, pscc);
 	unlock_all();
+}
+
+int statistics::get_times_empty()
+{
+	my_mutex_lock(&times_empty_lck);
+	int dummy = n_times_empty;
+	my_mutex_unlock(&times_empty_lck);
+
+	return dummy;
+}
+
+int statistics::get_times_not_allowed()
+{
+	return 0; // FIXME
+}
+
+int statistics::get_times_full()
+{
+	my_mutex_lock(&times_full_lck);
+	int dummy = n_times_full;
+	my_mutex_unlock(&times_full_lck);
+
+	return dummy;
+}
+
+int statistics::get_times_quota()
+{
+	my_mutex_lock(&times_quota_lck);
+	int dummy = n_times_quota;
+	my_mutex_unlock(&times_quota_lck);
+
+	return dummy;
+}
+
+void statistics::get_recvs(long long int *total_bits, int *n_reqs)
+{
+	my_mutex_lock(&recv_lck);
+
+	*total_bits = total_recv;
+	*n_reqs = total_recv_requests;
+
+	my_mutex_unlock(&recv_lck);
+}
+
+void statistics::get_sents(long long int *total_bits, int *n_sents)
+{
+	my_mutex_lock(&sent_lck);
+
+	*total_bits = total_sent;
+	*n_sents = total_sent_requests;
+
+	my_mutex_unlock(&sent_lck);
+}
+
+void statistics::inc_msg_cnt()
+{
+	my_mutex_lock(&msg_cnt_lck);
+
+	msg_cnt++;
+
+	my_mutex_unlock(&msg_cnt_lck);
+}
+
+int statistics::get_msg_cnt()
+{
+	my_mutex_lock(&msg_cnt_lck);
+
+	int dummy = msg_cnt;
+
+	my_mutex_unlock(&msg_cnt_lck);
+
+	return dummy;
+}
+void statistics::register_msg(bool is_put)
+{
+	double now = get_ts();
+
+	my_mutex_lock(&time_lck);
+
+	if (connected_since == 0)
+		connected_since = now;
+
+	last_message = now;
+
+	if (is_put)
+		last_put_message = now;
+
+	my_mutex_unlock(&time_lck);
+}
+
+double statistics::get_last_msg_ts()
+{
+	my_mutex_lock(&time_lck);
+	double dummy = last_message;
+	my_mutex_unlock(&time_lck);
+
+	return dummy;
+}
+
+double statistics::get_since_ts()
+{
+	my_mutex_lock(&time_lck);
+	double dummy = connected_since;
+	my_mutex_unlock(&time_lck);
+
+	return dummy;
+}
+
+double statistics::get_last_put_msg_ts()
+{
+	my_mutex_lock(&time_lck);
+	double dummy = last_put_message;
+	my_mutex_unlock(&time_lck);
+
+	return dummy;
+}
+
+double statistics::get_start_ts()
+{
+	// no locking; does not change
+	return start_ts;
 }

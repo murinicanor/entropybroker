@@ -176,9 +176,11 @@ int main(int argc, char *argv[])
 	std::vector<client_t *> clients;
 	pthread_mutex_t clients_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-	start_web_server("0.0.0.0", 48923, &clients, &clients_mutex);
+	statistics stats(config.stats_file, eb_output_fips140, eb_output_scc, ppools);
 
-	main_loop(&clients, &clients_mutex, ppools, &config, eb_output_fips140, eb_output_scc, &pc);
+	start_web_server("0.0.0.0", 48923, &clients, &clients_mutex, &stats, eb_output_fips140, eb_output_scc);
+
+	main_loop(&clients, &clients_mutex, ppools, &config, eb_output_fips140, eb_output_scc, &pc, &stats);
 
 	printf("Dumping pool contents to cache-file\n");
 	delete ppools;

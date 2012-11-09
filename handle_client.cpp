@@ -78,6 +78,8 @@ void forget_client_index(std::vector<client_t *> *clients, int nr, bool force)
 
 	delete p -> pc;
 
+	delete p -> stats_user;
+
 	delete p;
 	clients -> erase(clients -> begin() + nr);
 }
@@ -227,13 +229,13 @@ int send_request_from_main_to_clients(client_t *p)
 
 	int rc_client = 0;
 	if (need_data)
-		rc_client |= notify_server_data_needed(p -> socket_fd, p -> stats, p -> config);
+		rc_client |= notify_server_data_needed(p -> socket_fd, p -> stats_glob, p -> config);
 
 	if (have_data)
-		rc_client |= notify_client_data_available(p -> socket_fd, p -> ppools, p -> stats, p -> config);
+		rc_client |= notify_client_data_available(p -> socket_fd, p -> ppools, p -> stats_glob, p -> config);
 
 	if (is_full)
-		rc_client |= notify_server_full(p -> socket_fd, p -> stats, p -> config);
+		rc_client |= notify_server_full(p -> socket_fd, p -> stats_glob, p -> config);
 
 	if (rc_client)
 	{
@@ -421,11 +423,6 @@ void register_new_client(int listen_socket_fd, std::vector<client_t *> *clients,
 		p -> pscc     -> set_user(p -> host.c_str());
 		p -> pscc -> set_threshold(config -> scc_threshold);
 
-		double now = get_ts();
-		p -> connected_since = now;
-		p -> last_message = 0;
-		p -> last_put_message = 0;
-
 		p -> ivec_counter = 0;
 		p -> password = NULL;
 
@@ -435,6 +432,8 @@ void register_new_client(int listen_socket_fd, std::vector<client_t *> *clients,
 		p -> ignore_rngtest_fips140 = config -> ignore_rngtest_fips140;
 		p -> ignore_rngtest_scc = config -> ignore_rngtest_scc;
 		p -> allow_prng = config -> allow_prng;
+
+		p -> stats_user = new statistics(NULL, p -> pfips140, p -> pscc, ppools);
 
 		p -> pc = new pool_crypto(config -> st, config -> ht, config -> rs);
 		if (!p -> pc)
@@ -446,7 +445,7 @@ void register_new_client(int listen_socket_fd, std::vector<client_t *> *clients,
 		p -> pu = user_map;
 		p -> config = config;
 		p -> ppools = ppools;
-		p -> stats = stats;
+		p -> stats_glob = stats;
 		p -> output_fips140 = output_fips140;
 		p -> output_scc = output_scc;
 
@@ -579,13 +578,12 @@ void terminate_threads(std::vector<client_t *> *clients)
 	}
 }
 
-void main_loop(std::vector<client_t *> *clients, pthread_mutex_t *clients_mutex, pools *ppools, config_t *config, fips140 *eb_output_fips140, scc *eb_output_scc, pool_crypto *pc)
+void main_loop(std::vector<client_t *> *clients, pthread_mutex_t *clients_mutex, pools *ppools, config_t *config, fips140 *eb_output_fips140, scc *eb_output_scc, pool_crypto *pc, statistics *stats)
 {
 	double last_counters_reset = get_ts();
 	double last_statistics_emit = last_counters_reset;
 	event_state_t event_state;
 	int listen_socket_fd = start_listen(config -> listen_adapter, config -> listen_port, config -> listen_queue_size);
-	statistics stats(config -> stats_file, eb_output_fips140, eb_output_scc, ppools);
 
 	memset(&event_state, 0x00, sizeof event_state);
 
@@ -678,7 +676,7 @@ void main_loop(std::vector<client_t *> *clients, pthread_mutex_t *clients_mutex,
 		my_mutex_lock(clients_mutex);
 		if ((last_counters_reset + double(config -> reset_counters_interval)) <= now || force_stats)
 		{
-			stats.emit_statistics_log(clients -> size(), force_stats, config -> reset_counters_interval);
+			stats -> emit_statistics_log(clients -> size(), force_stats, config -> reset_counters_interval);
 
 			if (!force_stats)
 			{
@@ -697,7 +695,7 @@ void main_loop(std::vector<client_t *> *clients, pthread_mutex_t *clients_mutex,
 
 		if ((config -> statistics_interval != 0 && (last_statistics_emit + double(config -> statistics_interval)) <= now) || force_stats)
 		{
-			stats.emit_statistics_file(clients -> size());
+			stats -> emit_statistics_file(clients -> size());
 
 			now = last_statistics_emit = get_ts();
 		}
@@ -712,7 +710,7 @@ void main_loop(std::vector<client_t *> *clients, pthread_mutex_t *clients_mutex,
 				dolog(LOG_DEBUG, "stats|%s (%s): %s, scc: %s | sent: %d, recv: %d | last msg: %ld seconds ago, %lds connected",
 						p -> host.c_str(), p -> type.c_str(), p -> pfips140 -> stats(),
 						p -> pscc -> stats(),
-						p -> bits_sent, p -> bits_recv, (long int)(now - p -> last_message), (long int)(now - p -> connected_since));
+						p -> bits_sent, p -> bits_recv, (long int)(now - p -> stats_user -> get_last_msg_ts()), (long int)(now - p -> stats_user -> get_since_ts()));
 				my_mutex_unlock(&p -> stats_lck);
 			}
 
@@ -758,7 +756,7 @@ void main_loop(std::vector<client_t *> *clients, pthread_mutex_t *clients_mutex,
 
 		if (rc > 0 && FD_ISSET(listen_socket_fd, &rfds))
 		{
-			register_new_client(listen_socket_fd, clients, user_map, config, ppools, &stats, eb_output_fips140, eb_output_scc);
+			register_new_client(listen_socket_fd, clients, user_map, config, ppools, stats, eb_output_fips140, eb_output_scc);
 			send_have_data = send_need_data = send_is_full = false;
 		}
 		my_mutex_unlock(clients_mutex);

@@ -17,8 +17,6 @@ typedef struct
 	int max_bits_per_interval;
 	bool allow_prng;
 	bool ignore_rngtest_fips140, ignore_rngtest_scc;
-	double last_message, last_put_message;
-	double connected_since;
 	char *username, *password;
 
 	fips140 *pfips140;
@@ -34,11 +32,13 @@ typedef struct
 	int bits_sent, bits_recv;
 	pthread_mutex_t stats_lck;
 
+	statistics *stats_user;
+
 	// globals
 	users *pu;
 	config_t *config;
 	pools *ppools;
-	statistics *stats;
+	statistics *stats_glob;
 	fips140 *output_fips140;
 	scc *output_scc;
 } client_t;
@@ -50,4 +50,4 @@ typedef struct
 } msg_pair_t;
 
 client_t *find_client_by_id(std::vector<client_t *> *clients, long long int id_in);
-void main_loop(std::vector<client_t *> *clients, pthread_mutex_t *clients_mutex, pools *ppools, config_t *config, fips140 *eb_output_fips140, scc *eb_output_scc, pool_crypto *pc);
+void main_loop(std::vector<client_t *> *clients, pthread_mutex_t *clients_mutex, pools *ppools, config_t *config, fips140 *eb_output_fips140, scc *eb_output_scc, pool_crypto *pc, statistics *stats);

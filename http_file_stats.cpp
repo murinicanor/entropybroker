@@ -25,7 +25,7 @@
 #include "http_file.h"
 #include "http_file_stats.h"
 
-http_file_stats::http_file_stats(std::vector<client_t *> *clients_in, pthread_mutex_t *clients_mutex_in) : clients(clients_in), clients_mutex(clients_mutex_in)
+http_file_stats::http_file_stats(std::vector<client_t *> *clients_in, pthread_mutex_t *clients_mutex_in, statistics *ps_in, fips140 *pfips140_in, scc *pscc_in) : clients(clients_in), clients_mutex(clients_mutex_in), ps(ps_in), pfips140(pfips140_in), pscc(pscc_in)
 {
 }
 
@@ -55,6 +55,8 @@ http_bundle * http_file_stats::do_request(http_request_t request_type, std::stri
 
 	std::string content = "<HTML><HEAD><link rel=\"stylesheet\" type=\"text/css\" media=\"screen\" href=\"stylesheet.css\"/></HEAD><BODY>\n";
 
+	double now = get_ts();
+
 	if (id > 0)
 	{
 		my_mutex_lock(clients_mutex);
@@ -64,20 +66,40 @@ http_bundle * http_file_stats::do_request(http_request_t request_type, std::stri
 			content += format("%lld is an unknown client id", id);
 		else
 		{
+			statistics *pcs = p -> stats_user;
+
 			content += "<TABLE>\n";
 			content += std::string("<TR><TD>username:</TD><TD>") + p -> username + "</TD></TR>\n";
 			content += std::string("<TR><TD>host:</TD><TD>") + p -> host + "</TD></TR>\n";
 			content += std::string("<TR><TD>type:</TD><TD>") + p -> type + "</TD></TR>\n";
 			content += std::string("<TR><TD>is server:</TD><TD>") + (p -> is_server ? "yes" : "no") + "</TD></TR>\n";
 
-			content += "<TR><TD>connected since:</TD><TD>" + time_to_str((time_t)p -> connected_since) + "</TD></TR>\n";
-			content += "<TR><TD>last message:</TD><TD>" + time_to_str((time_t)p -> last_message) + "</TD></TR>\n";
-			content += "<TR><TD>last put message:</TD><TD>" + time_to_str((time_t)p -> last_put_message) + "</TD></TR>\n";
+			content += "<TR><TD>connected since:</TD><TD>" + time_to_str((time_t)pcs -> get_since_ts()) + "</TD></TR>\n";
+			content += format("<TR><TD>duration:</TD><TD>%fs</TD></TR>\n", now - pcs -> get_since_ts());
+			content += format("<TR><TD>avg time between msgs:</TD><TD>%fs</TD></TR>\n", (now - pcs -> get_since_ts()) / double(pcs -> get_msg_cnt()));
+			content += "<TR><TD>last message:</TD><TD>" + time_to_str((time_t)pcs -> get_last_msg_ts()) + "</TD></TR>\n";
+			content += "<TR><TD>last put message:</TD><TD>" + time_to_str((time_t)pcs -> get_last_put_msg_ts()) + "</TD></TR>\n";
 
-			my_mutex_lock(&p -> stats_lck);
-			content += format("<TR><TD>bits sent:</TD><TD>%d</TD></TR>\n", p -> bits_sent);
-			content += format("<TR><TD>bits recv:</TD><TD>%d</TD></TR>\n", p -> bits_recv);
-			my_mutex_unlock(&p -> stats_lck);
+			content += format("<TR><TD>not allowed:</TD><TD>%d</TD></TR>\n", pcs -> get_times_not_allowed());
+			content += format("<TR><TD>quota:</TD><TD>%d</TD></TR>\n", pcs -> get_times_quota());
+			content += format("<TR><TD>pools empty:</TD><TD>%d</TD></TR>\n", pcs -> get_times_empty());
+			content += format("<TR><TD>full:</TD><TD>%d</TD></TR>\n", pcs -> get_times_full());
+
+			long long int total_bits_recv = 0;
+			int n_recv = 0;
+			pcs -> get_recvs(&total_bits_recv, &n_recv);
+			content += format("<TR><TD>put requests:</TD><TD>%d</TD></TR>\n", n_recv);
+			content += format("<TR><TD>bits put:</TD><TD>%lld</TD></TR>\n", total_bits_recv);
+			content += format("<TR><TD>avg bits/put:</TD><TD>%f</TD></TR>\n", double(total_bits_recv) / double(n_recv));
+			content += format("<TR><TD>put bps:</TD><TD>%f</TD></TR>\n", double(total_bits_recv) / (now - pcs -> get_since_ts()));
+
+			long long int total_bits_sent = 0;
+			int n_sent = 0;
+			pcs -> get_sents(&total_bits_sent, &n_sent);
+			content += format("<TR><TD>get requests:</TD><TD>%d</TD></TR>\n", n_sent);
+			content += format("<TR><TD>bits requested:</TD><TD>%lld</TD></TR>\n", total_bits_sent);
+			content += format("<TR><TD>avg bits/get:</TD><TD>%f</TD></TR>\n", double(total_bits_sent) / double(n_sent));
+			content += format("<TR><TD>get bps:</TD><TD>%f</TD></TR>\n", double(total_bits_sent) / (now - pcs -> get_since_ts()));
 
 			content += std::string("<TR><TD>FIPS140 stats:</TD><TD>") + p -> pfips140 -> stats() + "</TD></TR>\n";
 			content += std::string("<TR><TD>SCC stats:</TD><TD>") + p -> pscc -> stats() + "</TD></TR>\n";
@@ -109,17 +131,56 @@ http_bundle * http_file_stats::do_request(http_request_t request_type, std::stri
 			content += p -> is_server ? "yes" : "no";
 			content += "</TD><TD>";
 
-			content += time_to_str((time_t)p -> connected_since);
+			statistics *pcs = p -> stats_user;
 
+			content += time_to_str((time_t)pcs -> get_since_ts());
+
+			long long int total_bits_recv = 0, total_bits_sent = 0;
+			int n_recv = 0, n_sent = 0;
+			pcs -> get_recvs(&total_bits_recv, &n_recv);
+			pcs -> get_sents(&total_bits_sent, &n_sent);
 			content += "</TD><TD>";
-			my_mutex_lock(&p -> stats_lck);
-			content += format("%d", p -> bits_sent);
+			content += format("%lld", total_bits_recv);
 			content += "</TD><TD>";
-			content += format("%d", p -> bits_recv);
-			my_mutex_unlock(&p -> stats_lck);
+			content += format("%lld", total_bits_sent);
 			content += "</TD></TR>\n";
 		}
 		my_mutex_unlock(clients_mutex);
+
+		content += "</TABLE>\n";
+		content += "<BR>\n";
+
+		content += "<TABLE>\n";
+		content += "<TR><TD>running since:</TD><TD>" + time_to_str((time_t)ps -> get_start_ts()) + "</TD></TR>\n";
+		content += format("<TR><TD>duration:</TD><TD>%fs</TD></TR>\n", now - ps -> get_start_ts());
+		content += "<TR><TD>first msg:</TD><TD>" + time_to_str((time_t)ps -> get_since_ts()) + "</TD></TR>\n";
+		content += format("<TR><TD>avg time between msgs:</TD><TD>%fs</TD></TR>\n", (now - ps -> get_since_ts()) / double(ps -> get_msg_cnt()));
+		content += "<TR><TD>last message:</TD><TD>" + time_to_str((time_t)ps -> get_last_msg_ts()) + "</TD></TR>\n";
+		content += "<TR><TD>last put message:</TD><TD>" + time_to_str((time_t)ps -> get_last_put_msg_ts()) + "</TD></TR>\n";
+
+		content += format("<TR><TD>not allowed:</TD><TD>%d</TD></TR>\n", ps -> get_times_not_allowed());
+		content += format("<TR><TD>quota:</TD><TD>%d</TD></TR>\n", ps -> get_times_quota());
+		content += format("<TR><TD>pools empty:</TD><TD>%d</TD></TR>\n", ps -> get_times_empty());
+		content += format("<TR><TD>full:</TD><TD>%d</TD></TR>\n", ps -> get_times_full());
+
+		long long int total_bits_recv = 0;
+		int n_recv = 0;
+		ps -> get_recvs(&total_bits_recv, &n_recv);
+		content += format("<TR><TD>put requests:</TD><TD>%d</TD></TR>\n", n_recv);
+		content += format("<TR><TD>bits put:</TD><TD>%lld</TD></TR>\n", total_bits_recv);
+		content += format("<TR><TD>avg bits/put:</TD><TD>%f</TD></TR>\n", double(total_bits_recv) / double(n_recv));
+		content += format("<TR><TD>put bps:</TD><TD>%f</TD></TR>\n", double(total_bits_recv) / (now - ps -> get_since_ts()));
+
+		long long int total_bits_sent = 0;
+		int n_sent = 0;
+		ps -> get_sents(&total_bits_sent, &n_sent);
+		content += format("<TR><TD>get requests:</TD><TD>%d</TD></TR>\n", n_sent);
+		content += format("<TR><TD>bits requested:</TD><TD>%lld</TD></TR>\n", total_bits_sent);
+		content += format("<TR><TD>avg bits/get:</TD><TD>%f</TD></TR>\n", double(total_bits_sent) / double(n_sent));
+		content += format("<TR><TD>get bps:</TD><TD>%f</TD></TR>\n", double(total_bits_sent) / (now - ps -> get_since_ts()));
+
+		content += std::string("<TR><TD>FIPS140 stats:</TD><TD>") + pfips140 -> stats() + "</TD></TR>\n";
+		content += std::string("<TR><TD>SCC stats:</TD><TD>") + pscc -> stats() + "</TD></TR>\n";
 
 		content += "</TABLE>\n";
 	}

@@ -34,6 +34,13 @@ private:
 	pthread_mutex_t timeouts_lck;
 	int timeouts;
 
+	pthread_mutex_t msg_cnt_lck;
+	int msg_cnt;
+
+	pthread_mutex_t time_lck;
+	double last_message, last_put_message;
+	double connected_since;
+
 	double start_ts;
 
 	void lock_all();
@@ -49,8 +56,22 @@ public:
 	void inc_n_times_quota();
 	void inc_n_times_full();
 	void inc_bps_cur();
+	void inc_msg_cnt();
 	void track_sents(int cur_n_bits);
 	void track_recvs(int n_bits_added);
 	void emit_statistics_file(int n_clients);
 	void emit_statistics_log(int n_clients, bool force_stats, int reset_counters_interval);
+	void register_msg(bool is_put);
+
+	int get_msg_cnt();
+	int get_times_empty();
+	int get_times_not_allowed();
+	int get_times_full();
+	int get_times_quota();
+	void get_recvs(long long int *total_bits, int *n_reqs);
+	void get_sents(long long int *total_bits, int *n_sents);
+	double get_last_msg_ts();
+	double get_since_ts();
+	double get_last_put_msg_ts();
+	double get_start_ts();
 };
