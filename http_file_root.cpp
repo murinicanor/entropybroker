@@ -28,5 +28,5 @@ http_bundle * http_file_root::do_request(http_request_t request_type, http_bundl
 {
 	std::vector<std::string> reply_headers;
 
-	return new http_bundle(reply_headers, "<HTML><BODY><A HREF=\"stats.html\">stats</A><BR><A HREF=\"version.html\">version</A></BODY></HTML>");
+	return new http_bundle(reply_headers, "<HTML><HEAD><link rel=\"stylesheet\" type=\"text/css\" media=\"screen\" href=\"stylesheet.css\"/></HEAD><BODY><A HREF=\"stats.html\">stats</A><BR><A HREF=\"version.html\">version</A></BODY></HTML>");
 }
