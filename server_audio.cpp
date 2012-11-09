@@ -21,7 +21,6 @@
 #include <errno.h>
 #include <alsa/asoundlib.h>
 
-const char *server_type = "eb_server_audio v" VERSION;
 const char *pid_file = PID_DIR "/eb_server_audio.pid";
 
 #include "defines.h"
@@ -146,6 +145,9 @@ void main_loop(std::vector<std::string> * hosts, char *bytes_file, char show_bps
 	int err;
 	unsigned char bytes[4096]; // 4096 * 8: 9992, must be less then 9999
 	int bytes_out = 0;
+
+	char server_type[128];
+	snprintf(server_type, sizeof server_type, "eb_server_audio v" VERSION " %s", cdevice);
 
 	protocol *p = NULL;
 	if (!hosts -> empty())
@@ -323,7 +325,7 @@ int main(int argc, char *argv[])
 	std::vector<std::string> hosts;
 	int log_level = LOG_INFO;
 
-	fprintf(stderr, "%s, (C) 2009-2012 by folkert@vanheusden.com\n", server_type);
+	fprintf(stderr, "eb_server_audio v" VERSION ", (C) 2009-2012 by folkert@vanheusden.com\n");
 
 	while((c = getopt(argc, argv, "I:hX:P:So:d:L:l:sn")) != -1)
 	{

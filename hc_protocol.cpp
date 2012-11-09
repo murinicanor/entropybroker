@@ -351,8 +351,6 @@ int do_client(client_t *client, bool *no_bits, bool *new_bits, bool *is_full)
 {
 	char cmd[4];
 
-	double now = get_ts();
-
 	client -> stats_user -> inc_msg_cnt();
 	client -> stats_glob -> inc_msg_cnt();
 
