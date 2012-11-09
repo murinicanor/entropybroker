@@ -194,7 +194,7 @@ http_bundle * http_file_stats::do_request(http_request_t request_type, std::stri
 		content += format("<TR><TD>in memory bit count:</TD><TD>%d</TD></TR>\n", bit_sum);
 		int mem_pools = ppools -> get_memory_pool_count();
 		content += format("<TR><TD>pools in memory:</TD><TD>%d</TD></TR>\n", mem_pools);
-		content += format("<TR><TD>avg bits/mem pool:</TD><TD>%f (def max: %)</TD></TR>\n", double(bit_sum) / double(mem_pools), DEFAULT_POOL_SIZE_BITS);
+		content += format("<TR><TD>avg bits/mem pool:</TD><TD>%f (def max: %d)</TD></TR>\n", double(bit_sum) / double(mem_pools), DEFAULT_POOL_SIZE_BITS);
 		content += format("<TR><TD>pool files on disk:</TD><TD>%d</TD></TR>\n", ppools -> get_disk_pool_count());
 		content += "</TABLE>\n";
 	}
