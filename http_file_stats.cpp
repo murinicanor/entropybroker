@@ -53,7 +53,7 @@ http_bundle * http_file_stats::do_request(http_request_t request_type, std::stri
 
 	std::vector<std::string> reply_headers;
 
-	std::string content = "<HTML><HEAD><link rel=\"stylesheet\" type=\"text/css\" media=\"screen\" href=\"stylesheet.css\"/></HEAD><BODY>\n";
+	std::string content = get_style_header();
 
 	double now = get_ts();
 
@@ -68,8 +68,8 @@ http_bundle * http_file_stats::do_request(http_request_t request_type, std::stri
 		{
 			statistics *pcs = p -> stats_user;
 
-			content += "<TABLE>\n";
-			content += std::string("<TR><TD>username:</TD><TD>") + p -> username + "</TD></TR>\n";
+			content += "<TABLE CLASS=\"table2\" WIDTH=100%>\n";
+			content += std::string("<TR><TD WIDTH=200>username:</TD><TD>") + p -> username + "</TD></TR>\n";
 			content += std::string("<TR><TD>host:</TD><TD>") + p -> host + "</TD></TR>\n";
 			content += std::string("<TR><TD>type:</TD><TD>") + p -> type + "</TD></TR>\n";
 			content += std::string("<TR><TD>is server:</TD><TD>") + (p -> is_server ? "yes" : "no") + "</TD></TR>\n";
@@ -114,8 +114,8 @@ http_bundle * http_file_stats::do_request(http_request_t request_type, std::stri
 	else
 	{
 		// PER USER STATS
-		content += "<TABLE>\n";
-		content += "<TR><TH>user</TH><TH>host</TH><TH>type</TH><TH>is server</TH><TH>connected since</TH><TH>bits sent</TH><TH>bits recv</TH></TR>\n";
+		content += "<TABLE CLASS=\"table2\" WIDTH=100%>\n";
+		content += "<TR CLASS=\"lighttable\"><TD>user</TD><TD>host</TD><TD>type</TD><TD>is server</TD><TD>connected since</TD><TD>bits sent</TD><TD>bits recv</TD></TR>\n";
 
 		my_mutex_lock(clients_mutex);
 		for(unsigned int index=0; index<clients -> size(); index++)
@@ -155,8 +155,8 @@ http_bundle * http_file_stats::do_request(http_request_t request_type, std::stri
 		content += "<BR>\n";
 
 		// GLOBAL STATS
-		content += "<TABLE>\n";
-		content += "<TR><TD>running since:</TD><TD>" + time_to_str((time_t)ps -> get_start_ts()) + "</TD></TR>\n";
+		content += "<TABLE CLASS=\"table2\" WIDTH=100%>\n";
+		content += "<TR><TD WIDTH=200>running since:</TD><TD>" + time_to_str((time_t)ps -> get_start_ts()) + "</TD></TR>\n";
 		content += format("<TR><TD>duration:</TD><TD>%fs</TD></TR>\n", now - ps -> get_start_ts());
 		content += "<TR><TD>first msg:</TD><TD>" + time_to_str((time_t)ps -> get_since_ts()) + "</TD></TR>\n";
 		content += format("<TR><TD>avg time between msgs:</TD><TD>%fs</TD></TR>\n", (now - ps -> get_since_ts()) / double(ps -> get_msg_cnt()));
@@ -191,9 +191,9 @@ http_bundle * http_file_stats::do_request(http_request_t request_type, std::stri
 		content += "<BR>\n";
 
 		// POOL STATS
-		content += "<TABLE>\n";
+		content += "<TABLE CLASS=\"table2\" WIDTH=100%>\n";
 		int bit_sum = ppools -> get_bit_sum(1.0);
-		content += format("<TR><TD>in memory bit count:</TD><TD>%d</TD></TR>\n", bit_sum);
+		content += format("<TR><TD WIDTH=200>in memory bit count:</TD><TD>%d</TD></TR>\n", bit_sum);
 		int mem_pools = ppools -> get_memory_pool_count();
 		content += format("<TR><TD>pools in memory:</TD><TD>%d</TD></TR>\n", mem_pools);
 		content += format("<TR><TD>avg bits/mem pool:</TD><TD>%f (def max: %d)</TD></TR>\n", double(bit_sum) / double(mem_pools), DEFAULT_POOL_SIZE_BITS);
@@ -201,7 +201,7 @@ http_bundle * http_file_stats::do_request(http_request_t request_type, std::stri
 		content += "</TABLE>\n";
 	}
 
-	content += "</BODY></HTML>\n";
+	content += get_style_tail();
 
 	return new http_bundle(reply_headers, content.c_str());
 }

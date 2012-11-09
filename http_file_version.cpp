@@ -29,5 +29,5 @@ http_bundle * http_file_version::do_request(http_request_t request_type, std::st
 {
 	std::vector<std::string> reply_headers;
 
-	return new http_bundle(reply_headers, "<HTML><HEAD><link rel=\"stylesheet\" type=\"text/css\" media=\"screen\" href=\"stylesheet.css\"/></HEAD><BODY><H1>Entropy Broker v" VERSION "</H1>$Id$</BODY></HTML>");
+	return new http_bundle(reply_headers, get_style_header() + "<H2>Entropy Broker v" VERSION "</H2>$Id$" + get_style_tail());
 }

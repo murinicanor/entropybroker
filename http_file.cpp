@@ -57,3 +57,31 @@ http_bundle * http_file::do_request(http_request_t request_type, std::string req
 {
 	return NULL;
 }
+
+std::string http_file::get_style_header()
+{
+	return "<HTML><HEAD>\n"
+		"<link rel=\"stylesheet\" type=\"text/css\" media=\"screen\" href=\"stylesheet.css\"/>\n"
+		"<link rel=\"shortcut icon\" href=\"/favicon.ico\" />\n"
+		"</HEAD><BODY>\n"
+		"<TABLE HEIGHT=100% WIDTH=100%><TR><TD WIDTH=150 ALIGN=LEFT VALIGN=TOP>\n"
+		"<IMG SRC=\"logo.png\" WIDTH=140><BR><BR>\n"
+		"<IMG SRC=\"logo.png\" WIDTH=93><BR><BR>\n"
+		"<IMG SRC=\"logo.png\" WIDTH=62><BR><BR>\n"
+		"<IMG SRC=\"logo.png\" WIDTH=41><BR><BR>\n"
+		"<IMG SRC=\"logo.png\" WIDTH=27><BR><BR>\n"
+		"<IMG SRC=\"logo.png\" WIDTH=18><BR><BR>\n"
+		"<IMG SRC=\"logo.png\" WIDTH=12><BR><BR>\n"
+		"<IMG SRC=\"logo.png\" WIDTH=8>\n"
+		"</TD><TD VALIGN=TOP>\n"
+		"<BR CLASS=\"myBr\">\n"
+		"<H1>Entropy Broker</H1>\n";
+}
+
+std::string http_file::get_style_tail()
+{
+	return "</TD></TR>\n"
+		"<TR HEIGHT=32><TD ALIGN=\"RIGHT\" COLSPAN=\"3\"><A HREF=\"http://www.vanheusden.com/\">www.vanheusden.com</A></TD></TR>"
+		"</TABLE>"
+		"</BODY></HTML>";
+}

@@ -72,6 +72,7 @@ web_server::web_server(std::string listen_adapter, int listen_port, std::vector<
 	add_object(new http_file_version());
 	add_object(new http_file_file("/stylesheet.css", "text/css", WEB_DIR "/stylesheet.css"));
 	add_object(new http_file_file("/favicon.ico", "image/x-ico", WEB_DIR "/favicon.ico"));
+	add_object(new http_file_file("/logo.png", "image/png", WEB_DIR "/logo.png"));
 }
 
 web_server::~web_server()

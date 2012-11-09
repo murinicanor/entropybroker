@@ -139,20 +139,16 @@ bool http_server::send(unsigned char *p, int len)
 
 void http_server::send_response(int status_code, std::vector<std::string> *headers, http_bundle *response)
 {
-	bool ok = send(format("HTTP/1.0 %d\r\n", status_code).c_str());
-	if (headers && ok)
-	{
-		for(unsigned int index=0; index<headers -> size(); index++)
-		{
-			ok = send((headers -> at(index) + "\r\n").c_str());
-			if (!ok)
-				break;
-		}
-	}
-	if (ok)
-		ok = send(format("Expires: Fri, 09 Nov 2012 14:55:30 GMT\r\n");
-	if (ok)
-		ok = send(format("Content-Length: %d\r\n", response -> get_data_len()).c_str());
+	headers -> insert(headers -> begin(), format("HTTP/1.0 %d", status_code));
+	headers -> push_back("Expires: Fri, 09 Nov 2012 14:55:30 GMT");
+	headers -> push_back("Cache-Control: no-cache");
+	headers -> push_back("Pragma: no-cache");
+	headers -> push_back(format("Content-Length: %d", response -> get_data_len()));
+
+	bool ok = true;
+	for(unsigned int index=0; index<headers -> size() && ok; index++)
+		ok = send((headers -> at(index) + "\r\n").c_str());
+
 	if (ok)
 		ok = send("\r\n");
 

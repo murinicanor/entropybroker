@@ -29,5 +29,10 @@ http_bundle * http_file_root::do_request(http_request_t request_type, std::strin
 {
 	std::vector<std::string> reply_headers;
 
-	return new http_bundle(reply_headers, "<HTML><HEAD><link rel=\"stylesheet\" type=\"text/css\" media=\"screen\" href=\"stylesheet.css\"/></HEAD><BODY><A HREF=\"stats.html\">stats</A><BR><A HREF=\"version.html\">version</A></BODY></HTML>");
+	return new http_bundle(reply_headers,
+			get_style_header() + 
+			"<TABLE CLASS=\"table2\" WIDTH=100%><TR><TD>\n"
+			"<A HREF=\"stats.html\">stats</A><BR><A HREF=\"version.html\">version</A>\n"
+			"</TD></TR></TABLE>\n" +
+			get_style_tail());
 }

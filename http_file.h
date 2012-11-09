@@ -10,5 +10,8 @@ public:
 
 	std::map<std::string, std::string> split_parameters(std::string url);
 
+	std::string get_style_header();
+	std::string get_style_tail();
+
 	virtual http_bundle * do_request(http_request_t request_type, std::string request_url, http_bundle *request_details) = 0;
 };

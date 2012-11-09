@@ -26,6 +26,14 @@ http_bundle::http_bundle(std::vector<std::string> headers_in, const char *data_i
 	data_len = strlen(data_in);
 }
 
+http_bundle::http_bundle(std::vector<std::string> headers_in, std::string data_in)
+{
+	headers = headers_in;
+
+	data = reinterpret_cast<unsigned char *>(strdup(data_in.c_str()));
+	data_len = data_in.size();
+}
+
 http_bundle::~http_bundle()
 {
 	free(data);
