@@ -135,7 +135,10 @@ int do_client_get(client_t *client, bool *no_bits)
 	my_mutex_unlock(&client -> stats_lck);
 	dolog(LOG_DEBUG, "get|%s is allowed to now receive %d bits", client -> host.c_str(), cur_n_bits);
 	if (cur_n_bits == 0)
+	{
+		client -> stats -> inc_n_times_quota();
 		return send_denied_quota(client -> socket_fd, client -> stats, client -> config);
+	}
 	if (cur_n_bits < 0)
 		error_exit("cur_n_bits < 0");
 
@@ -151,6 +154,7 @@ int do_client_get(client_t *client, bool *no_bits)
 
 		dolog(LOG_WARNING, "get|%s no bits in pools, sending deny", client -> host.c_str());
 		*no_bits = true;
+		client -> stats -> inc_n_times_empty();
 		return send_denied_empty(client -> socket_fd, client -> stats, client -> config);
 	}
 
@@ -231,6 +235,8 @@ int do_client_put(client_t *client, bool *new_bits, bool *is_full)
 	if (client -> ppools -> all_pools_full(double(client -> config -> communication_timeout) * 0.9))
 	{
 		*is_full = true;
+
+		client -> stats -> inc_n_times_full();
 
 		double last_submit_ago = get_ts() - client -> last_put_message;
 		char full_allow_interval_submit = last_submit_ago >= client -> config -> when_pools_full_allow_submit_interval;
