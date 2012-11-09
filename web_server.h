@@ -5,7 +5,7 @@ class web_server
 private:
 	int fd;
 	std::map<std::string, http_file *> objects;
-	pthread_t *thread;
+	pthread_t thread;
 	std::vector<client_t *> *clients;
 	pthread_mutex_t *clients_mutex;
 

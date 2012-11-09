@@ -19,6 +19,7 @@
 #include <time.h>
 #include <unistd.h>
 
+#include "defines.h"
 #include "error.h"
 #include "random_source.h"
 #include "log.h"

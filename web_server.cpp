@@ -159,7 +159,7 @@ void web_server::run(void)
 		p_client -> p_server = this;
 		p_client -> fd = client_fd;
 
-		pthread_check(pthread_create(thread, NULL, thread_wrapper_http_server, reinterpret_cast<void *>(p_client)), "pthread_create");
+		pthread_check(pthread_create(&thread, NULL, thread_wrapper_http_server, reinterpret_cast<void *>(p_client)), "pthread_create");
 	}
 }
 

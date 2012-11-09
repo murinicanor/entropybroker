@@ -174,7 +174,7 @@ int main(int argc, char *argv[])
 	set_signal_handlers();
 
 	std::vector<client_t *> clients;
-	pthread_mutex_t clients_mutex;
+	pthread_mutex_t clients_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 	start_web_server("0.0.0.0", 48923, &clients, &clients_mutex);
 

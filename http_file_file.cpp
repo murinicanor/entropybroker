@@ -61,7 +61,7 @@ void http_file_file::load_file(unsigned char **p, int *len)
 			break;
 		}
 
-		if (fread(*p, st.st_size, 1, fh) != st.st_size)
+		if (fread(*p, st.st_size, 1, fh) != 1)
 		{
 			dolog(LOG_INFO, "short read on %s", file.c_str());
 			ok = false;
@@ -69,6 +69,8 @@ void http_file_file::load_file(unsigned char **p, int *len)
 			free(*p);
 			break;
 		}
+
+		*len = st.st_size;
 
 		fclose(fh);
 
