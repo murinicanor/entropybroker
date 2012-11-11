@@ -98,6 +98,10 @@ void data_store_int::put_long_long_int(FILE *fh, long long int value)
 
 void data_store_int::add_avg(int t, int value)
 {
+// FIXME keep track of wraps and time
+// eg pick latest t as current and then start is t - n_samples
+// keep track of data available in values (boolean)
+// clear in-between fields when index-prev_index > 1
 	int index = (t / value) % n_samples;
 
 	if (index != prev_index)

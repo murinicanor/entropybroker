@@ -47,6 +47,7 @@ libpng12-dev is for plot
 The configure script will determine which libraries are available
 and then select which daemons to build.
 
+
 Usage
 -----
 Since version 1.0 all entropy-data is encrypted before it is
