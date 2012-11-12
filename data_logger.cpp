@@ -87,7 +87,6 @@ void data_logger::run()
 
 		if (now_ts - prev_ts >= 300.0)
 		{
-			// FIXME
 			my_mutex_lock(&mem_pool_lck);
 			mem_pool_counts -> add_avg(time_t(now_ts), ppools -> get_memory_pool_count());
 			my_mutex_unlock(&mem_pool_lck);
