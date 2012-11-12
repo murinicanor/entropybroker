@@ -28,6 +28,8 @@ public:
 	void add_sum(int t, int value);
 	bool get(int index, double *value);
 
+	void get_data(long int **t, double **v, int *n);
+
 	int get_cur_t() { return cur_t; }
 	int get_n_samples() { return n_samples; }
 	int get_interval() { return interval; }

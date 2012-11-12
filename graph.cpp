@@ -3,19 +3,15 @@
 #include <string>
 
 #include "error.h"
+#include "utils.h"
 #include "graph.h"
 
 graph::graph(std::string font_in) : font(font_in)
 {
-	ts = NULL;
-	values = NULL;
-	n_values = 0;
 }
 
 graph::~graph()
 {
-	free(ts);
-	free(values);
 }
 
 void graph::calc_text_width(std::string font_descr, double font_height, std::string str, int *width, int *height)
@@ -37,13 +33,13 @@ void graph::draw_text(gdImagePtr im, std::string font_descr, double font_height,
 	gdImageStringFT(im, &brect[0], color, (char *)font_descr.c_str(), font_height, 0., x, y, (char *)str.c_str());
 }
 
-void graph::do_draw(int width, int height, std::string title, char **result, int *result_len)
+void graph::do_draw(int width, int height, std::string title, long int *ts, double *values, int n_values, char **result, size_t *result_len)
 {
 	int yAxisTop = (!title.empty()) ? 12 : 5;
 	int yAxisBottom = height - 25;
 	int yTicks = 10;
 	int xTicks;
-	int yAxisMaxStrLen = 5;
+	unsigned int yAxisMaxStrLen = 5;
 	int xAxisLeft;
 	int xAxisRight = width - 5;
 	int font_height = 10;
@@ -53,11 +49,10 @@ void graph::do_draw(int width, int height, std::string title, char **result, int
 	int black = gdImageColorAllocate(im, 0, 0, 0);
 	int gray = gdImageColorAllocate(im, 127, 127, 127);
 	int red = gdImageColorAllocate(im, 255, 0, 0);
-	int white = gdImageColorAllocate(im, 255, 255, 255);
 
 	// determine x-position of y-axis
         std::string dummyStr;
-        for(int nr=0; nr<yAxisMaxStrLen; nr++)
+        for(unsigned int nr=0; nr<yAxisMaxStrLen; nr++)
                 dummyStr += "8";
 	int dummy;
 	calc_text_width(font, font_height, dummyStr, &xAxisLeft, &dummy);
@@ -93,4 +88,94 @@ void graph::do_draw(int width, int height, std::string title, char **result, int
 
 		draw_text(im, font, font_height, black, title, plotX, 9);
 	}
+
+	gdImageLine(im, xAxisLeft, yAxisTop, xAxisLeft, yAxisBottom, black);
+	gdImageLine(im, xAxisLeft, yAxisBottom, xAxisRight, yAxisBottom, black);
+
+	// draw ticks vertical
+	for(int yti=0; yti<=yTicks; yti++)
+	{
+		int y = (double(yAxisBottom - yAxisTop) * double(yti)) / double(yTicks) + yAxisTop;
+		gdImageLine(im, xAxisLeft - 2, y, xAxisLeft, y, black);
+
+		double value = (((dataMax - dataMin) / double(yTicks)) * double(yTicks - yti) + dataMin);
+
+		std::string str = format("%f", value);
+		if (str.length() > yAxisMaxStrLen)
+			str = str.substr(0, yAxisMaxStrLen);
+
+		if (yti < yTicks)
+			gdImageLine(im, xAxisLeft + 1, y, xAxisRight, y, gray);
+
+		draw_text(im, font, font_height, gray, str, 1, y == yAxisTop ? y + 6 : y + 3);
+	}
+
+	// draw ticks horizonal
+	for(int xti=0; xti<=xTicks; xti++)
+	{
+		int x = (double(xAxisRight - xAxisLeft) * double(xti)) / double(xTicks) + xAxisLeft;
+		gdImageLine(im, x, yAxisBottom, x, yAxisBottom + 2, black);
+
+		double value = tMin + scaleT * double(xti);
+
+		time_t epoch = value * 1000;
+		struct tm *tm = localtime(&epoch);
+
+		char buffer[128];
+		strftime(buffer, sizeof buffer, "%Y/%m/%d", tm);
+		std::string strDate = std::string(buffer);
+		strftime(buffer, sizeof buffer, "%H:%M:%S", tm);
+		std::string strTime = std::string(buffer);
+
+		if (xti > 0)
+			gdImageLine(im, x, yAxisTop + 1, x, yAxisBottom, gray);
+
+		int xPos = -1;
+		if (xti == 0)
+			xPos = mymax(0, x - dateWidth / 2);
+		else if (xti == xTicks)
+			xPos = width - (dateWidth * 3) / 4;
+		else if (xti == xTicks - 1)
+			xPos = x - (dateWidth * 5) / 8;
+		else
+			xPos = x - dateWidth / 2;
+
+		draw_text(im, font, font_height, gray, strTime, xPos, yAxisBottom + 14);
+		draw_text(im, font, font_height, gray, strDate, xPos, yAxisBottom + 24);
+	}
+
+	// draw data
+	bool first = true;
+	int yPrev = -1, xPrev = -1;
+	for(int index=0; index<n_values; index++)
+	{
+		double t = ts[index];
+		double value = values[index];
+		int x = xAxisLeft + int(scaleX * double(t - tMin));
+		int y = yAxisBottom - int(scaleY * double(value - dataMin));
+
+		if (first)
+		{
+			xPrev = x;
+			yPrev = y;
+			first = false;
+		}
+		else
+		{
+			gdImageLine(im, xPrev, yPrev, x, y, red);
+			xPrev = x;
+			yPrev = y;
+		}
+	}
+
+	// draw to memory
+	FILE *fh = open_memstream(result, result_len);
+	if (!fh)
+		error_exit("graph: open_memstream failed");
+
+	gdImagePng(im, fh);
+
+	fclose(fh);
+
+	gdImageDestroy(im);
 }

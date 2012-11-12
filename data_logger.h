@@ -31,5 +31,9 @@ public:
 	data_logger(pools *ppools_in, std::vector<client_t *> *clients_in, pthread_mutex_t *clients_mutex_in);
 	~data_logger();
 
+	void get_mem_pool_counts(long int **t, double **v, int *n);
+	void get_dsk_pool_counts(long int **t, double **v, int *n);
+	void get_connection_counts(long int **t, double **v, int *n);
+
 	void run();
 };

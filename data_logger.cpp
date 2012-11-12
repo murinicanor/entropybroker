@@ -148,3 +148,24 @@ void data_logger::run()
 		sleep(1);
 	}
 }
+
+void data_logger::get_mem_pool_counts(long int **t, double **v, int *n)
+{
+	my_mutex_lock(&mem_pool_lck);
+	mem_pool_counts -> get_data(t, v, n);
+	my_mutex_unlock(&mem_pool_lck);
+}
+
+void data_logger::get_dsk_pool_counts(long int **t, double **v, int *n)
+{
+	my_mutex_lock(&dsk_pool_lck);
+	dsk_pool_counts -> get_data(t, v, n);
+	my_mutex_unlock(&dsk_pool_lck);
+}
+
+void data_logger::get_connection_counts(long int **t, double **v, int *n)
+{
+	my_mutex_lock(clients_mutex);
+	connection_counts -> get_data(t, v, n);
+	my_mutex_unlock(clients_mutex);
+}

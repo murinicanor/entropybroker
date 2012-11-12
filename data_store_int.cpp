@@ -189,3 +189,25 @@ bool data_store_int::get(int index, double *value)
 
 	return false;
 }
+
+void data_store_int::get_data(long int **t, double **v, int *n)
+{
+	int offset_index = (cur_t / interval) % n_samples;
+
+	*t = (long int *)malloc(sizeof(long int) * n_samples);
+	*v = (double *)malloc(sizeof(double) * n_samples);
+	*n = 0;
+
+	long int start_t = cur_t - n_samples * interval;
+	for(int index=0; index<n_samples; index++)
+	{
+		int cur_index = (offset_index + 1 + index) % n_samples;
+
+		if (valid[cur_index])
+		{
+			(*t)[*n] = start_t + index * interval;
+			(*v)[*n] = double(values[index]) / double(counts[index]);
+			(*n)++;
+		}
+	}
+}
