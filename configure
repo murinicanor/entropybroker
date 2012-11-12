@@ -66,6 +66,22 @@ if [ $? -ne 0 ] ; then
 	echo
 	exit 1
 fi
+echo \ OK
+
+echo -n \* checking for libgd2-\(no\)xpm-dev...
+g++ -O0 -o $FILE test_libgd2.cpp 2> $FILE2
+if [ $? -ne 0 ] ; then
+	echo
+	echo \! libgd2-\(no\)xpm-dev was NOT detected
+	echo \! libgd2-\(no\)xpm-dev is required for entropy_broker
+	echo
+	echo \! errors reported:
+	echo
+	cat $FILE2
+	echo
+	exit 1
+fi
+echo \ OK
 
 g++ -O0 -o $FILE test_asound2.cpp 2> /dev/null
 if [ $? -eq 0 ] ; then
