@@ -15,6 +15,8 @@ private:
 	data_store_int *connection_counts;
 
 	pthread_t thread;
+
+	pthread_mutex_t terminate_flag_lck;
 	bool abort;
 
 	///
@@ -22,6 +24,8 @@ private:
 
 	std::vector<client_t *> *clients;
 	pthread_mutex_t *clients_mutex;
+
+	void dump_data();
 
 public:
 	data_logger(pools *ppools_in, std::vector<client_t *> *clients_in, pthread_mutex_t *clients_mutex_in);

@@ -5,7 +5,7 @@ private:
 	int *counts;
 	bool *valid;
 	int n_samples, interval;
-	int prev_index, cur_t;
+	int cur_t;
 
 	bool get_bool(FILE *fh);
 	int get_int(FILE *fh);

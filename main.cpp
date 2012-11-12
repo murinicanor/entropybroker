@@ -53,6 +53,8 @@
 #include "web_server.h"
 
 const char *pid_file = PID_DIR "/entropy_broker.pid";
+const char *revision = "SVN revision: $Revision$";
+const char *version = "entropy_broker v " VERSION ", (C) 2009-2012 by folkert@vanheusden.com";
 
 void seed(pools *ppools, pool_crypto *pc)
 {
@@ -89,8 +91,8 @@ int main(int argc, char *argv[])
 	config_t config;
 	int log_level = LOG_INFO;
 
-	printf("entropy_broker v " VERSION ", (C) 2009-2012 by folkert@vanheusden.com\n");
-	printf("SVN revision: $Revision$\n");
+	printf("%s\n", version);
+	printf("%s\n", revision);
 
 	eb_output_fips140 -> set_user("output");
 	eb_output_scc     -> set_user("output");
@@ -148,6 +150,9 @@ int main(int argc, char *argv[])
 	if (stats_file)
 		config.stats_file = stats_file;
 
+	dolog(LOG_INFO, "%s", version);
+	dolog(LOG_INFO, "%s", revision);
+
 	dolog(LOG_DEBUG, "Main thread id: %ld", gettid());
 
 	eb_output_scc -> set_threshold(config.scc_threshold);
@@ -187,7 +192,7 @@ int main(int argc, char *argv[])
 
 	main_loop(&clients, &clients_mutex, ppools, &config, eb_output_fips140, eb_output_scc, &pc, &stats);
 
-	printf("Dumping pool contents to cache-file\n");
+	dolog(LOG_INFO, "Dumping pool contents to cache-file");
 
 	delete dl;
 
@@ -203,7 +208,7 @@ int main(int argc, char *argv[])
 
 	unlink(pid_file);
 
-	printf("Finished\n");
+	dolog(LOG_INFO, "--- terminating ---\n");
 
 	return 0;
 }

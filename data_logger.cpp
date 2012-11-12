@@ -38,6 +38,8 @@ data_logger::data_logger(pools *ppools_in, std::vector<client_t *> *clients_in, 
 {
 	abort = false;
 
+	pthread_check(pthread_mutex_init(&terminate_flag_lck, &global_mutex_attr), "pthread_mutex_init");
+
 	if (file_exist(MEM_POOL_COUNTS))
 		mem_pool_counts = new data_store_int(MEM_POOL_COUNTS);
 	else
@@ -61,28 +63,62 @@ data_logger::data_logger(pools *ppools_in, std::vector<client_t *> *clients_in, 
 
 data_logger::~data_logger()
 {
+	my_mutex_lock(&terminate_flag_lck);
 	abort = true;
+	my_mutex_unlock(&terminate_flag_lck);
+
+	dolog(LOG_INFO, "data logger about to terminate: waiting to thread to terminate");
+
 	pthread_check(pthread_join(thread, NULL), "pthread_join");
 
-	mem_pool_counts -> dump(MEM_POOL_COUNTS);
+	dolog(LOG_INFO, "data logger thread stopped");
+
+	pthread_check(pthread_mutex_destroy(&terminate_flag_lck), "pthread_mutex_destroy");
+
+	dump_data();
+
 	delete mem_pool_counts;
 	pthread_check(pthread_mutex_destroy(&mem_pool_lck), "pthread_mutex_destroy");
 
-	dsk_pool_counts -> dump(DSK_POOL_COUNTS);
 	delete dsk_pool_counts;
 	pthread_check(pthread_mutex_destroy(&dsk_pool_lck), "pthread_mutex_destroy");
 
-	connection_counts -> dump(CONNECTION_COUNTS);
 	delete connection_counts;
 	pthread_check(pthread_mutex_destroy(&connection_counts_lck), "pthread_mutex_destroy");
+
+	dolog(LOG_INFO, "data logger stopped");
+}
+
+void data_logger::dump_data()
+{
+	dolog(LOG_INFO, "dump statistics to disk");
+
+	my_mutex_lock(&mem_pool_lck);
+	mem_pool_counts -> dump(MEM_POOL_COUNTS);
+	my_mutex_unlock(&mem_pool_lck);
+
+	my_mutex_lock(&dsk_pool_lck);
+	dsk_pool_counts -> dump(DSK_POOL_COUNTS);
+	my_mutex_unlock(&dsk_pool_lck);
+
+	my_mutex_lock(clients_mutex);
+	connection_counts -> dump(CONNECTION_COUNTS);
+	my_mutex_unlock(clients_mutex);
 }
 
 void data_logger::run()
 {
-	double prev_ts = -1;
+	double prev_ts = -1, last_dump_ts = get_ts();
 
-	for(; !abort;)
+	for(;;)
 	{
+		my_mutex_lock(&terminate_flag_lck);
+		bool terminate = abort;
+		my_mutex_unlock(&terminate_flag_lck);
+
+		if (terminate)
+			break;
+
 		double now_ts = get_ts();
 
 		if (now_ts - prev_ts >= 300.0)
@@ -100,6 +136,13 @@ void data_logger::run()
 			my_mutex_unlock(clients_mutex);
 
 			prev_ts = now_ts;
+		}
+
+		if (now_ts - last_dump_ts >= 86400) // push to disk once a day
+		{
+			dump_data();
+
+			last_dump_ts = now_ts;
 		}
 
 		sleep(1);

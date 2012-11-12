@@ -1,11 +1,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string>
+#include <string.h>
 
 #include "error.h"
 #include "data_store_int.h"
 
-data_store_int::data_store_int(int n_samples_in, int interval_in) : n_samples(n_samples_in), interval(interval_in), prev_index(-1)
+data_store_int::data_store_int(int n_samples_in, int interval_in) : n_samples(n_samples_in), interval(interval_in)
 {
 	values = (long long int *)malloc(n_samples * sizeof(long long int));
 	counts = (int *)malloc(n_samples * sizeof(int));
@@ -14,7 +15,7 @@ data_store_int::data_store_int(int n_samples_in, int interval_in) : n_samples(n_
 	cur_t = 0;
 }
 
-data_store_int::data_store_int(std::string file) : prev_index(-1)
+data_store_int::data_store_int(std::string file)
 {
 	FILE *fh = fopen(file.c_str(), "r");
 	if (!fh)
@@ -103,10 +104,10 @@ void data_store_int::put_int(FILE *fh, int value)
 {
 	unsigned char buffer[4];
 
-	buffer[0] = (value >> 24) && 255;
-	buffer[1] = (value >> 16) && 255;
-	buffer[2] = (value >>  8) && 255;
-	buffer[3] = (value      ) && 255;
+	buffer[0] = (value >> 24) & 255;
+	buffer[1] = (value >> 16) & 255;
+	buffer[2] = (value >>  8) & 255;
+	buffer[3] = (value      ) & 255;
 
 	if (fwrite((char *)buffer, 4, 1, fh) != 1)
 		error_exit("problem writing to data_store_int dump-file");
@@ -120,30 +121,45 @@ void data_store_int::put_long_long_int(FILE *fh, long long int value)
 
 int data_store_int::init_data(int t)
 {
-	int index = (t / interval) % n_samples;
+	int cur_index = (t / interval) % n_samples;
+	int prev_index = cur_t != -1 ? (cur_t / interval) % n_samples : -1;
 
-	if (t != cur_t)
+	if (cur_index != prev_index && prev_index != -1)
 	{
 		// if the interval between now and previous value
 		// is more than a second, then invalidate values
 		// in between
-		for(int temp_t=cur_t + 1; temp_t < t; temp_t++)
+		if (cur_index > prev_index)
 		{
-			int temp_index = (temp_t / interval) % n_samples;
+			int n = (cur_index - prev_index) - 1;
 
-			values[temp_index] = 0;
-			counts[temp_index] = 0;
-			valid[temp_index] = false;
+			if (n > 0)
+			{
+				memset(&values[prev_index + 1], 0x00, sizeof(long long int) * n);
+				memset(&counts[prev_index + 1], 0x00, sizeof(int) * n);
+				memset(&valid[prev_index + 1], 0x00, sizeof(bool) * n);
+			}
+		}
+		else
+		{
+			int n = n_samples - prev_index;
+			memset(&values[prev_index], 0x00, sizeof(long long int) * n);
+			memset(&counts[prev_index], 0x00, sizeof(int) * n);
+			memset(&valid[prev_index], 0x00, sizeof(bool) * n);
+
+			memset(&values[0], 0x00, sizeof(long long int) * cur_index);
+			memset(&counts[0], 0x00, sizeof(int) * cur_index);
+			memset(&valid[0], 0x00, sizeof(bool) * cur_index);
 		}
 
-		values[index] = 0;
-		counts[index] = 0;
-		valid[index] = true;
+		values[cur_index] = 0;
+		counts[cur_index] = 0;
+		valid[cur_index] = true;
 	}
 
 	cur_t = t;
 
-	return index;
+	return cur_index;
 }
 
 void data_store_int::add_avg(int t, int value)
