@@ -41,6 +41,8 @@
 #include "pools.h"
 #include "statistics.h"
 #include "handle_client.h"
+#include "data_store_int.h"
+#include "data_logger.h"
 #include "utils.h"
 #include "log.h"
 #include "signals.h"
@@ -178,12 +180,17 @@ int main(int argc, char *argv[])
 
 	statistics stats(config.stats_file, eb_output_fips140, eb_output_scc, ppools);
 
+	data_logger *dl = new data_logger(ppools, &clients, &clients_mutex);
+
 	if (config.webserver_port >= 1)
-		start_web_server(config.webserver_interface, config.webserver_port, &clients, &clients_mutex, ppools, &stats, eb_output_fips140, eb_output_scc);
+		start_web_server(config.webserver_interface, config.webserver_port, &clients, &clients_mutex, ppools, &stats, eb_output_fips140, eb_output_scc, dl);
 
 	main_loop(&clients, &clients_mutex, ppools, &config, eb_output_fips140, eb_output_scc, &pc, &stats);
 
 	printf("Dumping pool contents to cache-file\n");
+
+	delete dl;
+
 	delete ppools;
 
 	delete bce;

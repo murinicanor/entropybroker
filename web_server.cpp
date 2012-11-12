@@ -28,6 +28,8 @@
 #include "users.h"
 #include "statistics.h"
 #include "handle_client.h"
+#include "data_store_int.h"
+#include "data_logger.h"
 #include "http_request_t.h"
 #include "http_bundle.h"
 #include "http_file.h"
@@ -54,15 +56,15 @@ void *start_web_server_thread_wrapper(void *p)
 	return NULL;
 }
 
-void start_web_server(std::string listen_adapter, int listen_port, std::vector<client_t *> *clients, pthread_mutex_t *clients_mutex, pools *ppools, statistics *ps, fips140 *pfips140, scc *pscc)
+void start_web_server(std::string listen_adapter, int listen_port, std::vector<client_t *> *clients, pthread_mutex_t *clients_mutex, pools *ppools, statistics *ps, fips140 *pfips140, scc *pscc, data_logger *dl)
 {
-	web_server *ws = new web_server(listen_adapter, listen_port, clients, clients_mutex, ppools, ps, pfips140, pscc);
+	web_server *ws = new web_server(listen_adapter, listen_port, clients, clients_mutex, ppools, ps, pfips140, pscc, dl);
 
 	pthread_t thread;
 	pthread_check(pthread_create(&thread, NULL, start_web_server_thread_wrapper, ws), "pthread_create");
 }
 
-web_server::web_server(std::string listen_adapter, int listen_port, std::vector<client_t *> *clients, pthread_mutex_t *clients_mutex, pools *ppools, statistics *ps, fips140 *pfips140, scc *pscc)
+web_server::web_server(std::string listen_adapter, int listen_port, std::vector<client_t *> *clients, pthread_mutex_t *clients_mutex, pools *ppools, statistics *ps, fips140 *pfips140, scc *pscc, data_logger *dl)
 {
 	fd = start_listen(listen_adapter.c_str(), listen_port, 64);
 
@@ -73,6 +75,8 @@ web_server::web_server(std::string listen_adapter, int listen_port, std::vector<
 	add_object(new http_file_file("/stylesheet.css", "text/css", WEB_DIR "/stylesheet.css"));
 	add_object(new http_file_file("/favicon.ico", "image/x-ico", WEB_DIR "/favicon.ico"));
 	add_object(new http_file_file("/logo.png", "image/png", WEB_DIR "/logo.png"));
+
+	// FIXME graphs for data_logger
 }
 
 web_server::~web_server()
