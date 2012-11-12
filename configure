@@ -53,6 +53,20 @@ if [ $? -ne 0 ] ; then
 fi
 echo \ OK
 
+echo -n \* checking for libpng12-dev...
+g++ -O0 -o $FILE test_libpng.cpp 2> $FILE2
+if [ $? -ne 0 ] ; then
+	echo
+	echo \! libpng12-dev was NOT detected
+	echo \! libpng12-dev is required for entropy_broker
+	echo
+	echo \! errors reported:
+	echo
+	cat $FILE2
+	echo
+	exit 1
+fi
+
 g++ -O0 -o $FILE test_asound2.cpp 2> /dev/null
 if [ $? -eq 0 ] ; then
 	echo \+ libasound2 detected, enabling eb_server_audio
@@ -84,14 +98,6 @@ if [ $? -eq 0 ] ; then
 	B2="$B2 eb_server_ComScire_R2000KU"
 else
 	echo \- libftdi-dev NOT found, disabling eb_server_ComScire_R2000KU
-fi
-
-g++ -O0 -o $FILE test_libpng.cpp 2> /dev/null
-if [ $? -eq 0 ] ; then
-	echo \+ libpng12-dev detected, enabling plot
-	B2="$B2 plot"
-else
-	echo \- libpng12-dev NOT found, disabling plot
 fi
 
 echo B2=$B2 > makefile.inc
