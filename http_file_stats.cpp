@@ -199,6 +199,17 @@ http_bundle * http_file_stats::do_request(http_request_t request_type, std::stri
 		content += format("<TR><TD>avg bits/mem pool:</TD><TD>%f (def max: %d)</TD></TR>\n", double(bit_sum) / double(mem_pools), DEFAULT_POOL_SIZE_BITS);
 		content += format("<TR><TD>pool files on disk:</TD><TD>%d</TD></TR>\n", ppools -> get_disk_pool_count());
 		content += "</TABLE>\n";
+		content += "<BR>\n";
+
+		content += "<H2>number of memory pools</H2>\n";
+		content += "<IMG SRC=\"/graph.png?type=mem_pool_counts&width=400&height=240\"><BR>\n";
+		content += "<BR>\n";
+		content += "<H2>number of disk pools</H2>\n";
+		content += "<IMG SRC=\"/graph.png?type=dsk_pool_counts&width=400&height=240\"><BR>\n";
+		content += "<BR>\n";
+		content += "<H2>number of connections</H2>\n";
+		content += "<IMG SRC=\"/graph.png?type=connection_counts&width=400&height=240\"><BR>\n";
+		content += "<BR>\n";
 	}
 
 	content += get_style_tail();

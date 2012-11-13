@@ -75,6 +75,8 @@ void graph::do_draw(int width, int height, std::string title, long int *ts, doub
 		if (values[index] > dataMax) dataMax = values[index];
 	}
 
+	printf("values: %d, ts min: %f, ts max: %f, data min: %f, data max: %f\n", n_values, tMin, tMax, dataMin, dataMax);
+
 	double scaleX = (double)(xAxisRight - xAxisLeft) / (double)(tMax - tMin);
 	double scaleY = (double)(yAxisBottom - yAxisTop) / (dataMax - dataMin);
 	double scaleT = (double)(tMax - tMin) / (double)xTicks;
@@ -92,29 +94,10 @@ void graph::do_draw(int width, int height, std::string title, long int *ts, doub
 	gdImageLine(im, xAxisLeft, yAxisTop, xAxisLeft, yAxisBottom, black);
 	gdImageLine(im, xAxisLeft, yAxisBottom, xAxisRight, yAxisBottom, black);
 
-	// draw ticks vertical
-	for(int yti=0; yti<=yTicks; yti++)
-	{
-		int y = (double(yAxisBottom - yAxisTop) * double(yti)) / double(yTicks) + yAxisTop;
-		gdImageLine(im, xAxisLeft - 2, y, xAxisLeft, y, black);
-
-		double value = (((dataMax - dataMin) / double(yTicks)) * double(yTicks - yti) + dataMin);
-
-		std::string str = format("%f", value);
-		if (str.length() > yAxisMaxStrLen)
-			str = str.substr(0, yAxisMaxStrLen);
-
-		if (yti < yTicks)
-			gdImageLine(im, xAxisLeft + 1, y, xAxisRight, y, gray);
-
-		draw_text(im, font, font_height, gray, str, 1, y == yAxisTop ? y + 6 : y + 3);
-	}
-
 	// draw ticks horizonal
 	for(int xti=0; xti<=xTicks; xti++)
 	{
 		int x = (double(xAxisRight - xAxisLeft) * double(xti)) / double(xTicks) + xAxisLeft;
-		gdImageLine(im, x, yAxisBottom, x, yAxisBottom + 2, black);
 
 		double value = tMin + scaleT * double(xti);
 
@@ -142,30 +125,56 @@ void graph::do_draw(int width, int height, std::string title, long int *ts, doub
 
 		draw_text(im, font, font_height, gray, strTime, xPos, yAxisBottom + 14);
 		draw_text(im, font, font_height, gray, strDate, xPos, yAxisBottom + 24);
+
+		gdImageLine(im, x, yAxisBottom, x, yAxisBottom + 2, black);
+	}
+
+	// draw ticks vertical
+	for(int yti=0; yti<=yTicks; yti++)
+	{
+		int y = (double(yAxisBottom - yAxisTop) * double(yti)) / double(yTicks) + yAxisTop;
+		gdImageLine(im, xAxisLeft - 2, y, xAxisLeft, y, black);
+
+		double value = (((dataMax - dataMin) / double(yTicks)) * double(yTicks - yti) + dataMin);
+
+		std::string str = format("%f", value);
+		if (str.length() > yAxisMaxStrLen)
+			str = str.substr(0, yAxisMaxStrLen);
+
+		gdImageLine(im, xAxisLeft + 1, y, xAxisRight, y, gray);
+
+		draw_text(im, font, font_height, gray, str, 1, y == yAxisTop ? y + 6 : y + 3);
 	}
 
 	// draw data
-	bool first = true;
-	int yPrev = -1, xPrev = -1;
-	for(int index=0; index<n_values; index++)
+	if (n_values > 1 && dataMax - dataMin > 0.001)
 	{
-		double t = ts[index];
-		double value = values[index];
-		int x = xAxisLeft + int(scaleX * double(t - tMin));
-		int y = yAxisBottom - int(scaleY * double(value - dataMin));
+		bool first = true;
+		int yPrev = -1, xPrev = -1;
+		for(int index=0; index<n_values; index++)
+		{
+			double t = ts[index];
+			double value = values[index];
+			int x = xAxisLeft + int(scaleX * double(t - tMin));
+			int y = yAxisBottom - int(scaleY * double(value - dataMin));
 
-		if (first)
-		{
-			xPrev = x;
-			yPrev = y;
-			first = false;
+			if (first)
+			{
+				xPrev = x;
+				yPrev = y;
+				first = false;
+			}
+			else
+			{
+				gdImageLine(im, xPrev, yPrev, x, y, red);
+				xPrev = x;
+				yPrev = y;
+			}
 		}
-		else
-		{
-			gdImageLine(im, xPrev, yPrev, x, y, red);
-			xPrev = x;
-			yPrev = y;
-		}
+	}
+	else
+	{
+		draw_text(im, font, font_height * 1.5, red, "No data or data too constant", xAxisLeft + 5, height / 2 + yAxisTop / 2);
 	}
 
 	// draw to memory

@@ -1,4 +1,5 @@
 #include <errno.h>
+#include <gd.h>
 #include <map>
 #include <pthread.h>
 #include <stdlib.h>
@@ -30,6 +31,7 @@
 #include "handle_client.h"
 #include "data_store_int.h"
 #include "data_logger.h"
+#include "graph.h"
 #include "http_request_t.h"
 #include "http_bundle.h"
 #include "http_file.h"
@@ -38,6 +40,7 @@
 #include "http_file_stats.h"
 #include "http_file_404.h"
 #include "http_file_version.h"
+#include "http_file_graph_data_logger.h"
 #include "http_server.h"
 #include "web_server.h"
 
@@ -75,8 +78,7 @@ web_server::web_server(std::string listen_adapter, int listen_port, std::vector<
 	add_object(new http_file_file("/stylesheet.css", "text/css", WEB_DIR "/stylesheet.css"));
 	add_object(new http_file_file("/favicon.ico", "image/x-ico", WEB_DIR "/favicon.ico"));
 	add_object(new http_file_file("/logo.png", "image/png", WEB_DIR "/logo.png"));
-
-	// FIXME graphs for data_logger
+	add_object(new http_file_graph_data_logger(dl));
 }
 
 web_server::~web_server()

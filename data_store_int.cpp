@@ -8,9 +8,9 @@
 
 data_store_int::data_store_int(int n_samples_in, int interval_in) : n_samples(n_samples_in), interval(interval_in)
 {
-	values = (long long int *)malloc(n_samples * sizeof(long long int));
-	counts = (int *)malloc(n_samples * sizeof(int));
-	valid = (bool *)malloc(n_samples * sizeof(bool));
+	values = (long long int *)calloc(n_samples, sizeof(long long int));
+	counts = (int *)calloc(n_samples, sizeof(int));
+	valid = (bool *)calloc(n_samples, sizeof(bool));
 
 	cur_t = 0;
 }
@@ -25,9 +25,9 @@ data_store_int::data_store_int(std::string file)
 	interval = get_int(fh);
 	cur_t = get_int(fh);
 
-	values = (long long int *)malloc(n_samples * sizeof(long long int));
-	counts = (int *)malloc(n_samples * sizeof(int));
-	valid = (bool *)malloc(n_samples * sizeof(bool));
+	values = (long long int *)calloc(n_samples, sizeof(long long int));
+	counts = (int *)calloc(n_samples, sizeof(int));
+	valid = (bool *)calloc(n_samples, sizeof(bool));
 
 	for(int index=0; index<n_samples; index++)
 	{
@@ -206,7 +206,7 @@ void data_store_int::get_data(long int **t, double **v, int *n)
 		if (valid[cur_index])
 		{
 			(*t)[*n] = start_t + index * interval;
-			(*v)[*n] = double(values[index]) / double(counts[index]);
+			(*v)[*n] = double(values[cur_index]) / double(counts[cur_index]);
 			(*n)++;
 		}
 	}
