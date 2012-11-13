@@ -39,7 +39,8 @@ void graph::do_draw(int width, int height, std::string title, long int *ts, doub
 	int yAxisBottom = height - 25;
 	int yTicks = 10;
 	int xTicks;
-	unsigned int yAxisMaxStrLen = 5;
+	unsigned int yAxisMaxStrLen = 4;
+	bool doRound = false;
 	int xAxisLeft;
 	int xAxisRight = width - 5;
 	int font_height = 10;
@@ -50,17 +51,9 @@ void graph::do_draw(int width, int height, std::string title, long int *ts, doub
 	int gray = gdImageColorAllocate(im, 127, 127, 127);
 	int red = gdImageColorAllocate(im, 255, 0, 0);
 
-	// determine x-position of y-axis
-        std::string dummyStr;
-        for(unsigned int nr=0; nr<yAxisMaxStrLen; nr++)
-                dummyStr += "8";
-	int dummy;
-	calc_text_width(font, font_height, dummyStr, &xAxisLeft, &dummy);
-
         // determine center of date string
-	int dateWidth = -1;
+	int dateWidth = -1, dummy;
 	calc_text_width(font, 10.0, "8888/88/88", &dateWidth, &dummy);
-        xTicks = (width - xAxisLeft) / dateWidth;
 
 	double dataMin = 99999999999.9;
 	double dataMax = -99999999999.9;
@@ -75,7 +68,28 @@ void graph::do_draw(int width, int height, std::string title, long int *ts, doub
 		if (values[index] > dataMax) dataMax = values[index];
 	}
 
-	printf("values: %d, ts min: %f, ts max: %f, data min: %f, data max: %f\n", n_values, tMin, tMax, dataMin, dataMax);
+	// determine x-position of y-axis
+        std::string dummyStr1 = format("%f", dataMax);
+        std::string dummyStr2 = format("%f", dataMin);
+	std::string use_width = dummyStr1;
+	if (dummyStr2.size() > use_width.size())
+		use_width = dummyStr2;
+	size_t dot_index = use_width.find_first_of('.');
+	if (dot_index == std::string::npos)
+		dot_index = use_width.size();
+	if (dot_index > yAxisMaxStrLen)
+	{
+		doRound = true;
+		use_width = use_width.substr(0, dot_index);
+	}
+	else
+	{
+		use_width = use_width.substr(0, yAxisMaxStrLen);
+	}
+	calc_text_width(font, font_height, use_width, &xAxisLeft, &dummy);
+	xAxisLeft++; // 1 pixel space between text and lines
+
+        xTicks = (width - xAxisLeft) / dateWidth;
 
 	double scaleX = (double)(xAxisRight - xAxisLeft) / (double)(tMax - tMin);
 	double scaleY = (double)(yAxisBottom - yAxisTop) / (dataMax - dataMin);
@@ -138,8 +152,16 @@ void graph::do_draw(int width, int height, std::string title, long int *ts, doub
 		double value = (((dataMax - dataMin) / double(yTicks)) * double(yTicks - yti) + dataMin);
 
 		std::string str = format("%f", value);
-		if (str.length() > yAxisMaxStrLen)
+		if (doRound)
+		{
+			size_t dot_offset = str.find_first_of('.');
+			if (dot_offset != std::string::npos)
+				str = str.substr(0, dot_offset);
+		}
+		else
+		{
 			str = str.substr(0, yAxisMaxStrLen);
+		}
 
 		gdImageLine(im, xAxisLeft + 1, y, xAxisRight, y, gray);
 
