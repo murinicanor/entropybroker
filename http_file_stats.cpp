@@ -216,10 +216,10 @@ http_bundle * http_file_stats::do_request(http_request_t request_type, std::stri
 		content += "<H2>disk pools bit count</H2>\n";
 		content += "<IMG SRC=\"/graph.png?type=dsk_pools_bitcount&width=640&height=240\"><BR>\n";
 		content += "<BR>\n";
-		content += "<H2>received bit count (per interval)</H2>\n";
+		content += "<H2>sent bit count (per interval)</H2>\n";
 		content += "<IMG SRC=\"/graph.png?type=recv_bit_count&width=640&height=240\"><BR>\n";
 		content += "<BR>\n";
-		content += "<H2>sent bit count (per interval)</H2>\n";
+		content += "<H2>received bit count (per interval)</H2>\n";
 		content += "<IMG SRC=\"/graph.png?type=sent_bit_count&width=640&height=240\"><BR>\n";
 		content += "<BR>\n";
 	}
