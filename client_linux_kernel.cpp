@@ -113,7 +113,7 @@ int main(int argc, char *argv[])
 	}
 
 	if (username.length() == 0 || password.length() == 0)
-		error_exit("username + password cannot be empty");
+		error_exit("please select a file with authentication parameters (username + password) using the -X switch");
 
 	if (hosts.empty())
 		error_exit("no host to connect to selected");
