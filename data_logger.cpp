@@ -44,31 +44,31 @@ data_logger::data_logger(statistics *s_in, pools *ppools_in, std::vector<client_
 	if (file_exist(MEM_POOL_COUNTS))
 		mem_pool_counts = new data_store_int(MEM_POOL_COUNTS);
 	else
-		mem_pool_counts = new data_store_int(1440 * 7, 300);
+		mem_pool_counts = new data_store_int(MEASURE_KEEP_N, MEASURE_INTERVAL);
 	pthread_check(pthread_mutex_init(&mem_pool_lck, &global_mutex_attr), "pthread_mutex_init");
 
 	if (file_exist(DSK_POOL_COUNTS))
 		dsk_pool_counts = new data_store_int(DSK_POOL_COUNTS);
 	else
-		dsk_pool_counts = new data_store_int(1440 * 7, 300);
+		dsk_pool_counts = new data_store_int(MEASURE_KEEP_N, MEASURE_INTERVAL);
 	pthread_check(pthread_mutex_init(&dsk_pool_lck, &global_mutex_attr), "pthread_mutex_init");
 
 	if (file_exist(CONNECTION_COUNTS))
 		connection_counts = new data_store_int(CONNECTION_COUNTS);
 	else
-		connection_counts = new data_store_int(1440 * 7, 300);
+		connection_counts = new data_store_int(MEASURE_KEEP_N, MEASURE_INTERVAL);
 	pthread_check(pthread_mutex_init(&connection_counts_lck, &global_mutex_attr), "pthread_mutex_init");
 
 	if (file_exist(MEM_POOL_BIT_COUNT_COUNTS))
 		mem_pool_bit_count_counts = new data_store_int(MEM_POOL_BIT_COUNT_COUNTS);
 	else
-		mem_pool_bit_count_counts = new data_store_int(1440 * 7, 300);
+		mem_pool_bit_count_counts = new data_store_int(MEASURE_KEEP_N, MEASURE_INTERVAL);
 	pthread_check(pthread_mutex_init(&mem_pool_bit_count_lck, &global_mutex_attr), "pthread_mutex_init");
 
 	if (file_exist(DSK_POOL_BIT_COUNT_COUNTS))
 		dsk_pool_bit_count_counts = new data_store_int(DSK_POOL_BIT_COUNT_COUNTS);
 	else
-		dsk_pool_bit_count_counts = new data_store_int(1440 * 7, 300);
+		dsk_pool_bit_count_counts = new data_store_int(MEASURE_KEEP_N, MEASURE_INTERVAL);
 	pthread_check(pthread_mutex_init(&dsk_pool_bit_count_lck, &global_mutex_attr), "pthread_mutex_init");
 
 	prev_recv_n = prev_sent_n = -1;
@@ -76,13 +76,13 @@ data_logger::data_logger(statistics *s_in, pools *ppools_in, std::vector<client_
 	if (file_exist(RECV_BIT_COUNT))
 		recv_bit_count = new data_store_int(RECV_BIT_COUNT);
 	else
-		recv_bit_count = new data_store_int(1440 * 7, 300);
+		recv_bit_count = new data_store_int(MEASURE_KEEP_N, MEASURE_INTERVAL);
 	pthread_check(pthread_mutex_init(&recv_bit_count_lck, &global_mutex_attr), "pthread_mutex_init");
 
 	if (file_exist(SENT_BIT_COUNT))
 		sent_bit_count = new data_store_int(SENT_BIT_COUNT);
 	else
-		sent_bit_count = new data_store_int(1440 * 7, 300);
+		sent_bit_count = new data_store_int(MEASURE_KEEP_N, MEASURE_INTERVAL);
 	pthread_check(pthread_mutex_init(&sent_bit_count_lck, &global_mutex_attr), "pthread_mutex_init");
 
 	pthread_check(pthread_create(&thread, NULL, start_data_logger_thread_wrapper, this), "pthread_create");
@@ -176,7 +176,7 @@ void data_logger::run()
 
 		double now_ts = get_ts();
 
-		if (now_ts - prev_ts >= 300.0)
+		if (now_ts - prev_ts >= MEASURE_INTERVAL)
 		{
 			time_t dummy_ts = time_t(now_ts);
 
