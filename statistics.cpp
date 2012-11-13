@@ -39,6 +39,7 @@ statistics::statistics(char *file_in, fips140 *fips140_in, scc *scc_in, pools *p
 	pthread_check(pthread_mutex_init(&timeouts_lck, &global_mutex_attr), "pthread_mutex_init");
 	pthread_check(pthread_mutex_init(&msg_cnt_lck, &global_mutex_attr), "pthread_mutex_init");
 	pthread_check(pthread_mutex_init(&time_lck, &global_mutex_attr), "pthread_mutex_init");
+	pthread_check(pthread_mutex_init(&logins_lck, &global_mutex_attr), "pthread_mutex_init");
 
 	bps_cur = 0;
 
@@ -72,6 +73,7 @@ statistics::~statistics()
 	pthread_check(pthread_mutex_destroy(&timeouts_lck), "pthread_mutex_destroy");
 	pthread_check(pthread_mutex_destroy(&msg_cnt_lck), "pthread_mutex_destroy");
 	pthread_check(pthread_mutex_destroy(&time_lck), "pthread_mutex_destroy");
+	pthread_check(pthread_mutex_destroy(&logins_lck), "pthread_mutex_destroy");
 }
 
 void statistics::inc_disconnects()
@@ -314,4 +316,32 @@ double statistics::get_start_ts()
 {
 	// no locking; does not change
 	return start_ts;
+}
+
+void statistics::put_history_login(std::string host_in, std::string type_in, std::string user_in, double start_ts_in, double duration_in)
+{
+	history_logins entry;
+
+	entry.host = host_in;
+	entry.type = type_in;
+	entry.user = user_in;
+	entry.time_logged_in = start_ts_in;
+	entry.duration = duration_in;
+
+	my_mutex_lock(&logins_lck);
+	logins.push_back(entry);
+
+	while(logins.size() > HISTORY_REMEMBER_N)
+		logins.erase(logins.begin() + 0);
+
+	my_mutex_unlock(&logins_lck);
+}
+
+std::vector<history_logins> statistics::get_login_history()
+{
+	my_mutex_lock(&logins_lck);
+	std::vector<history_logins> result = logins;
+	my_mutex_unlock(&logins_lck);
+
+	return result;
 }

@@ -48,9 +48,13 @@ extern const char *pid_file;
 
 long long int client_id = 1;
 
-void forget_client_index(std::vector<client_t *> *clients, int nr, bool force)
+void forget_client_index(statistics *s, std::vector<client_t *> *clients, int nr, bool force)
 {
 	client_t *p = clients -> at(nr);
+
+	double now_ts = get_ts();
+	double since_ts = p -> stats_user -> get_since_ts();
+	s -> put_history_login(p -> host, p -> type, p -> user, since_ts, now_ts - since_ts);
 
 	close(p -> socket_fd);
 	close(p -> to_thread[1]);
@@ -95,13 +99,13 @@ client_t *find_client_by_id(std::vector<client_t *> *clients, long long int id_i
 	return NULL;
 }
 
-void forget_client_thread_id(std::vector<client_t *> *clients, pthread_t *tid, bool force)
+void forget_client_thread_id(statistics *s, std::vector<client_t *> *clients, pthread_t *tid, bool force)
 {
 	for(unsigned int index=0; index<clients -> size(); index++)
 	{
 		if (pthread_equal(clients -> at(index) -> th, *tid) != 0)
 		{
-			forget_client_index(clients, index, force);
+			forget_client_index(s, clients, index, force);
 
 			break;
 		}
@@ -551,7 +555,7 @@ void send_to_client_threads(std::vector<client_t *> *clients, std::vector<msg_pa
 	}
 }
 
-void terminate_threads(std::vector<client_t *> *clients)
+void terminate_threads(statistics *s, std::vector<client_t *> *clients)
 {
 	for(unsigned int index=0; index<clients -> size(); index++)
 	{
@@ -574,7 +578,7 @@ void terminate_threads(std::vector<client_t *> *clients)
 
 		dolog(LOG_DEBUG, "... %s/%s (fd: %d)", p -> host.c_str(), p -> type.c_str(), p -> socket_fd);
 
-		forget_client_index(clients, 0, true);
+		forget_client_index(s, clients, 0, true);
 	}
 }
 
@@ -751,7 +755,7 @@ void main_loop(std::vector<client_t *> *clients, pthread_mutex_t *clients_mutex,
 		}
 
 		for(unsigned int loop=0; loop<delete_ids.size(); loop++)
-			forget_client_thread_id(clients, delete_ids.at(loop), true);
+			forget_client_thread_id(stats, clients, delete_ids.at(loop), true);
 
 		send_to_client_threads(clients, &msgs_clients, false, &send_have_data, &send_need_data, &send_is_full);
 		send_to_client_threads(clients, &msgs_servers, true, &send_have_data, &send_need_data, &send_is_full);
@@ -767,7 +771,7 @@ void main_loop(std::vector<client_t *> *clients, pthread_mutex_t *clients_mutex,
 	my_mutex_lock(clients_mutex);
 	dolog(LOG_INFO, "Terminating %d threads...", clients -> size());
 
-	terminate_threads(clients);
+	terminate_threads(stats, clients);
 	my_mutex_unlock(clients_mutex);
 
 	delete user_map;

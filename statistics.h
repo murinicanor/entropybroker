@@ -1,4 +1,14 @@
 // SVN: $Revision$
+
+#define HISTORY_REMEMBER_N 128
+
+class history_logins
+{
+public:
+	std::string host, type, user;
+	double time_logged_in, duration;
+};
+
 class statistics
 {
 private:
@@ -6,6 +16,9 @@ private:
 	fips140 *pfips140;
 	scc *pscc;
 	pools *ppools;
+
+	pthread_mutex_t logins_lck;
+	std::vector<history_logins> logins;
 
 	pthread_mutex_t recv_lck;
 	long long int total_recv;
@@ -62,6 +75,7 @@ public:
 	void emit_statistics_file(int n_clients);
 	void emit_statistics_log(int n_clients, bool force_stats, int reset_counters_interval);
 	void register_msg(bool is_put);
+	void put_history_login(std::string host_in, std::string type_in, std::string user_in, double start_ts, double duration_in);
 
 	int get_msg_cnt();
 	int get_times_empty();
@@ -74,4 +88,5 @@ public:
 	double get_since_ts();
 	double get_last_put_msg_ts();
 	double get_start_ts();
+	std::vector<history_logins> get_login_history();
 };
