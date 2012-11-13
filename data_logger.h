@@ -1,4 +1,5 @@
 #define MEM_POOL_COUNTS VAR_DIR "/mem_pool_counts.dat"
+#define MEM_POOL_BIT_COUNT_COUNTS VAR_DIR "/mem_pool_bit_count_counts.dat"
 #define DSK_POOL_COUNTS VAR_DIR "/dsk_pool_counts.dat"
 #define CONNECTION_COUNTS VAR_DIR "/connection_counts.dat"
 
@@ -13,6 +14,9 @@ private:
 
 	pthread_mutex_t connection_counts_lck;
 	data_store_int *connection_counts;
+
+	pthread_mutex_t mem_pool_bit_count_lck;
+	data_store_int *mem_pool_bit_count_counts;
 
 	pthread_t thread;
 
@@ -34,6 +38,7 @@ public:
 	void get_mem_pool_counts(long int **t, double **v, int *n);
 	void get_dsk_pool_counts(long int **t, double **v, int *n);
 	void get_connection_counts(long int **t, double **v, int *n);
+	void get_pools_bitcounts(long int **t, double **v, int *n);
 
 	void run();
 };

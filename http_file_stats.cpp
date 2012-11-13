@@ -210,6 +210,9 @@ http_bundle * http_file_stats::do_request(http_request_t request_type, std::stri
 		content += "<H2>number of connections</H2>\n";
 		content += "<IMG SRC=\"/graph.png?type=connection_counts&width=400&height=240\"><BR>\n";
 		content += "<BR>\n";
+		content += "<H2>memory pools bit count</H2>\n";
+		content += "<IMG SRC=\"/graph.png?type=mem_pools_bitcount&width=400&height=240\"><BR>\n";
+		content += "<BR>\n";
 	}
 
 	content += get_style_tail();

@@ -82,6 +82,8 @@ http_bundle * http_file_graph_data_logger::do_request(http_request_t request_typ
 		dl -> get_dsk_pool_counts(&t, &v, &n);
 	else if (type == "connection_counts")
 		dl -> get_connection_counts(&t, &v, &n);
+	else if (type == "mem_pools_bitcount")
+		dl -> get_pools_bitcounts(&t, &v, &n);
 	else
 	{
 		dolog(LOG_INFO, "%s is an unknown graph-type", type.c_str());
