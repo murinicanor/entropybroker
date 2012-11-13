@@ -41,6 +41,7 @@
 #include "http_file_404.h"
 #include "http_file_version.h"
 #include "http_file_graph_data_logger.h"
+#include "http_file_logfile.h"
 #include "http_server.h"
 #include "web_server.h"
 
@@ -79,6 +80,7 @@ web_server::web_server(std::string listen_adapter, int listen_port, std::vector<
 	add_object(new http_file_file("/favicon.ico", "image/x-ico", WEB_DIR "/favicon.ico"));
 	add_object(new http_file_file("/logo.png", "image/png", WEB_DIR "/logo.png"));
 	add_object(new http_file_graph_data_logger(dl));
+	add_object(new http_file_logfile(ps));
 }
 
 web_server::~web_server()
