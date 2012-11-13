@@ -48,7 +48,8 @@ void graph::do_draw(int width, int height, std::string title, long int *ts, doub
 	gdImagePtr im = gdImageCreate(width, height);
 
 	int black = gdImageColorAllocate(im, 0, 0, 0);
-	int gray = gdImageColorAllocate(im, 127, 127, 127);
+	int green_dark = gdImageColorAllocate(im, 0, 96, 0);
+	int green_bright = gdImageColorAllocate(im, 0, 255, 0);
 	int red = gdImageColorAllocate(im, 255, 0, 0);
 
         // determine center of date string
@@ -123,7 +124,7 @@ void graph::do_draw(int width, int height, std::string title, long int *ts, doub
 		std::string strTime = std::string(buffer);
 
 		if (xti > 0)
-			gdImageLine(im, x, yAxisTop + 1, x, yAxisBottom, gray);
+			gdImageLine(im, x, yAxisTop + 1, x, yAxisBottom, green_dark);
 
 		int xPos = -1;
 		if (xti == 0)
@@ -135,8 +136,8 @@ void graph::do_draw(int width, int height, std::string title, long int *ts, doub
 		else
 			xPos = x - dateWidth / 2;
 
-		draw_text(im, font, font_height, gray, strTime, xPos, yAxisBottom + 14);
-		draw_text(im, font, font_height, gray, strDate, xPos, yAxisBottom + 24);
+		draw_text(im, font, font_height, green_bright, strTime, xPos, yAxisBottom + 14);
+		draw_text(im, font, font_height, green_bright, strDate, xPos, yAxisBottom + 24);
 
 		gdImageLine(im, x, yAxisBottom, x, yAxisBottom + 2, black);
 	}
@@ -161,9 +162,9 @@ void graph::do_draw(int width, int height, std::string title, long int *ts, doub
 			str = str.substr(0, yAxisMaxStrLen);
 		}
 
-		gdImageLine(im, xAxisLeft + 1, y, xAxisRight, y, gray);
+		gdImageLine(im, xAxisLeft + 1, y, xAxisRight, y, green_dark);
 
-		draw_text(im, font, font_height, gray, str, 1, y == yAxisTop ? y + 6 : y + 3);
+		draw_text(im, font, font_height, green_bright, str, 1, y == yAxisTop ? y + 6 : y + 3);
 	}
 
 	// draw data
