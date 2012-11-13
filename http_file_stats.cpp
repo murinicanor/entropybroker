@@ -202,16 +202,16 @@ http_bundle * http_file_stats::do_request(http_request_t request_type, std::stri
 		content += "<BR>\n";
 
 		content += "<H2>number of memory pools</H2>\n";
-		content += "<IMG SRC=\"/graph.png?type=mem_pool_counts&width=400&height=240\"><BR>\n";
+		content += "<IMG SRC=\"/graph.png?type=mem_pool_counts&width=640&height=240\"><BR>\n";
 		content += "<BR>\n";
 		content += "<H2>number of disk pools</H2>\n";
-		content += "<IMG SRC=\"/graph.png?type=dsk_pool_counts&width=400&height=240\"><BR>\n";
+		content += "<IMG SRC=\"/graph.png?type=dsk_pool_counts&width=640&height=240\"><BR>\n";
 		content += "<BR>\n";
 		content += "<H2>number of connections</H2>\n";
-		content += "<IMG SRC=\"/graph.png?type=connection_counts&width=400&height=240\"><BR>\n";
+		content += "<IMG SRC=\"/graph.png?type=connection_counts&width=640&height=240\"><BR>\n";
 		content += "<BR>\n";
 		content += "<H2>memory pools bit count</H2>\n";
-		content += "<IMG SRC=\"/graph.png?type=mem_pools_bitcount&width=400&height=240\"><BR>\n";
+		content += "<IMG SRC=\"/graph.png?type=mem_pools_bitcount&width=640&height=240\"><BR>\n";
 		content += "<BR>\n";
 	}
 
