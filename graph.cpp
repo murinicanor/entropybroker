@@ -113,9 +113,7 @@ void graph::do_draw(int width, int height, std::string title, long int *ts, doub
 	{
 		int x = (double(xAxisRight - xAxisLeft) * double(xti)) / double(xTicks) + xAxisLeft;
 
-		double value = tMin + scaleT * double(xti);
-
-		time_t epoch = value * 1000;
+		time_t epoch = tMin + scaleT * double(xti);
 		struct tm *tm = localtime(&epoch);
 
 		char buffer[128];
