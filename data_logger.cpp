@@ -65,6 +65,12 @@ data_logger::data_logger(pools *ppools_in, std::vector<client_t *> *clients_in, 
 		mem_pool_bit_count_counts = new data_store_int(1440 * 7, 300);
 	pthread_check(pthread_mutex_init(&mem_pool_bit_count_lck, &global_mutex_attr), "pthread_mutex_init");
 
+	if (file_exist(DSK_POOL_BIT_COUNT_COUNTS))
+		dsk_pool_bit_count_counts = new data_store_int(DSK_POOL_BIT_COUNT_COUNTS);
+	else
+		dsk_pool_bit_count_counts = new data_store_int(1440 * 7, 300);
+	pthread_check(pthread_mutex_init(&dsk_pool_bit_count_lck, &global_mutex_attr), "pthread_mutex_init");
+
 	pthread_check(pthread_create(&thread, NULL, start_data_logger_thread_wrapper, this), "pthread_create");
 }
 
@@ -96,6 +102,9 @@ data_logger::~data_logger()
 	delete mem_pool_bit_count_counts;
 	pthread_check(pthread_mutex_destroy(&mem_pool_bit_count_lck), "pthread_mutex_destroy");
 
+	delete dsk_pool_bit_count_counts;
+	pthread_check(pthread_mutex_destroy(&dsk_pool_bit_count_lck), "pthread_mutex_destroy");
+
 	dolog(LOG_INFO, "data logger stopped");
 }
 
@@ -118,6 +127,10 @@ void data_logger::dump_data()
 	my_mutex_lock(&mem_pool_bit_count_lck);
 	mem_pool_bit_count_counts -> dump(MEM_POOL_BIT_COUNT_COUNTS);
 	my_mutex_unlock(&mem_pool_bit_count_lck);
+
+	my_mutex_lock(&dsk_pool_bit_count_lck);
+	dsk_pool_bit_count_counts -> dump(DSK_POOL_BIT_COUNT_COUNTS);
+	my_mutex_unlock(&dsk_pool_bit_count_lck);
 }
 
 void data_logger::run()
@@ -154,6 +167,10 @@ void data_logger::run()
 			my_mutex_lock(&mem_pool_bit_count_lck);
 			mem_pool_bit_count_counts -> add_avg(dummy_ts, ppools -> get_bit_sum(DEFAULT_COMM_TO + 1.0));
 			my_mutex_unlock(&mem_pool_bit_count_lck);
+
+			my_mutex_lock(&dsk_pool_bit_count_lck);
+			dsk_pool_bit_count_counts -> add_avg(dummy_ts, ppools -> get_disk_pool_bit_count());
+			my_mutex_unlock(&dsk_pool_bit_count_lck);
 
 			prev_ts = now_ts;
 		}
@@ -195,4 +212,11 @@ void data_logger::get_pools_bitcounts(long int **t, double **v, int *n)
 	my_mutex_lock(&mem_pool_bit_count_lck);
 	mem_pool_bit_count_counts -> get_data(t, v, n);
 	my_mutex_unlock(&mem_pool_bit_count_lck);
+}
+
+void data_logger::get_disk_pools_bitcounts(long int **t, double **v, int *n)
+{
+	my_mutex_lock(&dsk_pool_bit_count_lck);
+	dsk_pool_bit_count_counts -> get_data(t, v, n);
+	my_mutex_unlock(&dsk_pool_bit_count_lck);
 }

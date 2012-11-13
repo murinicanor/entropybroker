@@ -5,7 +5,7 @@ class pools
 {
 private:
 	std::vector<pool *> pool_vector;
-	std::vector<std::string> cache_list;
+	std::vector<std::pair<std::string, int> > cache_list;
 	std::string cache_dir;
 	unsigned int max_n_mem_pools;
 	unsigned int max_n_disk_pools;
@@ -46,4 +46,5 @@ public:
 	bool all_pools_full(double max_duration);
 	int get_memory_pool_count();
 	int get_disk_pool_count();
+	int get_disk_pool_bit_count();
 };

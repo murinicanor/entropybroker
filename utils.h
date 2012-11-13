@@ -49,6 +49,12 @@ void free_locked(void *p, size_t n);
 std::string format(const char *fmt, ...);
 int get_local_port(int fd);
 std::string time_to_str(time_t t);
+bool get_bool(FILE *fh, bool *value);
+bool get_int(FILE *fh, int *value);
+bool get_long_long_int(FILE *fh, long long int *value);
+void put_bool(FILE *fh, bool value);
+void put_int(FILE *fh, int value);
+void put_long_long_int(FILE *fh, long long int value);
 
 void my_Assert(bool flag, int line, const char *file);
 #define my_assert(x) my_Assert(x, __LINE__,  __FILE__)

@@ -128,17 +128,21 @@ void pools::store_caches(unsigned int keep_n)
 		FILE *fh = fopen(new_cache_file.c_str(), "wb");
 		if (!fh)
 			error_exit("Failed to create file %s", new_cache_file.c_str());
-		cache_list.push_back(new_cache_file);
 
 		if (flock(fileno(fh), LOCK_EX) == -1)
 			error_exit("flock(LOCK_EX) for %s failed", new_cache_file.c_str());
 
+		int bit_sum = 0;
 		while(pool_vector.size() > keep_n)
 		{
 			if (pool_vector.at(0) -> timed_lock_object(1.0) == NULL) // will always succeed due to writelock on list
 			{
-				if (pool_vector.at(0) -> get_n_bits_in_pool() > 0)
+				int n_bits = pool_vector.at(0) -> get_n_bits_in_pool();
+				if (n_bits > 0)
+				{
+					bit_sum += n_bits;
 					pool_vector.at(0) -> dump(fh);
+				}
 
 				pool_vector.at(0) -> unlock_object();
 
@@ -146,6 +150,8 @@ void pools::store_caches(unsigned int keep_n)
 				pool_vector.erase(pool_vector.begin() + 0);
 			}
 		}
+
+		cache_list.push_back(std::pair<std::string, int>(new_cache_file, bit_sum));
 
 		fflush(fh);
 
@@ -165,13 +171,13 @@ bool pools::load_caches(unsigned int load_n_bits, pool_crypto *pc)
 	unsigned int files_loaded = 0;
 	while(!cache_list.empty() && bits_loaded < load_n_bits)
 	{
-		dolog(LOG_DEBUG, "Load bits from %s", cache_list.at(0).c_str());
-		FILE *fh = fopen(cache_list.at(0).c_str(), "r");
+		dolog(LOG_DEBUG, "Load bits from %s", cache_list.at(0).first.c_str());
+		FILE *fh = fopen(cache_list.at(0).first.c_str(), "r");
 		if (!fh)
-			error_exit("Failed to open cache-file %s", cache_list.at(0).c_str());
+			error_exit("Failed to open cache-file %s", cache_list.at(0).first.c_str());
 
 		if (flock(fileno(fh), LOCK_EX) == -1)
-			error_exit("flock(LOCK_EX) for %s failed", cache_list.at(0).c_str());
+			error_exit("flock(LOCK_EX) for %s failed", cache_list.at(0).first.c_str());
 
 		while(!feof(fh))
 		{
@@ -182,13 +188,13 @@ bool pools::load_caches(unsigned int load_n_bits, pool_crypto *pc)
 			pool_vector.push_back(new_pool);
 		}
 
-		if (unlink(cache_list.at(0).c_str()) == -1)
-			error_exit("Failed to delete cache-file %s", cache_list.at(0).c_str());
+		if (unlink(cache_list.at(0).first.c_str()) == -1)
+			error_exit("Failed to delete cache-file %s", cache_list.at(0).first.c_str());
 
 		fflush(fh);
 
 		if (flock(fileno(fh), LOCK_UN) == -1)
-			error_exit("flock(LOCK_UN) for %s failed", cache_list.at(0).c_str());
+			error_exit("flock(LOCK_UN) for %s failed", cache_list.at(0).first.c_str());
 
 		fclose(fh);
 
@@ -345,7 +351,7 @@ void pools::load_cachefiles_list()
 		if (file_name.substr(file_name.size() - 5, 5) == ".pool")
 		{
 			dolog(LOG_DEBUG, "Added %s to cache list", file_name.c_str());
-			cache_list.push_back(file_name);
+			cache_list.push_back(std::pair<std::string, int>(file_name, pool::get_file_bit_count(file_name)));
 		}
 	}
 
@@ -783,4 +789,16 @@ int pools::get_disk_pool_count()
 	list_runlock();
 
 	return n;
+}
+
+int pools::get_disk_pool_bit_count()
+{
+	int bit_sum = 0;
+
+	list_rlock();
+	for(unsigned int index=0; index<cache_list.size(); index++)
+		bit_sum += cache_list.at(index).second;
+	list_runlock();
+
+	return bit_sum;
 }

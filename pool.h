@@ -42,6 +42,8 @@ public:
 	pthread_cond_t * timed_lock_object(double max_time);
 	void unlock_object();
 
+	static int get_file_bit_count(std::string file_name);
+
 	/* -1 if not full, 0 if full */
 	int add_entropy_data(unsigned char *entropy_data, int n_bytes, pool_crypto *pc, int is_n_bits = -1);
 	/* returns number of bytes returned, set prng_ok to also return data when pool empty */

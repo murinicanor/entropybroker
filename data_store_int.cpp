@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "error.h"
+#include "utils.h"
 #include "data_store_int.h"
 
 data_store_int::data_store_int(int n_samples_in, int interval_in) : n_samples(n_samples_in), interval(interval_in)
@@ -21,9 +22,12 @@ data_store_int::data_store_int(std::string file)
 	if (!fh)
 		error_exit("failed to open %s", file.c_str());
 
-	n_samples = get_int(fh);
-	interval = get_int(fh);
-	cur_t = get_int(fh);
+	if (!get_int(fh, &n_samples))
+		error_exit("short read on %s", file.c_str());
+	if (!get_int(fh, &interval))
+		error_exit("short read on %s", file.c_str());
+	if (!get_int(fh, &cur_t))
+		error_exit("short read on %s", file.c_str());
 
 	values = (long long int *)calloc(n_samples, sizeof(long long int));
 	counts = (int *)calloc(n_samples, sizeof(int));
@@ -31,9 +35,12 @@ data_store_int::data_store_int(std::string file)
 
 	for(int index=0; index<n_samples; index++)
 	{
-		values[index] = get_long_long_int(fh);
-		counts[index] = get_int(fh);
-		valid[index] = get_bool(fh);
+		if (!get_long_long_int(fh, &values[index]))
+			error_exit("short read on %s", file.c_str());
+		if (!get_int(fh, &counts[index]))
+			error_exit("short read on %s", file.c_str());
+		if (!get_bool(fh, &valid[index]))
+			error_exit("short read on %s", file.c_str());
 	}
 
 	fclose(fh);
@@ -64,59 +71,6 @@ void data_store_int::dump(std::string file)
 	}
 
 	fclose(fh);
-}
-
-bool data_store_int::get_bool(FILE *fh)
-{
-	if (fgetc(fh))
-		return true;
-
-	return false;
-}
-
-int data_store_int::get_int(FILE *fh)
-{
-	unsigned char buffer[4];
-
-	if (fread((char *)buffer, 4, 1, fh) != 1)
-		error_exit("short read on data_store_int dump-file");
-
-	return (buffer[0] << 24) + (buffer[1] << 16) + (buffer[2] << 8) + buffer[3];
-}
-
-// assuming 2x 32bit ints and 64bit long long int
-long long int data_store_int::get_long_long_int(FILE *fh)
-{
-	unsigned i1, i2;
-
-	i1 = get_int(fh);
-	i2 = get_int(fh);
-
-	return ((long long int)i1 << 32) + i2;
-}
-
-void data_store_int::put_bool(FILE *fh, bool value)
-{
-	fputc(value ? 1 : 0, fh);
-}
-
-void data_store_int::put_int(FILE *fh, int value)
-{
-	unsigned char buffer[4];
-
-	buffer[0] = (value >> 24) & 255;
-	buffer[1] = (value >> 16) & 255;
-	buffer[2] = (value >>  8) & 255;
-	buffer[3] = (value      ) & 255;
-
-	if (fwrite((char *)buffer, 4, 1, fh) != 1)
-		error_exit("problem writing to data_store_int dump-file");
-}
-
-void data_store_int::put_long_long_int(FILE *fh, long long int value)
-{
-	put_int(fh, value >> 32);
-	put_int(fh, value & 0xffffffff);
 }
 
 int data_store_int::init_data(int t)

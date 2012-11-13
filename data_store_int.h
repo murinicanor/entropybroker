@@ -7,14 +7,6 @@ private:
 	int n_samples, interval;
 	int cur_t;
 
-	bool get_bool(FILE *fh);
-	int get_int(FILE *fh);
-	long long int get_long_long_int(FILE *fh);
-
-	void put_bool(FILE *fh, bool value);
-	void put_int(FILE *fh, int value);
-	void put_long_long_int(FILE *fh, long long int value);
-
 	int init_data(int t);
 
 public:

@@ -38,36 +38,54 @@ pool::pool(int new_pool_size_bytes, bit_count_estimator *bce_in, pool_crypto *pc
 
 pool::pool(int pool_nr, FILE *fh, bit_count_estimator *bce_in, pool_crypto *pc) : bce(bce_in)
 {
-	unsigned char val_buffer[8];
+	if (!get_int(fh, &bits_in_pool))
+		error_exit("loading pool: short read (bit count)");
 
-	if (fread(val_buffer, 1, 8, fh) <= 0)
-	{
-		// FIXME throw an exception instead to prevent a 0-bits pool?
-		pool_size_bytes = DEFAULT_POOL_SIZE_BITS / 8;
-		bits_in_pool = 0;
+	if (bits_in_pool < 0 || bits_in_pool >= 4194304) // more than 4MB is ridiculous
+		error_exit("Corrupt dump? bits in pool is strange! %d", bits_in_pool);
 
-		entropy_pool = reinterpret_cast<unsigned char *>(malloc_locked(pool_size_bytes));
-	}
-	else
-	{
-		bits_in_pool = (val_buffer[0] << 24) + (val_buffer[1] << 16) + (val_buffer[2] << 8) + val_buffer[3];
-		if (bits_in_pool < 0 || bits_in_pool >= 4194304) // more than 4MB is ridiculous
-			error_exit("Corrupt dump? bits in pool is strange! %d", bits_in_pool);
+	if (!get_int(fh, &pool_size_bytes))
+		error_exit("loading pool: short read (size)");
 
-		pool_size_bytes = (val_buffer[4] << 24) + (val_buffer[5] << 16) + (val_buffer[6] << 8) + val_buffer[7];
-		if (pool_size_bytes < 0 || pool_size_bytes >= 4194304) // more than 4MB is ridiculous
-			error_exit("Corrupt dump? pool size is strange! %d", pool_size_bytes);
+	if (pool_size_bytes < 0 || pool_size_bytes >= 4194304) // more than 4MB is ridiculous
+		error_exit("Corrupt dump? pool size is strange! %d", pool_size_bytes);
 
-		entropy_pool = reinterpret_cast<unsigned char *>(malloc_locked(pool_size_bytes));
+	entropy_pool = reinterpret_cast<unsigned char *>(malloc_locked(pool_size_bytes));
 
-		int rc = -1;
-		if ((rc = fread(entropy_pool, 1, pool_size_bytes, fh)) != pool_size_bytes)
-			error_exit("Dump is corrupt: are you using disk-pools from an entropybroker version older than v1.1? (expected %d, got %d)", pool_size_bytes, rc);
+	int rc = -1;
+	if ((rc = fread(entropy_pool, 1, pool_size_bytes, fh)) != pool_size_bytes)
+		error_exit("Dump is corrupt: are you using disk-pools from an entropybroker version older than v1.1? (expected %d, got %d)", pool_size_bytes, rc);
 
-		dolog(LOG_DEBUG, "Pool %d: loaded %d bits from cache", pool_nr, bits_in_pool);
-	}
+	dolog(LOG_DEBUG, "Pool %d: loaded %d bits from cache", pool_nr, bits_in_pool);
 
 	pool_init(pc);
+}
+
+int pool::get_file_bit_count(std::string file_name)
+{
+	FILE *fh = fopen(file_name.c_str(), "rb");
+	if (!fh)
+		error_exit("Failed to open %s", file_name.c_str());
+
+	int bit_sum = 0;
+	while(!feof(fh))
+	{
+		int bits, bytes;
+
+		if (!get_int(fh, &bits))
+			break;
+
+		if (!get_int(fh, &bytes))
+			error_exit("Short read in %s", file_name.c_str());
+
+		bit_sum += bits;
+
+		fseek(fh, bytes, SEEK_CUR);
+	}
+
+	fclose(fh);
+
+	return bit_sum;
 }
 
 void pool::pool_init(pool_crypto *pc)

@@ -22,7 +22,7 @@
 - calc_time_left debuggen of 't vaak voorkomt dat time_left < 0
 
 - webserver
-  - bits uit/in gemiddeld grafiek
+  - bits uit/in per interval gemiddeld grafiek
   - history list of connections that were connected before but no longer and how long connected
 
 - hash for protocol (user password): Use bcrypt or PBKDF2 exclusively to hash anything you need to be secure.

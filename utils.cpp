@@ -805,3 +805,69 @@ std::string time_to_str(time_t t)
 
 	return std::string(time_buffer);
 }
+
+bool get_bool(FILE *fh, bool *value)
+{
+	int rc = fgetc(fh);
+
+	if (rc < 0)
+		return false;
+
+	if (rc)
+		*value = true;
+	else
+		*value = false;
+
+	return true;
+}
+
+bool get_int(FILE *fh, int *value)
+{
+	unsigned char buffer[4];
+
+	if (fread((char *)buffer, 4, 1, fh) != 1)
+		return false;
+
+	*value = (buffer[0] << 24) + (buffer[1] << 16) + (buffer[2] << 8) + buffer[3];
+
+	return true;
+}
+
+// assuming 2x 32bit ints and 64bit long long int
+bool get_long_long_int(FILE *fh, long long int *value)
+{
+	unsigned int i1, i2;
+
+	if (!get_int(fh, (int *)&i1))
+		return false;
+	if (!get_int(fh, (int *)&i2))
+		return false;
+
+	*value = ((long long int)i1 << 32) + i2;
+
+	return true;
+}
+
+void put_bool(FILE *fh, bool value)
+{
+	fputc(value ? 1 : 0, fh);
+}
+
+void put_int(FILE *fh, int value)
+{
+	unsigned char buffer[4];
+
+	buffer[0] = (value >> 24) & 255;
+	buffer[1] = (value >> 16) & 255;
+	buffer[2] = (value >>  8) & 255;
+	buffer[3] = (value      ) & 255;
+
+	if (fwrite((char *)buffer, 4, 1, fh) != 1)
+		error_exit("problem writing to data_store_int dump-file");
+}
+
+void put_long_long_int(FILE *fh, long long int value)
+{
+	put_int(fh, value >> 32);
+	put_int(fh, value & 0xffffffff);
+}
