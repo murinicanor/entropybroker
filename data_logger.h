@@ -3,6 +3,8 @@
 #define DSK_POOL_COUNTS VAR_DIR "/dsk_pool_counts.dat"
 #define DSK_POOL_BIT_COUNT_COUNTS VAR_DIR "/dsk_pool_bit_count_counts.dat"
 #define CONNECTION_COUNTS VAR_DIR "/connection_counts.dat"
+#define RECV_BIT_COUNT VAR_DIR "/recv_bit_count.dat"
+#define SENT_BIT_COUNT VAR_DIR "/sent_bit_count.dat"
 
 class data_logger
 {
@@ -22,12 +24,22 @@ private:
 	pthread_mutex_t dsk_pool_bit_count_lck;
 	data_store_int *dsk_pool_bit_count_counts;
 
+	long long int prev_recv_n, prev_sent_n;
+
+	pthread_mutex_t recv_bit_count_lck;
+	data_store_int *recv_bit_count;
+
+	pthread_mutex_t sent_bit_count_lck;
+	data_store_int *sent_bit_count;
+
 	pthread_t thread;
 
 	pthread_mutex_t terminate_flag_lck;
 	bool abort;
 
 	///
+	statistics *s;
+
 	pools *ppools;
 
 	std::vector<client_t *> *clients;
@@ -36,7 +48,7 @@ private:
 	void dump_data();
 
 public:
-	data_logger(pools *ppools_in, std::vector<client_t *> *clients_in, pthread_mutex_t *clients_mutex_in);
+	data_logger(statistics *s_in, pools *ppools_in, std::vector<client_t *> *clients_in, pthread_mutex_t *clients_mutex_in);
 	~data_logger();
 
 	void get_mem_pool_counts(long int **t, double **v, int *n);
@@ -44,6 +56,8 @@ public:
 	void get_connection_counts(long int **t, double **v, int *n);
 	void get_pools_bitcounts(long int **t, double **v, int *n);
 	void get_disk_pools_bitcounts(long int **t, double **v, int *n);
+	void get_recv_bit_count(long int **t, double **v, int *n);
+	void get_sent_bit_count(long int **t, double **v, int *n);
 
 	void run();
 };

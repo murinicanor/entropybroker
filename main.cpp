@@ -185,7 +185,7 @@ int main(int argc, char *argv[])
 
 	statistics stats(config.stats_file, eb_output_fips140, eb_output_scc, ppools);
 
-	data_logger *dl = new data_logger(ppools, &clients, &clients_mutex);
+	data_logger *dl = new data_logger(&stats, ppools, &clients, &clients_mutex);
 
 	if (config.webserver_port >= 1)
 		start_web_server(config.webserver_interface, config.webserver_port, &clients, &clients_mutex, ppools, &stats, eb_output_fips140, eb_output_scc, dl);
