@@ -174,15 +174,6 @@ void graph::do_draw(int width, int height, std::string title, long int *ts, doub
 	// draw data
 	if (n_values > 1 && dataMax - dataMin > 0.001)
 	{
-		int yAvg = yAxisBottom - int(scaleY * double(avg - dataMin));
-		gdImageLine(im, xAxisLeft + 1, yAvg, xAxisRight, yAvg, green);
-
-		std::string avg_str = format("avg: %f", avg);
-		int text_y = yAxisTop + font_height;
-		if (abs(yAvg - text_y) < font_height * 2)
-			text_y = yAxisBottom - font_height * 2;
-		draw_text(im, font, font_height, green, avg_str, xAxisLeft + double(xAxisRight-xAxisLeft) * 0.03125, text_y);
-
 		bool first = true;
 		int yPrev = -1, xPrev = -1;
 		for(int index=0; index<n_values; index++)
@@ -205,6 +196,15 @@ void graph::do_draw(int width, int height, std::string title, long int *ts, doub
 				yPrev = y;
 			}
 		}
+
+		int yAvg = yAxisBottom - int(scaleY * double(avg - dataMin));
+		gdImageLine(im, xAxisLeft + 1, yAvg, xAxisRight, yAvg, green);
+
+		std::string avg_str = format("avg: %f", avg);
+		int text_y = yAxisTop + font_height;
+		if (abs(yAvg - text_y) < font_height * 2)
+			text_y = yAxisBottom - font_height * 2;
+		draw_text(im, font, font_height, green, avg_str, xAxisLeft + double(xAxisRight-xAxisLeft) * 0.03125, text_y);
 	}
 	else
 	{
