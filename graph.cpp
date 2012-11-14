@@ -178,7 +178,10 @@ void graph::do_draw(int width, int height, std::string title, long int *ts, doub
 		gdImageLine(im, xAxisLeft + 1, yAvg, xAxisRight, yAvg, green);
 
 		std::string avg_str = format("%f", avg);
-		draw_text(im, font, font_height, green, avg_str, xAxisLeft + double(xAxisRight-xAxisLeft) * 0.03125, yAxisTop * 2);
+		int text_y = yAxisTop + font_height;
+		if (abs(yAvg - text_y) < font_height * 2)
+			text_y = yAxisBottom - font_height * 2;
+		draw_text(im, font, font_height, green, avg_str, xAxisLeft + double(xAxisRight-xAxisLeft) * 0.03125, text_y);
 
 		bool first = true;
 		int yPrev = -1, xPrev = -1;
