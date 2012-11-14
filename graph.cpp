@@ -177,7 +177,7 @@ void graph::do_draw(int width, int height, std::string title, long int *ts, doub
 		int yAvg = yAxisBottom - int(scaleY * double(avg - dataMin));
 		gdImageLine(im, xAxisLeft + 1, yAvg, xAxisRight, yAvg, green);
 
-		std::string avg_str = format("%f", avg);
+		std::string avg_str = format("avg: %f", avg);
 		int text_y = yAxisTop + font_height;
 		if (abs(yAvg - text_y) < font_height * 2)
 			text_y = yAxisBottom - font_height * 2;
