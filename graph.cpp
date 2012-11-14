@@ -130,18 +130,23 @@ void graph::do_draw(int width, int height, std::string title, long int *ts, doub
 		if (xti > 0)
 			gdImageLine(im, x, yAxisTop + 1, x, yAxisBottom, gray);
 
+		bool date = true;
 		int xPos = -1;
 		if (xti == 0)
 			xPos = mymax(0, x - dateWidth / 2);
 		else if (xti == xTicks)
-			xPos = width - (dateWidth * 3) / 4;
+			xPos = width - dateWidth; // FIXME time slightly to the right
 		else if (xti == xTicks - 1)
+		{
 			xPos = x - (dateWidth * 5) / 8;
+			date = false;
+		}
 		else
 			xPos = x - dateWidth / 2;
 
 		draw_text(im, font, font_height, white, strTime, xPos, yAxisBottom + 14);
-		draw_text(im, font, font_height, white, strDate, xPos, yAxisBottom + 24);
+		if (date)
+			draw_text(im, font, font_height, white, strDate, xPos, yAxisBottom + 24);
 
 		gdImageLine(im, x, yAxisBottom, x, yAxisBottom + 2, black);
 	}
