@@ -51,6 +51,7 @@ void graph::do_draw(int width, int height, std::string title, long int *ts, doub
 	int gray = gdImageColorAllocate(im, 64, 64, 64);
 	int white = gdImageColorAllocate(im, 255, 255, 255);
 	int red = gdImageColorAllocate(im, 255, 0, 0);
+	int yellow = gdImageColorAllocate(im, 0, 255, 255);
 
         // determine center of date string
 	int dateWidth = -1, dummy;
@@ -60,14 +61,17 @@ void graph::do_draw(int width, int height, std::string title, long int *ts, doub
 	double dataMax = -99999999999.9;
 	double tMin = 99999999999.9;
 	double tMax = -99999999999.9;
-
+	double avg = 0.0;
 	for(int index=0; index<n_values; index++)
 	{
 		if (ts[index] < tMin) tMin = ts[index];
 		if (values[index] < dataMin) dataMin = values[index];
 		if (ts[index] > tMax) tMax = ts[index];
 		if (values[index] > dataMax) dataMax = values[index];
+
+		avg += values[index];
 	}
+	avg /= double(n_values);
 
 	// determine x-position of y-axis
         std::string dummyStr1 = format("%f", dataMax);
@@ -170,6 +174,9 @@ void graph::do_draw(int width, int height, std::string title, long int *ts, doub
 	// draw data
 	if (n_values > 1 && dataMax - dataMin > 0.001)
 	{
+		int yAvg = yAxisBottom - int(scaleY * double(avg - dataMin));
+		gdImageLine(im, xAxisLeft + 1, yAvg, xAxisRight, yAvg, yellow);
+
 		bool first = true;
 		int yPrev = -1, xPrev = -1;
 		for(int index=0; index<n_values; index++)
