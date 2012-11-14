@@ -56,6 +56,8 @@ void graph::do_draw(int width, int height, std::string title, long int *ts, doub
         // determine center of date string
 	int dateWidth = -1, dummy;
 	calc_text_width(font, 10.0, "8888/88/88", &dateWidth, &dummy);
+	int timeWidth = -1;
+	calc_text_width(font, 10.0, "88:88:88", &timeWidth, &dummy);
 
 	double dataMin = 99999999999.9;
 	double dataMax = -99999999999.9;
@@ -131,22 +133,27 @@ void graph::do_draw(int width, int height, std::string title, long int *ts, doub
 			gdImageLine(im, x, yAxisTop + 1, x, yAxisBottom, gray);
 
 		bool date = true;
-		int xPos = -1;
+		int xPosDate = -1, xPosTime = -1;
 		if (xti == 0)
-			xPos = mymax(0, x - dateWidth / 2);
+			xPosTime = xPosDate = mymax(0, x - dateWidth / 2);
 		else if (xti == xTicks)
-			xPos = width - dateWidth; // FIXME time slightly to the right
+		{
+			xPosDate = width - dateWidth;
+			xPosTime = width - timeWidth;
+		}
 		else if (xti == xTicks - 1)
 		{
-			xPos = x - (dateWidth * 5) / 8;
+			xPosTime = xPosDate = x - (dateWidth * 5) / 8;
 			date = false;
 		}
 		else
-			xPos = x - dateWidth / 2;
+		{
+			xPosTime = xPosDate = x - dateWidth / 2;
+		}
 
-		draw_text(im, font, font_height, white, strTime, xPos, yAxisBottom + 14);
+		draw_text(im, font, font_height, white, strTime, xPosTime, yAxisBottom + 14);
 		if (date)
-			draw_text(im, font, font_height, white, strDate, xPos, yAxisBottom + 24);
+			draw_text(im, font, font_height, white, strDate, xPosDate, yAxisBottom + 24);
 
 		gdImageLine(im, x, yAxisBottom, x, yAxisBottom + 2, black);
 	}
