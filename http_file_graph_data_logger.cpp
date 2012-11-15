@@ -88,6 +88,8 @@ http_bundle * http_file_graph_data_logger::do_request(http_request_t request_typ
 		dl -> get_disk_pools_bitcounts(&t, &v, &n);
 	else if (type == "recv_bit_count")
 		dl -> get_recv_bit_count(&t, &v, &n);
+	else if (type == "recv_bit_count_in")
+		dl -> get_recv_bit_count_in(&t, &v, &n);
 	else if (type == "sent_bit_count")
 		dl -> get_sent_bit_count(&t, &v, &n);
 	else

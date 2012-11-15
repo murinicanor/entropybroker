@@ -344,8 +344,8 @@ int do_client_put(client_t *client, bool *new_bits, bool *is_full)
 		client -> bits_recv += n_bits_added;
 		my_mutex_unlock(&client -> stats_lck);
 
-		client -> stats_user -> track_recvs(n_bits_added);
-		client -> stats_glob -> track_recvs(n_bits_added);
+		client -> stats_user -> track_recvs(n_bits_added, entropy_data_len * 8);
+		client -> stats_glob -> track_recvs(n_bits_added, entropy_data_len * 8);
 
 		*new_bits = true;
 	}

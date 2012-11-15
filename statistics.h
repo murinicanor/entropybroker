@@ -21,7 +21,7 @@ private:
 	std::vector<history_logins> logins;
 
 	pthread_mutex_t recv_lck;
-	long long int total_recv;
+	long long int total_recv, total_recv_in;
 	int total_recv_requests;
 
 	pthread_mutex_t sent_lck;
@@ -71,7 +71,7 @@ public:
 	void inc_bps_cur();
 	void inc_msg_cnt();
 	void track_sents(int cur_n_bits);
-	void track_recvs(int n_bits_added);
+	void track_recvs(int n_bits_added, int n_bits_added_in);
 	void emit_statistics_file(int n_clients);
 	void emit_statistics_log(int n_clients, bool force_stats, int reset_counters_interval);
 	void register_msg(bool is_put);
@@ -82,7 +82,7 @@ public:
 	int get_times_not_allowed();
 	int get_times_full();
 	int get_times_quota();
-	void get_recvs(long long int *total_bits, int *n_reqs);
+	void get_recvs(long long int *total_bits, int *n_reqs, long long int *total_bits_in);
 	void get_sents(long long int *total_bits, int *n_sents);
 	double get_last_msg_ts();
 	double get_since_ts();

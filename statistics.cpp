@@ -120,10 +120,11 @@ void statistics::track_sents(int cur_n_bits)
 	my_mutex_unlock(&sent_lck);
 }
 
-void statistics::track_recvs(int n_bits_added)
+void statistics::track_recvs(int n_bits_added, int n_bits_in)
 {
 	my_mutex_lock(&recv_lck);
 	total_recv += n_bits_added;
+	total_recv_in += n_bits_in;
 	total_recv_requests++;
 	my_mutex_unlock(&recv_lck);
 }
@@ -229,11 +230,12 @@ int statistics::get_times_quota()
 	return dummy;
 }
 
-void statistics::get_recvs(long long int *total_bits, int *n_reqs)
+void statistics::get_recvs(long long int *total_bits, int *n_reqs, long long int *total_bits_in)
 {
 	my_mutex_lock(&recv_lck);
 
 	*total_bits = total_recv;
+	*total_bits_in = total_recv_in;
 	*n_reqs = total_recv_requests;
 
 	my_mutex_unlock(&recv_lck);

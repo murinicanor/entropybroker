@@ -4,6 +4,7 @@
 #define DSK_POOL_BIT_COUNT_COUNTS VAR_DIR "/dsk_pool_bit_count_counts.dat"
 #define CONNECTION_COUNTS VAR_DIR "/connection_counts.dat"
 #define RECV_BIT_COUNT VAR_DIR "/recv_bit_count.dat"
+#define RECV_BIT_COUNT_IN VAR_DIR "/recv_bit_count_in.dat"
 #define SENT_BIT_COUNT VAR_DIR "/sent_bit_count.dat"
 
 #define MEASURE_INTERVAL 300
@@ -27,10 +28,13 @@ private:
 	pthread_mutex_t dsk_pool_bit_count_lck;
 	data_store_int *dsk_pool_bit_count_counts;
 
-	long long int prev_recv_n, prev_sent_n;
+	long long int prev_recv_n, prev_recv_in_n, prev_sent_n;
 
 	pthread_mutex_t recv_bit_count_lck;
 	data_store_int *recv_bit_count;
+
+	pthread_mutex_t recv_bit_count_in_lck;
+	data_store_int *recv_bit_count_in;
 
 	pthread_mutex_t sent_bit_count_lck;
 	data_store_int *sent_bit_count;
@@ -60,6 +64,7 @@ public:
 	void get_pools_bitcounts(long int **t, double **v, int *n);
 	void get_disk_pools_bitcounts(long int **t, double **v, int *n);
 	void get_recv_bit_count(long int **t, double **v, int *n);
+	void get_recv_bit_count_in(long int **t, double **v, int *n);
 	void get_sent_bit_count(long int **t, double **v, int *n);
 
 	void run();

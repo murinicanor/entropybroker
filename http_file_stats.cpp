@@ -85,11 +85,12 @@ http_bundle * http_file_stats::do_request(http_request_t request_type, std::stri
 			content += format("<TR><TD>pools empty:</TD><TD>%d</TD></TR>\n", pcs -> get_times_empty());
 			content += format("<TR><TD>full:</TD><TD>%d</TD></TR>\n", pcs -> get_times_full());
 
-			long long int total_bits_recv = 0;
+			long long int total_bits_recv = 0, total_bits_recv_in = 0;
 			int n_recv = 0;
-			pcs -> get_recvs(&total_bits_recv, &n_recv);
+			pcs -> get_recvs(&total_bits_recv, &n_recv, &total_bits_recv_in);
 			content += format("<TR><TD>put requests:</TD><TD>%d</TD></TR>\n", n_recv);
 			content += format("<TR><TD>bits put:</TD><TD>%lld</TD></TR>\n", total_bits_recv);
+			content += format("<TR><TD>bits put density:</TD><TD>%f%%</TD></TR>\n", total_bits_recv, double(total_bits_recv * 100) / double(total_bits_recv_in));
 			content += format("<TR><TD>avg bits/put:</TD><TD>%f</TD></TR>\n", double(total_bits_recv) / double(n_recv));
 			content += format("<TR><TD>put bps:</TD><TD>%f</TD></TR>\n", double(total_bits_recv) / (now - pcs -> get_since_ts()));
 
@@ -138,9 +139,9 @@ http_bundle * http_file_stats::do_request(http_request_t request_type, std::stri
 
 			content += time_to_str((time_t)pcs -> get_since_ts());
 
-			long long int total_bits_recv = 0, total_bits_sent = 0;
+			long long int total_bits_recv = 0, total_bits_recv_in = 0, total_bits_sent = 0;
 			int n_recv = 0, n_sent = 0;
-			pcs -> get_recvs(&total_bits_recv, &n_recv);
+			pcs -> get_recvs(&total_bits_recv, &n_recv, &total_bits_recv_in);
 			pcs -> get_sents(&total_bits_sent, &n_sent);
 			content += "</TD><TD>";
 			content += format("%lld", total_bits_recv);
@@ -168,11 +169,12 @@ http_bundle * http_file_stats::do_request(http_request_t request_type, std::stri
 		content += format("<TR><TD>pools empty:</TD><TD>%d</TD></TR>\n", ps -> get_times_empty());
 		content += format("<TR><TD>full:</TD><TD>%d</TD></TR>\n", ps -> get_times_full());
 
-		long long int total_bits_recv = 0;
+		long long int total_bits_recv = 0, total_bits_recv_in = 0;
 		int n_recv = 0;
-		ps -> get_recvs(&total_bits_recv, &n_recv);
+		ps -> get_recvs(&total_bits_recv, &n_recv, &total_bits_recv_in);
 		content += format("<TR><TD>put requests:</TD><TD>%d</TD></TR>\n", n_recv);
 		content += format("<TR><TD>bits put:</TD><TD>%lld</TD></TR>\n", total_bits_recv);
+		content += format("<TR><TD>bits put density:</TD><TD>%f%%</TD></TR>\n", total_bits_recv, double(total_bits_recv * 100) / double(total_bits_recv_in));
 		content += format("<TR><TD>avg bits/put:</TD><TD>%f</TD></TR>\n", double(total_bits_recv) / double(n_recv));
 		content += format("<TR><TD>put bps:</TD><TD>%f</TD></TR>\n", double(total_bits_recv) / (now - ps -> get_since_ts()));
 

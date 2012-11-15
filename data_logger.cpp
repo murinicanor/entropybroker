@@ -79,6 +79,12 @@ data_logger::data_logger(statistics *s_in, pools *ppools_in, std::vector<client_
 		recv_bit_count = new data_store_int(MEASURE_KEEP_N, MEASURE_INTERVAL);
 	pthread_check(pthread_mutex_init(&recv_bit_count_lck, &global_mutex_attr), "pthread_mutex_init");
 
+	if (file_exist(RECV_BIT_COUNT_IN))
+		recv_bit_count_in = new data_store_int(RECV_BIT_COUNT_IN);
+	else
+		recv_bit_count_in = new data_store_int(MEASURE_KEEP_N, MEASURE_INTERVAL);
+	pthread_check(pthread_mutex_init(&recv_bit_count_in_lck, &global_mutex_attr), "pthread_mutex_init");
+
 	if (file_exist(SENT_BIT_COUNT))
 		sent_bit_count = new data_store_int(SENT_BIT_COUNT);
 	else
@@ -122,6 +128,9 @@ data_logger::~data_logger()
 	delete recv_bit_count;
 	pthread_check(pthread_mutex_destroy(&recv_bit_count_lck), "pthread_mutex_destroy");
 
+	delete recv_bit_count_in;
+	pthread_check(pthread_mutex_destroy(&recv_bit_count_in_lck), "pthread_mutex_destroy");
+
 	delete sent_bit_count;
 	pthread_check(pthread_mutex_destroy(&sent_bit_count_lck), "pthread_mutex_destroy");
 
@@ -159,6 +168,10 @@ void data_logger::dump_data()
 	my_mutex_lock(&recv_bit_count_lck);
 	recv_bit_count -> dump(RECV_BIT_COUNT);
 	my_mutex_unlock(&recv_bit_count_lck);
+
+	my_mutex_lock(&recv_bit_count_in_lck);
+	recv_bit_count_in -> dump(RECV_BIT_COUNT_IN);
+	my_mutex_unlock(&recv_bit_count_in_lck);
 }
 
 void data_logger::run()
@@ -200,9 +213,9 @@ void data_logger::run()
 			dsk_pool_bit_count_counts -> add_avg(dummy_ts, ppools -> get_disk_pool_bit_count());
 			my_mutex_unlock(&dsk_pool_bit_count_lck);
 
-			long long int recv_total_bits = 0, sent_total_bits = 0;
+			long long int recv_total_bits = 0, recv_total_bits_in = 0, sent_total_bits = 0;
 			int n_reqs = 0, n_sents = 0;
-			s -> get_recvs(&recv_total_bits, &n_reqs);
+			s -> get_recvs(&recv_total_bits, &n_reqs, &recv_total_bits_in);
 			s -> get_sents(&sent_total_bits, &n_sents);
 
 			if (prev_recv_n != -1)
@@ -210,8 +223,13 @@ void data_logger::run()
 				my_mutex_lock(&recv_bit_count_lck);
 				recv_bit_count -> add_avg(dummy_ts, recv_total_bits - prev_recv_n);
 				my_mutex_unlock(&recv_bit_count_lck);
+
+				my_mutex_lock(&recv_bit_count_in_lck);
+				recv_bit_count_in -> add_avg(dummy_ts, recv_total_bits_in - prev_recv_in_n);
+				my_mutex_unlock(&recv_bit_count_in_lck);
 			}
 			prev_recv_n = recv_total_bits;
+			prev_recv_in_n = recv_total_bits_in;
 
 			if (prev_sent_n != -1)
 			{
@@ -275,6 +293,13 @@ void data_logger::get_recv_bit_count(long int **t, double **v, int *n)
 	my_mutex_lock(&recv_bit_count_lck);
 	recv_bit_count -> get_data(t, v, n);
 	my_mutex_unlock(&recv_bit_count_lck);
+}
+
+void data_logger::get_recv_bit_count_in(long int **t, double **v, int *n)
+{
+	my_mutex_lock(&recv_bit_count_in_lck);
+	recv_bit_count_in -> get_data(t, v, n);
+	my_mutex_unlock(&recv_bit_count_in_lck);
 }
 
 void data_logger::get_sent_bit_count(long int **t, double **v, int *n)
