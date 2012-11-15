@@ -81,6 +81,9 @@ web_server::web_server(std::string listen_adapter, int listen_port, std::vector<
 	add_object(new http_file_file("/logo.png", "image/png", WEB_DIR "/logo.png"));
 	add_object(new http_file_graph_data_logger(dl));
 	add_object(new http_file_logfile(ps));
+	add_object(new http_file_file("/logo-bw.png", "image/png", WEB_DIR "/logo-bw.png"));
+	add_object(new http_file_file("/logfiles.png", "image/png", WEB_DIR "/logfiles.png"));
+	add_object(new http_file_file("/statistics.png", "image/png", WEB_DIR "/statistics.png"));
 }
 
 web_server::~web_server()
