@@ -187,6 +187,8 @@ int main(int argc, char *argv[])
 			}
 			if (n_bits_to_get > 9999)
 				n_bits_to_get = 9999;
+			if (n_bits_to_get < 8)
+				n_bits_to_get = 8;
 
 			dolog(LOG_INFO, "%d bits left (%d max), will get %d bits", n_bits_in_kernel_rng, max_bits_in_kernel_rng, n_bits_to_get);
 
