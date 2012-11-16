@@ -5,6 +5,7 @@ protected:
 
 	void calc_text_width(std::string font_descr, double font_height, std::string str, int *width, int *height);
 	void draw_text(gdImagePtr im, std::string font_descr, double font_height, int color, std::string str, int x, int y);
+	std::string shorten(double value, bool round);
 
 public:
 	graph(std::string font_in);

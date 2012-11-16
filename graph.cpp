@@ -1,4 +1,5 @@
 #include <gd.h>
+#include <math.h>
 #include <stdlib.h>
 #include <string>
 
@@ -33,15 +34,43 @@ void graph::draw_text(gdImagePtr im, std::string font_descr, double font_height,
 	gdImageStringFT(im, &brect[0], color, (char *)font_descr.c_str(), font_height, 0., x, y, (char *)str.c_str());
 }
 
+std::string graph::shorten(double value, bool do_round)
+{
+	std::string fmt = do_round ? "%.0f" : "%f";
+
+	double chk = fabs(value);
+
+	if (chk >= 1000000000000.0)
+		return format((fmt + "T").c_str(), value / 1000000000000.0);
+
+	if (chk >= 1000000000.0)
+		return format((fmt + "G").c_str(), value / 1000000000.0);
+
+	if (chk >= 1000000.0)
+		return format((fmt + "M").c_str(), value / 1000000.0);
+
+	if (chk >= 1000.0)
+		return format((fmt + "k").c_str(), value / 1000.0);
+
+	if (chk == 0.0)
+		return "0";
+
+	if (chk <= 0.000001)
+		return format((fmt + "u").c_str(), value * 1000000.0);
+
+	if (chk <= 0.001)
+		return format((fmt + "m").c_str(), value * 1000.0);
+
+	return format(fmt.c_str(), value);
+}
+
 void graph::do_draw(int width, int height, std::string title, long int *ts, double *values, int n_values, char **result, size_t *result_len)
 {
 	int yAxisTop = (!title.empty()) ? 12 : 5;
 	int yAxisBottom = height - 25;
 	int yTicks = 10;
-	int xTicks;
-	unsigned int yAxisMaxStrLen = 4;
-	bool doRound = false;
-	int xAxisLeft;
+	int xTicks = -1;
+	int xAxisLeft = -1;
 	int xAxisRight = width - 5;
 	int font_height = 10;
 
@@ -76,25 +105,11 @@ void graph::do_draw(int width, int height, std::string title, long int *ts, doub
 	avg /= double(n_values);
 
 	// determine x-position of y-axis
-        std::string dummyStr1 = format("%f", dataMax);
-        std::string dummyStr2 = format("%f", dataMin);
-	std::string use_width = dummyStr1;
-	if (dummyStr2.size() > use_width.size())
-		use_width = dummyStr2;
-	size_t dot_index = use_width.find_first_of('.');
-	if (dot_index == std::string::npos)
-		dot_index = use_width.size();
-	if (dot_index > yAxisMaxStrLen)
-	{
-		doRound = true;
-		use_width = use_width.substr(0, dot_index);
-	}
-	else
-	{
-		use_width = use_width.substr(0, yAxisMaxStrLen);
-	}
+	std::string use_width = "999w";
+	if (dataMin < 0)
+		use_width = "-999w";
 	calc_text_width(font, font_height, use_width, &xAxisLeft, &dummy);
-	xAxisLeft++; // 1 pixel space between text and lines
+	xAxisLeft++; // 1 pixel extra space between text and lines
 
         xTicks = (width - xAxisLeft) / dateWidth;
 
@@ -166,17 +181,7 @@ void graph::do_draw(int width, int height, std::string title, long int *ts, doub
 
 		double value = (((dataMax - dataMin) / double(yTicks)) * double(yTicks - yti) + dataMin);
 
-		std::string str = format("%f", value);
-		if (doRound)
-		{
-			size_t dot_offset = str.find_first_of('.');
-			if (dot_offset != std::string::npos)
-				str = str.substr(0, dot_offset);
-		}
-		else
-		{
-			str = str.substr(0, yAxisMaxStrLen);
-		}
+		std::string str = shorten(value, true);
 
 		gdImageLine(im, xAxisLeft + 1, y, xAxisRight, y, gray);
 
@@ -212,7 +217,7 @@ void graph::do_draw(int width, int height, std::string title, long int *ts, doub
 		int yAvg = yAxisBottom - int(scaleY * double(avg - dataMin));
 		gdImageLine(im, xAxisLeft + 1, yAvg, xAxisRight, yAvg, green);
 
-		std::string avg_str = format("avg: %f", avg);
+		std::string avg_str = "avg: " + shorten(avg, false);
 		int text_y = yAxisTop + font_height;
 		if (abs(yAvg - text_y) < font_height * 2)
 			text_y = yAxisBottom - font_height * 2;
