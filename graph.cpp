@@ -34,34 +34,60 @@ void graph::draw_text(gdImagePtr im, std::string font_descr, double font_height,
 	gdImageStringFT(im, &brect[0], color, (char *)font_descr.c_str(), font_height, 0., x, y, (char *)str.c_str());
 }
 
-std::string graph::shorten(double value, bool do_round)
+std::string graph::shorten(double value)
 {
-	std::string fmt = do_round ? "%.0f" : "%f";
-
 	double chk = fabs(value);
 
+	double divider = 1.0;
+	std::string si;
 	if (chk >= 1000000000000.0)
-		return format((fmt + "T").c_str(), value / 1000000000000.0);
+	{
+		si = "T";
+		divider = 1000000000000.0;
+	}
 
 	if (chk >= 1000000000.0)
-		return format((fmt + "G").c_str(), value / 1000000000.0);
+	{
+		si = "G";
+		divider = 1000000000.0;
+	}
 
 	if (chk >= 1000000.0)
-		return format((fmt + "M").c_str(), value / 1000000.0);
+	{
+		si = "M";
+		divider = 1000000.0;
+	}
 
 	if (chk >= 1000.0)
-		return format((fmt + "k").c_str(), value / 1000.0);
+	{
+		si = "k";
+		divider = 1000.0;
+	}
 
 	if (chk == 0.0)
 		return "0";
 
 	if (chk <= 0.000001)
-		return format((fmt + "u").c_str(), value * 1000000.0);
+	{
+		si = "u";
+		divider = 0.000001;
+	}
 
 	if (chk <= 0.001)
-		return format((fmt + "m").c_str(), value * 1000.0);
+	{
+		si = "m";
+		divider = 0.001;
+	}
 
-	return format(fmt.c_str(), value);
+	std::string dummy = format("%.0f", value / divider);
+	int len = dummy.length();
+	if (len < 3)
+	{
+		std::string fmt = "%." + format("%d", 3 - len) + "f";
+		dummy = format(fmt.c_str(), value / divider);
+	}
+
+	return dummy + si;
 }
 
 void graph::do_draw(int width, int height, std::string title, long int *ts, double *values, int n_values, char **result, size_t *result_len)
@@ -181,7 +207,7 @@ void graph::do_draw(int width, int height, std::string title, long int *ts, doub
 
 		double value = (((dataMax - dataMin) / double(yTicks)) * double(yTicks - yti) + dataMin);
 
-		std::string str = shorten(value, true);
+		std::string str = shorten(value);
 
 		gdImageLine(im, xAxisLeft + 1, y, xAxisRight, y, gray);
 
@@ -217,7 +243,7 @@ void graph::do_draw(int width, int height, std::string title, long int *ts, doub
 		int yAvg = yAxisBottom - int(scaleY * double(avg - dataMin));
 		gdImageLine(im, xAxisLeft + 1, yAvg, xAxisRight, yAvg, green);
 
-		std::string avg_str = "avg: " + shorten(avg, false);
+		std::string avg_str = "avg: " + shorten(avg);
 		int text_y = yAxisTop + font_height;
 		if (abs(yAvg - text_y) < font_height * 2)
 			text_y = yAxisBottom - font_height * 2;
