@@ -174,7 +174,7 @@ http_bundle * http_file_stats::do_request(http_request_t request_type, std::stri
 		ps -> get_recvs(&total_bits_recv, &n_recv, &total_bits_recv_in);
 		content += format("<TR><TD>put requests:</TD><TD>%d</TD></TR>\n", n_recv);
 		content += format("<TR><TD>bits put:</TD><TD>%lld</TD></TR>\n", total_bits_recv);
-		content += format("<TR><TD>bits put density:</TD><TD>%f%%</TD></TR>\n", double(total_bits_recv * 100) / double(total_bits_recv_in));
+		// FIXME should be get density content += format("<TR><TD>bits put density:</TD><TD>%f%%</TD></TR>\n", double(total_bits_recv * 100) / double(total_bits_recv_in));
 		content += format("<TR><TD>avg bits/put:</TD><TD>%f</TD></TR>\n", double(total_bits_recv) / double(n_recv));
 		content += format("<TR><TD>put bps:</TD><TD>%f</TD></TR>\n", double(total_bits_recv) / (now - ps -> get_since_ts()));
 
