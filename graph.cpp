@@ -45,35 +45,29 @@ std::string graph::shorten(double value)
 		si = "T";
 		divider = 1000000000000.0;
 	}
-
-	if (chk >= 1000000000.0)
+	else if (chk >= 1000000000.0)
 	{
 		si = "G";
 		divider = 1000000000.0;
 	}
-
-	if (chk >= 1000000.0)
+	else if (chk >= 1000000.0)
 	{
 		si = "M";
 		divider = 1000000.0;
 	}
-
-	if (chk >= 1000.0)
+	else if (chk >= 1000.0)
 	{
 		si = "k";
 		divider = 1000.0;
 	}
-
-	if (chk == 0.0)
+	else if (chk == 0.0)
 		return "0";
-
-	if (chk <= 0.000001)
+	else if (chk <= 0.000001)
 	{
 		si = "u";
 		divider = 0.000001;
 	}
-
-	if (chk <= 0.001)
+	else if (chk <= 0.001)
 	{
 		si = "m";
 		divider = 0.001;
