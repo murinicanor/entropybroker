@@ -23,7 +23,6 @@
 
 - webserver
   - constants in data logger configureerbaar? interval/keep_n
-  - grote getallen naar k/M en m voor milli, u n etc
 
 - hash for protocol (user password): Use bcrypt or PBKDF2 exclusively to hash anything you need to be secure.
 

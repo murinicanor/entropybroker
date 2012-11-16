@@ -60,17 +60,17 @@ void *start_web_server_thread_wrapper(void *p)
 	return NULL;
 }
 
-void start_web_server(std::string listen_adapter, int listen_port, std::vector<client_t *> *clients, pthread_mutex_t *clients_mutex, pools *ppools, statistics *ps, fips140 *pfips140, scc *pscc, data_logger *dl)
+void start_web_server(config_t *config, std::vector<client_t *> *clients, pthread_mutex_t *clients_mutex, pools *ppools, statistics *ps, fips140 *pfips140, scc *pscc, data_logger *dl)
 {
-	web_server *ws = new web_server(listen_adapter, listen_port, clients, clients_mutex, ppools, ps, pfips140, pscc, dl);
+	web_server *ws = new web_server(config, clients, clients_mutex, ppools, ps, pfips140, pscc, dl);
 
 	pthread_t thread;
 	pthread_check(pthread_create(&thread, NULL, start_web_server_thread_wrapper, ws), "pthread_create");
 }
 
-web_server::web_server(std::string listen_adapter, int listen_port, std::vector<client_t *> *clients, pthread_mutex_t *clients_mutex, pools *ppools, statistics *ps, fips140 *pfips140, scc *pscc, data_logger *dl)
+web_server::web_server(config_t *config, std::vector<client_t *> *clients, pthread_mutex_t *clients_mutex, pools *ppools, statistics *ps, fips140 *pfips140, scc *pscc, data_logger *dl)
 {
-	fd = start_listen(listen_adapter.c_str(), listen_port, 64);
+	fd = start_listen(config -> webserver_interface.c_str(), config -> webserver_port, config -> listen_queue_size);
 
 	add_object(new http_file_root());
 	add_object(new http_file_404());
@@ -79,7 +79,7 @@ web_server::web_server(std::string listen_adapter, int listen_port, std::vector<
 	add_object(new http_file_file("/stylesheet.css", "text/css", WEB_DIR "/stylesheet.css"));
 	add_object(new http_file_file("/favicon.ico", "image/x-ico", WEB_DIR "/favicon.ico"));
 	add_object(new http_file_file("/logo.png", "image/png", WEB_DIR "/logo.png"));
-	add_object(new http_file_graph_data_logger(dl));
+	add_object(new http_file_graph_data_logger(dl, config -> graph_font));
 	add_object(new http_file_logfile(ps));
 	add_object(new http_file_file("/logo-bw.png", "image/png", WEB_DIR "/logo-bw.png"));
 	add_object(new http_file_file("/logfiles.png", "image/png", WEB_DIR "/logfiles.png"));

@@ -49,6 +49,8 @@ typedef struct
 
 	std::string *user_map;
 
+	const char *graph_font;
+
 	std::string webserver_interface;
 	int webserver_port;
 } config_t;

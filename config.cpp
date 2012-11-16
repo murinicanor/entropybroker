@@ -54,7 +54,7 @@ void load_config(const char *config, config_t *pconfig)
 
 	pconfig -> listen_adapter    = "0.0.0.0";
 	pconfig -> listen_port       = DEFAULT_BROKER_PORT;
-	pconfig -> listen_queue_size = 5;
+	pconfig -> listen_queue_size = 64;
 	pconfig -> disable_nagle     = false;
 	pconfig -> enable_keepalive  = true;
 
@@ -102,6 +102,8 @@ void load_config(const char *config, config_t *pconfig)
 	pconfig -> webserver_interface = "0.0.0.0";
 	pconfig -> webserver_port = -1;
 
+	pconfig -> graph_font = FONT;
+
         for(;;)
         {
 		double parvald;
@@ -144,6 +146,8 @@ void load_config(const char *config, config_t *pconfig)
 			pconfig -> min_store_on_disk_n = parval;
 		else if (strcmp(cmd, "listen_adapter") == 0)
 			pconfig -> listen_adapter = strdup(par);
+		else if (strcmp(cmd, "graph_font") == 0)
+			pconfig -> graph_font = strdup(par);
 		else if (strcmp(cmd, "users") == 0)
 		{
 			char *p_file = static_cast<char *>(malloc(strlen(cur_dir) + strlen(par) + 1 + 1));

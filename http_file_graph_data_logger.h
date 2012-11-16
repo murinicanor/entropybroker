@@ -5,7 +5,7 @@ private:
 	graph *g;
 
 public:
-	http_file_graph_data_logger(data_logger *dl_in);
+	http_file_graph_data_logger(data_logger *dl_in, std::string font);
 	~http_file_graph_data_logger();
 
 	std::string get_url();

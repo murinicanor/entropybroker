@@ -30,9 +30,9 @@
 #include "http_file.h"
 #include "http_file_graph_data_logger.h"
 
-http_file_graph_data_logger::http_file_graph_data_logger(data_logger *dl_in) : dl(dl_in)
+http_file_graph_data_logger::http_file_graph_data_logger(data_logger *dl_in, std::string font) : dl(dl_in)
 {
-	g = new graph(FONT);
+	g = new graph(font);
 }
 
 http_file_graph_data_logger::~http_file_graph_data_logger()
