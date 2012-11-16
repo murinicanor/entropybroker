@@ -24,6 +24,7 @@
 - webserver
   - constants in data logger configureerbaar? interval/keep_n
   - keep track of bandwidth of each user: if > avg+stddev, then alert in logfile
+  - show total bps over alle servers en idem clients
 
 - hash for protocol (user password): Use bcrypt or PBKDF2 exclusively to hash anything you need to be secure.
 
