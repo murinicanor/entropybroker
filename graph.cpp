@@ -125,9 +125,9 @@ void graph::do_draw(int width, int height, std::string title, long int *ts, doub
 	avg /= double(n_values);
 
 	// determine x-position of y-axis
-	std::string use_width = "999w";
+	std::string use_width = "9999W";
 	if (dataMin < 0)
-		use_width = "-999w";
+		use_width = "-9999W";
 	calc_text_width(font, font_height, use_width, &xAxisLeft, &dummy);
 	xAxisLeft++; // 1 pixel extra space between text and lines
 
