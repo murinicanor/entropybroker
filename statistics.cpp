@@ -3,6 +3,7 @@
 #include <vector>
 #include <string>
 #include <map>
+#include <math.h>
 #include <sys/time.h>
 #include <sys/resource.h>
 #include <arpa/inet.h>
@@ -43,8 +44,8 @@ statistics::statistics(char *file_in, fips140 *fips140_in, scc *scc_in, pools *p
 
 	bps_cur = 0;
 
-	total_recv = 0;
-	total_sent = 0;
+	total_recv = total_recv_sd = total_recv_in = total_recv_in_sd = 0;
+	total_sent = total_sent_sd = 0;
 	total_recv_requests = 0;
 	total_sent_requests = 0;
 	n_times_empty = 0;
@@ -116,6 +117,7 @@ void statistics::track_sents(int cur_n_bits)
 	my_mutex_lock(&sent_lck);
 	bps_cur += cur_n_bits;
 	total_sent += cur_n_bits;
+	total_sent_sd += cur_n_bits * cur_n_bits;
 	total_sent_requests++;
 	my_mutex_unlock(&sent_lck);
 }
@@ -124,7 +126,9 @@ void statistics::track_recvs(int n_bits_added, int n_bits_in)
 {
 	my_mutex_lock(&recv_lck);
 	total_recv += n_bits_added;
+	total_recv_sd += n_bits_added * n_bits_added;
 	total_recv_in += n_bits_in;
+	total_recv_in_sd += n_bits_in * n_bits_in;
 	total_recv_requests++;
 	my_mutex_unlock(&recv_lck);
 }
@@ -346,4 +350,25 @@ std::vector<history_logins> statistics::get_login_history()
 	my_mutex_unlock(&logins_lck);
 
 	return result;
+}
+
+void statistics::get_sent_avg_sd(double *avg, double *sd)
+{
+	*avg = double(total_sent) / double(total_sent_requests);
+
+	*sd = sqrt((double(total_sent_sd) / double(total_sent_requests)) - pow(*avg, 2.0));
+}
+
+void statistics::get_recv_avg_sd(double *avg, double *sd)
+{
+	*avg = double(total_recv) / double(total_recv_requests);
+
+	*sd = sqrt((double(total_recv_sd) / double(total_recv_requests)) - pow(*avg, 2.0));
+}
+
+void statistics::get_recv_in_avg_sd(double *avg, double *sd)
+{
+	*avg = double(total_recv_in) / double(total_recv_requests);
+
+	*sd = sqrt((double(total_recv_in_sd) / double(total_recv_requests)) - pow(*avg, 2.0));
 }

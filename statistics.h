@@ -21,11 +21,11 @@ private:
 	std::vector<history_logins> logins;
 
 	pthread_mutex_t recv_lck;
-	long long int total_recv, total_recv_in;
+	long long int total_recv, total_recv_sd, total_recv_in, total_recv_in_sd;
 	int total_recv_requests;
 
 	pthread_mutex_t sent_lck;
-	long long int total_sent;
+	long long int total_sent, total_sent_sd;
 	int total_sent_requests;
 	int bps_cur;
 
@@ -89,4 +89,7 @@ public:
 	double get_last_put_msg_ts();
 	double get_start_ts();
 	std::vector<history_logins> get_login_history();
+	void get_sent_avg_sd(double *avg, double *sd);
+	void get_recv_avg_sd(double *avg, double *sd);
+	void get_recv_in_avg_sd(double *avg, double *sd);
 };
