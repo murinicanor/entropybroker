@@ -242,7 +242,7 @@ void data_logger::run()
 			prev_ts = now_ts;
 		}
 
-		if (now_ts - last_dump_ts >= 86400) // push to disk once a day
+		if (now_ts - last_dump_ts >= 3600) // push to disk every hour
 		{
 			dump_data();
 
