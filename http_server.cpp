@@ -79,9 +79,11 @@ http_server::http_server(int fd_in) : fd(fd_in), request_type(static_cast<http_r
 
 		for(int index=0; index<n_request_parts; index++)
 			free(request_parts[index]);
+		free(request_parts);
 
 		for(int index=0; index<n_headers; index++)
 			free(headers[index]);
+		free(headers);
 
 		// memmove read data (if any) to front
 		int headers_size = int(headers_end - reinterpret_cast<char *>(request_data)) + (crlf ? 4 : 2);
