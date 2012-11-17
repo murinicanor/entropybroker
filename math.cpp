@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <arpa/inet.h>
 #include <string>
+#include <vector>
 #include <zlib.h>
 
 #include "error.h"

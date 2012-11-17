@@ -1,5 +1,6 @@
 // SVN: $Revision$
 #include <string>
+#include <vector>
 #include <string.h>
 #include <stdio.h>
 

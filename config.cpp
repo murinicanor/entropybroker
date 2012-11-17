@@ -102,7 +102,9 @@ void load_config(const char *config, config_t *pconfig)
 	pconfig -> webserver_interface = "0.0.0.0";
 	pconfig -> webserver_port = -1;
 
-	pconfig -> graph_font = FONT;
+	pconfig -> graph_font = strdup(FONT);
+
+	pconfig -> default_max_get_bps = 4096;
 
         for(;;)
         {
@@ -184,6 +186,8 @@ void load_config(const char *config, config_t *pconfig)
 			pconfig -> listen_port = parval;
 		else if (strcmp(cmd, "listen_queue_size") == 0)
 			pconfig -> listen_queue_size = parval;
+		else if (strcmp(cmd, "default_max_get_bps") == 0)
+			pconfig -> default_max_get_bps = parval;
 		else if (strcmp(cmd, "webserver_interface") == 0)
 			pconfig -> webserver_interface = par;
 		else if (strcmp(cmd, "webserver_port") == 0)

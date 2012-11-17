@@ -1,4 +1,4 @@
-joe_user|my_password1234123492348
-folkert|test
+joe_user|my_password1234123492348|3072
+folkert|test|2048
 another user|some password
 bla|blo

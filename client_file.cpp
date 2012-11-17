@@ -204,7 +204,11 @@ int main(int argc, char *argv[])
 
 		int n_bytes = p -> request_bytes(buffer, n_bits_to_get, false);
 
-		count -= n_bytes;
+		if (count == -1) { }
+		else if (n_bytes >= count)
+			count = 0;
+		else
+			count -= n_bytes;
 
 		if (fwrite(buffer, 1, n_bytes, fh) != (size_t)n_bytes)
 			error_exit("Failed to write %d bytes to file", n_bytes);

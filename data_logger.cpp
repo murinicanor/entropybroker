@@ -1,5 +1,6 @@
 #include <pthread.h>
 #include <string>
+#include <vector>
 #include <unistd.h>
 
 #include "defines.h"

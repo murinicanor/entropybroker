@@ -19,6 +19,8 @@ typedef struct
 	bool ignore_rngtest_fips140, ignore_rngtest_scc;
 	char *username, *password;
 
+	int max_get_bps, last_get_allowance;
+
 	fips140 *pfips140;
 	scc *pscc;
 

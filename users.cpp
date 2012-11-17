@@ -1,6 +1,8 @@
 // SVN: $Revision$
+#include <stdlib.h>
 #include <string>
 #include <map>
+#include <vector>
 #include <fstream>
 #include <pthread.h>
 
@@ -37,7 +39,7 @@ void users::reload()
 
 void users::load_usermap()
 {
-	user_map = new std::map<std::string, std::string>();
+	user_map = new std::map<std::string, user_t>();
 
 	std::ifstream fh(filename.c_str());
 	if (!fh.is_open())
@@ -53,36 +55,44 @@ void users::load_usermap()
 
 		line_nr++;
 
-		size_t pos = line.find("|");
-		if (pos == std::string::npos)
+		std::vector<std::string> pars = split_string(line, "|");
+		if (pars.size() == 1)
 			error_exit("%s: seperator missing at line %d (%s)", filename.c_str(), line_nr, line.c_str());
 
-		std::string username = line.substr(0, pos);
-		std::string password = line.substr(pos + 1);
+		user_t u;
+		u.password = pars[1];
+		if (pars.size() >= 3)
+			u.max_get_bps = atoi(pars[2].c_str());
+		else
+			u.max_get_bps = -1;
 
-		if (username.length() == 0 || password.length() == 0)
+		std::string username = pars[0];
+
+		if (username.length() == 0 || u.password.length() == 0)
 			error_exit("%s: username/password cannot be empty at line %d (%s)", filename.c_str(), line_nr, line.c_str());
 
-		(*user_map)[username] = password;
+		(*user_map)[username] = u;
 	}
 
 	fh.close();
 }
 
-bool users::find_user(std::string username, std::string & password)
+bool users::find_user(std::string username, std::string & password, int & max_get_bps)
 {
 	my_mutex_lock(&lock);
 
-	password.assign("INVALID PASSWORd");
+	password.assign("INVALID PASSWORD");
 
-	std::map<std::string, std::string>::iterator it = user_map -> find(username);
+	std::map<std::string, user_t>::iterator it = user_map -> find(username);
 	if (it == user_map -> end())
 	{
 		my_mutex_unlock(&lock);
 		return false;
 	}
 
-	password.assign(it -> second);
+	password.assign(it -> second.password);
+
+	max_get_bps = it -> second.max_get_bps;
 
 	my_mutex_unlock(&lock);
 

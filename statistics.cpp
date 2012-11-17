@@ -57,7 +57,7 @@ statistics::statistics(char *file_in, fips140 *fips140_in, scc *scc_in, pools *p
 	timeouts = 0;
 
 	msg_cnt = 0;
-	last_message = last_put_message = connected_since = 0;
+	last_message = last_put_message = last_get_message = connected_since = 0;
 
 	start_ts = get_ts();
 }
@@ -287,6 +287,8 @@ void statistics::register_msg(bool is_put)
 
 	if (is_put)
 		last_put_message = now;
+	else
+		last_get_message = now;
 
 	my_mutex_unlock(&time_lck);
 }
@@ -313,6 +315,15 @@ double statistics::get_last_put_msg_ts()
 {
 	my_mutex_lock(&time_lck);
 	double dummy = last_put_message;
+	my_mutex_unlock(&time_lck);
+
+	return dummy;
+}
+
+double statistics::get_last_get_msg_ts()
+{
+	my_mutex_lock(&time_lck);
+	double dummy = last_get_message;
 	my_mutex_unlock(&time_lck);
 
 	return dummy;

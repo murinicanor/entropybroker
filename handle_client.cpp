@@ -277,9 +277,10 @@ void * thread(void *data)
 
 	for(;;)
 	{
+		int max_get_bps = p -> config -> default_max_get_bps;
 		long long unsigned int auth_rnd = 1;
 		std::string password, username;
-		bool ok = auth_eb(p -> socket_fd, p -> config -> communication_timeout, p -> pu, username, password, &auth_rnd, &p -> is_server, p -> type, p -> pc -> get_random_source(), es, mh, p -> config -> hash_hasher, p -> config -> max_get_put_size) == 0;
+		bool ok = auth_eb(p -> socket_fd, p -> config -> communication_timeout, p -> pu, username, password, &auth_rnd, &p -> is_server, p -> type, p -> pc -> get_random_source(), es, mh, p -> config -> hash_hasher, p -> config -> max_get_put_size, &max_get_bps) == 0;
 
 		if (!ok)
 		{
@@ -298,6 +299,9 @@ void * thread(void *data)
 		set_thread_name(username + "_" + (p -> is_server ? "1":"0"));
 
 		p -> password = strdup(password.c_str());
+
+		p -> max_get_bps = max_get_bps;
+		p -> last_get_allowance = p -> max_get_bps;
 
 		unsigned char *pw_char = reinterpret_cast<unsigned char *>(const_cast<char *>(password.c_str()));
 		if (!es -> init(pw_char, password.length(), ivec))
@@ -436,6 +440,9 @@ void register_new_client(int listen_socket_fd, std::vector<client_t *> *clients,
 		p -> ignore_rngtest_fips140 = config -> ignore_rngtest_fips140;
 		p -> ignore_rngtest_scc = config -> ignore_rngtest_scc;
 		p -> allow_prng = config -> allow_prng;
+
+		p -> max_get_bps = config -> default_max_get_bps;
+		p -> last_get_allowance = p -> max_get_bps;
 
 		p -> stats_user = new statistics(NULL, p -> pfips140, p -> pscc, ppools);
 

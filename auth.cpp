@@ -20,7 +20,7 @@
 #include "protocol.h"
 #include "users.h"
 
-int auth_eb_user(int fd, int to, users *user_map, std::string & username_out, std::string & password, long long unsigned int *challenge, bool is_proxy_auth, bool *is_server_in, std::string & type, random_source *rs, encrypt_stream *es, hasher *mac, std::string handshake_hash, unsigned int max_get_put_size)
+int auth_eb_user(int fd, int to, users *user_map, std::string & username_out, std::string & password, long long unsigned int *challenge, bool is_proxy_auth, bool *is_server_in, std::string & type, random_source *rs, encrypt_stream *es, hasher *mac, std::string handshake_hash, unsigned int max_get_put_size, int *max_get_bps)
 {
 	const char *ts = is_proxy_auth ? "Proxy-auth" : "Connection";
 
@@ -83,7 +83,8 @@ int auth_eb_user(int fd, int to, users *user_map, std::string & username_out, st
 	}
 
 	username_out.assign(username);
-	bool user_known = user_map -> find_user(username_out, password);
+
+	bool user_known = user_map -> find_user(username_out, password, *max_get_bps);
 	if (!user_known)
 	{
 		dolog(LOG_WARNING, "User '%s' not known", username);
@@ -164,7 +165,7 @@ int auth_eb_user(int fd, int to, users *user_map, std::string & username_out, st
 	return 0;
 }
 
-int auth_eb(int fd, int to, users *user_map, std::string & username, std::string & password, long long unsigned int *challenge, bool *is_server_in, std::string & type, random_source *rs, encrypt_stream *enc, hasher *mac, std::string handshake_hash, unsigned int max_get_put_size)
+int auth_eb(int fd, int to, users *user_map, std::string & username, std::string & password, long long unsigned int *challenge, bool *is_server_in, std::string & type, random_source *rs, encrypt_stream *enc, hasher *mac, std::string handshake_hash, unsigned int max_get_put_size, int *max_get_bps)
 {
 	char prot_ver[4 + 1] = { 0 };
 	snprintf(prot_ver, sizeof prot_ver, "%04d", PROTOCOL_VERSION);
@@ -175,7 +176,7 @@ int auth_eb(int fd, int to, users *user_map, std::string & username, std::string
 		return -1;
 	}
 
-	return auth_eb_user(fd, to, user_map, username, password, challenge, false, is_server_in, type, rs, enc, mac, handshake_hash, max_get_put_size);
+	return auth_eb_user(fd, to, user_map, username, password, challenge, false, is_server_in, type, rs, enc, mac, handshake_hash, max_get_put_size, max_get_bps);
 }
 
 bool get_auth_from_file(char *filename, std::string & username, std::string & password)

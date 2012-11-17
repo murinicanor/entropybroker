@@ -41,6 +41,8 @@ typedef struct
 
 	int max_get_put_size;
 
+	int default_max_get_bps;
+
 	hasher_type ht;
 	stirrer_type st;
 	random_source_t rs;

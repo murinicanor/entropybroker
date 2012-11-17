@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <errno.h>
 #include <string>
+#include <vector>
 #include <sys/mman.h>
 #include <arpa/inet.h>
 

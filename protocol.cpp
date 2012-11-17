@@ -579,6 +579,8 @@ int protocol::request_bytes(unsigned char *where_to, unsigned int n_bits, bool f
 
 			free(hash);
 
+			dolog(LOG_DEBUG, "got %d bits", will_get_n_bytes * 8);
+
 			return will_get_n_bytes;
 		}
 		else

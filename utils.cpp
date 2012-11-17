@@ -708,6 +708,26 @@ void split_string(const char *in, const char *split, char ***out, int *n_out)
 	free(dummy);
 }
 
+std::vector<std::string> split_string(std::string in, std::string split)
+{
+	char **out = NULL;
+	int n_out = 0;
+
+	split_string(in.c_str(), split.c_str(), &out, &n_out);
+
+	std::vector<std::string> list_out;
+
+	for(int index=0; index<n_out; index++)
+	{
+		list_out.push_back(out[index]);
+		free(out[index]);
+	}
+
+	free(out);
+
+	return list_out;
+}
+
 unsigned int uchar_to_uint(unsigned char *in)
 {
 	return (in[0] << 24) + (in[1] << 16) + (in[2] << 8) + in[3];

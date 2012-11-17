@@ -2,6 +2,7 @@
 #include <string.h>
 #include <arpa/inet.h>
 #include <string>
+#include <vector>
 #include <arpa/inet.h>
 
 #include "error.h"

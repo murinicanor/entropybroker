@@ -51,7 +51,7 @@ private:
 	int msg_cnt;
 
 	pthread_mutex_t time_lck;
-	double last_message, last_put_message;
+	double last_message, last_put_message, last_get_message;
 	double connected_since;
 
 	double start_ts;
@@ -87,6 +87,7 @@ public:
 	double get_last_msg_ts();
 	double get_since_ts();
 	double get_last_put_msg_ts();
+	double get_last_get_msg_ts();
 	double get_start_ts();
 	std::vector<history_logins> get_login_history();
 	void get_sent_avg_sd(double *avg, double *sd);

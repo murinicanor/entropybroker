@@ -50,7 +50,8 @@ int send_denied_quota(int fd, statistics *stats, config_t *config)
 
 	stats -> inc_n_times_quota();
 
-	make_msg(buffer, 9002, config -> reset_counters_interval); // FIXME daadwerkelijke tijd want die interval kan al eerder getriggered zijn
+	// FIXME use a time which is calculated with the incoming data rate
+	make_msg(buffer, 9002, config -> reset_counters_interval);
 
 	return WRITE_TO(fd, buffer, 8, config -> communication_timeout) == 8 ? 0 : -1;
 }
@@ -112,6 +113,31 @@ void update_client_fips140_scc(client_t *p, unsigned char *data, int n)
 	}
 }
 
+int calc_max_allowance(client_t *client, double now, int n_requested)
+{
+	double rate = client -> max_get_bps;	// unit: messages
+        double per = 1.0;	// unit: seconds
+        double allowance = client -> last_get_allowance; // unit: messages
+
+        double last_check = client -> stats_user -> get_last_get_msg_ts(); // floating-point, e.g. usec accuracy. Unit: seconds
+
+	double time_passed = now - last_check;
+	allowance += time_passed * (rate / per);
+
+	if (allowance > rate)
+		allowance = rate; // throttle
+
+	if (allowance < 8.0) // 8 bits in a byte
+		return 0;
+
+	return mymin(n_requested, allowance);
+}
+
+void use_allowance(client_t *client, int n)
+{
+	client -> last_get_allowance -= n;
+}
+
 int do_client_get(client_t *client, bool *no_bits)
 {
 	int transmit_size;
@@ -139,17 +165,15 @@ int do_client_get(client_t *client, bool *no_bits)
 
 	dolog(LOG_DEBUG, "get|%s requested %d bits", client -> host.c_str(), cur_n_bits);
 
-	my_mutex_lock(&client -> stats_lck);
-	cur_n_bits = mymin(cur_n_bits, client -> max_bits_per_interval - client -> bits_sent);
-	my_mutex_unlock(&client -> stats_lck);
+	cur_n_bits = calc_max_allowance(client, get_ts(), cur_n_bits);
+
 	dolog(LOG_DEBUG, "get|%s is allowed to now receive %d bits", client -> host.c_str(), cur_n_bits);
-	if (cur_n_bits == 0)
+	if (cur_n_bits < 8)
 	{
 		client -> stats_user -> inc_n_times_quota();
+
 		return send_denied_quota(client -> socket_fd, client -> stats_glob, client -> config);
 	}
-	if (cur_n_bits < 0)
-		error_exit("cur_n_bits < 0");
 
 	int cur_n_bytes = (cur_n_bits + 7) / 8;
 
@@ -171,6 +195,8 @@ int do_client_get(client_t *client, bool *no_bits)
 		error_exit("internal error: %d < 0", cur_n_bits);
 	cur_n_bytes = (cur_n_bits + 7) / 8;
 	dolog(LOG_DEBUG, "get|%s got %d bits from pool", client -> host.c_str(), cur_n_bits);
+
+	use_allowance(client, cur_n_bits);
 
 	int hash_len = client -> mac_hasher -> get_hash_size();
 	int out_len = cur_n_bytes + hash_len;
@@ -375,15 +401,17 @@ int do_client(client_t *client, bool *no_bits, bool *new_bits, bool *is_full)
 
 	if (memcmp(cmd, "0001", 4) == 0)		// GET bits
 	{
+		rc = do_client_get(client, no_bits);
 		client -> stats_user -> register_msg(false);
 		client -> stats_glob -> register_msg(false);
-		return do_client_get(client, no_bits);
+		return rc;
 	}
 	else if (memcmp(cmd, "0002", 4) == 0)	// PUT bits
 	{
+		rc = do_client_put(client, new_bits, is_full);
 		client -> stats_user -> register_msg(true);
 		client -> stats_glob -> register_msg(true);
-		return do_client_put(client, new_bits, is_full);
+		return rc;
 	}
 
 	client -> stats_user -> register_msg(false);

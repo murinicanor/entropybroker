@@ -3,6 +3,7 @@
 #include <stdarg.h>
 #include <string.h>
 #include <string>
+#include <vector>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
