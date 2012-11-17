@@ -116,9 +116,9 @@ http_bundle * http_file_stats::do_request(http_request_t request_type, std::stri
 	{
 		// PER USER STATS
 		content += "<TABLE CLASS=\"table2\" WIDTH=100%>\n";
-		content += "<TR CLASS=\"lighttable\"><TD>user</TD><TD>host</TD><TD>type</TD><TD>is server</TD><TD>connected since</TD><TD>bits sent</TD><TD>bits recv</TD></TR>\n";
+		content += "<TR CLASS=\"lighttable\"><TD>user</TD><TD>host</TD><TD>type</TD><TD>is server</TD><TD>connected since</TD><TD>bits recv</TD><TD>bits sent</TD></TR>\n";
 
-		double sent_bps = 0, recv_bps = 0;
+		double recv_bps = 0, sent_bps = 0;
 		int n_server = 0, n_client = 0;
 
 		my_mutex_lock(clients_mutex);
@@ -151,12 +151,12 @@ http_bundle * http_file_stats::do_request(http_request_t request_type, std::stri
 			content += format("%lld", total_bits_recv);
 			if (p -> is_server)
 			{
-				sent_bps += double(total_bits_recv) / duration;
+				recv_bps += double(total_bits_recv) / duration;
 				n_server++;
 			}
 			else
 			{
-				recv_bps += double(total_bits_sent) / duration;
+				sent_bps += double(total_bits_sent) / duration;
 				n_client++;
 			}
 			content += "</TD><TD>";
