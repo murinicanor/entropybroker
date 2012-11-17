@@ -24,8 +24,6 @@
 - webserver
   - constants in data logger configureerbaar? interval/keep_n
   - keep track of bandwidth of each user: if > avg+stddev, then alert in logfile
-  - show total bps over alle servers en idem clients
-  - last value in graph
 
 - bandwidth limiting:
 	http://stackoverflow.com/questions/667508/whats-a-good-rate-limiting-algorithm
@@ -41,6 +39,7 @@
 	  time_passed = current - last_check;
 	  last_check = current;
 	  allowance += time_passed * (rate / per);
+/// FVH: misschien checken allowance > rate + burst?
 	  if (allowance > rate):
 	    allowance = rate; // throttle
 	  if (allowance < 1.0):
