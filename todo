@@ -27,6 +27,29 @@
   - show total bps over alle servers en idem clients
   - last value in graph
 
+- bandwidth limiting:
+	http://stackoverflow.com/questions/667508/whats-a-good-rate-limiting-algorithm
+	Here the simplest algorithm, if you want just to drop messages when they arrive too quickly (instead of queuing them, which makes sense because the queue might get arbitrarily large):
+
+	rate = 5.0; // unit: messages
+	per  = 8.0; // unit: seconds
+	allowance = rate; // unit: messages
+	last_check = now(); // floating-point, e.g. usec accuracy. Unit: seconds
+
+	when (message_received):
+	  current = now();
+	  time_passed = current - last_check;
+	  last_check = current;
+	  allowance += time_passed * (rate / per);
+	  if (allowance > rate):
+	    allowance = rate; // throttle
+	  if (allowance < 1.0):
+	    discard_message();
+	  else:
+	    forward_message();
+	    allowance -= 1.0;
+	There are no datastructures, timers etc. in this solution and it works cleanly :) To see this, 'allowance' grows at speed 5/8 units per seconds at most, i.e. at most five units per eight seconds. Every message that is forwarded deducts one unit, so you can't send more than five messages per every eight seconds.
+
 - hash for protocol (user password): Use bcrypt or PBKDF2 exclusively to hash anything you need to be secure.
 
 SVN: $Revision$
