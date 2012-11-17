@@ -119,7 +119,6 @@ http_bundle * http_file_stats::do_request(http_request_t request_type, std::stri
 		content += "<TR CLASS=\"lighttable\"><TD>user</TD><TD>host</TD><TD>type</TD><TD>is server</TD><TD>connected since</TD><TD>bits recv</TD><TD>bits sent</TD></TR>\n";
 
 		double recv_bps = 0, sent_bps = 0;
-		int n_server = 0, n_client = 0;
 
 		my_mutex_lock(clients_mutex);
 		for(unsigned int index=0; index<clients -> size(); index++)
@@ -150,21 +149,15 @@ http_bundle * http_file_stats::do_request(http_request_t request_type, std::stri
 			content += "</TD><TD>";
 			content += format("%lld", total_bits_recv);
 			if (p -> is_server)
-			{
 				recv_bps += double(total_bits_recv) / duration;
-				n_server++;
-			}
 			else
-			{
 				sent_bps += double(total_bits_sent) / duration;
-				n_client++;
-			}
 			content += "</TD><TD>";
 			content += format("%lld", total_bits_sent);
 			content += "</TD></TR>\n";
 		}
 		my_mutex_unlock(clients_mutex);
-		content += format("<TR CLASS=\"lighttable\"><TD COLSPAN=\"4\"></TD><TD ALIGN=\"right\">bps:</TD><TD>%.1f</TD><TD>%.1f</TD></TR>\n", recv_bps / double(n_server), sent_bps / double(n_client));
+		content += format("<TR CLASS=\"lighttable\"><TD COLSPAN=\"4\"></TD><TD ALIGN=\"right\">bps:</TD><TD>%.1f</TD><TD>%.1f</TD></TR>\n", recv_bps, sent_bps);
 
 		content += "</TABLE>\n";
 		content += format("Number of connected clients/servers: %d<BR>\n", clients -> size());
