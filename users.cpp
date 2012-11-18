@@ -11,7 +11,7 @@
 #include "utils.h"
 #include "users.h"
 
-users::users(std::string filename_in) : filename(filename_in)
+users::users(std::string filename_in, int default_max_get_bps_in) : filename(filename_in), default_max_get_bps(default_max_get_bps_in)
 {
 	pthread_check(pthread_mutex_init(&lock, &global_mutex_attr), "pthread_mutex_init");
 
@@ -28,13 +28,17 @@ users::~users()
 
 void users::reload()
 {
-	my_mutex_lock(&lock);
+	my_mutex_lock(&lock); // FIXME writelock
+
+	std::map<std::string, user_t>::iterator it;
+	for(it = user_map -> begin(); it != user_map -> end(); it++)
+		pthread_check(pthread_mutex_destroy(&it -> second.lck), "pthread_mutex_destroy");
 
 	delete user_map;
 
 	load_usermap();
 
-	my_mutex_unlock(&lock);
+	my_mutex_unlock(&lock); // FIXME writelock
 }
 
 void users::load_usermap()
@@ -62,9 +66,12 @@ void users::load_usermap()
 		user_t u;
 		u.password = pars[1];
 		if (pars.size() >= 3)
-			u.max_get_bps = atoi(pars[2].c_str());
+			u.allowance = u.max_get_bps = atoi(pars[2].c_str());
 		else
-			u.max_get_bps = -1;
+			u.allowance = u.max_get_bps = default_max_get_bps;
+		u.last_get_message = 0.0;
+
+		pthread_check(pthread_mutex_init(&u.lck, &global_mutex_attr), "pthread_mutex_init");
 
 		std::string username = pars[0];
 
@@ -77,26 +84,89 @@ void users::load_usermap()
 	fh.close();
 }
 
-bool users::find_user(std::string username, user_t **u)
+user_t *users::find_user(std::string username)
 {
-	my_mutex_lock(&lock);
-
 	std::map<std::string, user_t>::iterator it = user_map -> find(username);
 	if (it == user_map -> end())
+		return NULL;
+
+	return &it -> second;
+}
+
+bool users::get_password(std::string username, std::string & password)
+{
+	password.assign("DEFINATELY WRONG PASSWORd");
+
+	my_mutex_lock(&lock); // FIXME readlock
+
+	user_t *u = find_user(username);
+	if (u)
+		password.assign(u -> password);
+
+	my_mutex_unlock(&lock); // FIXME readlock
+
+	return u ? true : false;
+}
+
+int users::calc_max_allowance(std::string username, double now, int n_requested)
+{
+	my_mutex_lock(&lock); // FIXME readlock
+
+	int n = -1;
+
+	user_t *u = find_user(username);
+
+	if (u)
 	{
-		my_mutex_unlock(&lock);
-		return false;
+		my_mutex_lock(&u -> lck);
+
+		double rate = u -> max_get_bps;	// unit: messages
+		double per = 1.0;	// unit: seconds
+		double allowance = u -> allowance; // unit: messages
+
+		double last_check = u -> last_get_message; // floating-point, e.g. usec accuracy. Unit: seconds
+
+		double time_passed = now - last_check;
+		allowance += time_passed * (rate / per);
+
+		if (allowance > rate)
+			allowance = rate; // throttle
+
+		if (allowance < 8.0) // 8 bits in a byte
+			n = 0;
+		else
+			n = mymin(n_requested, allowance);
 	}
 
-	*u = new user_t;
+	return n;
+}
 
-	(*u) -> password = it -> second.password;
-	(*u) -> max_get_bps = it -> second.max_get_bps;
+bool  users::use_allowance(std::string username, int n)
+{
+	user_t *u = find_user(username);
 
-	(*u) -> last_get_message = 0.0;
-	(*u) -> allowance = (*u) -> max_get_bps;
+	if (u)
+	{
+		u -> allowance -= n;
 
-	my_mutex_unlock(&lock);
+		u -> last_get_message = get_ts();
 
-	return true;
+		my_mutex_unlock(&u -> lck);
+	}
+
+	my_mutex_unlock(&lock); // FIXME readlock
+
+	return u ? true : false;
+}
+
+bool users::cancel_allowance(std::string username)
+{
+	user_t *u = find_user(username);
+
+	if (u)
+		my_mutex_unlock(&u -> lck);
+
+	my_mutex_unlock(&lock); // FIXME readlock
+
+	return u ? true : false;
 }

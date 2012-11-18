@@ -77,10 +77,6 @@ void forget_client_index(statistics *s, std::vector<client_t *> *clients, int nr
 	delete p -> pfips140;
 	delete p -> pscc;
 
-	free(p -> username);
-
-	delete p -> u;
-
 	delete p -> pc;
 
 	delete p -> stats_user;
@@ -279,9 +275,7 @@ void * thread(void *data)
 	for(;;)
 	{
 		long long unsigned int auth_rnd = 1;
-		std::string username;
-		user_t *u = NULL;
-		bool ok = auth_eb(p -> socket_fd, p -> config -> communication_timeout, p -> pu, username, &u, &auth_rnd, &p -> is_server, p -> type, p -> pc -> get_random_source(), es, mh, p -> config -> hash_hasher, p -> config -> max_get_put_size) == 0;
+		bool ok = auth_eb(p -> socket_fd, p -> config -> communication_timeout, p -> pu, p -> username, p -> password, &auth_rnd, &p -> is_server, p -> type, p -> pc -> get_random_source(), es, mh, p -> config -> hash_hasher, p -> config -> max_get_put_size) == 0;
 
 		if (!ok)
 		{
@@ -289,25 +283,19 @@ void * thread(void *data)
 			break;
 		}
 
-		dolog(LOG_INFO, "Thread id: %d, fd: %d, user: %s, type: %s, host: %s", gettid(), p -> socket_fd, username.c_str(), p -> type.c_str(), p -> host.c_str());
+		dolog(LOG_INFO, "Thread id: %d, fd: %d, user: %s, type: %s, host: %s", gettid(), p -> socket_fd, p -> username.c_str(), p -> type.c_str(), p -> host.c_str());
 
 		p -> challenge = auth_rnd;
 		p -> ivec_counter = 0;
-		calc_ivec(u -> password.c_str(), p -> challenge, p -> ivec_counter, es -> get_ivec_size(), ivec);
+		calc_ivec(p -> password.c_str(), p -> challenge, p -> ivec_counter, es -> get_ivec_size(), ivec);
 		// printf("IVEC: "); hexdump(ivec, 8);
 
-		p -> username = strdup(username.c_str());
-		set_thread_name(username + "_" + (p -> is_server ? "1":"0"));
+		set_thread_name(p -> username + "_" + (p -> is_server ? "1":"0"));
 
-		p -> u = u;
-
-		if (p -> u -> max_get_bps == -1)
-			p -> u -> max_get_bps = p -> config -> default_max_get_bps;
-
-		unsigned char *pw_char = reinterpret_cast<unsigned char *>(const_cast<char *>(u -> password.c_str()));
-		if (!es -> init(pw_char, u -> password.length(), ivec))
+		unsigned char *pw_char = reinterpret_cast<unsigned char *>(const_cast<char *>(p -> password.c_str()));
+		if (!es -> init(pw_char, p -> password.length(), ivec))
 		{
-			dolog(LOG_CRIT, "Password for %s too weak (fd: %d)", username.c_str(), p -> socket_fd);
+			dolog(LOG_CRIT, "Password for %s too weak (fd: %d)", p -> username.c_str(), p -> socket_fd);
 			break;
 		}
 
@@ -412,9 +400,6 @@ void register_new_client(int listen_socket_fd, std::vector<client_t *> *clients,
 		client_t *p = new client_t;
 		if (!p)
 			error_exit("memory allocation error");
-
-		p -> username = NULL;
-		p -> u = NULL;
 
 		p -> id = client_id++;
 
@@ -597,7 +582,7 @@ void main_loop(std::vector<client_t *> *clients, pthread_mutex_t *clients_mutex,
 
 	dolog(LOG_INFO, "main|main-loop started");
 
-	users *user_map = new users(*config -> user_map);
+	users *user_map = new users(*config -> user_map, config -> default_max_get_bps);
 	if (!user_map)
 		error_exit("failed allocating users-object");
 

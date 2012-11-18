@@ -113,31 +113,6 @@ void update_client_fips140_scc(client_t *p, unsigned char *data, int n)
 	}
 }
 
-int calc_max_allowance(client_t *client, double now, int n_requested)
-{
-	double rate = client -> u -> max_get_bps;	// unit: messages
-        double per = 1.0;	// unit: seconds
-        double allowance = client -> u -> allowance; // unit: messages
-
-        double last_check = client -> u -> last_get_message; // floating-point, e.g. usec accuracy. Unit: seconds
-
-	double time_passed = now - last_check;
-	allowance += time_passed * (rate / per);
-
-	if (allowance > rate)
-		allowance = rate; // throttle
-
-	if (allowance < 8.0) // 8 bits in a byte
-		return 0;
-
-	return mymin(n_requested, allowance);
-}
-
-void use_allowance(client_t *client, int n)
-{
-	client -> u -> allowance -= n;
-}
-
 int do_client_get(client_t *client, bool *no_bits)
 {
 	client -> stats_user -> register_msg(false);
@@ -166,12 +141,14 @@ int do_client_get(client_t *client, bool *no_bits)
 
 	dolog(LOG_DEBUG, "get|%s requested %d bits", client -> host.c_str(), cur_n_bits);
 
-	cur_n_bits = calc_max_allowance(client, get_ts(), cur_n_bits);
+	cur_n_bits = client -> pu -> calc_max_allowance(client -> username, get_ts(), cur_n_bits);
 
 	dolog(LOG_DEBUG, "get|%s is allowed to now receive %d bits", client -> host.c_str(), cur_n_bits);
 	if (cur_n_bits < 8)
 	{
 		client -> stats_user -> inc_n_times_quota();
+
+		client -> pu -> cancel_allowance(client -> username);
 
 		return send_denied_quota(client -> socket_fd, client -> stats_glob, client -> config);
 	}
@@ -186,6 +163,8 @@ int do_client_get(client_t *client, bool *no_bits)
 	{
 		free_locked(temp_buffer, cur_n_bytes + 1);
 
+		client -> pu -> cancel_allowance(client -> username);
+
 		dolog(LOG_WARNING, "get|%s no bits in pools, sending deny", client -> host.c_str());
 		*no_bits = true;
 		client -> stats_user -> inc_n_times_empty();
@@ -197,9 +176,7 @@ int do_client_get(client_t *client, bool *no_bits)
 	cur_n_bytes = (cur_n_bits + 7) / 8;
 	dolog(LOG_DEBUG, "get|%s got %d bits from pool", client -> host.c_str(), cur_n_bits);
 
-	client -> u -> last_get_message = get_ts();
-
-	use_allowance(client, cur_n_bits);
+	client -> pu -> use_allowance(client -> username, cur_n_bits);
 
 	int hash_len = client -> mac_hasher -> get_hash_size();
 	int out_len = cur_n_bytes + hash_len;

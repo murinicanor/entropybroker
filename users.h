@@ -13,16 +13,21 @@ class users
 {
 private:
 	std::string filename;
+	int default_max_get_bps;
 	std::map<std::string, user_t> *user_map;
 	pthread_mutex_t lock;
 
 	void load_usermap();
+	user_t *find_user(std::string username);
 
 public:
-	users(std::string filename);
+	users(std::string filename, int default_max_get_bps);
 	~users();
 
 	void reload();
 
-	bool find_user(std::string username, user_t **u);
+	bool get_password(std::string username, std::string & password);
+	int calc_max_allowance(std::string username, double now, int n_requested);
+	void use_allowance(std::string username, int n);
+	void cancel_allowance(std::string username);
 };
