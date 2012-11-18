@@ -492,7 +492,8 @@ int main(int argc, char *argv[])
 
 	set_logging_parameters(log_console, log_logfile, log_syslog, log_level);
 
-	users *user_map = new users(clients_auths);
+	// bit rate is dummy: only servers connect to the proxy
+	users *user_map = new users(clients_auths, 4096);
 
 	protocol *p = new protocol(&hosts, username, password, true, client_type, DEFAULT_COMM_TO);
 
