@@ -17,9 +17,8 @@ typedef struct
 	int max_bits_per_interval;
 	bool allow_prng;
 	bool ignore_rngtest_fips140, ignore_rngtest_scc;
-	char *username, *password;
-
-	int max_get_bps, last_get_allowance;
+	char *username;
+	user_t *u;
 
 	fips140 *pfips140;
 	scc *pscc;

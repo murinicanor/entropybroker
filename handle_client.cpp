@@ -78,7 +78,8 @@ void forget_client_index(statistics *s, std::vector<client_t *> *clients, int nr
 	delete p -> pscc;
 
 	free(p -> username);
-	free(p -> password);
+
+	delete p -> u;
 
 	delete p -> pc;
 
@@ -277,10 +278,10 @@ void * thread(void *data)
 
 	for(;;)
 	{
-		int max_get_bps = p -> config -> default_max_get_bps;
 		long long unsigned int auth_rnd = 1;
-		std::string password, username;
-		bool ok = auth_eb(p -> socket_fd, p -> config -> communication_timeout, p -> pu, username, password, &auth_rnd, &p -> is_server, p -> type, p -> pc -> get_random_source(), es, mh, p -> config -> hash_hasher, p -> config -> max_get_put_size, &max_get_bps) == 0;
+		std::string username;
+		user_t *u = NULL;
+		bool ok = auth_eb(p -> socket_fd, p -> config -> communication_timeout, p -> pu, username, &u, &auth_rnd, &p -> is_server, p -> type, p -> pc -> get_random_source(), es, mh, p -> config -> hash_hasher, p -> config -> max_get_put_size) == 0;
 
 		if (!ok)
 		{
@@ -292,19 +293,19 @@ void * thread(void *data)
 
 		p -> challenge = auth_rnd;
 		p -> ivec_counter = 0;
-		calc_ivec(password.c_str(), p -> challenge, p -> ivec_counter, es -> get_ivec_size(), ivec);
+		calc_ivec(u -> password.c_str(), p -> challenge, p -> ivec_counter, es -> get_ivec_size(), ivec);
 		// printf("IVEC: "); hexdump(ivec, 8);
 
 		p -> username = strdup(username.c_str());
 		set_thread_name(username + "_" + (p -> is_server ? "1":"0"));
 
-		p -> password = strdup(password.c_str());
+		p -> u = u;
 
-		p -> max_get_bps = max_get_bps;
-		p -> last_get_allowance = p -> max_get_bps;
+		if (p -> u -> max_get_bps == -1)
+			p -> u -> max_get_bps = p -> config -> default_max_get_bps;
 
-		unsigned char *pw_char = reinterpret_cast<unsigned char *>(const_cast<char *>(password.c_str()));
-		if (!es -> init(pw_char, password.length(), ivec))
+		unsigned char *pw_char = reinterpret_cast<unsigned char *>(const_cast<char *>(u -> password.c_str()));
+		if (!es -> init(pw_char, u -> password.length(), ivec))
 		{
 			dolog(LOG_CRIT, "Password for %s too weak (fd: %d)", username.c_str(), p -> socket_fd);
 			break;
@@ -413,7 +414,7 @@ void register_new_client(int listen_socket_fd, std::vector<client_t *> *clients,
 			error_exit("memory allocation error");
 
 		p -> username = NULL;
-		p -> password = NULL;
+		p -> u = NULL;
 
 		p -> id = client_id++;
 
@@ -432,7 +433,6 @@ void register_new_client(int listen_socket_fd, std::vector<client_t *> *clients,
 		p -> pscc -> set_threshold(config -> scc_threshold);
 
 		p -> ivec_counter = 0;
-		p -> password = NULL;
 
 		p -> bits_sent = p -> bits_recv = 0;
 
@@ -440,9 +440,6 @@ void register_new_client(int listen_socket_fd, std::vector<client_t *> *clients,
 		p -> ignore_rngtest_fips140 = config -> ignore_rngtest_fips140;
 		p -> ignore_rngtest_scc = config -> ignore_rngtest_scc;
 		p -> allow_prng = config -> allow_prng;
-
-		p -> max_get_bps = config -> default_max_get_bps;
-		p -> last_get_allowance = p -> max_get_bps;
 
 		p -> stats_user = new statistics(NULL, p -> pfips140, p -> pscc, ppools);
 

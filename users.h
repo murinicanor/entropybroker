@@ -24,5 +24,5 @@ public:
 
 	void reload();
 
-	bool find_user(std::string username, std::string & password, user_t **user);
+	bool find_user(std::string username, user_t **u);
 };

@@ -77,11 +77,9 @@ void users::load_usermap()
 	fh.close();
 }
 
-bool users::find_user(std::string username, std::string & password, int & max_get_bps)
+bool users::find_user(std::string username, user_t **u)
 {
 	my_mutex_lock(&lock);
-
-	password.assign("INVALID PASSWORD");
 
 	std::map<std::string, user_t>::iterator it = user_map -> find(username);
 	if (it == user_map -> end())
@@ -90,9 +88,13 @@ bool users::find_user(std::string username, std::string & password, int & max_ge
 		return false;
 	}
 
-	password.assign(it -> second.password);
+	*u = new user_t;
 
-	max_get_bps = it -> second.max_get_bps;
+	(*u) -> password = it -> second.password;
+	(*u) -> max_get_bps = it -> second.max_get_bps;
+
+	(*u) -> last_get_message = 0.0;
+	(*u) -> allowance = (*u) -> max_get_bps;
 
 	my_mutex_unlock(&lock);
 
