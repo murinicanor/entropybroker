@@ -13,7 +13,7 @@
 
 users::users(std::string filename_in, int default_max_get_bps_in) : filename(filename_in), default_max_get_bps(default_max_get_bps_in)
 {
-	pthread_check(pthread_mutex_init(&lock, &global_mutex_attr), "pthread_mutex_init");
+	pthread_check(pthread_rwlock_init(&rwlck, NULL), "pthread_rwlock_init");
 
 	user_map = NULL;
 	load_usermap();
@@ -23,12 +23,32 @@ users::~users()
 {
 	delete user_map;
 
-	pthread_check(pthread_mutex_destroy(&lock), "pthread_mutex_destroy");
+	pthread_check(pthread_rwlock_destroy(&rwlck), "pthread_rwlock_destroy");
+}
+
+void users::list_wlock()
+{
+	pthread_check(pthread_rwlock_wrlock(&rwlck), "pthread_rwlock_wrlock");
+}
+
+void users::list_wunlock()
+{
+	pthread_check(pthread_rwlock_unlock(&rwlck), "pthread_rwlock_unlock");
+}
+
+void users::list_runlock()
+{
+	pthread_check(pthread_rwlock_unlock(&rwlck), "pthread_rwlock_unlock");
+}
+
+void users::list_rlock()
+{
+	pthread_check(pthread_rwlock_rdlock(&rwlck), "pthread_rwlock_rdlock");
 }
 
 void users::reload()
 {
-	my_mutex_lock(&lock); // FIXME writelock
+	list_wlock();
 
 	std::map<std::string, user_t>::iterator it;
 	for(it = user_map -> begin(); it != user_map -> end(); it++)
@@ -38,7 +58,7 @@ void users::reload()
 
 	load_usermap();
 
-	my_mutex_unlock(&lock); // FIXME writelock
+	list_wunlock();
 }
 
 void users::load_usermap()
@@ -97,20 +117,20 @@ bool users::get_password(std::string username, std::string & password)
 {
 	password.assign("DEFINATELY WRONG PASSWORd");
 
-	my_mutex_lock(&lock); // FIXME readlock
+	list_rlock();
 
 	user_t *u = find_user(username);
 	if (u)
 		password.assign(u -> password);
 
-	my_mutex_unlock(&lock); // FIXME readlock
+	list_runlock();
 
 	return u ? true : false;
 }
 
 int users::calc_max_allowance(std::string username, double now, int n_requested)
 {
-	my_mutex_lock(&lock); // FIXME readlock
+	list_rlock();
 
 	int n = -1;
 
@@ -154,7 +174,7 @@ bool  users::use_allowance(std::string username, int n)
 		my_mutex_unlock(&u -> lck);
 	}
 
-	my_mutex_unlock(&lock); // FIXME readlock
+	list_runlock();
 
 	return u ? true : false;
 }
@@ -166,7 +186,7 @@ bool users::cancel_allowance(std::string username)
 	if (u)
 		my_mutex_unlock(&u -> lck);
 
-	my_mutex_unlock(&lock); // FIXME readlock
+	list_runlock();
 
 	return u ? true : false;
 }
