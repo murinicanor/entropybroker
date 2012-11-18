@@ -48,6 +48,8 @@ void users::list_rlock()
 
 void users::reload()
 {
+	dolog(LOG_INFO, "Reload user database");
+
 	list_wlock();
 
 	std::map<std::string, user_t>::iterator it;
