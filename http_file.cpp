@@ -48,6 +48,8 @@ std::map<std::string, std::string> http_file::split_parameters(std::string url)
 
 			free(par_array[index]);
 		}
+
+		free(par_array);
 	}
 
 	return parameters;

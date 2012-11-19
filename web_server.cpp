@@ -64,8 +64,13 @@ void start_web_server(config_t *config, std::vector<client_t *> *clients, pthrea
 {
 	web_server *ws = new web_server(config, clients, clients_mutex, ppools, ps, pfips140, pscc, dl);
 
+	pthread_attr_t attr;
+
+	pthread_check(pthread_attr_init(&attr), "pthread_attr_init");
+	pthread_check(pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED), "pthread_attr_setdetachstate");
+
 	pthread_t thread;
-	pthread_check(pthread_create(&thread, NULL, start_web_server_thread_wrapper, ws), "pthread_create");
+	pthread_check(pthread_create(&thread, &attr, start_web_server_thread_wrapper, ws), "pthread_create");
 }
 
 web_server::web_server(config_t *config, std::vector<client_t *> *clients, pthread_mutex_t *clients_mutex, pools *ppools, statistics *ps, fips140 *pfips140, scc *pscc, data_logger *dl)
@@ -156,6 +161,11 @@ void * thread_wrapper_http_server(void *thread_data)
 
 void web_server::run(void)
 {
+	pthread_attr_t attr;
+
+	pthread_check(pthread_attr_init(&attr), "pthread_attr_init");
+	pthread_check(pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED), "pthread_attr_setdetachstate");
+
 	for(;;)
 	{
 		int client_fd = accept(fd, NULL, NULL);
@@ -175,7 +185,7 @@ void web_server::run(void)
 		p_client -> p_server = this;
 		p_client -> fd = client_fd;
 
-		pthread_check(pthread_create(&thread, NULL, thread_wrapper_http_server, reinterpret_cast<void *>(p_client)), "pthread_create");
+		pthread_check(pthread_create(&thread, &attr, thread_wrapper_http_server, reinterpret_cast<void *>(p_client)), "pthread_create");
 	}
 }
 
