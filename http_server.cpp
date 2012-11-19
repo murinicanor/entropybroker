@@ -113,8 +113,6 @@ http_request_t http_server::get_request_type()
 http_bundle * http_server::get_request()
 {
 	return new http_bundle(request_headers, request_data, request_data_size);
-
-	request_data = NULL;
 }
 
 std::string http_server::get_request_url()

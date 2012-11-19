@@ -184,7 +184,8 @@ bool pools::load_caches(unsigned int load_n_bits, pool_crypto *pc)
 			/// FIXME ugly hack, should throw an exception in pool-constructor
 			if (fgetc(fh) == -1)
 				break;
-			fseek(fh, -1, SEEK_CUR);
+			if (fseek(fh, -1, SEEK_CUR) == -1)
+				error_exit("Problem seeking in %s", cache_list.at(0).first.c_str());
 			///// FIXME /////
 
 			pool *new_pool = new pool(++files_loaded, fh, bce, pc);

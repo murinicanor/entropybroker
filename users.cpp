@@ -130,6 +130,7 @@ bool users::get_password(std::string username, std::string & password)
 	return u ? true : false;
 }
 
+// http://stackoverflow.com/questions/667508/whats-a-good-rate-limiting-algorithm
 int users::calc_max_allowance(std::string username, double now, int n_requested)
 {
 	list_rlock();

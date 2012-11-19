@@ -26,7 +26,7 @@ std::map<std::string, std::string> http_file::split_parameters(std::string url)
 {
 	std::map<std::string, std::string> parameters;
 
-        unsigned int parameters_pos = url.find('?');
+        size_t parameters_pos = url.find('?');
         if (parameters_pos != std::string::npos && parameters_pos < url.size() - 1)
 	{
 		std::string dummy = url.substr(parameters_pos + 1);

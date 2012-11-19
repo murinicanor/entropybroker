@@ -5,7 +5,6 @@ class web_server
 private:
 	int fd;
 	std::map<std::string, http_file *> objects;
-	pthread_t thread;
 
 	void add_object(http_file *p);
 

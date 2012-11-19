@@ -81,7 +81,8 @@ int pool::get_file_bit_count(std::string file_name)
 
 		bit_sum += bits;
 
-		fseek(fh, bytes, SEEK_CUR);
+		if (fseek(fh, bytes, SEEK_CUR) == -1)
+			error_exit("Error seeking in %s", file_name.c_str());
 	}
 
 	fclose(fh);

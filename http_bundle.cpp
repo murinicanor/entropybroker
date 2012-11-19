@@ -9,6 +9,9 @@ http_bundle::http_bundle(std::vector<std::string> headers_in, unsigned char *dat
 {
 	headers = headers_in;
 
+	data = NULL;
+	data_len = 0;
+
 	if (data_in)
 	{
 		data = reinterpret_cast<unsigned char *>(malloc(data_len_in));

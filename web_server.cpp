@@ -65,7 +65,6 @@ void start_web_server(config_t *config, std::vector<client_t *> *clients, pthrea
 	web_server *ws = new web_server(config, clients, clients_mutex, ppools, ps, pfips140, pscc, dl);
 
 	pthread_attr_t attr;
-
 	pthread_check(pthread_attr_init(&attr), "pthread_attr_init");
 	pthread_check(pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED), "pthread_attr_setdetachstate");
 
@@ -185,13 +184,14 @@ void web_server::run(void)
 		p_client -> p_server = this;
 		p_client -> fd = client_fd;
 
+		pthread_t thread;
 		pthread_check(pthread_create(&thread, &attr, thread_wrapper_http_server, reinterpret_cast<void *>(p_client)), "pthread_create");
 	}
 }
 
 http_file * web_server::lookup_url(std::string url)
 {
-	unsigned int parameters_pos = url.find('?');
+	size_t parameters_pos = url.find('?');
 	if (parameters_pos != std::string::npos)
 		url = url.substr(0, parameters_pos);
 
