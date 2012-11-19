@@ -29,6 +29,8 @@ int recv_length_data(int fd, char **data, unsigned int *len, double to)
 
 	if (*len == 0)
 		*data = NULL;
+	else if (*len > 100 * 1024 * 1024) // TODO there now is a limit on the data transmitted
+		return -1;
 	else
 	{
 		*data = reinterpret_cast<char *>(malloc(*len + 1));
