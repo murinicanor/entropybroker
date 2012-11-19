@@ -105,5 +105,8 @@ http_bundle * http_file_graph_data_logger::do_request(http_request_t request_typ
 	free(t);
 	free(v);
 
-	return new http_bundle(reply_headers, (unsigned char *)img_data, (int)img_data_len);
+	http_bundle *result = new http_bundle(reply_headers, (unsigned char *)img_data, (int)img_data_len);
+	free(img_data);
+
+	return result;
 }
