@@ -7,9 +7,6 @@
 #define RECV_BIT_COUNT_IN VAR_DIR "/recv_bit_count_in.dat"
 #define SENT_BIT_COUNT VAR_DIR "/sent_bit_count.dat"
 
-#define MEASURE_INTERVAL 300
-#define MEASURE_KEEP_N	((86400 / MEASURE_INTERVAL) * 7)
-
 class data_logger
 {
 private:
