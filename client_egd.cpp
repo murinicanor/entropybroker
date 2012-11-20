@@ -59,6 +59,12 @@ void egd_get(int fd, protocol *p, bool blocking)
 		return;
 	}
 
+	if (n_bytes_to_get == 0)
+	{
+		dolog(LOG_INFO, "client requesting 0 bytes");
+		return;
+	}
+
 	int n_bits_to_get = n_bytes_to_get * 8;
 
 	dolog(LOG_INFO, "will get %d bits (%sblocking)", n_bits_to_get, blocking?"":"non-");

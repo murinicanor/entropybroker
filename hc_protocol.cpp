@@ -282,15 +282,15 @@ int do_client_put(client_t *client, bool *new_bits, bool *is_full)
 	}
 
 	int cur_n_bits = uchar_to_uint(n_bits);
-	if (cur_n_bits == 0)
+	if (cur_n_bits <= 0)
 	{
 		dolog(LOG_INFO, "put|%s(%s) 0 bits requested", client -> host.c_str(), client -> type.c_str());
 		return -1;
 	}
 	if (cur_n_bits > client -> config -> max_get_put_size)
 	{
-		dolog(LOG_WARNING, "put|%s(%s) client requested more than %d bits: %d", client -> host.c_str(), client -> type.c_str(), client -> config -> max_get_put_size, cur_n_bits);
-		return -1;
+		dolog(LOG_WARNING, "put|%s(%s) client wants to put more than %d bits: %d", client -> host.c_str(), client -> type.c_str(), client -> config -> max_get_put_size, cur_n_bits);
+		cur_n_bits = client -> config -> max_get_put_size;
 	}
 
 	unsigned char msg[4 + 4];
