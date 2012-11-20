@@ -38,13 +38,13 @@ loop:
 			  - if there's a quota problem (not implemented in v1.1), then a 9002 is send
 			    with a 4-byte value containg the interval in which the counters will be reset
 			  - if data is available, a 0002 is returned with the data:
-			     - a hash of the data, using a SHA256 hash function so 32 bytes in size
+			     - a hash of the data, using a SHA256 (*1) hash function so 32 bytes in size
 			     - the data
-                             - the data + hash are encrypted with blowfish
-				- the blowfish cipher is at start initialized with the user-password as the key
-				- the IV of the cipher is set to the password xored with the authentication
-				  random value: this value is stored as 8 bytes
-				- the cipher is used in "cipher feedback" mode ("cfb64")
+                               - the data + hash are encrypted with blowfish (*1)
+				  - the blowfish cipher is at start initialized with the user-password as the key
+				  - the IV of the cipher is set to the password xored with the authentication
+				    random value: this value is stored as 8 bytes
+				  - the cipher is used in "cipher feedback" mode ("cfb64")
 
 		0002: put bits
 			- see get bits
@@ -70,5 +70,9 @@ loop:
 	  value that can be ignored (= number of bits maxed at 9999)
 
 	- if all pools are empty, the broker send 0010 (with a 0 value) to all servers
+
+
+*1 since version 2.0, all ciphers, hashers, etc are configurable
+
 
 SVN: $Revision$
