@@ -18,7 +18,7 @@ Retrieving data:
 In both cases:
  - the initial vector (as used by the stirrer) is initialized
    to a random value. this random value is obtained from the
-   OpenSSL prng
+   crypto++ prng
 
 References:
  - entropy estimation: http://en.wikipedia.org/wiki/Entropy_estimation
@@ -45,24 +45,6 @@ server_usb:
 
 In all cases:
  - where applicable, von Neumann whitening is applied
-
-network protocol
-****************
-authentication:
- - client/server process sends his username to the broker
- - a 64 bit random is send to the client. the client then
-   concatenates this value as a string to his password (with a
-   space in between) and then proceeds by calculating a 'sha512'
-   over this string. this string is returned to the broker. the
-   broker does the same calculating and compares the results.
-   if they're not equal, the session is aborted.
-
-entropy data transmission:
- - an SHA256 is calculated over the data, then the data is
-   concatenated. after that, the result of the previous is
-   encrypted with blowfish using the authentication-password as
-   the key. the IV is initialized with the password XORed with
-   the random used during the authentication.
 
 
 Contact info

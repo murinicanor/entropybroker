@@ -207,9 +207,7 @@ int pool::add_entropy_data(unsigned char *entropy_data, int n_bytes_in, pool_cry
 
 	// this implementation is described in RFC 4086 (June 2005) chapter 6.2.1, second paragraph
 
-	// NOTE (or FIXME if you like): not entirely sure if it is good enough to use a
-	// cryptographical strong PRNG to set the ivec - could use "real"
-	// entropy values for that instead
+	pc -> get_random_source() -> get(ivec, ivec_size);
 
 	int n_added = is_n_bits;
 	if (n_added == -1)
