@@ -69,7 +69,7 @@ http_bundle * http_file_stats::do_request(http_request_t request_type, std::stri
 		{
 			statistics *pcs = p -> stats_user;
 
-			content += "<table class=\"table2\" WIDTH=\"100%\">\n";
+			content += "<table class=\"table2 fullwidth\">\n";
 			content += std::string("<tr><td class=\"keys\">username:</td><td>") + p -> username + "</td></tr>\n";
 			content += std::string("<tr><td>host:</td><td>") + p -> host + "</td></tr>\n";
 			content += std::string("<tr><td>type:</td><td>") + p -> type + "</td></tr>\n";
@@ -116,7 +116,7 @@ http_bundle * http_file_stats::do_request(http_request_t request_type, std::stri
 	else
 	{
 		// PER USER STATS
-		content += "<table class=\"table2\" WIDTH=\"100%\">\n";
+		content += "<table class=\"table2 fullwidth\">\n";
 		content += "<TR class=\"lighttable\"><td>user</td><td>host</td><td>type</td><td>is server</td><td class=\"timestamp\">connected since</td><td>bits recv</td><td>bits sent</td></tr>\n";
 
 		double recv_bps = 0, sent_bps = 0;
@@ -158,14 +158,14 @@ http_bundle * http_file_stats::do_request(http_request_t request_type, std::stri
 			content += "</td></tr>\n";
 		}
 		my_mutex_unlock(clients_mutex);
-		content += format("<TR class=\"lighttable\"><td COLSPAN=\"4\"></td><td ALIGN=\"right\">bps:</td><td>%.1f</td><td>%.1f</td></tr>\n", recv_bps, sent_bps);
+		content += format("<TR class=\"lighttable\"><td COLSPAN=\"4\"></td><td class=\"alignright\">bps:</td><td>%.1f</td><td>%.1f</td></tr>\n", recv_bps, sent_bps);
 
 		content += "</table>\n";
 		content += format("Number of connected clients/servers: %d<BR>\n", clients -> size());
 		content += "<BR>\n";
 
 		// GLOBAL STATS
-		content += "<table class=\"table2\" WIDTH=\"100%\">\n";
+		content += "<table class=\"table2 fullwidth\">\n";
 		content += "<tr><td class=\"keys\">running since:</td><td>" + time_to_str((time_t)get_start_ts()) + "</td></tr>\n";
 		content += format("<tr><td>duration:</td><td>%fs</td></tr>\n", now - get_start_ts());
 		content += "<tr><td>first msg:</td><td>" + time_to_str((time_t)ps -> get_since_ts()) + "</td></tr>\n";
@@ -202,7 +202,7 @@ http_bundle * http_file_stats::do_request(http_request_t request_type, std::stri
 		content += "<BR>\n";
 
 		// POOL STATS
-		content += "<table class=\"table2\" WIDTH=100%>\n";
+		content += "<table class=\"table2 fullwidth>\n";
 		int bit_sum = ppools -> get_bit_sum(1.0);
 		content += format("<tr><td class=\"keys\">in memory bit count:</td><td>%d</td></tr>\n", bit_sum);
 		int mem_pools = ppools -> get_memory_pool_count();

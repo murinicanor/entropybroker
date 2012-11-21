@@ -47,6 +47,15 @@ section.content nav img {
 	width: 240px;
 }
 
+.alignright {
+	position:absolute;
+	right:0px;
+}
+
+.fullwidth {
+	width: 100%;
+}
+
 section.content nav a {
 	background: #383838;
 	display: block;
