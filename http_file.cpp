@@ -62,10 +62,10 @@ http_bundle * http_file::do_request(http_request_t request_type, std::string req
 
 std::string http_file::get_style_header()
 {
-	return "<!DOCTYPE html PUBLIC \"-//IETF//DTD HTML 2.0//EN\">\n"
+	return "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 3.2 Final//EN\">\n"
 		"<HTML><HEAD>\n"
 		"<link rel=\"stylesheet\" type=\"text/css\" media=\"screen\" href=\"stylesheet.css\">\n"
-		"<link rel=\"shortcut icon\" href=\"/favicon.ico\" />\n"
+		"<link rel=\"shortcut icon\" href=\"/favicon.ico\">\n"
 		"<meta http-equiv=\"Content-Type\" content=\"text/html;charset=utf-8\" >\n"
 		"</HEAD><BODY>\n"
 		"<TABLE HEIGHT=\"100%\" WIDTH=\"100%\"><TR><TD WIDTH=\"150\" ALIGN=\"LEFT\" VALIGN=\"TOP\">\n"
