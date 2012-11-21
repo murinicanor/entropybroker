@@ -1,65 +1,89 @@
-h1 {
-	font-family: "HelveticaNeue-Light", "Helvetica Neue Light", "Helvetica Neue", Helvetica, Arial, "Lucida Grande", sans-serif;
-}
-h2 {
-	font-family: "HelveticaNeue-Light", "Helvetica Neue Light", "Helvetica Neue", Helvetica, Arial, "Lucida Grande", sans-serif;
-}
-h3 {
-	font-family: "HelveticaNeue-Light", "Helvetica Neue Light", "Helvetica Neue", Helvetica, Arial, "Lucida Grande", sans-serif;
-}
-
 body {
-	background-color: #585858;
+	background: #282828;
+	border: 8px solid #585858;
 	color: #ffffff;
-	font: 16px sans-serif;
-	word-wrap: break-word;
+	font: 16px/1.25 "HelveticaNeue-Light", "Helvetica Neue Light", "Helvetica Neue", Helvetica, Arial, "Lucida Grande", sans-serif;
+	margin: 0;
 }
 
-table {
-	background-color: #282828;
-	line-height: 1.25em
-}
-
-.myBr {
+header, footer, section {
 	display: block;
-	margin-top: 0px;
-	margin: 0px 0;
-	line-height: 0px;
+	overflow: hidden;
+}
+
+header {
+	background: #282828;
+	float: left;
+	width: 150px;
+}
+
+header img {
+	clear: both;
+	display: block;
+	margin: 0 0 15px 5px;
+}
+
+section.content {
+	padding: 10px;
+	min-height: 700px;
+}
+
+section.content h1 {
+	background: #282828;
+	font-size: 32px;
+	margin: 0;
+	padding: 30px 0 10px 10px;
+}
+
+section.content nav img {
+	vertical-align: middle;
+}
+
+section.content nav a {
+	background: #383838;
+	display: block;
+	margin: 0 0 0 0;
+	padding: 5px;
+}
+
+.tablemargins {
+	margin: 1px 1px 1px 1px;
+	padding: 1px;
 }
 
 .table2 {
-	background-color: #383838;
-	line-height: 1.25em;
+        background-color: #383838;
+        line-height: 1.25em;
+}
+
+.lighttable {
+        background-color: #585858;
+}
+
+.lighttable2 {
+        background-color: #484848;
+}
+
+footer {
+	text-align: right;
 }
 
 .adsense {
 	background-color: #ffffff;
-	line-height: 1.25em
 }
 
-.mtlogo {
-	background-color: #ffffff;
-	line-height: 1.25em
+a:link {
+	color: #0b9a0a
 }
 
-.header {
-	background-color: #000000;
+a:visited {
+	color: #018a00
 }
 
-.lighttable2 {
-	background-color: #484848;
+a:active {
+	color: #007a00
 }
 
-.lighttable {
-	background-color: #585858;
-}
-
-a:link { color: #0b9a0a }
-a:visited { color: #018a00 }
-a:active { color: #007a00 }
-a:hover { color: #006a00 }
-
-smallBr {
-font-size: 1px;
-line-height: 8px;
+a:hover {
+	color: #006a00
 }

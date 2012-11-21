@@ -31,10 +31,10 @@ http_bundle * http_file_root::do_request(http_request_t request_type, std::strin
 
 	return new http_bundle(reply_headers,
 			get_style_header() + 
-			"<TABLE CLASS=\"table2\" WIDTH=\"100%\"><TR><TD>\n"
-			"<A HREF=\"/stats.html\"><IMG ALIGN=\"middle\" ALT=\"statistics page\" SRC=\"statistics.png\" BORDER=0> stats</A><BR><BR>\n"
-			"<A HREF=\"/logfile.html\"><IMG ALIGN=\"middle\" ALT=\"logfile(s) page\" SRC=\"logfiles.png\" BORDER=0> log file</A><BR><BR>\n"
-			"<A HREF=\"/version.html\"><IMG ALIGN=\"middle\" ALT=\"version information\" SRC=\"logo-bw.png\" BORDER=0> version</A>\n"
-			"</TD></TR></TABLE>\n" +
+			"   <nav>\n"
+			"    <a href=\"/stats.html\"><img alt=\"statistics page\" src=\"statistics.png\"/>stats</a>\n"
+			"    <a href=\"/logfile.html\"><img alt=\"logfile(s) page\" src=\"logfiles.png\"/>log file</a>\n"
+			"    <a href=\"/version.html\"><img alt=\"version information\" src=\"logo-bw.png\"/>version</a>\n"
+			"   </nav>\n" +
 			get_style_tail());
 }

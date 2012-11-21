@@ -689,7 +689,8 @@ void main_loop(std::vector<client_t *> *clients, pthread_mutex_t *clients_mutex,
 
 		if ((config -> statistics_interval != 0 && (last_statistics_emit + double(config -> statistics_interval)) <= now) || force_stats)
 		{
-			emit_statistics_file(config -> stats_file, stats, ppools, eb_output_scc, clients -> size());
+			if (config -> stats_file)
+				emit_statistics_file(config -> stats_file, stats, ppools, eb_output_scc, clients -> size());
 
 			now = last_statistics_emit = get_ts();
 		}

@@ -62,30 +62,49 @@ http_bundle * http_file::do_request(http_request_t request_type, std::string req
 
 std::string http_file::get_style_header()
 {
-	return // "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 Frameset//EN\" \"http://www.w3.org/TR/html4/frameset.dtd\"> \n"
-		"<HTML><HEAD>\n"
-		"<link rel=\"stylesheet\" type=\"text/css\" media=\"screen\" href=\"stylesheet.css\">\n"
-		"<link rel=\"shortcut icon\" href=\"/favicon.ico\">\n"
-		"<meta http-equiv=\"Content-Type\" content=\"text/html;charset=utf-8\" >\n"
-		"</HEAD><BODY>\n"
-		"<TABLE HEIGHT=\"100%\" WIDTH=\"100%\"><TR><TD WIDTH=\"150\" ALIGN=\"LEFT\" VALIGN=\"TOP\">\n"
-		"<IMG SRC=\"logo.png\" ALT=\"entropy broker logo\" WIDTH=140><BR><BR>\n"
-		"<IMG SRC=\"logo.png\" ALT=\"entropy broker logo\" WIDTH=93><BR><BR>\n"
-		"<IMG SRC=\"logo.png\" ALT=\"entropy broker logo\" WIDTH=62><BR><BR>\n"
-		"<IMG SRC=\"logo.png\" ALT=\"entropy broker logo\" WIDTH=41><BR><BR>\n"
-		"<IMG SRC=\"logo.png\" ALT=\"entropy broker logo\" WIDTH=27><BR><BR>\n"
-		"<IMG SRC=\"logo.png\" ALT=\"entropy broker logo\" WIDTH=18><BR><BR>\n"
-		"<IMG SRC=\"logo.png\" ALT=\"entropy broker logo\" WIDTH=12><BR><BR>\n"
-		"<IMG SRC=\"logo.png\" ALT=\"entropy broker logo\" WIDTH=8>\n"
-		"</TD><TD VALIGN=\"TOP\">\n"
-		"<BR CLASS=\"myBr\">\n"
-		"<H1>Entropy Broker</H1>\n";
+	return
+		"<!DOCTYPE html>\n"
+		"<html>\n"
+		" <head>\n"
+		"  <meta charset=\"utf-8\"/>\n"
+		"  <title>Entropy broker</title>\n"
+		"  <link rel=\"stylesheet\" media=\"screen\" href=\"stylesheet.css\">\n"
+		"  <link rel=\"shortcut icon\" href=\"/favicon.ico\">\n"
+		"<!--[if lt IE 9]>\n"
+		"  <script src=\"dist/html5shiv.js\">\n"
+		"  (function(){\n"
+		"    document.createElement('header');\n"
+		"    document.createElement('section');\n"
+		"    document.createElement('footer');\n"
+		"  })();\n"
+		"  </script>\n"
+		"<![endif]-->\n"
+		" </head>\n"
+		" <body>\n"
+		"  <header>\n"
+		"   <img src=\"logo.png\" alt=\"entropy broker logo\" width=\"140\"/>\n"
+		"   <img src=\"logo.png\" alt=\"entropy broker logo\" width=\"93\"/>\n"
+		"   <img src=\"logo.png\" alt=\"entropy broker logo\" width=\"62\"/>\n"
+		"   <img src=\"logo.png\" alt=\"entropy broker logo\" width=\"41\"/>\n"
+		"   <img src=\"logo.png\" alt=\"entropy broker logo\" width=\"27\"/>\n"
+		"   <img src=\"logo.png\" alt=\"entropy broker logo\" width=\"18\"/>\n"
+		"   <img src=\"logo.png\" alt=\"entropy broker logo\" width=\"12\"/>\n"
+		"   <img src=\"logo.png\" alt=\"entropy broker logo\" width=\"8\"/>\n"
+		"  </header>\n"
+		"\n"
+		"  <section class=\"content\">\n"
+		"\n"
+		"   <h1>Entropy Broker</h1>\n";
 }
 
 std::string http_file::get_style_tail()
 {
-	return "</TD></TR>\n"
-		"<TR HEIGHT=\"32\"><TD ALIGN=\"RIGHT\" COLSPAN=\"3\"><A HREF=\"http://www.vanheusden.com/\">www.vanheusden.com</A></TD></TR>"
-		"</TABLE>"
-		"</BODY></HTML>";
+	return
+		"  </section>\n"
+		"\n"
+		"  <footer>\n"
+		"   <a href=\"http://www.vanheusden.com/\">www.vanheusden.com</a>\n"
+		"  </footer>\n"
+		" </body>\n"
+		"</html>\n";
 }
