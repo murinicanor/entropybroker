@@ -52,11 +52,14 @@ http_bundle * http_file_logfile::do_request(http_request_t request_type, std::st
 	std::string content = get_style_header();
 
 	content += "<TABLE CLASS=\"table2\" WIDTH=100%>\n";
-	content += "<TR CLASS=\"lighttable\"><TD>event type</TD><TD>user</TD><TD>host</TD><TD>type</TD><TD>connected since</TD><TD>duration</TD><TD>notes</TD></TR>\n";
+	content += "<TR CLASS=\"lighttable\"><TD>event ts</TD><TD>event type</TD><TD>user</TD><TD>host</TD><TD>type</TD></TR>\n";
+	content += "<TR CLASS=\"lighttable\"><TD>connected since</TD><TD>duration</TD><TD COLSPAN=\"3\">notes</TD></TR>\n";
 
 	for(int index=log.size()-1; index >= 0; index--)
 	{
-		content += "<TR><TD>";
+		content += "<TR>";
+		content += "<TD>" + time_to_str((time_t)log.at(index).event_ts) + "</TD>";
+		content += "<TD>";
 
 		switch(log.at(index).hl)
 		{
@@ -82,12 +85,14 @@ http_bundle * http_file_logfile::do_request(http_request_t request_type, std::st
 		content += "</TD><TD>" + log.at(index).user + "</TD>";
 		content += "<TD>" + log.at(index).host + "</TD>";
 		content += "<TD>" + log.at(index).type + "</TD>";
+		content += "</TR>";
+		content += "<TR>";
 		content += "<TD>" + time_to_str((time_t)log.at(index).time_logged_in) + "</TD>";
 		if (log.at(index).hl == HL_LOGOUT_OK)
 			content += format("<TD>%f</TD>", log.at(index).duration);
 		else
 			content += "<TD></TD>";
-		content += "<TD>" + log.at(index).details + "</TD>";
+		content += "<TD COLSPAN=\"3\">" + log.at(index).details + "</TD>";
 		content += "</TR>";
 	}
 	content += "</TABLE>\n";

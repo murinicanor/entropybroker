@@ -13,7 +13,7 @@ class history_logins
 public:
 	hl_type_t hl;
 	std::string host, type, user;
-	double time_logged_in, duration;
+	double time_logged_in, duration, event_ts;
 	std::string details;
 };
 

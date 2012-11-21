@@ -291,6 +291,7 @@ void statistics::put_history_login(hl_type_t hl_in, std::string host_in, std::st
 	entry.time_logged_in = start_ts_in;
 	entry.duration = duration_in;
 	entry.details = details_in;
+	entry.event_ts = get_ts();
 
 	my_mutex_lock(&logins_lck);
 	logins.push_back(entry);
