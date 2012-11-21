@@ -117,7 +117,7 @@ http_bundle * http_file_stats::do_request(http_request_t request_type, std::stri
 	{
 		// PER USER STATS
 		content += "<TABLE CLASS=\"table2\" WIDTH=100%>\n";
-		content += "<TR CLASS=\"lighttable\"><TD>user</TD><TD>host</TD><TD>type</TD><TD>is server</TD><TD>connected since</TD><TD>bits recv</TD><TD>bits sent</TD></TR>\n";
+		content += "<TR CLASS=\"lighttable\"><TD>user</TD><TD>host</TD><TD>type</TD><TD>is server</TD><TD WIDTH=240>connected since</TD><TD>bits recv</TD><TD>bits sent</TD></TR>\n";
 
 		double recv_bps = 0, sent_bps = 0;
 
