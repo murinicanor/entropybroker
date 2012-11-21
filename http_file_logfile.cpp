@@ -52,16 +52,39 @@ http_bundle * http_file_logfile::do_request(http_request_t request_type, std::st
 	std::string content = get_style_header();
 
 	content += "<TABLE CLASS=\"table2\" WIDTH=100%>\n";
-	content += "<TR CLASS=\"lighttable\"><TD>user</TD><TD>host</TD><TD>type</TD><TD>connected since</TD><TD>duration</TD></TR>\n";
+	content += "<TR CLASS=\"lighttable\"><TD>event type</TD><TD>user</TD><TD>host</TD><TD>type</TD><TD>connected since</TD><TD>duration</TD><TD>notes</TD></TR>\n";
 
 	for(int index=log.size()-1; index >= 0; index--)
 	{
-		content += "<TR>";
-		content += "<TD>" + log.at(index).user + "</TD>";
+		content += "<TR><TD>";
+
+		switch(log.at(index).hl)
+		{
+			case HL_LOGIN_OK:
+				content += "login ok";
+				break;
+			case HL_LOGOUT_OK:
+				content += "logout ok";
+				break;
+			case HL_LOGIN_USER_FAIL:
+				content += "unknown user";
+				break;
+			case HL_LOGIN_PW_FAIL:
+				content += "password fail";
+				break;
+			case HL_LOGIN_OTHER:
+				content += "other error";
+				break;
+			default:
+				content += "INTERNAL ERROR";
+		}
+
+		content += "</TD><TD>" + log.at(index).user + "</TD>";
 		content += "<TD>" + log.at(index).host + "</TD>";
 		content += "<TD>" + log.at(index).type + "</TD>";
 		content += "<TD>" + time_to_str((time_t)log.at(index).time_logged_in) + "</TD>";
 		content += format("<TD>%f</TD>", log.at(index).duration);
+		content += "<TD>" + log.at(index).details + "</TD>";
 		content += "</TR>";
 	}
 	content += "</TABLE>\n";

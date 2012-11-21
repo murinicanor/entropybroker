@@ -1,34 +1,23 @@
 // SVN: $Revision$
 #include <stdio.h>
-#include <vector>
+#include <pthread.h>
 #include <string>
-#include <map>
 #include <math.h>
-#include <sys/time.h>
-#include <sys/resource.h>
-#include <arpa/inet.h>
+#include <vector>
 
 #include "error.h"
-#include "random_source.h"
 #include "log.h"
-#include "math.h"
-#include "hasher.h"
-#include "stirrer.h"
-#include "fips140.h"
-#include "hasher_type.h"
-#include "stirrer_type.h"
-#include "encrypt_stream.h"
-#include "users.h"
-#include "config.h"
-#include "scc.h"
-#include "pool_crypto.h"
-#include "pool.h"
-#include "pools.h"
 #include "utils.h"
 #include "statistics.h"
-#include "handle_client.h"
 
-statistics::statistics(char *file_in, fips140 *fips140_in, scc *scc_in, pools *pp_in) : file(file_in), pfips140(fips140_in), pscc(scc_in), ppools(pp_in)
+double start_ts = get_ts();
+
+double get_start_ts()
+{
+	return start_ts;
+}
+
+statistics::statistics()
 {
 	pthread_check(pthread_mutex_init(&recv_lck, &global_mutex_attr), "pthread_mutex_init");
 	pthread_check(pthread_mutex_init(&sent_lck, &global_mutex_attr), "pthread_mutex_init");
@@ -58,8 +47,6 @@ statistics::statistics(char *file_in, fips140 *fips140_in, scc *scc_in, pools *p
 
 	msg_cnt = 0;
 	last_message = last_put_message = last_get_message = connected_since = 0;
-
-	start_ts = get_ts();
 }
 
 statistics::~statistics()
@@ -82,6 +69,15 @@ void statistics::inc_disconnects()
 	my_mutex_lock(&disconnects_lck);
 	disconnects++;
 	my_mutex_unlock(&disconnects_lck);
+}
+
+int statistics::get_disconnects()
+{
+	my_mutex_lock(&disconnects_lck);
+	int dummy = disconnects;
+	my_mutex_unlock(&disconnects_lck);
+
+	return dummy;
 }
 
 void statistics::inc_timeouts()
@@ -155,51 +151,6 @@ void statistics::unlock_all()
 	my_mutex_unlock(&times_empty_lck);
 	my_mutex_unlock(&sent_lck);
 	my_mutex_unlock(&recv_lck);
-}
-
-void statistics::emit_statistics_file(int n_clients)
-{
-	if (file)
-	{
-		FILE *fh = fopen(file, "a+");
-		if (!fh)
-			error_exit("cannot access file %s", file);
-
-		struct rusage usage;
-		if (getrusage(RUSAGE_SELF, &usage) == -1)
-			error_exit("getrusage() failed");
-
-		double proc_usage = double(usage.ru_utime.tv_sec) + double(usage.ru_utime.tv_usec) / 1000000.0 +
-			double(usage.ru_stime.tv_sec) + double(usage.ru_stime.tv_usec) / 1000000.0;
-
-		double now = get_ts();
-		int total_n_bits = ppools -> get_bit_sum(1.0);
-
-		lock_all();
-		fprintf(fh, "%f %lld %lld %d %d %d %d %f %s\n", now, total_recv, total_sent,
-				total_recv_requests, total_sent_requests,
-				n_clients, total_n_bits, proc_usage, pscc -> stats().c_str());
-		unlock_all();
-
-		fclose(fh);
-	}
-}
-
-void statistics::emit_statistics_log(int n_clients, bool force_stats, int reset_counters_interval)
-{
-	int total_n_bits = ppools -> get_bit_sum(1.0);
-	double now = get_ts();
-	double runtime = now - start_ts;
-
-	lock_all();
-	int bps = bps_cur / reset_counters_interval;
-	bps_cur = 0;
-
-	dolog(LOG_DEBUG, "stats|client bps: %d (in last %ds interval), disconnects: %d", bps, reset_counters_interval, disconnects);
-	dolog(LOG_DEBUG, "stats|total recv: %ld (%fbps), total sent: %ld (%fbps), run time: %f", total_recv, double(total_recv) / runtime, total_sent, double(total_sent) / runtime, runtime);
-	dolog(LOG_DEBUG, "stats|recv requests: %d, sent: %d, clients/servers: %u, bits: %d", total_recv_requests, total_sent_requests, n_clients, total_n_bits);
-	dolog(LOG_DEBUG, "stats|%s, scc: %s", pfips140, pscc);
-	unlock_all();
 }
 
 int statistics::get_times_empty()
@@ -329,21 +280,17 @@ double statistics::get_last_get_msg_ts()
 	return dummy;
 }
 
-double statistics::get_start_ts()
-{
-	// no locking; does not change
-	return start_ts;
-}
-
-void statistics::put_history_login(std::string host_in, std::string type_in, std::string user_in, double start_ts_in, double duration_in)
+void statistics::put_history_login(hl_type_t hl_in, std::string host_in, std::string type_in, std::string user_in, double start_ts_in, double duration_in, std::string details_in)
 {
 	history_logins entry;
 
+	entry.hl = hl_in;
 	entry.host = host_in;
 	entry.type = type_in;
 	entry.user = user_in;
 	entry.time_logged_in = start_ts_in;
 	entry.duration = duration_in;
+	entry.details = details_in;
 
 	my_mutex_lock(&logins_lck);
 	logins.push_back(entry);
@@ -382,4 +329,14 @@ void statistics::get_recv_in_avg_sd(double *avg, double *sd)
 	*avg = double(total_recv_in) / double(total_recv_requests);
 
 	*sd = sqrt((double(total_recv_in_sd) / double(total_recv_requests)) - pow(*avg, 2.0));
+}
+
+int statistics::get_reset_bps_cur()
+{
+	my_mutex_lock(&sent_lck);
+	int dummy = bps_cur;
+	bps_cur = 0;
+	my_mutex_unlock(&sent_lck);
+
+	return dummy;
 }

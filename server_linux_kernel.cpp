@@ -25,6 +25,7 @@ const char *pid_file = PID_DIR "/server_kernel.pid";
 #include "protocol.h"
 #include "server_utils.h"
 #include "users.h"
+#include "statistics.h"
 #include "auth.h"
 #include "kernel_prng_io.h"
 #include "kernel_prng_rw.h"

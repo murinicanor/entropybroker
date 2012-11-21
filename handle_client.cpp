@@ -36,6 +36,7 @@
 #include "scc.h"
 #include "pools.h"
 #include "statistics.h"
+#include "statistics_log.h"
 #include "handle_client.h"
 #include "utils.h"
 #include "signals.h"
@@ -54,7 +55,7 @@ void forget_client_index(statistics *s, std::vector<client_t *> *clients, int nr
 
 	double now_ts = get_ts();
 	double since_ts = p -> stats_user -> get_since_ts();
-	s -> put_history_login(p -> host, p -> type, p -> username, since_ts, now_ts - since_ts);
+	s -> put_history_login(HL_LOGOUT_OK, p -> host, p -> type, p -> username, since_ts, now_ts - since_ts, "");
 
 	close(p -> socket_fd);
 	close(p -> to_thread[1]);
@@ -275,7 +276,7 @@ void * thread(void *data)
 	for(;;)
 	{
 		long long unsigned int auth_rnd = 1;
-		bool ok = auth_eb(p -> socket_fd, p -> config -> communication_timeout, p -> pu, p -> username, p -> password, &auth_rnd, &p -> is_server, p -> type, p -> pc -> get_random_source(), es, mh, p -> config -> hash_hasher, p -> config -> max_get_put_size) == 0;
+		bool ok = auth_eb(p -> socket_fd, p -> config -> communication_timeout, p -> pu, p -> username, p -> password, &auth_rnd, &p -> is_server, p -> type, p -> pc -> get_random_source(), es, mh, p -> config -> hash_hasher, p -> config -> max_get_put_size, p -> stats_glob) == 0;
 
 		if (!ok)
 		{
@@ -426,7 +427,7 @@ void register_new_client(int listen_socket_fd, std::vector<client_t *> *clients,
 		p -> ignore_rngtest_scc = config -> ignore_rngtest_scc;
 		p -> allow_prng = config -> allow_prng;
 
-		p -> stats_user = new statistics(NULL, p -> pfips140, p -> pscc, ppools);
+		p -> stats_user = new statistics();
 
 		p -> pc = new pool_crypto(config -> st, config -> ht, config -> rs);
 		if (!p -> pc)
@@ -669,7 +670,7 @@ void main_loop(std::vector<client_t *> *clients, pthread_mutex_t *clients_mutex,
 		my_mutex_lock(clients_mutex);
 		if ((last_counters_reset + double(config -> reset_counters_interval)) <= now || force_stats)
 		{
-			stats -> emit_statistics_log(clients -> size(), force_stats, config -> reset_counters_interval);
+			emit_statistics_log(stats, clients -> size(), force_stats, config -> reset_counters_interval, ppools, eb_output_fips140, eb_output_scc);
 
 			if (!force_stats)
 			{
@@ -688,7 +689,7 @@ void main_loop(std::vector<client_t *> *clients, pthread_mutex_t *clients_mutex,
 
 		if ((config -> statistics_interval != 0 && (last_statistics_emit + double(config -> statistics_interval)) <= now) || force_stats)
 		{
-			stats -> emit_statistics_file(clients -> size());
+			emit_statistics_file(config -> stats_file, stats, ppools, eb_output_scc, clients -> size());
 
 			now = last_statistics_emit = get_ts();
 		}

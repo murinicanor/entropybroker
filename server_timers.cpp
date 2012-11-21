@@ -25,6 +25,7 @@ const char *pid_file = PID_DIR "/server_timers.pid";
 #include "protocol.h"
 #include "server_utils.h"
 #include "users.h"
+#include "statistics.h"
 #include "auth.h"
 
 #define SLEEP_CLOCK	CLOCK_MONOTONIC

@@ -24,6 +24,7 @@
 #include "math.h"
 #include "protocol.h"
 #include "users.h"
+#include "statistics.h"
 #include "auth.h"
 
 #define DEFAULT_COMM_TO 15

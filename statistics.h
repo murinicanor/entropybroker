@@ -2,21 +2,24 @@
 
 #define HISTORY_REMEMBER_N 128
 
+typedef enum { HL_LOGIN_OK, HL_LOGOUT_OK, HL_LOGIN_USER_FAIL, HL_LOGIN_PW_FAIL, HL_LOGIN_OTHER } hl_type_t;
+
+extern double start_ts;
+
+double get_start_ts();
+
 class history_logins
 {
 public:
+	hl_type_t hl;
 	std::string host, type, user;
 	double time_logged_in, duration;
+	std::string details;
 };
 
 class statistics
 {
 private:
-	char *file;
-	fips140 *pfips140;
-	scc *pscc;
-	pools *ppools;
-
 	pthread_mutex_t logins_lck;
 	std::vector<history_logins> logins;
 
@@ -54,13 +57,11 @@ private:
 	double last_message, last_put_message, last_get_message;
 	double connected_since;
 
-	double start_ts;
-
 	void lock_all();
 	void unlock_all();
 
 public:
-	statistics(char *file_in, fips140 *fips140_in, scc *scc_in, pools *pp_in);
+	statistics();
 	~statistics();
 
 	void inc_disconnects();
@@ -72,12 +73,12 @@ public:
 	void inc_msg_cnt();
 	void track_sents(int cur_n_bits);
 	void track_recvs(int n_bits_added, int n_bits_added_in);
-	void emit_statistics_file(int n_clients);
-	void emit_statistics_log(int n_clients, bool force_stats, int reset_counters_interval);
 	void register_msg(bool is_put);
-	void put_history_login(std::string host_in, std::string type_in, std::string user_in, double start_ts, double duration_in);
+	void put_history_login(hl_type_t, std::string host_in, std::string type_in, std::string user_in, double start_ts, double duration_in, std::string details);
 
+	int get_reset_bps_cur();
 	int get_msg_cnt();
+	int get_disconnects();
 	int get_times_empty();
 	int get_times_not_allowed();
 	int get_times_full();
@@ -88,7 +89,6 @@ public:
 	double get_since_ts();
 	double get_last_put_msg_ts();
 	double get_last_get_msg_ts();
-	double get_start_ts();
 	std::vector<history_logins> get_login_history();
 	void get_sent_avg_sd(double *avg, double *sd);
 	void get_recv_avg_sd(double *avg, double *sd);

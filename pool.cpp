@@ -15,11 +15,11 @@
 #include <arpa/inet.h>
 
 #include "math.h"
-#include "random_source.h"
 #include "hasher.h"
 #include "hasher_type.h"
 #include "stirrer.h"
 #include "stirrer_type.h"
+#include "random_source.h"
 #include "pool_crypto.h"
 #include "pool.h"
 #include "error.h"

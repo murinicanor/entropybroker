@@ -26,9 +26,9 @@
 #include "pools.h"
 #include "utils.h"
 #include "signals.h"
-#include "auth.h"
 #include "protocol.h"
 #include "statistics.h"
+#include "auth.h"
 #include "handle_client.h"
 #include "hc_protocol.h"
 

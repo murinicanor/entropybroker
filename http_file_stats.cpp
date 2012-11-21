@@ -166,8 +166,8 @@ http_bundle * http_file_stats::do_request(http_request_t request_type, std::stri
 
 		// GLOBAL STATS
 		content += "<TABLE CLASS=\"table2\" WIDTH=100%>\n";
-		content += "<TR><TD WIDTH=200>running since:</TD><TD>" + time_to_str((time_t)ps -> get_start_ts()) + "</TD></TR>\n";
-		content += format("<TR><TD>duration:</TD><TD>%fs</TD></TR>\n", now - ps -> get_start_ts());
+		content += "<TR><TD WIDTH=200>running since:</TD><TD>" + time_to_str((time_t)get_start_ts()) + "</TD></TR>\n";
+		content += format("<TR><TD>duration:</TD><TD>%fs</TD></TR>\n", now - get_start_ts());
 		content += "<TR><TD>first msg:</TD><TD>" + time_to_str((time_t)ps -> get_since_ts()) + "</TD></TR>\n";
 		content += format("<TR><TD>avg time between msgs:</TD><TD>%fs</TD></TR>\n", (now - ps -> get_since_ts()) / double(ps -> get_msg_cnt()));
 		content += "<TR><TD>last message:</TD><TD>" + time_to_str((time_t)ps -> get_last_msg_ts()) + "</TD></TR>\n";

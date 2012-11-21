@@ -32,6 +32,7 @@
 #include "hasher.h"
 #include "protocol.h"
 #include "users.h"
+#include "statistics.h"
 #include "auth.h"
 #include "kernel_prng_io.h"
 
@@ -596,7 +597,7 @@ int main(int argc, char *argv[])
 				long long unsigned int challenge = 1;
 				bool is_server = false;
 				std::string type;
-				if (auth_eb(new_socket_fd, DEFAULT_COMM_TO, user_map, client_username, client_password, &challenge, &is_server, type, rs, enc, mac, handshake_hash, 4096) == 0)
+				if (auth_eb(new_socket_fd, DEFAULT_COMM_TO, user_map, client_username, client_password, &challenge, &is_server, type, rs, enc, mac, handshake_hash, 4096, NULL) == 0)
 				{
 					dolog(LOG_INFO, "%s/%s %d/%d (%s)", host.c_str(), type.c_str(), new_socket_fd, is_server, client_username.c_str());
 					if (clients[0] -> fd != -1 && clients[1] -> fd != -1)

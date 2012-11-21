@@ -32,6 +32,7 @@ const char *pid_file = PID_DIR "/server_ext_proc.pid";
 #include "protocol.h"
 #include "server_utils.h"
 #include "users.h"
+#include "statistics.h"
 #include "auth.h"
 
 void sig_handler(int sig)

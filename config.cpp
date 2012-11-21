@@ -20,10 +20,14 @@
 #include "protocol.h"
 #include "config.h"
 #include "log.h"
-#include "auth.h"
 #include "stirrer.h"
+#include "fips140.h"
+#include "scc.h"
 #include "pool_crypto.h"
 #include "pool.h"
+#include "pools.h"
+#include "statistics.h"
+#include "auth.h"
 
 bool config_yes_no(char *what)
 {

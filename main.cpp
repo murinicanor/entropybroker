@@ -183,7 +183,7 @@ int main(int argc, char *argv[])
 	std::vector<client_t *> clients;
 	pthread_mutex_t clients_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-	statistics stats(config.stats_file, eb_output_fips140, eb_output_scc, ppools);
+	statistics stats;
 
 	data_logger *dl = new data_logger(&stats, ppools, &clients, &clients_mutex);
 

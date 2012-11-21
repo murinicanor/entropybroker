@@ -25,6 +25,7 @@ const char *pid_file = PID_DIR "/server_cycle_count.pid";
 #include "protocol.h"
 #include "server_utils.h"
 #include "users.h"
+#include "statistics.h"
 #include "auth.h"
 
 inline unsigned long long GetCC(void)
