@@ -62,11 +62,11 @@ http_bundle * http_file::do_request(http_request_t request_type, std::string req
 
 std::string http_file::get_style_header()
 {
-	return "<!DOCTYPE html PUBLIC \"-//IETF//DTD HTML 2.0//EN\">\n";
+	return "<!DOCTYPE html PUBLIC \"-//IETF//DTD HTML 2.0//EN\">\n"
 		"<HTML><HEAD>\n"
-		"<link rel=\"stylesheet\" type=\"text/css\" media=\"screen\" href=\"stylesheet.css\" />\n"
+		"<link rel=\"stylesheet\" type=\"text/css\" media=\"screen\" href=\"stylesheet.css\">\n"
 		"<link rel=\"shortcut icon\" href=\"/favicon.ico\" />\n"
-		"<meta http-equiv=\"Content-Type\" content=\"text/html;charset=utf-8\" >\n";
+		"<meta http-equiv=\"Content-Type\" content=\"text/html;charset=utf-8\" >\n"
 		"</HEAD><BODY>\n"
 		"<TABLE HEIGHT=\"100%\" WIDTH=\"100%\"><TR><TD WIDTH=\"150\" ALIGN=\"LEFT\" VALIGN=\"TOP\">\n"
 		"<IMG SRC=\"logo.png\" ALT=\"entropy broker logo\" WIDTH=140><BR><BR>\n"
