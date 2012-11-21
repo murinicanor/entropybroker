@@ -39,6 +39,14 @@ section.content nav img {
 	vertical-align: middle;
 }
 
+.keys {
+	width: 200px;
+}
+
+.timestamp {
+	width: 240px;
+}
+
 section.content nav a {
 	background: #383838;
 	display: block;
