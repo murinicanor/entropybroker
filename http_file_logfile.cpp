@@ -83,7 +83,10 @@ http_bundle * http_file_logfile::do_request(http_request_t request_type, std::st
 		content += "<TD>" + log.at(index).host + "</TD>";
 		content += "<TD>" + log.at(index).type + "</TD>";
 		content += "<TD>" + time_to_str((time_t)log.at(index).time_logged_in) + "</TD>";
-		content += format("<TD>%f</TD>", log.at(index).duration);
+		if (log.at(index).hl == HL_LOGOUT_OK)
+			content += format("<TD>%f</TD>", log.at(index).duration);
+		else
+			content += "<TD></TD>";
 		content += "<TD>" + log.at(index).details + "</TD>";
 		content += "</TR>";
 	}
