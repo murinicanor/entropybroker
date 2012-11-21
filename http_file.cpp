@@ -62,7 +62,7 @@ http_bundle * http_file::do_request(http_request_t request_type, std::string req
 
 std::string http_file::get_style_header()
 {
-	return "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 Frameset//EN\" \"http://www.w3.org/TR/html4/frameset.dtd\"> \n"
+	return // "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 Frameset//EN\" \"http://www.w3.org/TR/html4/frameset.dtd\"> \n"
 		"<HTML><HEAD>\n"
 		"<link rel=\"stylesheet\" type=\"text/css\" media=\"screen\" href=\"stylesheet.css\">\n"
 		"<link rel=\"shortcut icon\" href=\"/favicon.ico\">\n"
