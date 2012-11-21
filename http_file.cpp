@@ -62,20 +62,22 @@ http_bundle * http_file::do_request(http_request_t request_type, std::string req
 
 std::string http_file::get_style_header()
 {
-	return "<HTML><HEAD>\n"
-		"<link rel=\"stylesheet\" type=\"text/css\" media=\"screen\" href=\"stylesheet.css\"/>\n"
+	return "<!DOCTYPE html PUBLIC \"-//IETF//DTD HTML 2.0//EN\">\n";
+		"<HTML><HEAD>\n"
+		"<link rel=\"stylesheet\" type=\"text/css\" media=\"screen\" href=\"stylesheet.css\" />\n"
 		"<link rel=\"shortcut icon\" href=\"/favicon.ico\" />\n"
+		"<meta http-equiv=\"Content-Type\" content=\"text/html;charset=utf-8\" >\n";
 		"</HEAD><BODY>\n"
-		"<TABLE HEIGHT=100% WIDTH=100%><TR><TD WIDTH=150 ALIGN=LEFT VALIGN=TOP>\n"
-		"<IMG SRC=\"logo.png\" WIDTH=140><BR><BR>\n"
-		"<IMG SRC=\"logo.png\" WIDTH=93><BR><BR>\n"
-		"<IMG SRC=\"logo.png\" WIDTH=62><BR><BR>\n"
-		"<IMG SRC=\"logo.png\" WIDTH=41><BR><BR>\n"
-		"<IMG SRC=\"logo.png\" WIDTH=27><BR><BR>\n"
-		"<IMG SRC=\"logo.png\" WIDTH=18><BR><BR>\n"
-		"<IMG SRC=\"logo.png\" WIDTH=12><BR><BR>\n"
-		"<IMG SRC=\"logo.png\" WIDTH=8>\n"
-		"</TD><TD VALIGN=TOP>\n"
+		"<TABLE HEIGHT=\"100%\" WIDTH=\"100%\"><TR><TD WIDTH=\"150\" ALIGN=\"LEFT\" VALIGN=\"TOP\">\n"
+		"<IMG SRC=\"logo.png\" ALT=\"entropy broker logo\" WIDTH=140><BR><BR>\n"
+		"<IMG SRC=\"logo.png\" ALT=\"entropy broker logo\" WIDTH=93><BR><BR>\n"
+		"<IMG SRC=\"logo.png\" ALT=\"entropy broker logo\" WIDTH=62><BR><BR>\n"
+		"<IMG SRC=\"logo.png\" ALT=\"entropy broker logo\" WIDTH=41><BR><BR>\n"
+		"<IMG SRC=\"logo.png\" ALT=\"entropy broker logo\" WIDTH=27><BR><BR>\n"
+		"<IMG SRC=\"logo.png\" ALT=\"entropy broker logo\" WIDTH=18><BR><BR>\n"
+		"<IMG SRC=\"logo.png\" ALT=\"entropy broker logo\" WIDTH=12><BR><BR>\n"
+		"<IMG SRC=\"logo.png\" ALT=\"entropy broker logo\" WIDTH=8>\n"
+		"</TD><TD VALIGN=\"TOP\">\n"
 		"<BR CLASS=\"myBr\">\n"
 		"<H1>Entropy Broker</H1>\n";
 }
@@ -83,7 +85,7 @@ std::string http_file::get_style_header()
 std::string http_file::get_style_tail()
 {
 	return "</TD></TR>\n"
-		"<TR HEIGHT=32><TD ALIGN=\"RIGHT\" COLSPAN=\"3\"><A HREF=\"http://www.vanheusden.com/\">www.vanheusden.com</A></TD></TR>"
+		"<TR HEIGHT=\"32\"><TD ALIGN=\"RIGHT\" COLSPAN=\"3\"><A HREF=\"http://www.vanheusden.com/\">www.vanheusden.com</A></TD></TR>"
 		"</TABLE>"
 		"</BODY></HTML>";
 }

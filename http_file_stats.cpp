@@ -69,8 +69,8 @@ http_bundle * http_file_stats::do_request(http_request_t request_type, std::stri
 		{
 			statistics *pcs = p -> stats_user;
 
-			content += "<TABLE CLASS=\"table2\" WIDTH=100%>\n";
-			content += std::string("<TR><TD WIDTH=200>username:</TD><TD>") + p -> username + "</TD></TR>\n";
+			content += "<TABLE CLASS=\"table2\" WIDTH=\"100%\">\n";
+			content += std::string("<TR><TD WIDTH=\"200\">username:</TD><TD>") + p -> username + "</TD></TR>\n";
 			content += std::string("<TR><TD>host:</TD><TD>") + p -> host + "</TD></TR>\n";
 			content += std::string("<TR><TD>type:</TD><TD>") + p -> type + "</TD></TR>\n";
 			content += std::string("<TR><TD>is server:</TD><TD>") + (p -> is_server ? "yes" : "no") + "</TD></TR>\n";
@@ -116,7 +116,7 @@ http_bundle * http_file_stats::do_request(http_request_t request_type, std::stri
 	else
 	{
 		// PER USER STATS
-		content += "<TABLE CLASS=\"table2\" WIDTH=100%>\n";
+		content += "<TABLE CLASS=\"table2\" WIDTH=\"100%\">\n";
 		content += "<TR CLASS=\"lighttable\"><TD>user</TD><TD>host</TD><TD>type</TD><TD>is server</TD><TD WIDTH=240>connected since</TD><TD>bits recv</TD><TD>bits sent</TD></TR>\n";
 
 		double recv_bps = 0, sent_bps = 0;
@@ -165,7 +165,7 @@ http_bundle * http_file_stats::do_request(http_request_t request_type, std::stri
 		content += "<BR>\n";
 
 		// GLOBAL STATS
-		content += "<TABLE CLASS=\"table2\" WIDTH=100%>\n";
+		content += "<TABLE CLASS=\"table2\" WIDTH=\"100%\">\n";
 		content += "<TR><TD WIDTH=200>running since:</TD><TD>" + time_to_str((time_t)get_start_ts()) + "</TD></TR>\n";
 		content += format("<TR><TD>duration:</TD><TD>%fs</TD></TR>\n", now - get_start_ts());
 		content += "<TR><TD>first msg:</TD><TD>" + time_to_str((time_t)ps -> get_since_ts()) + "</TD></TR>\n";
