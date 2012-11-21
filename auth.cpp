@@ -90,7 +90,7 @@ int auth_eb_user(int fd, int to, users *user_map, std::string & username_out, st
 	if (username == NULL || username[0] == 0x00 || username_length == 0)
 	{
 		dolog(LOG_WARNING, "Empty username");
-		s -> put_history_login(HL_LOGIN_OTHER, host, "", "", get_ts(), 0, "empty username");
+		s -> put_history_log(HL_LOGIN_OTHER, host, "", "", get_ts(), 0, "empty username");
 		free(username);
 		return -1;
 	}
@@ -102,7 +102,7 @@ int auth_eb_user(int fd, int to, users *user_map, std::string & username_out, st
 	{
 		dolog(LOG_WARNING, "User '%s' not known, (fd: %d, host: %s)", username, host.c_str());
 
-		s -> put_history_login(HL_LOGIN_USER_FAIL, host, "", username, get_ts(), 0, "username not known");
+		s -> put_history_log(HL_LOGIN_USER_FAIL, host, "", username_out, get_ts(), 0, "username not known");
 
 		user_known = false;
 	}
@@ -136,7 +136,7 @@ int auth_eb_user(int fd, int to, users *user_map, std::string & username_out, st
 		free(hash_cmp);
 		free(hash_in);
 		delete hh;
-		s -> put_history_login(HL_LOGIN_PW_FAIL, host, "", username, get_ts(), 0, "hash mismatch");
+		s -> put_history_log(HL_LOGIN_PW_FAIL, host, "", username_out, get_ts(), 0, "hash mismatch");
 		return -1;
 	}
 	free(hash_cmp);
@@ -178,7 +178,7 @@ int auth_eb_user(int fd, int to, users *user_map, std::string & username_out, st
 
 	dolog(LOG_INFO, "%s authentication ok (fd: %d, host: %s)", ts, fd, host.c_str());
 
-	s -> put_history_login(HL_LOGIN_OK, host, type, username, get_ts(), 0, "");
+	s -> put_history_log(HL_LOGIN_OK, host, type, username_out, get_ts(), 0, "");
 
 	return 0;
 }

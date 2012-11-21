@@ -280,7 +280,7 @@ double statistics::get_last_get_msg_ts()
 	return dummy;
 }
 
-void statistics::put_history_login(hl_type_t hl_in, std::string host_in, std::string type_in, std::string user_in, double start_ts_in, double duration_in, std::string details_in)
+void statistics::put_history_log(hl_type_t hl_in, std::string host_in, std::string type_in, std::string user_in, double start_ts_in, double duration_in, std::string details_in)
 {
 	history_logins entry;
 

@@ -55,7 +55,7 @@ void forget_client_index(statistics *s, std::vector<client_t *> *clients, int nr
 
 	double now_ts = get_ts();
 	double since_ts = p -> stats_user -> get_since_ts();
-	s -> put_history_login(HL_LOGOUT_OK, p -> host, p -> type, p -> username, since_ts, now_ts - since_ts, "");
+	s -> put_history_log(HL_LOGOUT_OK, p -> host, p -> type, p -> username, since_ts, now_ts - since_ts, "");
 
 	close(p -> socket_fd);
 	close(p -> to_thread[1]);

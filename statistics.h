@@ -74,7 +74,7 @@ public:
 	void track_sents(int cur_n_bits);
 	void track_recvs(int n_bits_added, int n_bits_added_in);
 	void register_msg(bool is_put);
-	void put_history_login(hl_type_t, std::string host_in, std::string type_in, std::string user_in, double start_ts, double duration_in, std::string details);
+	void put_history_log(hl_type_t, std::string host_in, std::string type_in, std::string user_in, double start_ts, double duration_in, std::string details);
 
 	int get_reset_bps_cur();
 	int get_msg_cnt();
