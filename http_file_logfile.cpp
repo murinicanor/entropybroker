@@ -52,7 +52,7 @@ http_bundle * http_file_logfile::do_request(http_request_t request_type, std::st
 	std::string content = get_style_header();
 
 	content += "<TABLE CLASS=\"table2\" WIDTH=100%>\n";
-	content += "<TR CLASS=\"lighttable\"><TD>event ts</TD><TD>event type</TD><TD>user</TD><TD>host</TD><TD>type</TD></TR>\n";
+	content += "<TR CLASS=\"lighttable\"><TD WIDTH=240>event ts</TD><TD>event type</TD><TD>user</TD><TD>host</TD><TD>type</TD></TR>\n";
 	content += "<TR CLASS=\"lighttable\"><TD>connected since</TD><TD>duration</TD><TD COLSPAN=\"3\">notes</TD></TR>\n";
 
 	for(int index=log.size()-1; index >= 0; index--)
