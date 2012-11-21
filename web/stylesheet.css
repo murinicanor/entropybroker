@@ -47,12 +47,11 @@ section.content nav img {
 	width: 240px;
 }
 
-.alignright {
-	position:absolute;
-	right:0px;
+td.alignright {
+	text-align: right;
 }
 
-.fullwidth {
+table.fullwidth {
 	width: 100%;
 }
 

@@ -117,7 +117,7 @@ http_bundle * http_file_stats::do_request(http_request_t request_type, std::stri
 	{
 		// PER USER STATS
 		content += "<table class=\"table2 fullwidth\">\n";
-		content += "<TR class=\"lighttable\"><td>user</td><td>host</td><td>type</td><td>is server</td><td class=\"timestamp\">connected since</td><td>bits recv</td><td>bits sent</td></tr>\n";
+		content += "<tr class=\"lighttable\"><td>user</td><td>host</td><td>type</td><td>is server</td><td class=\"timestamp\">connected since</td><td>bits recv</td><td>bits sent</td></tr>\n";
 
 		double recv_bps = 0, sent_bps = 0;
 
@@ -158,11 +158,11 @@ http_bundle * http_file_stats::do_request(http_request_t request_type, std::stri
 			content += "</td></tr>\n";
 		}
 		my_mutex_unlock(clients_mutex);
-		content += format("<TR class=\"lighttable\"><td COLSPAN=\"4\"></td><td class=\"alignright\">bps:</td><td>%.1f</td><td>%.1f</td></tr>\n", recv_bps, sent_bps);
+		content += format("<tr class=\"lighttable\"><td colspan=\"4\"></td><td class=\"alignright\">bps:</td><td>%.1f</td><td>%.1f</td></tr>\n", recv_bps, sent_bps);
 
 		content += "</table>\n";
-		content += format("Number of connected clients/servers: %d<BR>\n", clients -> size());
-		content += "<BR>\n";
+		content += format("Number of connected clients/servers: %d<br>\n", clients -> size());
+		content += "<br>\n";
 
 		// GLOBAL STATS
 		content += "<table class=\"table2 fullwidth\">\n";
@@ -199,10 +199,10 @@ http_bundle * http_file_stats::do_request(http_request_t request_type, std::stri
 		content += std::string("<tr><td>SCC stats:</td><td>") + pscc -> stats() + "</td></tr>\n";
 
 		content += "</table>\n";
-		content += "<BR>\n";
+		content += "<br>\n";
 
 		// POOL STATS
-		content += "<table class=\"table2 fullwidth>\n";
+		content += "<table class=\"table2 fullwidth\">\n";
 		int bit_sum = ppools -> get_bit_sum(1.0);
 		content += format("<tr><td class=\"keys\">in memory bit count:</td><td>%d</td></tr>\n", bit_sum);
 		int mem_pools = ppools -> get_memory_pool_count();
@@ -210,33 +210,33 @@ http_bundle * http_file_stats::do_request(http_request_t request_type, std::stri
 		content += format("<tr><td>avg bits/mem pool:</td><td>%f (def max: %d)</td></tr>\n", double(bit_sum) / double(mem_pools), DEFAULT_POOL_SIZE_BITS);
 		content += format("<tr><td>pool files on disk:</td><td>%d</td></tr>\n", ppools -> get_disk_pool_count());
 		content += "</table>\n";
-		content += "<BR>\n";
+		content += "<br>\n";
 
 		content += "<h2>number of memory pools</h2>\n";
-		content += "<IMG SRC=\"/graph.png?type=mem_pool_counts&width=640&height=240\"><BR>\n";
-		content += "<BR>\n";
+		content += "<img src=\"/graph.png?type=mem_pool_counts&width=640&height=240\" /><br>\n";
+		content += "<br>\n";
 		content += "<h2>number of disk pools</h2>\n";
-		content += "<IMG SRC=\"/graph.png?type=dsk_pool_counts&width=640&height=240\"><BR>\n";
-		content += "<BR>\n";
+		content += "<img src=\"/graph.png?type=dsk_pool_counts&width=640&height=240\" /><br>\n";
+		content += "<br>\n";
 		content += "<h2>number of connections</h2>\n";
-		content += "<IMG SRC=\"/graph.png?type=connection_counts&width=640&height=240\"><BR>\n";
-		content += "<BR>\n";
+		content += "<img src=\"/graph.png?type=connection_counts&width=640&height=240\" /><br>\n";
+		content += "<br>\n";
 		content += "<h2>memory pools bit count</h2>\n";
-		content += "<IMG SRC=\"/graph.png?type=mem_pools_bitcount&width=640&height=240\"><BR>\n";
-		content += "<BR>\n";
+		content += "<img src=\"/graph.png?type=mem_pools_bitcount&width=640&height=240\" /><br>\n";
+		content += "<br>\n";
 		content += "<h2>disk pools bit count</h2>\n";
-		content += "<IMG SRC=\"/graph.png?type=dsk_pools_bitcount&width=640&height=240\"><BR>\n";
-		content += "<BR>\n";
+		content += "<img src=\"/graph.png?type=dsk_pools_bitcount&width=640&height=240\" /><br>\n";
+		content += "<br>\n";
 		content += format("Interval: %ds\n", MEASURE_INTERVAL);
 		content += "<h2>data from servers to broker (per interval, entropy count)</h2>\n";
-		content += "<IMG SRC=\"/graph.png?type=recv_bit_count&width=640&height=240\"><BR>\n";
-		content += "<BR>\n";
+		content += "<img src=\"/graph.png?type=recv_bit_count&width=640&height=240\" /><br>\n";
+		content += "<br>\n";
 		content += "<h2>data from servers to broker (per interval, raw data)</h2>\n";
-		content += "<IMG SRC=\"/graph.png?type=recv_bit_count_in&width=640&height=240\"><BR>\n";
-		content += "<BR>\n";
+		content += "<img src=\"/graph.png?type=recv_bit_count_in&width=640&height=240\" /><br>\n";
+		content += "<br>\n";
 		content += "<h2>data from broker to clients (per interval)</h2>\n";
-		content += "<IMG SRC=\"/graph.png?type=sent_bit_count&width=640&height=240\"><BR>\n";
-		content += "<BR>\n";
+		content += "<img src=\"/graph.png?type=sent_bit_count&width=640&height=240\" /><br>\n";
+		content += "<br>\n";
 	}
 
 	content += get_style_tail();
