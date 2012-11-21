@@ -212,30 +212,32 @@ http_bundle * http_file_stats::do_request(http_request_t request_type, std::stri
 		content += "</table>\n";
 		content += "<br>\n";
 
+		std::string dimensions = "&amp;width=640&amp;height=240";
+
 		content += "<h2>number of memory pools</h2>\n";
-		content += "<img alt=\"graph\" src=\"/graph.png?type=mem_pool_counts&width=640&height=240\" /><br>\n";
+		content += "<img alt=\"graph\" src=\"/graph.png?type=mem_pool_counts" + dimensions + "\" /><br>\n";
 		content += "<br>\n";
 		content += "<h2>number of disk pools</h2>\n";
-		content += "<img alt=\"graph\" src=\"/graph.png?type=dsk_pool_counts&width=640&height=240\" /><br>\n";
+		content += "<img alt=\"graph\" src=\"/graph.png?type=dsk_pool_counts" + dimensions + "\" /><br>\n";
 		content += "<br>\n";
 		content += "<h2>number of connections</h2>\n";
-		content += "<img alt=\"graph\" src=\"/graph.png?type=connection_counts&width=640&height=240\" /><br>\n";
+		content += "<img alt=\"graph\" src=\"/graph.png?type=connection_counts" + dimensions + "\" /><br>\n";
 		content += "<br>\n";
 		content += "<h2>memory pools bit count</h2>\n";
-		content += "<img alt=\"graph\" src=\"/graph.png?type=mem_pools_bitcount&width=640&height=240\" /><br>\n";
+		content += "<img alt=\"graph\" src=\"/graph.png?type=mem_pools_bitcount" + dimensions + "\" /><br>\n";
 		content += "<br>\n";
 		content += "<h2>disk pools bit count</h2>\n";
-		content += "<img alt=\"graph\" src=\"/graph.png?type=dsk_pools_bitcount&width=640&height=240\" /><br>\n";
+		content += "<img alt=\"graph\" src=\"/graph.png?type=dsk_pools_bitcount" + dimensions + "\" /><br>\n";
 		content += "<br>\n";
 		content += format("Interval: %ds\n", MEASURE_INTERVAL);
 		content += "<h2>data from servers to broker (per interval, entropy count)</h2>\n";
-		content += "<img alt=\"graph\" src=\"/graph.png?type=recv_bit_count&width=640&height=240\" /><br>\n";
+		content += "<img alt=\"graph\" src=\"/graph.png?type=recv_bit_count" + dimensions + "\" /><br>\n";
 		content += "<br>\n";
 		content += "<h2>data from servers to broker (per interval, raw data)</h2>\n";
-		content += "<img alt=\"graph\" src=\"/graph.png?type=recv_bit_count_in&width=640&height=240\" /><br>\n";
+		content += "<img alt=\"graph\" src=\"/graph.png?type=recv_bit_count_in" + dimensions + "\" /><br>\n";
 		content += "<br>\n";
 		content += "<h2>data from broker to clients (per interval)</h2>\n";
-		content += "<img alt=\"graph\" src=\"/graph.png?type=sent_bit_count&width=640&height=240\" /><br>\n";
+		content += "<img alt=\"graph\" src=\"/graph.png?type=sent_bit_count" + dimensions + "\" /><br>\n";
 		content += "<br>\n";
 	}
 
