@@ -25,6 +25,8 @@
   - constants in data logger configureerbaar? interval/keep_n
   - keep track of bandwidth of each user: if > avg+stddev, then alert in logfile
 
+- per user totals? store in file for longer history?
+
 - hash for protocol (user password): Use bcrypt or PBKDF2 exclusively to hash anything you need to be secure.
 
 SVN: $Revision$
