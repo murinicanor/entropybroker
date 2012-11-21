@@ -51,15 +51,15 @@ http_bundle * http_file_logfile::do_request(http_request_t request_type, std::st
 
 	std::string content = get_style_header();
 
-	content += "<TABLE CLASS=\"table2 tablemargins\" WIDTH=\"100%\">\n";
-	content += "<TR CLASS=\"lighttable\"><TD WIDTH=\"240\">event ts</TD><TD>event type</TD><TD>user</TD><TD>host</TD><TD>type</TD></TR>\n";
-	content += "<TR CLASS=\"lighttable\"><TD>connected since</TD><TD>duration</TD><TD COLSPAN=\"3\">notes</TD></TR>\n";
+	content += "<table class=\"table2 tablemargins fullwidth\">\n";
+	content += "<tr class=\"lighttable\"><td class=\"timestamp\">event ts</td><td>event type</td><td>user</td><td>host</td><td>type</td></tr>\n";
+	content += "<tr class=\"lighttable\"><td>connected since</td><td>duration</td><td colspan=\"3\">notes</td></tr>\n";
 
 	for(int index=log.size()-1; index >= 0; index--)
 	{
-		content += "<TR>";
-		content += "<TD>" + time_to_str((time_t)log.at(index).event_ts) + "</TD>";
-		content += "<TD>";
+		content += "<tr>";
+		content += "<td>" + time_to_str((time_t)log.at(index).event_ts) + "</td>";
+		content += "<td>";
 
 		switch(log.at(index).hl)
 		{
@@ -82,20 +82,20 @@ http_bundle * http_file_logfile::do_request(http_request_t request_type, std::st
 				content += "INTERNAL ERROR";
 		}
 
-		content += "</TD><TD>" + log.at(index).user + "</TD>";
-		content += "<TD>" + log.at(index).host + "</TD>";
-		content += "<TD>" + log.at(index).type + "</TD>";
-		content += "</TR>";
-		content += "<TR CLASS=\"lighttable2\">";
-		content += "<TD>" + time_to_str((time_t)log.at(index).time_logged_in) + "</TD>";
+		content += "</td><td>" + log.at(index).user + "</td>";
+		content += "<td>" + log.at(index).host + "</td>";
+		content += "<td>" + log.at(index).type + "</td>";
+		content += "</tr>";
+		content += "<tr class=\"lighttable2\">";
+		content += "<td>" + time_to_str((time_t)log.at(index).time_logged_in) + "</td>";
 		if (log.at(index).hl == HL_LOGOUT_OK)
-			content += format("<TD>%f</TD>", log.at(index).duration);
+			content += format("<td>%f</td>", log.at(index).duration);
 		else
-			content += "<TD></TD>";
-		content += "<TD COLSPAN=\"3\">" + log.at(index).details + "</TD>";
-		content += "</TR>\n";
+			content += "<td></td>";
+		content += "<td colspan=\"3\">" + log.at(index).details + "</td>";
+		content += "</tr>\n";
 	}
-	content += "</TABLE>\n";
+	content += "</table>\n";
 
 	content += get_style_tail();
 
