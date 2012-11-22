@@ -55,6 +55,7 @@ http_bundle * http_file_logfile::do_request(http_request_t request_type, std::st
 	content += "<tr class=\"lighttable\"><td class=\"timestamp\">event ts</td><td>event type</td><td>user</td><td>host</td><td>type</td></tr>\n";
 	content += "<tr class=\"lighttable\"><td>connected since</td><td>duration</td><td colspan=\"3\">notes</td></tr>\n";
 
+	double now_ts = get_ts();
 	for(int index=log.size()-1; index >= 0; index--)
 	{
 		content += "<tr>";
@@ -90,6 +91,8 @@ http_bundle * http_file_logfile::do_request(http_request_t request_type, std::st
 		content += "<td>" + time_to_str((time_t)log.at(index).time_logged_in) + "</td>";
 		if (log.at(index).hl == HL_LOGOUT_OK)
 			content += format("<td>%f</td>", log.at(index).duration);
+		else if (log.at(index).hl == HL_LOGIN_OK)
+			content += format("<td>[%f]</td>", now_ts - log.at(index).time_logged_in);
 		else
 			content += "<td></td>";
 		content += "<td colspan=\"3\">" + log.at(index).details + "</td>";
