@@ -152,7 +152,7 @@ int main(int argc, char *argv[])
 		error_exit("Could not find a device? (2)");
 	lock_mem(q, sizeof *q);
 
-	snprintf(server_type, sizeof server_type, "server_egb v" VERSION " %s", q -> DeviceID());
+	snprintf(server_type, sizeof server_type, "eb_server_ComScire_R2000KU v" VERSION " %s", q -> DeviceID());
 
 	if (!do_not_fork)
 	{
