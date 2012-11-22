@@ -31,5 +31,6 @@
 - hash for protocol (user password): Use bcrypt or PBKDF2 exclusively to hash anything you need to be secure.
 
 - schermpje dat alleen de users laat zien
+  - per user logging, door de log-vector te filteren op 'username'
 
 SVN: $Revision$
