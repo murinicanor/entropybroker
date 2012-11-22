@@ -32,9 +32,9 @@ http_bundle * http_file_root::do_request(http_request_t request_type, std::strin
 	return new http_bundle(reply_headers,
 			get_style_header() + 
 			"   <nav>\n"
-			"    <a href=\"/stats.html\"><img alt=\"statistics page\" src=\"statistics.png\"/>stats</a>\n"
-			"    <a href=\"/logfile.html\"><img alt=\"logfile(s) page\" src=\"logfiles.png\"/>log file</a>\n"
-			"    <a href=\"/version.html\"><img alt=\"version information\" src=\"logo-bw.png\"/>version</a>\n"
+			"    <a href=\"/stats.html\"><img border=\"0\" alt=\"statistics page\" src=\"statistics.png\"/>stats</a>\n"
+			"    <a href=\"/logfile.html\"><img border=\"0\" alt=\"logfile(s) page\" src=\"logfiles.png\"/>log file</a>\n"
+			"    <a href=\"/version.html\"><img border=\"0\" alt=\"version information\" src=\"logo-bw.png\"/>version</a>\n"
 			"   </nav>\n" +
 			get_style_tail());
 }
