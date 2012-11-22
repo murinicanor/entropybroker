@@ -109,6 +109,9 @@ http_bundle * http_file_stats::do_request(http_request_t request_type, std::stri
 			my_mutex_unlock(&p -> stats_lck);
 
 			content += "</table>\n";
+			content += "<br>\n";
+
+			content += generate_logging_table(ps, p -> username);
 		}
 
 		my_mutex_unlock(clients_mutex);

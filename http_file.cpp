@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "utils.h"
+#include "statistics.h"
 #include "http_bundle.h"
 #include "http_request_t.h"
 #include "http_file.h"
@@ -108,4 +109,63 @@ std::string http_file::get_style_tail()
 		"  </footer>\n"
 		" </body>\n"
 		"</html>\n";
+}
+
+std::string generate_logging_table(statistics *ps, std::string username)
+{
+	std::vector<history_logins> log = ps -> get_login_history();
+
+	std::string content = "<table class=\"table2 tablemargins fullwidth\">\n";
+	content += "<tr class=\"lighttable\"><td class=\"timestamp\">event ts</td><td>event type</td><td>user</td><td>host</td><td>type</td></tr>\n";
+	content += "<tr class=\"lighttable\"><td>connected since</td><td>duration</td><td colspan=\"3\">notes</td></tr>\n";
+
+	double now_ts = get_ts();
+	for(int index=log.size()-1; index >= 0; index--)
+	{
+		if (username.size() > 0 && log.at(index).user != username)
+			continue;
+
+		content += "<tr>";
+		content += "<td>" + time_to_str((time_t)log.at(index).event_ts) + "</td>";
+		content += "<td>";
+
+		switch(log.at(index).hl)
+		{
+			case HL_LOGIN_OK:
+				content += "login ok";
+				break;
+			case HL_LOGOUT_OK:
+				content += "logout ok";
+				break;
+			case HL_LOGIN_USER_FAIL:
+				content += "unknown user";
+				break;
+			case HL_LOGIN_PW_FAIL:
+				content += "password fail";
+				break;
+			case HL_LOGIN_OTHER:
+				content += "other error";
+				break;
+			default:
+				content += "INTERNAL ERROR";
+		}
+
+		content += "</td><td>" + log.at(index).user + "</td>";
+		content += "<td>" + log.at(index).host + "</td>";
+		content += "<td>" + log.at(index).type + "</td>";
+		content += "</tr>";
+		content += "<tr class=\"lighttable2\">";
+		content += "<td>" + time_to_str((time_t)log.at(index).time_logged_in) + "</td>";
+		if (log.at(index).hl == HL_LOGOUT_OK)
+			content += format("<td>%f</td>", log.at(index).duration);
+		else if (log.at(index).hl == HL_LOGIN_OK)
+			content += format("<td>[%f]</td>", now_ts - log.at(index).time_logged_in);
+		else
+			content += "<td></td>";
+		content += "<td colspan=\"3\">" + log.at(index).details + "</td>";
+		content += "</tr>\n";
+	}
+	content += "</table>\n";
+
+	return content;
 }

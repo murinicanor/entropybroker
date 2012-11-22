@@ -15,3 +15,5 @@ public:
 
 	virtual http_bundle * do_request(http_request_t request_type, std::string request_url, http_bundle *request_details) = 0;
 };
+
+std::string generate_logging_table(statistics *ps, std::string username);
