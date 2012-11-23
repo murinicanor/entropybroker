@@ -572,7 +572,7 @@ void terminate_threads(statistics *s, std::vector<client_t *> *clients)
 	}
 }
 
-void main_loop(std::vector<client_t *> *clients, pthread_mutex_t *clients_mutex, pools *ppools, config_t *config, fips140 *eb_output_fips140, scc *eb_output_scc, pool_crypto *pc, statistics *stats)
+void main_loop(std::vector<client_t *> *clients, pthread_mutex_t *clients_mutex, pools *ppools, config_t *config, fips140 *eb_output_fips140, scc *eb_output_scc, pool_crypto *pc, statistics *stats, users *user_map)
 {
 	double last_counters_reset = get_ts();
 	double last_statistics_emit = last_counters_reset;
@@ -582,10 +582,6 @@ void main_loop(std::vector<client_t *> *clients, pthread_mutex_t *clients_mutex,
 	memset(&event_state, 0x00, sizeof event_state);
 
 	dolog(LOG_INFO, "main|main-loop started");
-
-	users *user_map = new users(*config -> user_map, config -> default_max_get_bps);
-	if (!user_map)
-		error_exit("failed allocating users-object");
 
 	bool send_have_data = false, send_need_data = false, send_is_full = false;
 	for(;;)
@@ -767,8 +763,6 @@ void main_loop(std::vector<client_t *> *clients, pthread_mutex_t *clients_mutex,
 
 	terminate_threads(stats, clients);
 	my_mutex_unlock(clients_mutex);
-
-	delete user_map;
 
 	close(listen_socket_fd);
 

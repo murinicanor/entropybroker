@@ -96,6 +96,7 @@ void users::load_usermap()
 		pthread_check(pthread_mutex_init(&u.lck, &global_mutex_attr), "pthread_mutex_init");
 
 		std::string username = pars[0];
+		u.username = username;
 
 		if (username.length() == 0 || u.password.length() == 0)
 			error_exit("%s: username/password cannot be empty at line %d (%s)", filename.c_str(), line_nr, line.c_str());
@@ -117,7 +118,7 @@ user_t *users::find_user(std::string username)
 
 bool users::get_password(std::string username, std::string & password)
 {
-	password.assign("DEFINATELY WRONG PASSWORd");
+	password.assign("DEFINATELY WRONG  PASSWORd");
 
 	list_rlock();
 
@@ -192,4 +193,13 @@ bool users::cancel_allowance(std::string username)
 	list_runlock();
 
 	return u ? true : false;
+}
+
+std::map<std::string, user_t> users::get_usermap()
+{
+	list_rlock();
+	std::map<std::string, user_t> result = *user_map;
+	list_runlock();
+
+	return result;
 }

@@ -42,6 +42,7 @@
 #include "http_file_version.h"
 #include "http_file_graph_data_logger.h"
 #include "http_file_logfile.h"
+#include "http_file_users.h"
 #include "http_server.h"
 #include "web_server.h"
 
@@ -60,9 +61,9 @@ void *start_web_server_thread_wrapper(void *p)
 	return NULL;
 }
 
-void start_web_server(config_t *config, std::vector<client_t *> *clients, pthread_mutex_t *clients_mutex, pools *ppools, statistics *ps, fips140 *pfips140, scc *pscc, data_logger *dl)
+void start_web_server(config_t *config, std::vector<client_t *> *clients, pthread_mutex_t *clients_mutex, pools *ppools, statistics *ps, fips140 *pfips140, scc *pscc, data_logger *dl, users *pusers)
 {
-	web_server *ws = new web_server(config, clients, clients_mutex, ppools, ps, pfips140, pscc, dl);
+	web_server *ws = new web_server(config, clients, clients_mutex, ppools, ps, pfips140, pscc, dl, pusers);
 
 	pthread_attr_t attr;
 	pthread_check(pthread_attr_init(&attr), "pthread_attr_init");
@@ -72,7 +73,7 @@ void start_web_server(config_t *config, std::vector<client_t *> *clients, pthrea
 	pthread_check(pthread_create(&thread, &attr, start_web_server_thread_wrapper, ws), "pthread_create");
 }
 
-web_server::web_server(config_t *config, std::vector<client_t *> *clients, pthread_mutex_t *clients_mutex, pools *ppools, statistics *ps, fips140 *pfips140, scc *pscc, data_logger *dl)
+web_server::web_server(config_t *config, std::vector<client_t *> *clients, pthread_mutex_t *clients_mutex, pools *ppools, statistics *ps, fips140 *pfips140, scc *pscc, data_logger *dl, users *pusers)
 {
 	fd = start_listen(config -> webserver_interface.c_str(), config -> webserver_port, config -> listen_queue_size);
 
@@ -88,6 +89,8 @@ web_server::web_server(config_t *config, std::vector<client_t *> *clients, pthre
 	add_object(new http_file_file("/logo-bw.png", "image/png", WEB_DIR "/logo-bw.png"));
 	add_object(new http_file_file("/logfiles.png", "image/png", WEB_DIR "/logfiles.png"));
 	add_object(new http_file_file("/statistics.png", "image/png", WEB_DIR "/statistics.png"));
+	add_object(new http_file_users(clients, clients_mutex, pusers));
+	add_object(new http_file_file("/users.png", "image/png", WEB_DIR "/users.png"));
 }
 
 web_server::~web_server()

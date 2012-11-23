@@ -5,7 +5,7 @@ class user_t
 public:
 	pthread_mutex_t lck;
 
-	std::string password;
+	std::string username, password;
 	int max_get_bps;
 
 	double last_get_message, allowance;
@@ -37,4 +37,6 @@ public:
 	int calc_max_allowance(std::string username, double now, int n_requested);
 	bool use_allowance(std::string username, int n);
 	bool cancel_allowance(std::string username);
+
+	std::map<std::string, user_t> get_usermap();
 };

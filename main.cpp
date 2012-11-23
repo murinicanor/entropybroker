@@ -187,14 +187,20 @@ int main(int argc, char *argv[])
 
 	data_logger *dl = new data_logger(&stats, ppools, &clients, &clients_mutex);
 
-	if (config.webserver_port >= 1)
-		start_web_server(&config, &clients, &clients_mutex, ppools, &stats, eb_output_fips140, eb_output_scc, dl);
+	users *user_map = new users(*config.user_map, config.default_max_get_bps);
+	if (!user_map)
+		error_exit("failed allocating users-object");
 
-	main_loop(&clients, &clients_mutex, ppools, &config, eb_output_fips140, eb_output_scc, &pc, &stats);
+	if (config.webserver_port >= 1)
+		start_web_server(&config, &clients, &clients_mutex, ppools, &stats, eb_output_fips140, eb_output_scc, dl, user_map);
+
+	main_loop(&clients, &clients_mutex, ppools, &config, eb_output_fips140, eb_output_scc, &pc, &stats, user_map);
 
 	dolog(LOG_INFO, "Dumping pool contents to cache-file");
 
 	delete dl;
+
+	delete user_map;
 
 	delete ppools;
 
