@@ -151,8 +151,8 @@ int do_client_get(client_t *client, bool *no_bits)
 		client -> stats_user -> inc_n_times_quota();
 		client -> stats_glob -> inc_n_times_quota();
 
-		bool rc = send_denied_quota(client -> socket_fd, client -> config);
-		if (!rc)
+		int rc = send_denied_quota(client -> socket_fd, client -> config);
+		if (rc == -1)
 		{
 			client -> stats_user -> inc_network_error();
 			client -> stats_glob -> inc_network_error();
@@ -178,8 +178,8 @@ int do_client_get(client_t *client, bool *no_bits)
 		client -> stats_user -> inc_n_times_empty();
 		client -> stats_glob -> inc_n_times_empty();
 
-		bool rc = send_denied_empty(client -> socket_fd, client -> config);
-		if (!rc)
+		int rc = send_denied_empty(client -> socket_fd, client -> config);
+		if (rc == -1)
 		{
 			client -> stats_user -> inc_network_error();
 			client -> stats_glob -> inc_network_error();
@@ -282,15 +282,21 @@ int do_client_put(client_t *client, bool *new_bits, bool *is_full)
 			client -> stats_glob -> inc_n_times_full();
 			client -> stats_user -> inc_n_times_full();
 
-			if (READ_TO(client -> socket_fd, dummy_buffer, 4, client -> config -> communication_timeout) != 4)	// flush number of bits
+			// flush number of bits
+			if (READ_TO(client -> socket_fd, dummy_buffer, 4, client -> config -> communication_timeout) != 4)
+			{
+				client -> stats_user -> inc_network_error();
+				client -> stats_glob -> inc_network_error();
 				return -1;
+			}
 
-			bool rc = send_denied_full(client -> socket_fd, client -> config, client -> host);
-			if (!rc)
+			int rc = send_denied_full(client -> socket_fd, client -> config, client -> host);
+			if (rc == -1)
 			{
 				client -> stats_user -> inc_network_error();
 				client -> stats_glob -> inc_network_error();
 			}
+
 			return rc;
 		}
 
