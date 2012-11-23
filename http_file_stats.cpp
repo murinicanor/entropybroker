@@ -173,7 +173,7 @@ http_bundle * http_file_stats::do_request(http_request_t request_type, std::stri
 			content += "</td></tr>\n";
 		}
 		my_mutex_unlock(clients_mutex);
-		content += format("<tr class=\"lighttable\"><td colspan=\"3\" class=\"alignright\">bps:</td><td>%.1f</td><td>%.1f</td><td colspan=\"2\"></td></tr>\n", recv_bps, sent_bps);
+		content += format("<tr class=\"lighttable\"><td colspan=\"3\" class=\"alignright\">bps:&nbsp;</td><td>%.1f</td><td>%.1f</td><td colspan=\"2\"></td></tr>\n", recv_bps, sent_bps);
 
 		content += "</table>\n";
 		content += format("Number of connected clients/servers: %d<br>\n", clients -> size());
