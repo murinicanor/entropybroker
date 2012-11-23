@@ -123,7 +123,7 @@ http_bundle * http_file_stats::do_request(http_request_t request_type, std::stri
 	{
 		// PER USER STATS
 		content += "<table class=\"table2 fullwidth\">\n";
-		content += "<tr class=\"lighttable\"><td>user</td><td>host</td><td>type</td><td>is server</td><td class=\"timestamp\">connected since</td><td>bits recv</td><td>bits sent</td><td>errors</td><td>warnings</td></tr>\n";
+		content += "<tr class=\"lighttable\"><td>user</td><td>host</td><td>is server</td><td class=\"timestamp\">connected since</td><td>bits recv</td><td>bits sent</td><td>errors</td><td>warnings</td></tr>\n";
 
 		double recv_bps = 0, sent_bps = 0;
 
@@ -139,8 +139,6 @@ http_bundle * http_file_stats::do_request(http_request_t request_type, std::stri
 			content += "\">";
 			content += p -> host;
 			content += "</A></td><td>";
-			content += p -> type;
-			content += "</td><td>";
 			content += p -> is_server ? "yes" : "no";
 			content += "</td><td>";
 
@@ -177,7 +175,7 @@ http_bundle * http_file_stats::do_request(http_request_t request_type, std::stri
 			content += "</td></tr>\n";
 		}
 		my_mutex_unlock(clients_mutex);
-		content += format("<tr class=\"lighttable\"><td colspan=\"4\"></td><td class=\"alignright\">bps:</td><td>%.1f</td><td>%.1f</td></tr>\n", recv_bps, sent_bps);
+		content += format("<tr class=\"lighttable\"><td colspan=\"4\" class=\"alignright\">bps:</td><td>%.1f</td><td colspan=\"3\">%.1f</td></tr>\n", recv_bps, sent_bps);
 
 		content += "</table>\n";
 		content += format("Number of connected clients/servers: %d<br>\n", clients -> size());
