@@ -66,6 +66,12 @@ http_bundle * http_file_users::do_request(http_request_t request_type, std::stri
 		content += uit -> second.username;
 		content += "</td><td>";
 
+		int reset_bps_cur = 0, msg_cnt = 0, disconnects = 0, times_empty = 0, times_full = 0, times_quota = 0, submit_while_full = 0, network_error = 0, protocol_error = 0, misc_errors = 0;
+		long long int total_bits_recv = 0, total_bits_recv_in = 0, total_bits_sents = 0;
+		int n_reqs = 0, n_sents = 0;
+		double since_ts = now + 10000.0; // min if != 0
+		double msg_ts = 0, /* max */ put_msg_ts = 0, /* max */ get_msg_ts = 0, /* max */ sent_avg = 0, sent_sd = 0, recv_avg = 0, recv_sd = 0, recv_in_avg = 0, recv_in_sd = 0;
+
 		my_mutex_lock(clients_mutex);
 
 		for(unsigned int index=0; index<clients -> size(); index++)
@@ -98,7 +104,6 @@ http_bundle * http_file_users::do_request(http_request_t request_type, std::stri
 	void get_recv_avg_sd(double *avg, double *sd);
 	void get_recv_in_avg_sd(double *avg, double *sd);
 */
-
 		}
 
 		my_mutex_unlock(clients_mutex);
