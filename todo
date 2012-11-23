@@ -30,6 +30,6 @@
 
 - hash for protocol (user password): Use bcrypt or PBKDF2 exclusively to hash anything you need to be secure.
 
-- schermpje dat alleen de users laat zien
+- schermpje dat alleen de users laat zien met statistics per username (die bewaren in een file?) en on-line status etc
 
 SVN: $Revision$

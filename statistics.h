@@ -53,6 +53,18 @@ private:
 	pthread_mutex_t msg_cnt_lck;
 	int msg_cnt;
 
+	pthread_mutex_t submit_while_full_lck;
+	int submit_while_full;
+
+	pthread_mutex_t network_error_lck;
+	int network_error;
+
+	pthread_mutex_t protocol_error_lck;
+	int protocol_error;
+
+	pthread_mutex_t misc_errors_lck;
+	int misc_errors;
+
 	pthread_mutex_t time_lck;
 	double last_message, last_put_message, last_get_message;
 	double connected_since;
@@ -71,6 +83,10 @@ public:
 	void inc_n_times_full();
 	void inc_bps_cur();
 	void inc_msg_cnt();
+	void inc_submit_while_full();
+	void inc_network_error();
+	void inc_protocol_error();
+	void inc_misc_errors();
 	void track_sents(int cur_n_bits);
 	void track_recvs(int n_bits_added, int n_bits_added_in);
 	void register_msg(bool is_put);
@@ -83,6 +99,10 @@ public:
 	int get_times_not_allowed();
 	int get_times_full();
 	int get_times_quota();
+	int get_submit_while_full();
+	int get_network_error();
+	int get_protocol_error();
+	int get_misc_errors();
 	void get_recvs(long long int *total_bits, int *n_reqs, long long int *total_bits_in);
 	void get_sents(long long int *total_bits, int *n_sents);
 	double get_last_msg_ts();

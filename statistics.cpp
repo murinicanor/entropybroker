@@ -30,6 +30,10 @@ statistics::statistics()
 	pthread_check(pthread_mutex_init(&msg_cnt_lck, &global_mutex_attr), "pthread_mutex_init");
 	pthread_check(pthread_mutex_init(&time_lck, &global_mutex_attr), "pthread_mutex_init");
 	pthread_check(pthread_mutex_init(&logins_lck, &global_mutex_attr), "pthread_mutex_init");
+	pthread_check(pthread_mutex_init(&submit_while_full_lck, &global_mutex_attr), "pthread_mutex_init");
+	pthread_check(pthread_mutex_init(&network_error_lck, &global_mutex_attr), "pthread_mutex_init");
+	pthread_check(pthread_mutex_init(&protocol_error_lck, &global_mutex_attr), "pthread_mutex_init");
+	pthread_check(pthread_mutex_init(&misc_errors_lck, &global_mutex_attr), "pthread_mutex_init");
 
 	bps_cur = 0;
 
@@ -44,6 +48,9 @@ statistics::statistics()
 
 	disconnects = 0;
 	timeouts = 0;
+
+	submit_while_full = 0;
+	misc_errors = protocol_error = network_error = 0;
 
 	msg_cnt = 0;
 	last_message = last_put_message = last_get_message = connected_since = 0;
@@ -62,6 +69,10 @@ statistics::~statistics()
 	pthread_check(pthread_mutex_destroy(&msg_cnt_lck), "pthread_mutex_destroy");
 	pthread_check(pthread_mutex_destroy(&time_lck), "pthread_mutex_destroy");
 	pthread_check(pthread_mutex_destroy(&logins_lck), "pthread_mutex_destroy");
+	pthread_check(pthread_mutex_destroy(&submit_while_full_lck), "pthread_mutex_destroy");
+	pthread_check(pthread_mutex_destroy(&network_error_lck), "pthread_mutex_destroy");
+	pthread_check(pthread_mutex_destroy(&protocol_error_lck), "pthread_mutex_destroy");
+	pthread_check(pthread_mutex_destroy(&misc_errors_lck), "pthread_mutex_destroy");
 }
 
 void statistics::inc_disconnects()
@@ -338,6 +349,70 @@ int statistics::get_reset_bps_cur()
 	int dummy = bps_cur;
 	bps_cur = 0;
 	my_mutex_unlock(&sent_lck);
+
+	return dummy;
+}
+
+void statistics::inc_submit_while_full()
+{
+	my_mutex_lock(&submit_while_full_lck);
+	submit_while_full++;
+	my_mutex_unlock(&submit_while_full_lck);
+}
+
+int statistics::get_submit_while_full()
+{
+	my_mutex_lock(&submit_while_full_lck);
+	int dummy = submit_while_full;
+	my_mutex_unlock(&submit_while_full_lck);
+
+	return dummy;
+}
+
+void statistics::inc_network_error()
+{
+	my_mutex_lock(&network_error_lck);
+	network_error++;
+	my_mutex_unlock(&network_error_lck);
+}
+
+int statistics::get_network_error()
+{
+	my_mutex_lock(&network_error_lck);
+	int dummy = network_error;
+	my_mutex_unlock(&network_error_lck);
+
+	return dummy;
+}
+
+void statistics::inc_protocol_error()
+{
+	my_mutex_lock(&protocol_error_lck);
+	protocol_error++;
+	my_mutex_unlock(&protocol_error_lck);
+}
+
+int statistics::get_protocol_error()
+{
+	my_mutex_lock(&protocol_error_lck);
+	int dummy = protocol_error;
+	my_mutex_unlock(&protocol_error_lck);
+
+	return dummy;
+}
+
+void statistics::inc_misc_errors()
+{
+	my_mutex_lock(&misc_errors_lck);
+	misc_errors++;
+	my_mutex_unlock(&misc_errors_lck);
+}
+
+int statistics::get_misc_errors()
+{
+	my_mutex_lock(&misc_errors_lck);
+	int dummy = misc_errors;
+	my_mutex_unlock(&misc_errors_lck);
 
 	return dummy;
 }

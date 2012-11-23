@@ -741,6 +741,9 @@ void main_loop(std::vector<client_t *> *clients, pthread_mutex_t *clients_mutex,
 			{
 				dolog(LOG_INFO, "main|connection with %s/%s lost", clients -> at(loop) -> host.c_str(), clients -> at(loop) -> type.c_str());
 
+				clients -> at(loop) -> stats_user -> inc_misc_errors();
+				clients -> at(loop) -> stats_glob -> inc_misc_errors();
+
 				delete_ids.push_back(&clients -> at(loop) -> th);
 			}
 		}
