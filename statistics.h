@@ -35,9 +35,6 @@ private:
 	pthread_mutex_t times_empty_lck;
 	int n_times_empty;
 
-	pthread_mutex_t times_not_allowed_lck;
-	int n_times_not_allowed;
-
 	pthread_mutex_t times_full_lck;
 	int n_times_full;
 
@@ -96,7 +93,6 @@ public:
 	int get_msg_cnt();
 	int get_disconnects();
 	int get_times_empty();
-	int get_times_not_allowed();
 	int get_times_full();
 	int get_times_quota();
 	int get_submit_while_full();

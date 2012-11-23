@@ -22,7 +22,6 @@ statistics::statistics()
 	pthread_check(pthread_mutex_init(&recv_lck, &global_mutex_attr), "pthread_mutex_init");
 	pthread_check(pthread_mutex_init(&sent_lck, &global_mutex_attr), "pthread_mutex_init");
 	pthread_check(pthread_mutex_init(&times_empty_lck, &global_mutex_attr), "pthread_mutex_init");
-	pthread_check(pthread_mutex_init(&times_not_allowed_lck, &global_mutex_attr), "pthread_mutex_init");
 	pthread_check(pthread_mutex_init(&times_full_lck, &global_mutex_attr), "pthread_mutex_init");
 	pthread_check(pthread_mutex_init(&times_quota_lck, &global_mutex_attr), "pthread_mutex_init");
 	pthread_check(pthread_mutex_init(&disconnects_lck, &global_mutex_attr), "pthread_mutex_init");
@@ -42,7 +41,6 @@ statistics::statistics()
 	total_recv_requests = 0;
 	total_sent_requests = 0;
 	n_times_empty = 0;
-	n_times_not_allowed = 0;
 	n_times_full = 0;
 	n_times_quota = 0;
 
@@ -61,7 +59,6 @@ statistics::~statistics()
 	pthread_check(pthread_mutex_destroy(&recv_lck), "pthread_mutex_destroy");
 	pthread_check(pthread_mutex_destroy(&sent_lck), "pthread_mutex_destroy");
 	pthread_check(pthread_mutex_destroy(&times_empty_lck), "pthread_mutex_destroy");
-	pthread_check(pthread_mutex_destroy(&times_not_allowed_lck), "pthread_mutex_destroy");
 	pthread_check(pthread_mutex_destroy(&times_full_lck), "pthread_mutex_destroy");
 	pthread_check(pthread_mutex_destroy(&times_quota_lck), "pthread_mutex_destroy");
 	pthread_check(pthread_mutex_destroy(&disconnects_lck), "pthread_mutex_destroy");
@@ -140,30 +137,6 @@ void statistics::track_recvs(int n_bits_added, int n_bits_in)
 	my_mutex_unlock(&recv_lck);
 }
 
-void statistics::lock_all()
-{
-	my_mutex_lock(&recv_lck);
-	my_mutex_lock(&sent_lck);
-	my_mutex_lock(&times_empty_lck);
-	my_mutex_lock(&times_not_allowed_lck);
-	my_mutex_lock(&times_full_lck);
-	my_mutex_lock(&times_quota_lck);
-	my_mutex_lock(&disconnects_lck);
-	my_mutex_lock(&timeouts_lck);
-}
-
-void statistics::unlock_all()
-{
-	my_mutex_unlock(&timeouts_lck);
-	my_mutex_unlock(&disconnects_lck);
-	my_mutex_unlock(&times_quota_lck);
-	my_mutex_unlock(&times_full_lck);
-	my_mutex_unlock(&times_not_allowed_lck);
-	my_mutex_unlock(&times_empty_lck);
-	my_mutex_unlock(&sent_lck);
-	my_mutex_unlock(&recv_lck);
-}
-
 int statistics::get_times_empty()
 {
 	my_mutex_lock(&times_empty_lck);
@@ -171,11 +144,6 @@ int statistics::get_times_empty()
 	my_mutex_unlock(&times_empty_lck);
 
 	return dummy;
-}
-
-int statistics::get_times_not_allowed()
-{
-	return 0; // FIXME
 }
 
 int statistics::get_times_full()
