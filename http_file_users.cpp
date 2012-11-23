@@ -66,6 +66,7 @@ http_bundle * http_file_users::do_request(http_request_t request_type, std::stri
 		content += uit -> second.username;
 		content += "</td><td>";
 
+		int cnt = 0;
 		int reset_bps_cur = 0, msg_cnt = 0, disconnects = 0, times_empty = 0, times_full = 0, times_quota = 0, submit_while_full = 0, network_error = 0, protocol_error = 0, misc_errors = 0;
 		long long int total_bits_recv = 0, total_bits_recv_in = 0, total_bits_sents = 0;
 		int n_reqs = 0, n_sents = 0;
@@ -82,29 +83,60 @@ http_bundle * http_file_users::do_request(http_request_t request_type, std::stri
 				continue;
 
 			// sum stats from cur -> stats_user -> ...
-			// emit
-/*
-	int get_reset_bps_cur();
-	int get_msg_cnt();
-	int get_disconnects();
-	int get_times_empty();
-	int get_times_full();
-	int get_times_quota();
-	int get_submit_while_full();
-	int get_network_error();
-	int get_protocol_error();
-	int get_misc_errors();
-	void get_recvs(long long int *total_bits, int *n_reqs, long long int *total_bits_in);
-	void get_sents(long long int *total_bits, int *n_sents);
-	double get_since_ts(); // min if != 0
-	double get_last_msg_ts(); // max
-	double get_last_put_msg_ts(); // max
-	double get_last_get_msg_ts(); // max
-	void get_sent_avg_sd(double *avg, double *sd);
-	void get_recv_avg_sd(double *avg, double *sd);
-	void get_recv_in_avg_sd(double *avg, double *sd);
-*/
+			statistics *pcs = cur -> stats_user;
+
+			cnt++;
+
+			reset_bps_cur += pcs -> get_reset_bps_cur();
+			msg_cnt += pcs -> get_msg_cnt();
+			disconnects += pcs -> get_disconnects();
+			times_empty += pcs -> get_times_empty();
+			times_full +=  pcs -> get_times_full();
+			times_quota += pcs -> get_times_quota();
+			submit_while_full += pcs -> get_submit_while_full();
+			network_error += pcs -> get_network_error();
+			protocol_error += pcs -> get_protocol_error();
+			misc_errors += pcs -> get_misc_errors();
+
+			long long int total = -1, total_in = -1;
+			int n = -1;
+			pcs -> get_recvs(&total, &n, &total_in);
+			total_bits_recv += total;
+			n_reqs += n;
+			total_bits_recv_in += total_in;
+
+			pcs -> get_sents(&total, &n);
+			total_bits_sents += total;
+			n_sents += n;
+
+			double cur_since_ts = pcs -> get_since_ts(); // min if != 0
+			if (cur_since_ts != 0 && cur_since_ts < since_ts)
+				since_ts = cur_since_ts;
+			msg_ts = mymax(msg_ts, pcs -> get_last_msg_ts()); // max
+			put_msg_ts = mymax(put_msg_ts, pcs -> get_last_put_msg_ts()); // max
+			get_msg_ts = mymax(get_msg_ts, pcs -> get_last_get_msg_ts()); // max
+
+			double avg, sd;
+			pcs -> get_sent_avg_sd(&avg, &sd);
+			sent_avg += avg;
+			sent_sd += sd;
+			pcs -> get_recv_avg_sd(&avg, &sd);
+			recv_avg += avg;
+			recv_sd = sd;
+			pcs -> get_recv_in_avg_sd(&avg, &sd);
+			recv_in_avg += avg;
+			recv_in_sd += avg;
 		}
+
+		double dcnt = double(cnt);
+		sent_avg /= dcnt;
+		sent_sd /= dcnt;
+		recv_avg /= dcnt;
+		recv_sd /= dcnt;
+		recv_in_avg /= dcnt;
+		recv_in_sd /= dcnt;
+
+		// emit
 
 		my_mutex_unlock(clients_mutex);
 
