@@ -149,7 +149,7 @@ void protocol::error_sleep(int count)
 	usleep((long)sleep_micro_seconds);
 }
 
-reconnect_status_t protocol::reconnect_server_socket()
+reconnect_status_t protocol::reconnect_server_socket(bool *do_exit)
 {
 	reconnect_status_t rc = RSS_FAIL;
 
@@ -188,6 +188,9 @@ reconnect_status_t protocol::reconnect_server_socket()
 				close(socket_fd);
 				socket_fd = -1;
 			}
+
+			if (do_exit && *do_exit)
+				return RSS_FAIL;
 
 			host_index++;
 			if (host_index == hosts -> size())
@@ -233,7 +236,7 @@ reconnect_status_t protocol::reconnect_server_socket()
 	return rc;
 }
 
-int protocol::sleep_interruptable(double how_long)
+int protocol::sleep_interruptable(double how_long, bool *do_exit)
 {
 	if (socket_fd == -1)
 		return -1;
@@ -251,6 +254,8 @@ int protocol::sleep_interruptable(double how_long)
 		tv.tv_usec = (how_long - double(tv.tv_sec)) * 1000000.0;
 
 		rc = select(socket_fd + 1, &rfds, NULL, NULL, &tv);
+		if (do_exit && *do_exit)
+			return -1;
 		if (rc != -1 || errno != EINTR)
 			break;
 	}
@@ -259,7 +264,7 @@ int protocol::sleep_interruptable(double how_long)
 	{
 		char buffer[8];
 
-		if (READ_TO(socket_fd, buffer, 8, comm_time_out) != 8)
+		if (READ_TO(socket_fd, buffer, 8, comm_time_out, do_exit) != 8)
 		{
 			dolog(LOG_INFO, "error receiving unsollicited message");
 			return -1;
@@ -279,7 +284,7 @@ int protocol::sleep_interruptable(double how_long)
 	return 0;
 }
 
-int protocol::message_transmit_entropy_data(unsigned char *bytes_in, unsigned int n_bytes)
+int protocol::message_transmit_entropy_data(unsigned char *bytes_in, unsigned int n_bytes, bool *do_exit)
 {
 	int error_count = 0;
 	while(n_bytes > 0)
@@ -291,11 +296,14 @@ int protocol::message_transmit_entropy_data(unsigned char *bytes_in, unsigned in
 			unsigned char reply[8] = { 0 };
 			unsigned char header[8] = { 0 };
 
+			if (do_exit && *do_exit)
+				return -1;
+
 			error_count++;
 			if (error_count > MAX_ERROR_SLEEP)
 				error_count = MAX_ERROR_SLEEP;
 
-			reconnect_status_t rss = reconnect_server_socket();
+			reconnect_status_t rss = reconnect_server_socket(do_exit);
 			if (rss == RSS_FAIL)
 				continue;
 
@@ -307,8 +315,11 @@ int protocol::message_transmit_entropy_data(unsigned char *bytes_in, unsigned in
 			make_msg(header, 2, mymin(max_get_put_size, n_bytes * 8)); // 0002 xmit data request
 
 			// header
-			if (WRITE_TO(socket_fd, header, 8, comm_time_out) != 8)
+			if (WRITE_TO(socket_fd, header, 8, comm_time_out, do_exit) != 8)
 			{
+				if (do_exit && *do_exit)
+					return -1;
+
 				dolog(LOG_INFO, "error transmitting header");
 
 				close(socket_fd);
@@ -321,8 +332,11 @@ int protocol::message_transmit_entropy_data(unsigned char *bytes_in, unsigned in
 			// ack from server?
 		ignore_unsollicited_msg: // we jump to this label when unsollicited msgs are
 			// received during data-transmission handshake
-			if (READ_TO(socket_fd, reply, 8, comm_time_out) != 8)
+			if (READ_TO(socket_fd, reply, 8, comm_time_out, do_exit) != 8)
 			{
+				if (do_exit && *do_exit)
+					return -1;
+
 				dolog(LOG_INFO, "error receiving ack/nack");
 
 				close(socket_fd);
@@ -361,8 +375,11 @@ int protocol::message_transmit_entropy_data(unsigned char *bytes_in, unsigned in
 
 				free_locked(temp_buffer, with_hash_n);
 
-				if (WRITE_TO(socket_fd, bytes_out, with_hash_n, comm_time_out) != with_hash_n)
+				if (WRITE_TO(socket_fd, bytes_out, with_hash_n, comm_time_out, do_exit) != with_hash_n)
 				{
+					if (do_exit && *do_exit)
+						return -1;
+
 					dolog(LOG_INFO, "error transmitting data");
 					free(bytes_out);
 
@@ -427,7 +444,7 @@ int protocol::message_transmit_entropy_data(unsigned char *bytes_in, unsigned in
 	return 0;
 }
 
-int protocol::request_bytes(unsigned char *where_to, unsigned int n_bits, bool fail_on_no_bits)
+int protocol::request_bytes(unsigned char *where_to, unsigned int n_bits, bool fail_on_no_bits, bool *do_exit)
 {
 	bool request_sent = false;
 
@@ -438,11 +455,14 @@ int protocol::request_bytes(unsigned char *where_to, unsigned int n_bits, bool f
 	int error_count = 0;
 	for(;;)
 	{
+		if (do_exit && *do_exit)
+			return -1;
+
 		error_count++;
 		if (error_count > MAX_ERROR_SLEEP)
 			error_count = MAX_ERROR_SLEEP;
 
-		reconnect_status_t rss = reconnect_server_socket();
+		reconnect_status_t rss = reconnect_server_socket(do_exit);
 		if (rss == RSS_FAIL)
                         error_exit("Failed to connect");
 		else if (rss == RSS_NEW_CONNECTION)
@@ -458,6 +478,9 @@ int protocol::request_bytes(unsigned char *where_to, unsigned int n_bits, bool f
 			dolog(LOG_DEBUG, "Send request (%s)", request);
 			if (WRITE(socket_fd, request, 8) != 8)
 			{
+				if (do_exit && *do_exit)
+					return -1;
+
 				close(socket_fd);
 				socket_fd = -1;
 
@@ -470,7 +493,9 @@ int protocol::request_bytes(unsigned char *where_to, unsigned int n_bits, bool f
 		}
 
 		unsigned char reply[8];
-		int rc = READ_TO(socket_fd, reply, 8, comm_time_out);
+		int rc = READ_TO(socket_fd, reply, 8, comm_time_out, do_exit);
+		if (do_exit && *do_exit)
+			return -1;
 		if (rc == 0)
 			continue;
 		if (rc != 8)
@@ -507,8 +532,11 @@ int protocol::request_bytes(unsigned char *where_to, unsigned int n_bits, bool f
                         unsigned char xmit_buffer[8];
 			make_msg(xmit_buffer, 5, pingnr++); // 0005
 
-                        if (WRITE_TO(socket_fd, xmit_buffer, 8, comm_time_out) != 8)
+                        if (WRITE_TO(socket_fd, xmit_buffer, 8, comm_time_out, do_exit) != 8)
                         {
+				if (do_exit && *do_exit)
+					return -1;
+
                                 close(socket_fd);
                                 socket_fd = -1;
                         }
@@ -554,8 +582,11 @@ int protocol::request_bytes(unsigned char *where_to, unsigned int n_bits, bool f
 			if (!buffer_in)
 				error_exit("out of memory allocating %d bytes", will_get_n_bytes);
 
-			if (READ_TO(socket_fd, buffer_in, xmit_bytes, comm_time_out) != xmit_bytes)
+			if (READ_TO(socket_fd, buffer_in, xmit_bytes, comm_time_out, do_exit) != xmit_bytes)
 			{
+				if (do_exit && *do_exit)
+					return -1;
+
 				dolog(LOG_INFO, "Network read error (data)");
 
 				free(buffer_in);

@@ -35,11 +35,12 @@
 const char *pid_file = PID_DIR "/client_egd.pid";
 const char *client_type = "client_egd " VERSION;
 
+bool do_exit = false;
+
 void sig_handler(int sig)
 {
 	fprintf(stderr, "Exit due to signal %d\n", sig);
-	unlink(pid_file);
-	exit(0);
+	do_exit = true;
 }
 
 void egd_get__failure(int fd)
@@ -137,11 +138,11 @@ void egd_put(int fd, protocol *p)
 
 void handle_client(int fd, protocol *p)
 {
-	for(;;)
+	for(;!do_exit;)
 	{
 		unsigned char egd_msg;
 
-		if (READ(fd, &egd_msg, 1) != 1)
+		if (READ(fd, &egd_msg, 1, &do_exit) != 1)
 		{
 			dolog(LOG_INFO, "EGD client disconnected");
 
@@ -209,7 +210,7 @@ void help(void)
 	printf("-X file   read username+password from file\n");
 }
 
-void start_child(int fd, bool do_not_fork, struct sockaddr *ca, protocol *p)
+void start_child(int fd, bool do_not_fork, struct sockaddr *ca, std::vector<std::string> *hosts, std::string username, std::string password)
 {
 	if (fd != -1)
 	{
@@ -220,7 +221,11 @@ void start_child(int fd, bool do_not_fork, struct sockaddr *ca, protocol *p)
 
 		if (pid == 0)
 		{
+			protocol *p = new protocol(hosts, username, password, false, client_type, DEFAULT_COMM_TO);
+
 			handle_client(fd, p);
+
+			delete p;
 
 			if (!do_not_fork)
 				exit(0);
@@ -315,9 +320,6 @@ int main(int argc, char *argv[])
 
 	set_logging_parameters(log_console, log_logfile, log_syslog, log_level);
 
-	protocol *p1 = new protocol(&hosts, username, password, false, client_type, DEFAULT_COMM_TO);
-	protocol *p2 = new protocol(&hosts, username, password, false, client_type, DEFAULT_COMM_TO);
-
 	if (uds != NULL)
 		u_listen_fd = open_unixdomain_socket(uds, nListen);
 
@@ -338,7 +340,7 @@ int main(int argc, char *argv[])
 	signal(SIGINT , sig_handler);
 	signal(SIGQUIT, sig_handler);
 
-	for(;;)
+	for(; !do_exit;)
 	{
 		fd_set a_fds;
 		FD_ZERO(&a_fds);
@@ -360,10 +362,10 @@ int main(int argc, char *argv[])
 		socklen_t addr_len = sizeof addr;
 
 		if (u_listen_fd != -1 && FD_ISSET(u_listen_fd, &a_fds))
-			start_child(accept(u_listen_fd, &addr, &addr_len), do_not_fork, &addr, p1);
+			start_child(accept(u_listen_fd, &addr, &addr_len), do_not_fork, &addr, &hosts, username, password);
 
 		if (t_listen_fd != -1 && FD_ISSET(t_listen_fd, &a_fds))
-			start_child(accept(t_listen_fd, &addr, &addr_len), do_not_fork, &addr, p2);
+			start_child(accept(t_listen_fd, &addr, &addr_len), do_not_fork, &addr, &hosts, username, password);
 	}
 
 	unlink(pid_file);

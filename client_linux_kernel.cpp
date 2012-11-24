@@ -31,11 +31,12 @@
 const char *pid_file = PID_DIR "/client_linux_kernel.pid";
 const char *client_type = "client_linux_kernel " VERSION;
 
+bool do_exit = false;
+
 void sig_handler(int sig)
 {
 	fprintf(stderr, "Exit due to signal %d\n", sig);
-	unlink(pid_file);
-	exit(0);
+	do_exit = true;
 }
 
 void help(void)
@@ -146,7 +147,7 @@ int main(int argc, char *argv[])
 
 	bit_count_estimator bce(BCE_SHANNON);
 
-	for(;;)
+	for(;!do_exit;)
 	{
 		struct timeval tv, *ptv = NULL;
 
@@ -164,7 +165,7 @@ int main(int argc, char *argv[])
 		FD_SET(dev_random_fd, &write_fd);
 
 		dolog(LOG_DEBUG, "wait for low-event");
-		for(;;)
+		for(;!do_exit;)
 		{
 			int rc = select(dev_random_fd + 1, NULL, &write_fd, NULL, ptv);
 			if (rc > 0) break;
@@ -173,6 +174,9 @@ int main(int argc, char *argv[])
 			if (errno != EINTR && errno != EAGAIN)
 				error_exit("Select error: %m");
 		}
+
+		if (do_exit)
+			break;
 
 		int n_bits_in_kernel_rng = kernel_rng_get_entropy_count();
 		dolog(LOG_DEBUG, "kernel rng bit count: %d", n_bits_in_kernel_rng);
@@ -200,7 +204,9 @@ int main(int argc, char *argv[])
 				error_exit("out of memory allocating %d bytes", n_bytes_to_get);
 			lock_mem(buffer, n_bytes_to_get);
 
-			int n_bytes = p -> request_bytes(buffer, n_bits_to_get, false);
+			int n_bytes = p -> request_bytes(buffer, n_bits_to_get, false, &do_exit);
+			if (do_exit)
+				break;
 
 			int is_n_bits = bce.get_bit_count(reinterpret_cast<unsigned char *>(buffer), n_bytes);
 

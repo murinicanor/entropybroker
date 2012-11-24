@@ -36,11 +36,12 @@
 const char *pid_file = PID_DIR "/client_egd.pid";
 const char *client_type = NULL;
 
+bool do_exit = false;
+
 void sig_handler(int sig)
 {
 	fprintf(stderr, "Exit due to signal %d\n", sig);
-	unlink(pid_file);
-	exit(0);
+	do_exit = true;
 }
 
 void help(bool is_eb_client_file)
@@ -196,14 +197,17 @@ int main(int argc, char *argv[])
 
 	unsigned char buffer[4096];
 	lock_mem(buffer, sizeof buffer);
-	while(count > 0 || count == -1)
+
+	while((count > 0 || count == -1) && do_exit == false)
 	{
 		int n_bytes_to_get = mymin(block_size, mymin(count <= 0 ? 4096 : count, 4096));
 		int n_bits_to_get = n_bytes_to_get * 8;
 
 		dolog(LOG_INFO, "will get %d bits", n_bits_to_get);
 
-		int n_bytes = p -> request_bytes(buffer, n_bits_to_get, false);
+		int n_bytes = p -> request_bytes(buffer, n_bits_to_get, false, &do_exit);
+		if (do_exit)
+			break;
 
 		if (count == -1) { }
 		else if (n_bytes >= count)
@@ -217,6 +221,7 @@ int main(int argc, char *argv[])
 		if (sleep_time > 0)
 			sleep(sleep_time);
 	}
+
 	memset(buffer, 0x00, sizeof buffer);
 	unlock_mem(buffer, sizeof buffer);
 

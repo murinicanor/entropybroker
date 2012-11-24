@@ -7,7 +7,6 @@
 #include "error.h"
 #include "utils.h"
 #include "log.h"
-#include "utils.h"
 #include "hasher.h"
 #include "math.h"
 #include "stirrer.h"

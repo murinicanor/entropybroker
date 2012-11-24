@@ -29,6 +29,7 @@
 
 #include "defines.h"
 #include "error.h"
+#include "utils.h"
 #include "log.h"
 #include "kernel_prng_rw.h"
 #include "my_pty.h"
@@ -61,7 +62,7 @@ double get_ts()
         return double(ts.tv_sec) + double(ts.tv_usec) / 1000000.0;
 }
 
-int READ(int fd, char *whereto, size_t len)
+int READ(int fd, char *whereto, size_t len, bool *do_exit)
 {
 	ssize_t cnt=0;
 
@@ -73,6 +74,9 @@ int READ(int fd, char *whereto, size_t len)
 
 		if (rc == -1)
 		{
+			if (do_exit && *do_exit)
+				return -1;
+
 			if (errno != EINTR && errno != EINPROGRESS && errno != EAGAIN)
 				return -1;
 		}
@@ -91,12 +95,12 @@ int READ(int fd, char *whereto, size_t len)
 	return cnt;
 }
 
-int READ(int fd, unsigned char *whereto, size_t len)
+int READ(int fd, unsigned char *whereto, size_t len, bool *do_exit)
 {
-	return READ(fd, reinterpret_cast<char *>(whereto), len);
+	return READ(fd, reinterpret_cast<char *>(whereto), len, do_exit);
 }
 
-int READ_TO(int fd, char *whereto, size_t len, double to)
+int READ_TO(int fd, char *whereto, size_t len, double to, bool *do_exit)
 {
 	double end_ts = get_ts() + to;
 	ssize_t cnt=0;
@@ -121,6 +125,9 @@ int READ_TO(int fd, char *whereto, size_t len, double to)
 		rc = select(fd + 1, &rfds, NULL, NULL, &tv);
 		if (rc == -1)
 		{
+			if (do_exit && *do_exit)
+				return -1;
+
 			if (errno == EINTR || errno == EINPROGRESS || errno == EAGAIN)
 				continue;
 
@@ -156,12 +163,12 @@ int READ_TO(int fd, char *whereto, size_t len, double to)
 	return cnt;
 }
 
-int READ_TO(int fd, unsigned char *whereto, size_t len, double to)
+int READ_TO(int fd, unsigned char *whereto, size_t len, double to, bool *do_exit)
 {
-	return READ_TO(fd, reinterpret_cast<char *>(whereto), len, to);
+	return READ_TO(fd, reinterpret_cast<char *>(whereto), len, to, do_exit);
 }
 
-int WRITE(int fd, const char *whereto, size_t len)
+int WRITE(int fd, const char *whereto, size_t len, bool *do_exit)
 {
 	ssize_t cnt=0;
 
@@ -173,6 +180,9 @@ int WRITE(int fd, const char *whereto, size_t len)
 
 		if (rc == -1)
 		{
+			if (do_exit && *do_exit)
+				return -1;
+
 			if (errno != EINTR && errno != EINPROGRESS && errno != EAGAIN)
 				return -1;
 		}
@@ -191,12 +201,12 @@ int WRITE(int fd, const char *whereto, size_t len)
 	return cnt;
 }
 
-int WRITE(int fd, const unsigned char *whereto, size_t len)
+int WRITE(int fd, const unsigned char *whereto, size_t len, bool *do_exit)
 {
-	return WRITE(fd, reinterpret_cast<const char *>(whereto), len);
+	return WRITE(fd, reinterpret_cast<const char *>(whereto), len, do_exit);
 }
 
-int WRITE_TO(int fd, const char *whereto, size_t len, double to)
+int WRITE_TO(int fd, const char *whereto, size_t len, double to, bool *do_exit)
 {
 	double end_ts = get_ts() + to;
 	ssize_t cnt=0;
@@ -221,6 +231,9 @@ int WRITE_TO(int fd, const char *whereto, size_t len, double to)
 		rc = select(fd + 1, NULL, &wfds, NULL, &tv);
 		if (rc == -1)
 		{
+			if (do_exit && *do_exit)
+				return -1;
+
 			if (errno == EINTR || errno == EINPROGRESS || errno == EAGAIN)
 				continue;
 
@@ -256,9 +269,9 @@ int WRITE_TO(int fd, const char *whereto, size_t len, double to)
 	return cnt;
 }
 
-int WRITE_TO(int fd, const unsigned char *whereto, size_t len, double to)
+int WRITE_TO(int fd, const unsigned char *whereto, size_t len, double to, bool *do_exit)
 {
-	return WRITE_TO(fd, reinterpret_cast<const char *>(whereto), len, to);
+	return WRITE_TO(fd, reinterpret_cast<const char *>(whereto), len, to, do_exit);
 }
 
 int start_listen(const char *adapter, int portnr, int listen_queue_size)
@@ -821,7 +834,7 @@ std::string time_to_str(time_t t)
 	struct tm *tm = localtime(&t);
 
 	char time_buffer[128];
-	strftime(time_buffer, sizeof time_buffer, "%a, %d %b %y %T %z", tm);
+	strftime(time_buffer, sizeof time_buffer, "%a, %d %b %Y %T %z", tm);
 
 	return std::string(time_buffer);
 }

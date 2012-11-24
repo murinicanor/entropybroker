@@ -30,7 +30,7 @@ private:
 
 	void do_encrypt(unsigned char *buffer_in, unsigned char *buffer_out, int n_bytes);
 	void do_decrypt(unsigned char *buffer_in, unsigned char *buffer_out, int n_bytes);
-	reconnect_status_t reconnect_server_socket();
+	reconnect_status_t reconnect_server_socket(bool *do_exit);
 	void error_sleep(int count);
 
 public:
@@ -38,8 +38,8 @@ public:
 	~protocol();
 
 	unsigned int get_max_get_put_size() { return max_get_put_size; }
-	int sleep_interruptable(double how_long);
-	int message_transmit_entropy_data(unsigned char *bytes_in, unsigned int n_bytes);
-	int request_bytes(unsigned char *where_to, unsigned int n_bits, bool fail_on_no_bits);
+	int sleep_interruptable(double how_long, bool *do_exit = NULL);
+	int message_transmit_entropy_data(unsigned char *bytes_in, unsigned int n_bytes, bool *do_exit = NULL);
+	int request_bytes(unsigned char *where_to, unsigned int n_bits, bool fail_on_no_bits, bool *do_exit = NULL);
 	void drop();
 };
