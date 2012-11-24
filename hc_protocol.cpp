@@ -109,8 +109,7 @@ void update_client_fips140_scc(client_t *p, unsigned char *data, int n)
 
 int do_client_get(client_t *client, bool *no_bits)
 {
-	client -> stats_user -> register_msg(false);
-	client -> stats_glob -> register_msg(false);
+	client -> last_get_message = get_ts();
 
 	*no_bits = false;
 
@@ -264,8 +263,7 @@ int do_client_get(client_t *client, bool *no_bits)
 
 int do_client_put(client_t *client, bool *new_bits, bool *is_full)
 {
-	client -> stats_user -> register_msg(true);
-	client -> stats_glob -> register_msg(true);
+	client -> last_put_message = get_ts();
 
 	bool warn_all_full = false;
 
@@ -463,11 +461,11 @@ int do_client(client_t *client, bool *no_bits, bool *new_bits, bool *is_full)
 
 	u = client -> pu -> find_and_lock_user(client -> username);
 	u -> stats_user() -> inc_protocol_error();
-	u -> stats_user() -> register_msg(false);
 	client -> pu -> unlock_user(u);
 
+	client -> last_message = get_ts();
+
 	client -> stats_glob -> inc_protocol_error();
-	client -> stats_glob -> register_msg(false);
 
 	dolog(LOG_INFO, "client|%s command '%s' unknown", client -> host.c_str(), cmd);
 
