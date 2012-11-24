@@ -30,11 +30,12 @@ const char *pid_file = PID_DIR "/server_kernel.pid";
 #include "kernel_prng_io.h"
 #include "kernel_prng_rw.h"
 
+bool do_exit = false;
+
 void sig_handler(int sig)
 {
 	fprintf(stderr, "Exit due to signal %d\n", sig);
-	unlink(pid_file);
-	exit(0);
+	do_exit = true;
 }
 
 void help(void)
@@ -149,7 +150,7 @@ int main(int argc, char *argv[])
 
 	init_showbps();
 	set_showbps_start_ts();
-	for(;;)
+	for(;!do_exit;)
 	{
 		dolog(LOG_DEBUG, "Bits available: %d", kernel_rng_get_entropy_count());
 
@@ -165,13 +166,16 @@ int main(int argc, char *argv[])
 			}
 		}
 
+		if (do_exit)
+			break;
+
 		if (show_bps)
 			update_showbps(sizeof bytes);
 
 		if (bytes_file)
 			emit_buffer_to_file(bytes_file, bytes, sizeof bytes);
 
-		if (p && p -> message_transmit_entropy_data(bytes, sizeof bytes) == -1)
+		if (p && p -> message_transmit_entropy_data(bytes, sizeof bytes, &do_exit) == -1)
 		{
 			dolog(LOG_INFO, "connection closed");
 			p -> drop();
