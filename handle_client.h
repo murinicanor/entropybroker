@@ -27,6 +27,9 @@ typedef struct
 	encrypt_stream *stream_cipher;
 	hasher *mac_hasher;
 
+	double connected_since;
+	double last_message, last_put_message, last_get_message;
+
 	pool_crypto *pc;
 
 	int bits_sent, bits_recv;

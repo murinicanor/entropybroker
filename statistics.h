@@ -62,13 +62,6 @@ private:
 	pthread_mutex_t misc_errors_lck;
 	int misc_errors;
 
-	pthread_mutex_t time_lck;
-	double last_message, last_put_message, last_get_message;
-	double connected_since;
-
-	void lock_all();
-	void unlock_all();
-
 public:
 	statistics();
 	~statistics();
@@ -86,7 +79,6 @@ public:
 	void inc_misc_errors();
 	void track_sents(int cur_n_bits);
 	void track_recvs(int n_bits_added, int n_bits_added_in);
-	void register_msg(bool is_put);
 	void put_history_log(hl_type_t, std::string host_in, std::string type_in, std::string user_in, double start_ts, double duration_in, std::string details);
 
 	int get_reset_bps_cur();
@@ -101,10 +93,6 @@ public:
 	int get_misc_errors();
 	void get_recvs(long long int *total_bits, int *n_reqs, long long int *total_bits_in);
 	void get_sents(long long int *total_bits, int *n_sents);
-	double get_last_msg_ts();
-	double get_since_ts();
-	double get_last_put_msg_ts();
-	double get_last_get_msg_ts();
 	std::vector<history_logins> get_login_history();
 	void get_sent_avg_sd(double *avg, double *sd);
 	void get_recv_avg_sd(double *avg, double *sd);

@@ -51,7 +51,7 @@ statistics::statistics()
 	misc_errors = protocol_error = network_error = 0;
 
 	msg_cnt = 0;
-	last_message = last_put_message = last_get_message = connected_since = 0;
+	last_message = last_put_message = last_get_message = 0;
 }
 
 statistics::~statistics()
@@ -210,9 +210,6 @@ void statistics::register_msg(bool is_put)
 
 	my_mutex_lock(&time_lck);
 
-	if (connected_since == 0)
-		connected_since = now;
-
 	last_message = now;
 
 	if (is_put)
@@ -227,15 +224,6 @@ double statistics::get_last_msg_ts()
 {
 	my_mutex_lock(&time_lck);
 	double dummy = last_message;
-	my_mutex_unlock(&time_lck);
-
-	return dummy;
-}
-
-double statistics::get_since_ts()
-{
-	my_mutex_lock(&time_lck);
-	double dummy = connected_since;
 	my_mutex_unlock(&time_lck);
 
 	return dummy;

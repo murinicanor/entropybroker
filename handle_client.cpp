@@ -54,7 +54,7 @@ void forget_client_index(statistics *s, std::vector<client_t *> *clients, int nr
 	client_t *p = clients -> at(nr);
 
 	double now_ts = get_ts();
-	double since_ts = p -> stats_user -> get_since_ts();
+	double since_ts = p -> connected_since;
 	s -> put_history_log(HL_LOGOUT_OK, p -> host, p -> type, p -> username, since_ts, now_ts - since_ts, "");
 
 	close(p -> socket_fd);
@@ -79,8 +79,6 @@ void forget_client_index(statistics *s, std::vector<client_t *> *clients, int nr
 	delete p -> pscc;
 
 	delete p -> pc;
-
-	delete p -> stats_user;
 
 	delete p;
 	clients -> erase(clients -> begin() + nr);
@@ -421,6 +419,8 @@ void register_new_client(int listen_socket_fd, std::vector<client_t *> *clients,
 		p -> pscc     -> set_user(p -> host.c_str());
 		p -> pscc -> set_threshold(config -> scc_threshold);
 
+		p -> connected_since = get_ts();
+
 		p -> ivec_counter = 0;
 
 		p -> bits_sent = p -> bits_recv = 0;
@@ -429,8 +429,6 @@ void register_new_client(int listen_socket_fd, std::vector<client_t *> *clients,
 		p -> ignore_rngtest_fips140 = config -> ignore_rngtest_fips140;
 		p -> ignore_rngtest_scc = config -> ignore_rngtest_scc;
 		p -> allow_prng = config -> allow_prng;
-
-		p -> stats_user = new statistics();
 
 		p -> pc = new pool_crypto(config -> st, config -> ht, config -> rs);
 		if (!p -> pc)
@@ -705,8 +703,8 @@ void main_loop(std::vector<client_t *> *clients, pthread_mutex_t *clients_mutex,
 						p -> host.c_str(), p -> type.c_str(), p -> pfips140 -> stats(),
 						p -> pscc -> stats().c_str(),
 						p -> bits_sent, p -> bits_recv,
-						(long int)(now - p -> stats_user -> get_last_msg_ts()),
-						(long int)(now - p -> stats_user -> get_since_ts()));
+						(long int)(now - p -> get_last_msg_ts()),
+						(long int)(now - p -> get_since_ts()));
 				my_mutex_unlock(&p -> stats_lck);
 			}
 
