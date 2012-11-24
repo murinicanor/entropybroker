@@ -57,17 +57,15 @@ http_bundle * http_file_users::do_request(http_request_t request_type, std::stri
 	std::map<std::string, user_t> user_map = pusers -> get_usermap();
 
 	content += "<table class=\"table2 fullwidth\">\n";
-	content += "<tr class=\"lighttable\"><td>user</td><td>bits recv</td><td>bits sent</td><td>errors</td><td>warnings</td>...</tr>\n";
+	content += "<tr class=\"lighttable\"><td>user</td><td>bits put</td><td>bits put raw</td><td>bits sent</td><td colspan=\"5\"></td></tr>\n";
+	content += "<tr class=\"lighttable\"><td colspan=\"2\">latest logon</td><td colspan=\"2\">last message</td><td colspan=\"2\">last put</td><td colspan=\"2\">last get</td><td></td></tr>\n";
+	content += "<tr class=\"lighttable\"><td>msgs</td><td>disconnects</td><td>empty</td><td>full</td><td>quota reached</td><td>submit while full</td><td>network error</td><td>protocol error</td><td>misc error</td></tr>\n";
 
 	std::map<std::string, user_t>::iterator uit = user_map.begin();
 	for(; uit != user_map.end(); uit++)
 	{
-		content += "<tr><td>";
-		content += uit -> second.username;
-		content += "</td><td>";
-
 		int cnt = 0;
-		int reset_bps_cur = 0, msg_cnt = 0, disconnects = 0, times_empty = 0, times_full = 0, times_quota = 0, submit_while_full = 0, network_error = 0, protocol_error = 0, misc_errors = 0;
+		int msg_cnt = 0, disconnects = 0, times_empty = 0, times_full = 0, times_quota = 0, submit_while_full = 0, network_error = 0, protocol_error = 0, misc_errors = 0;
 		long long int total_bits_recv = 0, total_bits_recv_in = 0, total_bits_sents = 0;
 		int n_reqs = 0, n_sents = 0;
 		double since_ts = now + 10000.0; // min if != 0
@@ -87,7 +85,6 @@ http_bundle * http_file_users::do_request(http_request_t request_type, std::stri
 
 			cnt++;
 
-			reset_bps_cur += pcs -> get_reset_bps_cur();
 			msg_cnt += pcs -> get_msg_cnt();
 			disconnects += pcs -> get_disconnects();
 			times_empty += pcs -> get_times_empty();
@@ -136,7 +133,47 @@ http_bundle * http_file_users::do_request(http_request_t request_type, std::stri
 		recv_in_avg /= dcnt;
 		recv_in_sd /= dcnt;
 
-		// emit
+		// ** emit
+		// row 1
+		content += "<tr class=\"lighttable3\"><td class=\"lighttable4\">";
+		content += uit -> second.username;
+		content += "</td><td>";
+		content += format("%lld", total_bits_recv);
+		content += "</td><td>";
+		content += format("%lld", total_bits_recv_in);
+		content += "</td><td>";
+		content += format("%lld", total_bits_sents);
+		content += "</td><td colspan=\"5\"></td></tr>\n";
+		// row 2
+		content += "<tr class=\"lighttable2\"><td colspan=\"2\">";
+		content += time_to_str((time_t)since_ts);
+		content += "</td><td colspan=\"2\">";
+		content += time_to_str((time_t)msg_ts);
+		content += "</td><td colspan=\"2\">";
+		content += time_to_str((time_t)put_msg_ts);
+		content += "</td><td colspan=\"2\">";
+		content += time_to_str((time_t)get_msg_ts);
+		content += "</td><td></td></tr>\n";
+		// row 3
+		content += "<tr><td>";
+		content += format("%d", msg_cnt);
+		content += "</td><td>";
+		content += format("%d", disconnects);
+		content += "</td><td>";
+		content += format("%d", times_empty);
+		content += "</td><td>";
+		content += format("%d", times_full);
+		content += "</td><td>";
+		content += format("%d", times_quota);
+		content += "</td><td>";
+		content += format("%d", submit_while_full);
+		content += "</td><td>";
+		content += format("%d", network_error);
+		content += "</td><td>";
+		content += format("%d", protocol_error);
+		content += "</td><td>";
+		content += format("%d", misc_errors);
+		content += "</td></tr>\n";
 
 		my_mutex_unlock(clients_mutex);
 
