@@ -32,8 +32,6 @@ typedef struct
 	int bits_sent, bits_recv;
 	pthread_mutex_t stats_lck;
 
-	statistics *stats_user;
-
 	// globals
 	users *pu;
 	config_t *config;

@@ -19,6 +19,7 @@
 #include "stirrer_type.h"
 #include "pool_crypto.h"
 #include "pool.h"
+#include "statistics.h"
 #include "users.h"
 #include "encrypt_stream.h"
 #include "config.h"
@@ -27,7 +28,6 @@
 #include "utils.h"
 #include "signals.h"
 #include "protocol.h"
-#include "statistics.h"
 #include "auth.h"
 #include "handle_client.h"
 #include "hc_protocol.h"
@@ -425,7 +425,10 @@ int do_client(client_t *client, bool *no_bits, bool *new_bits, bool *is_full)
 {
 	char cmd[4];
 
-	client -> stats_user -> inc_msg_cnt();
+	user_t *u = client -> pu -> find_and_lock_user(client -> username);
+	u -> stats_user() -> inc_msg_cnt();
+	client -> pu -> unlock_user(u);
+
 	client -> stats_glob -> inc_msg_cnt();
 
 	int rc = READ_TO(client -> socket_fd, cmd, 4, client -> config -> communication_timeout);
@@ -449,16 +452,21 @@ int do_client(client_t *client, bool *no_bits, bool *new_bits, bool *is_full)
 	{
 		dolog(LOG_DEBUG, "client|%s LOGOUT (fd: %d)", client -> host.c_str(), client -> socket_fd);
 
-		client -> stats_user -> inc_disconnects();
+		u = client -> pu -> find_and_lock_user(client -> username);
+		u -> stats_user() -> inc_disconnects();
+		client -> pu -> unlock_user(u);
+
 		client -> stats_glob -> inc_disconnects();
 
 		return -1;
 	}
 
-	client -> stats_user -> inc_protocol_error();
-	client -> stats_glob -> inc_protocol_error();
+	u = client -> pu -> find_and_lock_user(client -> username);
+	u -> stats_user() -> inc_protocol_error();
+	u -> stats_user() -> register_msg(false);
+	client -> pu -> unlock_user(u);
 
-	client -> stats_user -> register_msg(false);
+	client -> stats_glob -> inc_protocol_error();
 	client -> stats_glob -> register_msg(false);
 
 	dolog(LOG_INFO, "client|%s command '%s' unknown", client -> host.c_str(), cmd);

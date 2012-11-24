@@ -203,3 +203,23 @@ std::map<std::string, user_t> users::get_usermap()
 
 	return result;
 }
+
+user_t *users::find_and_lock_user(std::string username);
+{
+	list_rlock();
+
+	user_t *u = find_user(username);
+	if (!u)
+		u = &dummy_user;
+
+	my_mutex_lock(&u -> lck);
+
+	return u;
+}
+
+void users::unlock_user(user_t *u)
+{
+	my_mutex_unlock(&u -> lck);
+
+	list_runlock();
+}
