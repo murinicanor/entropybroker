@@ -127,7 +127,14 @@ protocol::protocol(std::vector<std::string> *hosts_in, std::string username_in, 
 protocol::~protocol()
 {
 	if (socket_fd != -1)
+	{
+		unsigned char logout_msg[8] = { 0 };
+
+		make_msg(logout_msg, 9999, 0); // 9999 = logout
+		(void)WRITE_TO(socket_fd, logout_msg, 8, comm_time_out);
+
 		close(socket_fd);
+	}
 
 	delete stream_cipher;
 	delete mac_hasher;

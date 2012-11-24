@@ -41,11 +41,14 @@ const char *pid_file = PID_DIR "/eb_server_audio.pid";
 
 #define mymax(x, y)	((x)>(y)?(x):(y))
 
+bool do_exit = false;
+
 void sig_handler(int sig)
 {
+	signal(sig, SIG_IGN);
+
 	fprintf(stderr, "Exit due to signal %d\n", sig);
-	unlink(pid_file);
-	exit(0);
+	do_exit = true;
 }
 
 int setparams(snd_pcm_t *chandle, int sample_rate, snd_pcm_format_t *format, const char *cdevice)
@@ -123,13 +126,14 @@ void recover_sound_dev(snd_pcm_t **chandle, bool is_open, const char *cdevice, s
 		snd_pcm_close(*chandle);
 
 	int err = -1;
-	while ((err = snd_pcm_open(chandle, cdevice, SND_PCM_STREAM_CAPTURE, 0)) < 0)
+	while ((err = snd_pcm_open(chandle, cdevice, SND_PCM_STREAM_CAPTURE, 0)) < 0 && !do_exit)
 	{
 		dolog(LOG_WARNING, "snd_pcm_open open error: %s (retrying)", snd_strerror(err));
 		sleep(1);
 	}
 
-	setparams(*chandle, DEFAULT_SAMPLE_RATE, format, cdevice);
+	if (!do_exit)
+		setparams(*chandle, DEFAULT_SAMPLE_RATE, format, cdevice);
 }
 
 void main_loop(std::vector<std::string> * hosts, char *bytes_file, char show_bps, std::string username, std::string password, const char *cdevice)
@@ -160,7 +164,7 @@ void main_loop(std::vector<std::string> * hosts, char *bytes_file, char show_bps
 
 	init_showbps();
 	set_showbps_start_ts();
-	for(;;)
+	for(;!do_exit;)
 	{
 		char got_any = 0;
 
@@ -192,7 +196,7 @@ void main_loop(std::vector<std::string> * hosts, char *bytes_file, char show_bps
 		/* Read a buffer of audio */
 		n_to_do = DEFAULT_SAMPLE_RATE * 2;
 		dummy = input_buffer;
-		while (n_to_do > 0)
+		while (n_to_do > 0 && !do_exit)
 		{
 			snd_pcm_sframes_t frames_read = snd_pcm_readi(chandle, dummy, n_to_do);
 			/* Make	sure we	aren't hitting a disconnect/suspend case */
@@ -218,7 +222,7 @@ void main_loop(std::vector<std::string> * hosts, char *bytes_file, char show_bps
 		}
 
 		/* de-biase the data */
-		for(loop=0; loop<(DEFAULT_SAMPLE_RATE * 2/*16bits*/ * 2/*stereo*/ * 2); loop+=8)
+		for(loop=0; loop<(DEFAULT_SAMPLE_RATE * 2/*16bits*/ * 2/*stereo*/ * 2) && !do_exit; loop+=8)
 		{
 			int w1, w2, w3, w4, o1, o2;
 
@@ -309,7 +313,8 @@ void main_loop(std::vector<std::string> * hosts, char *bytes_file, char show_bps
 
 	unlock_mem(bytes, sizeof bytes);
 
-	snd_pcm_close(chandle);
+	if (!do_exit)
+		snd_pcm_close(chandle);
 
 	delete p;
 }
@@ -406,4 +411,8 @@ int main(int argc, char *argv[])
 	main_loop(&hosts, bytes_file, show_bps, username, password, cdevice);
 
 	unlink(pid_file);
+
+	fprintf(stderr, "program terminated\n");
+
+	return 0;
 }

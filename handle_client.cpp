@@ -230,18 +230,21 @@ int send_request_from_main_to_clients(client_t *p)
 ///
 
 	int rc_client = 0;
-	if (need_data)
-		rc_client |= notify_server_data_needed(p -> socket_fd, p -> stats_glob, p -> config);
+	if (need_data && rc_client == 0)
+		rc_client = notify_server_data_needed(p -> socket_fd, p -> config);
 
-	if (have_data)
-		rc_client |= notify_client_data_available(p -> socket_fd, p -> ppools, p -> stats_glob, p -> config);
+	if (have_data && rc_client == 0)
+		rc_client = notify_client_data_available(p -> socket_fd, p -> ppools, p -> config);
 
-	if (is_full)
-		rc_client |= notify_server_full(p -> socket_fd, p -> stats_glob, p -> config);
+	if (is_full && rc_client == 0)
+		rc_client = notify_server_full(p -> socket_fd, p -> config);
 
 	if (rc_client)
 	{
 		dolog(LOG_INFO, "Connection with %s lost", p -> host.c_str());
+
+		p -> stats_user -> inc_network_error();
+		p -> stats_glob -> inc_network_error();
 
 		return -1;
 	}

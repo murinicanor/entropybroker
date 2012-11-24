@@ -264,6 +264,9 @@ int do_client_get(client_t *client, bool *no_bits)
 
 int do_client_put(client_t *client, bool *new_bits, bool *is_full)
 {
+	client -> stats_user -> register_msg(true);
+	client -> stats_glob -> register_msg(true);
+
 	bool warn_all_full = false;
 
 	*new_bits = false;
@@ -440,9 +443,16 @@ int do_client(client_t *client, bool *no_bits, bool *new_bits, bool *is_full)
 	else if (memcmp(cmd, "0002", 4) == 0)	// PUT bits
 	{
 		rc = do_client_put(client, new_bits, is_full);
-		client -> stats_user -> register_msg(true);
-		client -> stats_glob -> register_msg(true);
 		return rc;
+	}
+	else if (memcmp(cmd, "9999", 4) == 0)	// logout
+	{
+		dolog(LOG_DEBUG, "client|%s LOGOUT (fd: %d)", client -> host.c_str(), client -> socket_fd);
+
+		client -> stats_user -> inc_disconnects();
+		client -> stats_glob -> inc_disconnects();
+
+		return -1;
 	}
 
 	client -> stats_user -> inc_protocol_error();
@@ -456,42 +466,30 @@ int do_client(client_t *client, bool *no_bits, bool *new_bits, bool *is_full)
 	return -1;
 }
 
-int notify_server_full(int socket_fd, statistics *stats, config_t *config)
+int notify_server_full(int socket_fd, config_t *config)
 {
 	unsigned char buffer[8];
 
 	make_msg(buffer, 9004, 0); // 9004
 
 	if (WRITE_TO(socket_fd, buffer, 8, config -> communication_timeout) != 8)
-	{
-		stats -> inc_disconnects();
-
 		return -1;
-	}
 
 	return 0;
 }
 
-int notify_client_data_available(int socket_fd, pools *ppools, statistics *stats, config_t *config)
+int notify_client_data_available(int socket_fd, pools *ppools, config_t *config)
 {
 	if (send_got_data(socket_fd, ppools, config) == -1)
-	{
-		stats -> inc_disconnects();
-
 		return -1;
-	}
 
 	return 0;
 }
 
-int notify_server_data_needed(int socket_fd, statistics *stats, config_t *config)
+int notify_server_data_needed(int socket_fd, config_t *config)
 {
 	if (send_need_data(socket_fd, config) == -1)
-	{
-		stats -> inc_disconnects();
-
 		return -1;
-	}
 
 	return 0;
 }
