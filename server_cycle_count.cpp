@@ -28,6 +28,8 @@ const char *pid_file = PID_DIR "/server_cycle_count.pid";
 #include "statistics.h"
 #include "auth.h"
 
+bool do_exit = false;
+
 inline unsigned long long GetCC(void)
 {
   unsigned a, d; 
@@ -54,9 +56,6 @@ void fiddle(fiddle_state_t *p)
 
 	while(p -> index >= p -> cache_size * 3)
 		p -> index -= p -> cache_size * 3;
-
-	// trigger an occasional exception
-	p -> a /= (p -> buffer)[p -> index];
 }
 
 int get_cache_size()
@@ -94,12 +93,7 @@ int get_cache_line_size()
 void sig_handler(int sig)
 {
 	fprintf(stderr, "Exit due to signal %d\n", sig);
-	unlink(pid_file);
-	exit(0);
-}
-
-void sig_handler_ign(int sig)
-{
+	do_exit = true;
 }
 
 void help(void)
@@ -214,8 +208,6 @@ int main(int argc, char *argv[])
 	signal(SIGTERM, sig_handler);
 	signal(SIGINT , sig_handler);
 	signal(SIGQUIT, sig_handler);
-	signal(SIGFPE,  sig_handler_ign);
-	signal(SIGSEGV, sig_handler_ign);
 
 	protocol *p = NULL;
 	if (!hosts.empty())
@@ -230,7 +222,7 @@ int main(int argc, char *argv[])
 
 	init_showbps();
 	set_showbps_start_ts();
-	for(;;)
+	for(;!do_exit;)
 	{
 		fiddle(&fs);
 		unsigned long long int a = GetCC();
@@ -264,7 +256,7 @@ int main(int argc, char *argv[])
 				if (bytes_file)
 					emit_buffer_to_file(bytes_file, bytes, index);
 
-				if (p && p -> message_transmit_entropy_data(bytes, index) == -1)
+				if (p && p -> message_transmit_entropy_data(bytes, index, &do_exit) == -1)
 				{
 					dolog(LOG_INFO, "connection closed");
 

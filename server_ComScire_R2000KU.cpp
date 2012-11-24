@@ -34,11 +34,12 @@
 
 const char *pid_file = PID_DIR "/server_ComScire_R2000KU.pid";
 
+bool do_exit = false;
+
 void sig_handler(int sig)
 {
 	fprintf(stderr, "Exit due to signal %d\n", sig);
-	unlink(pid_file);
-	exit(0);
+	do_exit = true;
 }
 
 void help(void)
@@ -175,7 +176,7 @@ int main(int argc, char *argv[])
 	set_showbps_start_ts();
 
 	bool stats_error_reported = false;
-	for(;;)
+	for(;!do_exit;)
 	{
 		int rc = q -> RandBytes(reinterpret_cast<char *>(bytes), 4096);
 		if (rc != QNG_S_OK && rc != S_OK)
@@ -208,7 +209,7 @@ int main(int argc, char *argv[])
 			if (bytes_file)
 				emit_buffer_to_file(bytes_file, bytes, index);
 
-			if (!hosts.empty() && p -> message_transmit_entropy_data(bytes, index) == -1)
+			if (!hosts.empty() && p -> message_transmit_entropy_data(bytes, index, &do_exit) == -1)
 			{
 				dolog(LOG_INFO, "connection closed");
 				p -> drop();
@@ -219,6 +220,8 @@ int main(int argc, char *argv[])
 			index = 0;
 		}
 	}
+
+	delete p;
 
 	memset(bytes, 0x00, sizeof bytes);
 

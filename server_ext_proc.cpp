@@ -22,6 +22,8 @@
 const char *server_type = "server_ext_proc v" VERSION;
 const char *pid_file = PID_DIR "/server_ext_proc.pid";
 
+bool do_exit = false;
+
 #include "defines.h"
 #include "error.h"
 #include "random_source.h"
@@ -38,8 +40,7 @@ const char *pid_file = PID_DIR "/server_ext_proc.pid";
 void sig_handler(int sig)
 {
 	fprintf(stderr, "Exit due to signal %d\n", sig);
-	unlink(pid_file);
-	exit(0);
+	do_exit = true;
 }
 
 void help(void)
@@ -72,15 +73,20 @@ int main(int argc, char *argv[])
 	int slp = DEFAULT_SLEEP;
 	char *bytes_file = NULL;
 	bool show_bps = false;
+	int idle = 0;
 	int log_level = LOG_INFO;
 	std::vector<std::string> hosts;
 
 	fprintf(stderr, "%s, (C) 2009-2012 by folkert@vanheusden.com\n", server_type);
 
-	while((c = getopt(argc, argv, "I:So:hc:Z:X:P:o:p:d:L:l:sn")) != -1)
+	while((c = getopt(argc, argv, "b:I:So:hc:Z:X:P:o:p:d:L:l:sn")) != -1)
 	{
 		switch(c)
 		{
+			case 'b':
+				idle = atoi(optarg);
+				break;
+
 			case 'o':
 				bytes_file = optarg;
 				break;
@@ -174,7 +180,7 @@ int main(int argc, char *argv[])
 
 	init_showbps();
 	set_showbps_start_ts();
-	for(;;)
+	for(;!do_exit;)
 	{
 		if (child_fd == -1)
 		{
@@ -223,7 +229,7 @@ int main(int argc, char *argv[])
 				{
 					int cur_count = mymin(got_bytes, 4096);
 
-					if (p -> message_transmit_entropy_data(pnt, cur_count) == -1)
+					if (p -> message_transmit_entropy_data(pnt, cur_count, &do_exit) == -1)
 					{
 						dolog(LOG_INFO, "connection closed");
 
@@ -239,6 +245,9 @@ int main(int argc, char *argv[])
 
 			data = false;
 		}
+
+		if (idle > 0)
+			sleep(idle);
 	}
 
 	unlink(pid_file);

@@ -32,11 +32,12 @@
 
 const char *pid_file = PID_DIR "/server_egd.pid";
 
+bool do_exit = false;
+
 void sig_handler(int sig)
 {
 	fprintf(stderr, "Exit due to signal %d\n", sig);
-	unlink(pid_file);
-	exit(0);
+	do_exit = true;
 }
 
 int open_tcp_socket(char *host, int port)
@@ -246,7 +247,7 @@ int main(int argc, char *argv[])
 
 	init_showbps();
 	set_showbps_start_ts();
-	for(;;)
+	for(;!do_exit;)
 	{
 		unsigned char request[2], reply[1];
 		int bytes_to_read = mymin(255, mymin(sizeof bytes - index, read_bytes_per_interval));
@@ -254,13 +255,16 @@ int main(int argc, char *argv[])
 		// gather random data from EGD
 		request[0] = 1;
 		request[1] = bytes_to_read;
-		if (WRITE(read_fd, request, sizeof request) != 2)
+		if (WRITE(read_fd, request, sizeof request, &do_exit) != 2)
 			error_exit("Problem sending request to EGD");
-		if (READ(read_fd, reply, 1) != 1)
+		if (do_exit) break;
+		if (READ(read_fd, reply, 1, &do_exit) != 1)
 			error_exit("Problem receiving reply header from EGD");
+		if (do_exit) break;
 		bytes_to_read = reply[0];
-		if (READ(read_fd, &bytes[index], bytes_to_read) != bytes_to_read)
+		if (READ(read_fd, &bytes[index], bytes_to_read, &do_exit) != bytes_to_read)
 			error_exit("Problem receiving reply-data from EGD");
+		if (do_exit) break;
 		index += bytes_to_read;
 		dolog(LOG_DEBUG, "Got %d bytes from EGD", bytes_to_read);
 		////////
@@ -275,14 +279,14 @@ int main(int argc, char *argv[])
 
 			if (p)
 			{
-				if (p -> message_transmit_entropy_data(bytes, index) == -1)
+				if (p -> message_transmit_entropy_data(bytes, index, &do_exit) == -1)
 				{
 					dolog(LOG_INFO, "connection closed");
 
 					p -> drop();
 				}
 
-				if (read_interval > 0.0 && p -> sleep_interruptable(read_interval) != 0)
+				if (read_interval > 0.0 && p -> sleep_interruptable(read_interval, &do_exit) != 0)
 				{
 					dolog(LOG_INFO, "connection closed");
 
