@@ -188,6 +188,8 @@ http_bundle * http_file_stats::do_request(http_request_t request_type, std::stri
 		content += "<tr><td>last message:</td><td>" + time_to_str((time_t)ps -> get_last_msg_ts()) + "</td></tr>\n";
 		content += "<tr><td>last put message:</td><td>" + time_to_str((time_t)ps -> get_last_put_msg_ts()) + "</td></tr>\n";
 
+		content += format("<tr><td>logged out sessions: </td><td>%d</td></tr>\n", ps -> get_disconnects());
+
 		content += format("<tr><td>denied because of quota:</td><td>%d</td></tr>\n", ps -> get_times_quota());
 		content += format("<tr><td>denied because pools empty:</td><td>%d</td></tr>\n", ps -> get_times_empty());
 		content += format("<tr><td>denied because full:</td><td>%d</td></tr>\n", ps -> get_times_full());
