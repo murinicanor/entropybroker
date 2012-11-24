@@ -167,11 +167,11 @@ http_bundle * http_file_users::do_request(http_request_t request_type, std::stri
 		content += format("%d", times_quota);
 		content += "</td><td>";
 		content += format("%d", submit_while_full);
-		content += "</td><td>";
+		content += "</td><td" + std::string(network_error > 0 ? " class=\"darkyellow\"" : "") + ">";
 		content += format("%d", network_error);
-		content += "</td><td>";
+		content += "</td><td" + std::string(protocol_error > 0 ? " class=\"darkyellow\"" : "") + ">";
 		content += format("%d", protocol_error);
-		content += "</td><td>";
+		content += "</td><td" + std::string(misc_errors > 0 ? " class=\"darkyellow\"" : "") + ">";
 		content += format("%d", misc_errors);
 		content += "</td></tr>\n";
 
