@@ -89,7 +89,11 @@ section.content nav a {
 }
 
 .darkyellow {
-        background-color: #383800;
+        background-color: #282800;
+}
+
+.darkred {
+        background-color: #280000;
 }
 
 footer {

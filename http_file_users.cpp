@@ -157,21 +157,21 @@ http_bundle * http_file_users::do_request(http_request_t request_type, std::stri
 		// row 3
 		content += "<tr><td>";
 		content += format("%d", msg_cnt);
-		content += "</td><td>";
+		content += "</td><td" + std::string(disconnects > 0 ? " class=\"darkyellow\"" : "") + ">";
 		content += format("%d", disconnects);
-		content += "</td><td>";
+		content += "</td><td" + std::string(times_empty > 0 ? " class=\"darkyellow\"" : "") + ">";
 		content += format("%d", times_empty);
-		content += "</td><td>";
+		content += "</td><td" + std::string(times_full > 0 ? " class=\"darkyellow\"" : "") + ">";
 		content += format("%d", times_full);
-		content += "</td><td>";
+		content += "</td><td" + std::string(times_quota > 0 ? " class=\"darkyellow\"" : "") + ">";
 		content += format("%d", times_quota);
-		content += "</td><td>";
+		content += "</td><td" + std::string(submit_while_full > 0 ? " class=\"darkyellow\"" : "") + ">";
 		content += format("%d", submit_while_full);
-		content += "</td><td" + std::string(network_error > 0 ? " class=\"darkyellow\"" : "") + ">";
+		content += "</td><td" + std::string(network_error > 0 ? " class=\"darkred\"" : "") + ">";
 		content += format("%d", network_error);
-		content += "</td><td" + std::string(protocol_error > 0 ? " class=\"darkyellow\"" : "") + ">";
+		content += "</td><td" + std::string(protocol_error > 0 ? " class=\"darkred\"" : "") + ">";
 		content += format("%d", protocol_error);
-		content += "</td><td" + std::string(misc_errors > 0 ? " class=\"darkyellow\"" : "") + ">";
+		content += "</td><td" + std::string(misc_errors > 0 ? " class=\"darkred\"" : "") + ">";
 		content += format("%d", misc_errors);
 		content += "</td></tr>\n";
 
