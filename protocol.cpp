@@ -15,7 +15,6 @@
 #include "log.h"
 #include "utils.h"
 #include "math.h"
-#include "users.h"
 #include "encrypt_stream.h"
 #include "hasher.h"
 #include "hasher_type.h"
@@ -30,6 +29,7 @@
 #include "pool.h"
 #include "pools.h"
 #include "statistics.h"
+#include "users.h"
 #include "auth.h"
 
 int recv_length_data(int fd, char **data, unsigned int *len, double to)

@@ -18,8 +18,8 @@
 #include "pools.h"
 #include "config.h"
 #include "encrypt_stream.h"
-#include "users.h"
 #include "statistics.h"
+#include "users.h"
 #include "handle_client.h"
 #include "http_bundle.h"
 #include "http_request_t.h"
@@ -75,11 +75,11 @@ http_bundle * http_file_stats::do_request(http_request_t request_type, std::stri
 			content += std::string("<tr><td>type:</td><td>") + p -> type + "</td></tr>\n";
 			content += std::string("<tr><td>is server:</td><td>") + (p -> is_server ? "yes" : "no") + "</td></tr>\n";
 
-			content += "<tr><td>connected since:</td><td>" + time_to_str((time_t)pcs -> get_since_ts()) + "</td></tr>\n";
-			content += format("<tr><td>duration:</td><td>%fs</td></tr>\n", now - pcs -> get_since_ts());
-			content += format("<tr><td>avg time between msgs:</td><td>%fs</td></tr>\n", (now - pcs -> get_since_ts()) / double(pcs -> get_msg_cnt()));
-			content += "<tr><td>last message:</td><td>" + time_to_str((time_t)pcs -> get_last_msg_ts()) + "</td></tr>\n";
-			content += "<tr><td>last put message:</td><td>" + time_to_str((time_t)pcs -> get_last_put_msg_ts()) + "</td></tr>\n";
+			content += "<tr><td>connected since:</td><td>" + time_to_str((time_t)p -> connected_since) + "</td></tr>\n";
+			content += format("<tr><td>duration:</td><td>%fs</td></tr>\n", now - p -> connected_since);
+			content += format("<tr><td>avg time between msgs:</td><td>%fs</td></tr>\n", (now - p -> connected_since) / double(pcs -> get_msg_cnt()));
+			content += "<tr><td>last message:</td><td>" + time_to_str((time_t)p -> last_message) + "</td></tr>\n";
+			content += "<tr><td>last put message:</td><td>" + time_to_str((time_t)p -> last_put_message) + "</td></tr>\n";
 
 			content += format("<tr><td>denied because of quota:</td><td>%d</td></tr>\n", pcs -> get_times_quota());
 			content += format("<tr><td>denied because pools empty:</td><td>%d</td></tr>\n", pcs -> get_times_empty());
@@ -96,7 +96,7 @@ http_bundle * http_file_stats::do_request(http_request_t request_type, std::stri
 			content += format("<tr><td>bits put:</td><td>%lld</td></tr>\n", total_bits_recv);
 			content += format("<tr><td>bits put density:</td><td>%f%%</td></tr>\n", double(total_bits_recv * 100) / double(total_bits_recv_in));
 			content += format("<tr><td>avg bits/put:</td><td>%f</td></tr>\n", double(total_bits_recv) / double(n_recv));
-			content += format("<tr><td>put bps:</td><td>%f</td></tr>\n", double(total_bits_recv) / (now - pcs -> get_since_ts()));
+			content += format("<tr><td>put bps:</td><td>%f</td></tr>\n", double(total_bits_recv) / (now - p -> connected_since));
 
 			long long int total_bits_sent = 0;
 			int n_sent = 0;
@@ -104,7 +104,7 @@ http_bundle * http_file_stats::do_request(http_request_t request_type, std::stri
 			content += format("<tr><td>get requests:</td><td>%d</td></tr>\n", n_sent);
 			content += format("<tr><td>bits requested:</td><td>%lld</td></tr>\n", total_bits_sent);
 			content += format("<tr><td>avg bits/get:</td><td>%f</td></tr>\n", double(total_bits_sent) / double(n_sent));
-			content += format("<tr><td>get bps:</td><td>%f</td></tr>\n", double(total_bits_sent) / (now - pcs -> get_since_ts()));
+			content += format("<tr><td>get bps:</td><td>%f</td></tr>\n", double(total_bits_sent) / (now - p -> connected_since));
 
 			my_mutex_lock(&p -> stats_lck);
 			content += std::string("<tr><td>FIPS140 stats:</td><td>") + p -> pfips140 -> stats() + "</td></tr>\n";
@@ -142,8 +142,8 @@ http_bundle * http_file_stats::do_request(http_request_t request_type, std::stri
 
 			statistics *pcs = p -> stats_user;
 
-			content += time_to_str((time_t)pcs -> get_since_ts());
-			double duration = now - pcs -> get_since_ts();
+			content += time_to_str((time_t)p -> connected_since);
+			double duration = now - p -> connected_since;
 
 			long long int total_bits_recv = 0, total_bits_recv_in = 0, total_bits_sent = 0;
 			int n_recv = 0, n_sent = 0;
@@ -183,8 +183,7 @@ http_bundle * http_file_stats::do_request(http_request_t request_type, std::stri
 		content += "<table class=\"table2 fullwidth\">\n";
 		content += "<tr><td class=\"keys\">running since:</td><td>" + time_to_str((time_t)get_start_ts()) + "</td></tr>\n";
 		content += format("<tr><td>duration:</td><td>%fs</td></tr>\n", now - get_start_ts());
-		content += "<tr><td>first msg:</td><td>" + time_to_str((time_t)ps -> get_since_ts()) + "</td></tr>\n";
-		content += format("<tr><td>avg time between msgs:</td><td>%fs</td></tr>\n", (now - ps -> get_since_ts()) / double(ps -> get_msg_cnt()));
+		content += format("<tr><td>avg time between msgs:</td><td>%fs</td></tr>\n", (now - get_start_ts()) / double(ps -> get_msg_cnt()));
 		content += "<tr><td>last message:</td><td>" + time_to_str((time_t)ps -> get_last_msg_ts()) + "</td></tr>\n";
 		content += "<tr><td>last put message:</td><td>" + time_to_str((time_t)ps -> get_last_put_msg_ts()) + "</td></tr>\n";
 
@@ -205,7 +204,7 @@ http_bundle * http_file_stats::do_request(http_request_t request_type, std::stri
 		content += format("<tr><td>bits put:</td><td>%lld</td></tr>\n", total_bits_recv);
 		// FIXME should be get density content += format("<tr><td>bits put density:</td><td>%f%%</td></tr>\n", double(total_bits_recv * 100) / double(total_bits_recv_in));
 		content += format("<tr><td>avg bits/put:</td><td>%f</td></tr>\n", double(total_bits_recv) / double(n_recv));
-		content += format("<tr><td>put bps:</td><td>%f</td></tr>\n", double(total_bits_recv) / (now - ps -> get_since_ts()));
+		content += format("<tr><td>put bps:</td><td>%f</td></tr>\n", double(total_bits_recv) / (now - get_start_ts()));
 
 		long long int total_bits_sent = 0;
 		int n_sent = 0;
@@ -213,7 +212,7 @@ http_bundle * http_file_stats::do_request(http_request_t request_type, std::stri
 		content += format("<tr><td>get requests:</td><td>%d</td></tr>\n", n_sent);
 		content += format("<tr><td>bits requested:</td><td>%lld</td></tr>\n", total_bits_sent);
 		content += format("<tr><td>avg bits/get:</td><td>%f</td></tr>\n", double(total_bits_sent) / double(n_sent));
-		content += format("<tr><td>get bps:</td><td>%f</td></tr>\n", double(total_bits_sent) / (now - ps -> get_since_ts()));
+		content += format("<tr><td>get bps:</td><td>%f</td></tr>\n", double(total_bits_sent) / (now - get_start_ts()));
 
 		content += std::string("<tr><td>FIPS140 stats:</td><td>") + pfips140 -> stats() + "</td></tr>\n";
 		content += std::string("<tr><td>SCC stats:</td><td>") + pscc -> stats() + "</td></tr>\n";

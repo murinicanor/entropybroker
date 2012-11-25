@@ -14,7 +14,6 @@
 #include "math.h"
 #include "hasher_type.h"
 #include "stirrer_type.h"
-#include "users.h"
 #include "encrypt_stream.h"
 #include "hasher.h"
 #include "protocol.h"
@@ -27,6 +26,7 @@
 #include "pool.h"
 #include "pools.h"
 #include "statistics.h"
+#include "users.h"
 #include "auth.h"
 
 bool config_yes_no(char *what)

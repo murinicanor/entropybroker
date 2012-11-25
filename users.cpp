@@ -9,6 +9,7 @@
 #include "error.h"
 #include "log.h"
 #include "utils.h"
+#include "statistics.h"
 #include "users.h"
 
 users::users(std::string filename_in, int default_max_get_bps_in) : filename(filename_in), default_max_get_bps(default_max_get_bps_in)
@@ -204,7 +205,7 @@ std::map<std::string, user_t> users::get_usermap()
 	return result;
 }
 
-user_t *users::find_and_lock_user(std::string username);
+user_t *users::find_and_lock_user(std::string username)
 {
 	list_rlock();
 

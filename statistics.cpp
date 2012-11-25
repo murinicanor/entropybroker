@@ -27,7 +27,6 @@ statistics::statistics()
 	pthread_check(pthread_mutex_init(&disconnects_lck, &global_mutex_attr), "pthread_mutex_init");
 	pthread_check(pthread_mutex_init(&timeouts_lck, &global_mutex_attr), "pthread_mutex_init");
 	pthread_check(pthread_mutex_init(&msg_cnt_lck, &global_mutex_attr), "pthread_mutex_init");
-	pthread_check(pthread_mutex_init(&time_lck, &global_mutex_attr), "pthread_mutex_init");
 	pthread_check(pthread_mutex_init(&logins_lck, &global_mutex_attr), "pthread_mutex_init");
 	pthread_check(pthread_mutex_init(&submit_while_full_lck, &global_mutex_attr), "pthread_mutex_init");
 	pthread_check(pthread_mutex_init(&network_error_lck, &global_mutex_attr), "pthread_mutex_init");
@@ -51,7 +50,6 @@ statistics::statistics()
 	misc_errors = protocol_error = network_error = 0;
 
 	msg_cnt = 0;
-	last_message = last_put_message = last_get_message = 0;
 }
 
 statistics::~statistics()
@@ -64,7 +62,6 @@ statistics::~statistics()
 	pthread_check(pthread_mutex_destroy(&disconnects_lck), "pthread_mutex_destroy");
 	pthread_check(pthread_mutex_destroy(&timeouts_lck), "pthread_mutex_destroy");
 	pthread_check(pthread_mutex_destroy(&msg_cnt_lck), "pthread_mutex_destroy");
-	pthread_check(pthread_mutex_destroy(&time_lck), "pthread_mutex_destroy");
 	pthread_check(pthread_mutex_destroy(&logins_lck), "pthread_mutex_destroy");
 	pthread_check(pthread_mutex_destroy(&submit_while_full_lck), "pthread_mutex_destroy");
 	pthread_check(pthread_mutex_destroy(&network_error_lck), "pthread_mutex_destroy");
@@ -201,48 +198,6 @@ int statistics::get_msg_cnt()
 	int dummy = msg_cnt;
 
 	my_mutex_unlock(&msg_cnt_lck);
-
-	return dummy;
-}
-void statistics::register_msg(bool is_put)
-{
-	double now = get_ts();
-
-	my_mutex_lock(&time_lck);
-
-	last_message = now;
-
-	if (is_put)
-		last_put_message = now;
-	else
-		last_get_message = now;
-
-	my_mutex_unlock(&time_lck);
-}
-
-double statistics::get_last_msg_ts()
-{
-	my_mutex_lock(&time_lck);
-	double dummy = last_message;
-	my_mutex_unlock(&time_lck);
-
-	return dummy;
-}
-
-double statistics::get_last_put_msg_ts()
-{
-	my_mutex_lock(&time_lck);
-	double dummy = last_put_message;
-	my_mutex_unlock(&time_lck);
-
-	return dummy;
-}
-
-double statistics::get_last_get_msg_ts()
-{
-	my_mutex_lock(&time_lck);
-	double dummy = last_get_message;
-	my_mutex_unlock(&time_lck);
 
 	return dummy;
 }
