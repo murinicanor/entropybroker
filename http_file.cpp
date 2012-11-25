@@ -6,6 +6,7 @@
 
 #include "utils.h"
 #include "statistics.h"
+#include "statistics_global.h"
 #include "http_bundle.h"
 #include "http_request_t.h"
 #include "http_file.h"
@@ -111,7 +112,7 @@ std::string http_file::get_style_tail()
 		"</html>\n";
 }
 
-std::string generate_logging_table(statistics *ps, std::string username)
+std::string generate_logging_table(statistics_global *ps, std::string username)
 {
 	std::vector<history_logins> log = ps -> get_login_history();
 

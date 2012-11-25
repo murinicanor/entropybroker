@@ -4,12 +4,12 @@ private:
 	std::vector<client_t *> *clients;
 	pthread_mutex_t *clients_mutex;
 	pools *ppools;
-	statistics *ps;
+	statistics_global *ps;
 	fips140 *pfips140;
 	scc *pscc;
 
 public:
-	http_file_stats(std::vector<client_t *> *clients_in, pthread_mutex_t *clients_mutex_in, pools *ppools, statistics *ps_in, fips140 *pfips140_in, scc *pscc_in);
+	http_file_stats(std::vector<client_t *> *clients_in, pthread_mutex_t *clients_mutex_in, pools *ppools, statistics_global *ps_in, fips140 *pfips140_in, scc *pscc_in);
 	~http_file_stats();
 
 	std::string get_url();

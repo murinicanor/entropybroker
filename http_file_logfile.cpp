@@ -19,13 +19,14 @@
 #include "encrypt_stream.h"
 #include "users.h"
 #include "statistics.h"
+#include "statistics_global.h"
 #include "handle_client.h"
 #include "http_bundle.h"
 #include "http_request_t.h"
 #include "http_file.h"
 #include "http_file_logfile.h"
 
-http_file_logfile::http_file_logfile(statistics *ps_in) : ps(ps_in)
+http_file_logfile::http_file_logfile(statistics_global *ps_in) : ps(ps_in)
 {
 }
 

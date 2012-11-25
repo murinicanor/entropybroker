@@ -19,6 +19,8 @@
 #include "config.h"
 #include "encrypt_stream.h"
 #include "statistics.h"
+#include "statistics_global.h"
+#include "statistics_user.h"
 #include "users.h"
 #include "handle_client.h"
 #include "http_bundle.h"
@@ -26,7 +28,7 @@
 #include "http_file.h"
 #include "http_file_stats.h"
 
-http_file_stats::http_file_stats(std::vector<client_t *> *clients_in, pthread_mutex_t *clients_mutex_in, pools *ppools_in, statistics *ps_in, fips140 *pfips140_in, scc *pscc_in) : clients(clients_in), clients_mutex(clients_mutex_in), ppools(ppools_in), ps(ps_in), pfips140(pfips140_in), pscc(pscc_in)
+http_file_stats::http_file_stats(std::vector<client_t *> *clients_in, pthread_mutex_t *clients_mutex_in, pools *ppools_in, statistics_global *ps_in, fips140 *pfips140_in, scc *pscc_in) : clients(clients_in), clients_mutex(clients_mutex_in), ppools(ppools_in), ps(ps_in), pfips140(pfips140_in), pscc(pscc_in)
 {
 }
 
@@ -67,7 +69,7 @@ http_bundle * http_file_stats::do_request(http_request_t request_type, std::stri
 			content += format("%lld is an unknown client id", id);
 		else
 		{
-			statistics *pcs = p -> stats_user;
+			statistics_user *pcs = p -> stats_user;
 
 			content += "<table class=\"table2 fullwidth\">\n";
 			content += std::string("<tr><td class=\"keys\">username:</td><td>") + p -> username + "</td></tr>\n";
@@ -140,7 +142,7 @@ http_bundle * http_file_stats::do_request(http_request_t request_type, std::stri
 			content += p -> host;
 			content += "</A></td><td>";
 
-			statistics *pcs = p -> stats_user;
+			statistics_user *pcs = p -> stats_user;
 
 			content += time_to_str((time_t)p -> connected_since);
 			double duration = now - p -> connected_since;

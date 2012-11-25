@@ -28,6 +28,7 @@
 #include "encrypt_stream.h"
 #include "users.h"
 #include "statistics.h"
+#include "statistics_global.h"
 #include "handle_client.h"
 #include "data_store_int.h"
 #include "data_logger.h"
@@ -61,7 +62,7 @@ void *start_web_server_thread_wrapper(void *p)
 	return NULL;
 }
 
-void start_web_server(config_t *config, std::vector<client_t *> *clients, pthread_mutex_t *clients_mutex, pools *ppools, statistics *ps, fips140 *pfips140, scc *pscc, data_logger *dl, users *pusers)
+void start_web_server(config_t *config, std::vector<client_t *> *clients, pthread_mutex_t *clients_mutex, pools *ppools, statistics_global *ps, fips140 *pfips140, scc *pscc, data_logger *dl, users *pusers)
 {
 	web_server *ws = new web_server(config, clients, clients_mutex, ppools, ps, pfips140, pscc, dl, pusers);
 
@@ -73,7 +74,7 @@ void start_web_server(config_t *config, std::vector<client_t *> *clients, pthrea
 	pthread_check(pthread_create(&thread, &attr, start_web_server_thread_wrapper, ws), "pthread_create");
 }
 
-web_server::web_server(config_t *config, std::vector<client_t *> *clients, pthread_mutex_t *clients_mutex, pools *ppools, statistics *ps, fips140 *pfips140, scc *pscc, data_logger *dl, users *pusers)
+web_server::web_server(config_t *config, std::vector<client_t *> *clients, pthread_mutex_t *clients_mutex, pools *ppools, statistics_global *ps, fips140 *pfips140, scc *pscc, data_logger *dl, users *pusers)
 {
 	fd = start_listen(config -> webserver_interface.c_str(), config -> webserver_port, config -> listen_queue_size);
 

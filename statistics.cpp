@@ -27,7 +27,7 @@ statistics::statistics()
 	pthread_check(pthread_mutex_init(&disconnects_lck, &global_mutex_attr), "pthread_mutex_init");
 	pthread_check(pthread_mutex_init(&timeouts_lck, &global_mutex_attr), "pthread_mutex_init");
 	pthread_check(pthread_mutex_init(&msg_cnt_lck, &global_mutex_attr), "pthread_mutex_init");
-	pthread_check(pthread_mutex_init(&logins_lck, &global_mutex_attr), "pthread_mutex_init");
+	pthread_check(pthread_mutex_init(&time_lck, &global_mutex_attr), "pthread_mutex_init");
 	pthread_check(pthread_mutex_init(&submit_while_full_lck, &global_mutex_attr), "pthread_mutex_init");
 	pthread_check(pthread_mutex_init(&network_error_lck, &global_mutex_attr), "pthread_mutex_init");
 	pthread_check(pthread_mutex_init(&protocol_error_lck, &global_mutex_attr), "pthread_mutex_init");
@@ -50,6 +50,7 @@ statistics::statistics()
 	misc_errors = protocol_error = network_error = 0;
 
 	msg_cnt = 0;
+	last_message = last_put_message = last_get_message = 0;
 }
 
 statistics::~statistics()
@@ -62,7 +63,7 @@ statistics::~statistics()
 	pthread_check(pthread_mutex_destroy(&disconnects_lck), "pthread_mutex_destroy");
 	pthread_check(pthread_mutex_destroy(&timeouts_lck), "pthread_mutex_destroy");
 	pthread_check(pthread_mutex_destroy(&msg_cnt_lck), "pthread_mutex_destroy");
-	pthread_check(pthread_mutex_destroy(&logins_lck), "pthread_mutex_destroy");
+	pthread_check(pthread_mutex_destroy(&time_lck), "pthread_mutex_destroy");
 	pthread_check(pthread_mutex_destroy(&submit_while_full_lck), "pthread_mutex_destroy");
 	pthread_check(pthread_mutex_destroy(&network_error_lck), "pthread_mutex_destroy");
 	pthread_check(pthread_mutex_destroy(&protocol_error_lck), "pthread_mutex_destroy");
@@ -201,36 +202,47 @@ int statistics::get_msg_cnt()
 
 	return dummy;
 }
-
-void statistics::put_history_log(hl_type_t hl_in, std::string host_in, std::string type_in, std::string user_in, double start_ts_in, double duration_in, std::string details_in)
+void statistics::register_msg(bool is_put)
 {
-	history_logins entry;
+	double now = get_ts();
 
-	entry.hl = hl_in;
-	entry.host = host_in;
-	entry.type = type_in;
-	entry.user = user_in;
-	entry.time_logged_in = start_ts_in;
-	entry.duration = duration_in;
-	entry.details = details_in;
-	entry.event_ts = get_ts();
+	my_mutex_lock(&time_lck);
 
-	my_mutex_lock(&logins_lck);
-	logins.push_back(entry);
+	last_message = now;
 
-	while(logins.size() > HISTORY_REMEMBER_N)
-		logins.erase(logins.begin() + 0);
+	if (is_put)
+		last_put_message = now;
+	else
+		last_get_message = now;
 
-	my_mutex_unlock(&logins_lck);
+	my_mutex_unlock(&time_lck);
 }
 
-std::vector<history_logins> statistics::get_login_history()
+double statistics::get_last_msg_ts()
 {
-	my_mutex_lock(&logins_lck);
-	std::vector<history_logins> result = logins;
-	my_mutex_unlock(&logins_lck);
+	my_mutex_lock(&time_lck);
+	double dummy = last_message;
+	my_mutex_unlock(&time_lck);
 
-	return result;
+	return dummy;
+}
+
+double statistics::get_last_put_msg_ts()
+{
+	my_mutex_lock(&time_lck);
+	double dummy = last_put_message;
+	my_mutex_unlock(&time_lck);
+
+	return dummy;
+}
+
+double statistics::get_last_get_msg_ts()
+{
+	my_mutex_lock(&time_lck);
+	double dummy = last_get_message;
+	my_mutex_unlock(&time_lck);
+
+	return dummy;
 }
 
 void statistics::get_sent_avg_sd(double *avg, double *sd)

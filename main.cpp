@@ -39,6 +39,7 @@
 #include "config.h"
 #include "pools.h"
 #include "statistics.h"
+#include "statistics_global.h"
 #include "users.h"
 #include "handle_client.h"
 #include "data_store_int.h"
@@ -183,7 +184,7 @@ int main(int argc, char *argv[])
 	std::vector<client_t *> clients;
 	pthread_mutex_t clients_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-	statistics stats;
+	statistics_global stats;
 
 	data_logger *dl = new data_logger(&stats, ppools, &clients, &clients_mutex);
 

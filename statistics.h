@@ -1,28 +1,8 @@
 // SVN: $Revision$
 
-#define HISTORY_REMEMBER_N 128
-
-typedef enum { HL_LOGIN_OK, HL_LOGOUT_OK, HL_LOGIN_USER_FAIL, HL_LOGIN_PW_FAIL, HL_LOGIN_OTHER } hl_type_t;
-
-extern double start_ts;
-
-double get_start_ts();
-
-class history_logins
-{
-public:
-	hl_type_t hl;
-	std::string host, type, user;
-	double time_logged_in, duration, event_ts;
-	std::string details;
-};
-
 class statistics
 {
-private:
-	pthread_mutex_t logins_lck;
-	std::vector<history_logins> logins;
-
+protected:
 	pthread_mutex_t recv_lck;
 	long long int total_recv, total_recv_sd, total_recv_in, total_recv_in_sd;
 	int total_recv_requests;
@@ -62,9 +42,12 @@ private:
 	pthread_mutex_t misc_errors_lck;
 	int misc_errors;
 
+	pthread_mutex_t time_lck;
+	double last_message, last_put_message, last_get_message;
+
 public:
 	statistics();
-	~statistics();
+	virtual ~statistics();
 
 	void inc_disconnects();
 	void inc_timeouts();
@@ -79,7 +62,7 @@ public:
 	void inc_misc_errors();
 	void track_sents(int cur_n_bits);
 	void track_recvs(int n_bits_added, int n_bits_added_in);
-	void put_history_log(hl_type_t, std::string host_in, std::string type_in, std::string user_in, double start_ts, double duration_in, std::string details);
+	void register_msg(bool is_put);
 
 	int get_reset_bps_cur();
 	int get_msg_cnt();
@@ -93,7 +76,9 @@ public:
 	int get_misc_errors();
 	void get_recvs(long long int *total_bits, int *n_reqs, long long int *total_bits_in);
 	void get_sents(long long int *total_bits, int *n_sents);
-	std::vector<history_logins> get_login_history();
+	double get_last_msg_ts();
+	double get_last_put_msg_ts();
+	double get_last_get_msg_ts();
 	void get_sent_avg_sd(double *avg, double *sd);
 	void get_recv_avg_sd(double *avg, double *sd);
 	void get_recv_in_avg_sd(double *avg, double *sd);

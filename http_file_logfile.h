@@ -1,10 +1,10 @@
 class http_file_logfile : public http_file
 {
 private:
-	statistics *ps;
+	statistics_global *ps;
 
 public:
-	http_file_logfile(statistics *ps_in);
+	http_file_logfile(statistics_global *ps_in);
 	~http_file_logfile();
 
 	std::string get_url();
