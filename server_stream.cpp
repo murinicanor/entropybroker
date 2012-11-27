@@ -17,6 +17,10 @@
 const char *server_type = "server_stream v" VERSION;
 const char *pid_file = PID_DIR "/server_stream.pid";
 
+#define BLOCK_SIZE 4096
+
+bool do_exit = false;
+
 #include "defines.h"
 #include "error.h"
 #include "random_source.h"
@@ -33,8 +37,7 @@ const char *pid_file = PID_DIR "/server_stream.pid";
 void sig_handler(int sig)
 {
 	fprintf(stderr, "Exit due to signal %d\n", sig);
-	unlink(pid_file);
-	exit(0);
+	do_exit = true;
 }
 
 void set_serial_parameters(int fd, char *pars_in)
@@ -231,7 +234,7 @@ void help(void)
 
 int main(int argc, char *argv[])
 {
-	unsigned char bytes[4096];
+	unsigned char bytes[BLOCK_SIZE];
 	int read_fd = -1;
 	int c;
 	bool do_not_fork = false, log_console = false, log_syslog = false;
@@ -344,18 +347,18 @@ int main(int argc, char *argv[])
 
 	init_showbps();
 	set_showbps_start_ts();
-	for(;;)
+	for(;!do_exit;)
 	{
-		if (READ(read_fd, bytes, 4096) != 4096)
+		if (READ(read_fd, bytes, BLOCK_SIZE, &do_exit) != BLOCK_SIZE)
 			error_exit("error reading from input");
 
 		if (show_bps)
-			update_showbps(4096);
+			update_showbps(BLOCK_SIZE);
 
 		if (bytes_file)
-			emit_buffer_to_file(bytes_file, bytes, 4096);
+			emit_buffer_to_file(bytes_file, bytes, BLOCK_SIZE);
 
-		if (p && p -> message_transmit_entropy_data(bytes, 4096) == -1)
+		if (p && p -> message_transmit_entropy_data(bytes, BLOCK_SIZE, &do_exit) == -1)
 		{
 			dolog(LOG_INFO, "connection closed");
 			p -> drop();

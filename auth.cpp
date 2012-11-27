@@ -28,6 +28,7 @@
 #include "pool.h"
 #include "pools.h"
 #include "statistics.h"
+#include "statistics_global.h"
 #include "users.h"
 
 int auth_eb_user(int fd, int to, users *user_map, std::string & username_out, std::string & password, long long unsigned int *challenge, bool is_proxy_auth, bool *is_server_in, std::string & type, random_source *rs, encrypt_stream *es, hasher *mac, std::string handshake_hash, unsigned int max_get_put_size, statistics *s)

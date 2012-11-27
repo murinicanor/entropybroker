@@ -15,6 +15,8 @@
 const char *server_type = "server_timers v" VERSION;
 const char *pid_file = PID_DIR "/server_timers.pid";
 
+bool do_exit = false;
+
 #include "defines.h"
 #include "error.h"
 #include "random_source.h"
@@ -33,8 +35,7 @@ const char *pid_file = PID_DIR "/server_timers.pid";
 void sig_handler(int sig)
 {
 	fprintf(stderr, "Exit due to signal %d\n", sig);
-	unlink(pid_file);
-	exit(0);
+	do_exit = true;
 }
 
 void help(void)
@@ -178,7 +179,7 @@ int main(int argc, char *argv[])
 
 	unsigned char cur_byte = 0;
 	int equal_cnt = 0;
-	for(;;)
+	for(;!do_exit;)
 	{
 		// gather random data
 		double t1 = gen_entropy_data(slp), t2 = gen_entropy_data(slp);
@@ -215,7 +216,7 @@ int main(int argc, char *argv[])
 				if (bytes_file)
 					emit_buffer_to_file(bytes_file, bytes, index);
 
-				if (p && p -> message_transmit_entropy_data(bytes, index) == -1)
+				if (p && p -> message_transmit_entropy_data(bytes, index, &do_exit) == -1)
 				{
 					dolog(LOG_INFO, "connection closed");
 

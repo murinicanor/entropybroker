@@ -20,6 +20,8 @@ extern "C" {
 const char *server_type = "server_usb v" VERSION;
 const char *pid_file = PID_DIR "/server_usb.pid";
 
+bool do_exit = false;
+
 #include "defines.h"
 #include "error.h"
 #include "random_source.h"
@@ -61,8 +63,7 @@ double gen_entropy_data(libusb_device_handle *dev)
 void sig_handler(int sig)
 {
 	fprintf(stderr, "Exit due to signal %d\n", sig);
-	unlink(pid_file);
-	exit(0);
+	do_exit = true;
 }
 
 void help(void)
@@ -217,7 +218,7 @@ int main(int argc, char *argv[])
 	set_showbps_start_ts();
 
 	int dev_index = 0;
-	for(;;)
+	for(;!do_exit;)
 	{
 		// gather random data
 		double t1 = gen_entropy_data(devhs[dev_index]), t2 = gen_entropy_data(devhs[dev_index]);
@@ -245,7 +246,7 @@ int main(int argc, char *argv[])
 				if (bytes_file)
 					emit_buffer_to_file(bytes_file, bytes, index);
 
-				if (p && p -> message_transmit_entropy_data(bytes, index) == -1)
+				if (p && p -> message_transmit_entropy_data(bytes, index, &do_exit) == -1)
 				{
 					dolog(LOG_INFO, "connection closed");
 					p -> drop();

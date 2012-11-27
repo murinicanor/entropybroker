@@ -35,14 +35,15 @@
 const char *server_type = "server_v4l v" VERSION;
 const char *pid_file = PID_DIR "/server_v4l.pid";
 
+bool do_exit = false;
+
 #define RES_LOW  0
 #define RES_HIGH 127
 
 void sig_handler(int sig)
 {
 	fprintf(stderr, "Exit due to signal %d\n", sig);
-	unlink(pid_file);
-	exit(0);
+	do_exit = true;
 }
 
 void open_dev(char *dev_name, int *fd, unsigned char **io_buffer, int *io_buffer_len)
@@ -279,7 +280,7 @@ int main(int argc, char *argv[])
 	set_showbps_start_ts();
 
 	unsigned char cur_byte = 0;
-	for(;;)
+	for(;!do_exit;)
 	{
 		img1 = reinterpret_cast<unsigned char *>(malloc_locked(io_buffer_len));
 		img2 = reinterpret_cast<unsigned char *>(malloc_locked(io_buffer_len));
@@ -353,7 +354,7 @@ int main(int argc, char *argv[])
 				{
 					int n_to_do = mymin(count, 4096);
 
-					if (p -> message_transmit_entropy_data(tempp, n_to_do) == -1)
+					if (p -> message_transmit_entropy_data(tempp, n_to_do, &do_exit) == -1)
 					{
 						dolog(LOG_INFO, "connection closed");
 						p -> drop();
