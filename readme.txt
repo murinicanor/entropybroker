@@ -71,6 +71,8 @@ user|password
 some user|my password
 If you change the password and want to reload the user-file
 without restarting the complete broker, sent SIGHUP to it.
+Of course the size of the password depends on the cipher you
+configure for the password. E.g. 3DES requires 24 characters.
 
 All clients and servers need a '-I' commandline parameter.
 This parameter can be used 1 or more times. It selects one

@@ -145,7 +145,7 @@ void graph::do_draw(int width, int height, std::string title, long int *ts, doub
 
 		int plotX = (width / 2) - (textWidth / 2);
 
-		draw_text(im, font, font_height, black, title, plotX, 9);
+		draw_text(im, font, font_height, white, title, plotX, 9);
 	}
 
 	gdImageLine(im, xAxisLeft, yAxisTop, xAxisLeft, yAxisBottom, black);
