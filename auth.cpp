@@ -31,7 +31,7 @@
 #include "statistics_global.h"
 #include "users.h"
 
-int auth_eb_user(int fd, int to, users *user_map, std::string & username_out, std::string & password, long long unsigned int *challenge, bool is_proxy_auth, bool *is_server_in, std::string & type, random_source *rs, encrypt_stream *es, hasher *mac, std::string handshake_hash, unsigned int max_get_put_size, statistics *s)
+int auth_eb_user(int fd, int to, users *user_map, std::string & username_out, std::string & password, long long unsigned int *challenge, bool is_proxy_auth, bool *is_server_in, std::string & type, random_source *rs, encrypt_stream *es, hasher *mac, std::string handshake_hash, unsigned int max_get_put_size, statistics_global *sg)
 {
 	std::string host = get_endpoint_name(fd);
 
@@ -91,7 +91,7 @@ int auth_eb_user(int fd, int to, users *user_map, std::string & username_out, st
 	if (username == NULL || username[0] == 0x00 || username_length == 0)
 	{
 		dolog(LOG_WARNING, "Empty username");
-		s -> put_history_log(HL_LOGIN_OTHER, host, "", "", get_ts(), 0, "empty username");
+		sg -> put_history_log(HL_LOGIN_OTHER, host, "", "", get_ts(), 0, "empty username");
 		free(username);
 		return -1;
 	}
@@ -103,7 +103,7 @@ int auth_eb_user(int fd, int to, users *user_map, std::string & username_out, st
 	{
 		dolog(LOG_WARNING, "User '%s' not known, (fd: %d, host: %s)", username, host.c_str());
 
-		s -> put_history_log(HL_LOGIN_USER_FAIL, host, "", username_out, get_ts(), 0, "username not known");
+		sg -> put_history_log(HL_LOGIN_USER_FAIL, host, "", username_out, get_ts(), 0, "username not known");
 
 		user_known = false;
 	}
@@ -137,7 +137,7 @@ int auth_eb_user(int fd, int to, users *user_map, std::string & username_out, st
 		free(hash_cmp);
 		free(hash_in);
 		delete hh;
-		s -> put_history_log(HL_LOGIN_PW_FAIL, host, "", username_out, get_ts(), 0, "hash mismatch");
+		sg -> put_history_log(HL_LOGIN_PW_FAIL, host, "", username_out, get_ts(), 0, "hash mismatch");
 		return -1;
 	}
 	free(hash_cmp);
@@ -179,12 +179,12 @@ int auth_eb_user(int fd, int to, users *user_map, std::string & username_out, st
 
 	dolog(LOG_INFO, "%s authentication ok (fd: %d, host: %s)", ts, fd, host.c_str());
 
-	s -> put_history_log(HL_LOGIN_OK, host, type, username_out, get_ts(), 0, "");
+	sg -> put_history_log(HL_LOGIN_OK, host, type, username_out, get_ts(), 0, "");
 
 	return 0;
 }
 
-int auth_eb(int fd, int to, users *user_map, std::string & username, std::string & password, long long unsigned int *challenge, bool *is_server_in, std::string & type, random_source *rs, encrypt_stream *enc, hasher *mac, std::string handshake_hash, unsigned int max_get_put_size, statistics *s)
+int auth_eb(int fd, int to, users *user_map, std::string & username, std::string & password, long long unsigned int *challenge, bool *is_server_in, std::string & type, random_source *rs, encrypt_stream *enc, hasher *mac, std::string handshake_hash, unsigned int max_get_put_size, statistics_global *sg)
 {
 	char prot_ver[4 + 1] = { 0 };
 	snprintf(prot_ver, sizeof prot_ver, "%04d", PROTOCOL_VERSION);
@@ -195,7 +195,7 @@ int auth_eb(int fd, int to, users *user_map, std::string & username, std::string
 		return -1;
 	}
 
-	return auth_eb_user(fd, to, user_map, username, password, challenge, false, is_server_in, type, rs, enc, mac, handshake_hash, max_get_put_size, s);
+	return auth_eb_user(fd, to, user_map, username, password, challenge, false, is_server_in, type, rs, enc, mac, handshake_hash, max_get_put_size, sg);
 }
 
 bool get_auth_from_file(char *filename, std::string & username, std::string & password)

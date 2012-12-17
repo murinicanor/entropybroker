@@ -117,7 +117,7 @@ int do_client_get(client_t *client, bool *no_bits)
 	if (READ_TO(client -> socket_fd, n_bits, 4, client -> config -> communication_timeout) != 4)
 	{
 		dolog(LOG_INFO, "get|%s short read while retrieving number of bits to send", client -> host.c_str());
-		client -> stats_user -> inc_network_error();
+		client -> pu -> inc_network_error(client -> username);
 		client -> stats_glob -> inc_network_error();
 		return -1;
 	}
@@ -126,14 +126,14 @@ int do_client_get(client_t *client, bool *no_bits)
 	if (cur_n_bits == 0)
 	{
 		dolog(LOG_INFO, "get|%s 0 bits requested", client -> host.c_str());
-		client -> stats_user -> inc_protocol_error();
+		client -> pu -> inc_protocol_error(client -> username);
 		client -> stats_glob -> inc_protocol_error();
 		return -1;
 	}
 	if (cur_n_bits > client -> config -> max_get_put_size)
 	{
 		dolog(LOG_WARNING, "get|%s client requested more than %d bits: %d", client -> host.c_str(), client -> config -> max_get_put_size, cur_n_bits);
-		client -> stats_user -> inc_protocol_error();
+		client -> pu -> inc_protocol_error(client -> username);
 		client -> stats_glob -> inc_protocol_error();
 		return -1;
 	}
@@ -147,13 +147,13 @@ int do_client_get(client_t *client, bool *no_bits)
 	{
 		client -> pu -> cancel_allowance(client -> username);
 
-		client -> stats_user -> inc_n_times_quota();
+		client -> pu -> inc_n_times_quota(client -> username);
 		client -> stats_glob -> inc_n_times_quota();
 
 		int rc = send_denied_quota(client -> socket_fd, client -> config);
 		if (rc == -1)
 		{
-			client -> stats_user -> inc_network_error();
+			client -> pu -> inc_network_error(client -> username);
 			client -> stats_glob -> inc_network_error();
 		}
 		return rc;
@@ -174,13 +174,13 @@ int do_client_get(client_t *client, bool *no_bits)
 		dolog(LOG_WARNING, "get|%s no bits in pools, sending deny", client -> host.c_str());
 		*no_bits = true;
 
-		client -> stats_user -> inc_n_times_empty();
+		client -> pu -> inc_n_times_empty(client -> username);
 		client -> stats_glob -> inc_n_times_empty();
 
 		int rc = send_denied_empty(client -> socket_fd, client -> config);
 		if (rc == -1)
 		{
-			client -> stats_user -> inc_network_error();
+			client -> pu -> inc_network_error(client -> username);
 			client -> stats_glob -> inc_network_error();
 		}
 		return rc;
@@ -226,7 +226,7 @@ int do_client_get(client_t *client, bool *no_bits)
 	client -> bits_sent += cur_n_bits;
 	my_mutex_unlock(&client -> stats_lck);
 
-	client -> stats_user -> track_sents(cur_n_bits);
+	client -> pu -> track_sents(client -> username, cur_n_bits);
 	client -> stats_glob -> track_sents(cur_n_bits);
 
 	free_locked(temp_buffer, cur_n_bytes + 1);
@@ -250,7 +250,7 @@ int do_client_get(client_t *client, bool *no_bits)
 	{
 		dolog(LOG_INFO, "%s error while sending data to client", client -> host.c_str());
 
-		client -> stats_user -> inc_network_error();
+		client -> pu -> inc_network_error(client -> username);
 		client -> stats_glob -> inc_network_error();
 
 		rc = -1;
@@ -280,13 +280,13 @@ int do_client_put(client_t *client, bool *new_bits, bool *is_full)
 		{
 			char dummy_buffer[4];
 
+			client -> pu -> inc_n_times_full(client -> username);
 			client -> stats_glob -> inc_n_times_full();
-			client -> stats_user -> inc_n_times_full();
 
 			// flush number of bits
 			if (READ_TO(client -> socket_fd, dummy_buffer, 4, client -> config -> communication_timeout) != 4)
 			{
-				client -> stats_user -> inc_network_error();
+				client -> pu -> inc_network_error(client -> username);
 				client -> stats_glob -> inc_network_error();
 				return -1;
 			}
@@ -294,7 +294,7 @@ int do_client_put(client_t *client, bool *new_bits, bool *is_full)
 			int rc = send_denied_full(client -> socket_fd, client -> config, client -> host);
 			if (rc == -1)
 			{
-				client -> stats_user -> inc_network_error();
+				client -> pu -> inc_network_error(client -> username);
 				client -> stats_glob -> inc_network_error();
 			}
 
@@ -304,8 +304,8 @@ int do_client_put(client_t *client, bool *new_bits, bool *is_full)
 		if (full_allow_interval_submit)
 			dolog(LOG_DEBUG, "put|%s(%s) allow submit when full, after %f seconds", client -> host.c_str(), client -> type.c_str(), last_submit_ago);
 
+		client -> pu -> inc_submit_while_full(client -> username);
 		client -> stats_glob -> inc_submit_while_full();
-		client -> stats_user -> inc_submit_while_full();
 
 		warn_all_full = true;
 	}
@@ -314,7 +314,7 @@ int do_client_put(client_t *client, bool *new_bits, bool *is_full)
 	if (READ_TO(client -> socket_fd, n_bits, 4, client -> config -> communication_timeout) != 4)
 	{
 		dolog(LOG_INFO, "put|%s(%s) short read while retrieving number of bits to recv", client -> host.c_str(), client -> type.c_str());
-		client -> stats_user -> inc_network_error();
+		client -> pu -> inc_network_error(client -> username);
 		client -> stats_glob -> inc_network_error();
 		return -1;
 	}
@@ -323,7 +323,7 @@ int do_client_put(client_t *client, bool *new_bits, bool *is_full)
 	if (cur_n_bits <= 0)
 	{
 		dolog(LOG_INFO, "put|%s(%s) 0 bits offered", client -> host.c_str(), client -> type.c_str());
-		client -> stats_user -> inc_protocol_error();
+		client -> pu -> inc_protocol_error(client -> username);
 		client -> stats_glob -> inc_protocol_error();
 		return -1;
 	}
@@ -341,7 +341,7 @@ int do_client_put(client_t *client, bool *new_bits, bool *is_full)
 	if (WRITE_TO(client -> socket_fd, msg, 8, client -> config -> communication_timeout) != 8)
 	{
 		dolog(LOG_INFO, "put|%s short write while sending ack", client -> host.c_str());
-		client -> stats_user -> inc_network_error();
+		client -> pu -> inc_network_error(client -> username);
 		client -> stats_glob -> inc_network_error();
 		return -1;
 	}
@@ -357,7 +357,7 @@ int do_client_put(client_t *client, bool *new_bits, bool *is_full)
 	if (READ_TO(client -> socket_fd, buffer_in, in_len, client -> config -> communication_timeout) != in_len)
 	{
 		dolog(LOG_INFO, "put|%s short read while retrieving entropy data", client -> host.c_str());
-		client -> stats_user -> inc_network_error();
+		client -> pu -> inc_network_error(client -> username);
 		client -> stats_glob -> inc_network_error();
 
 		free(buffer_in);
@@ -381,7 +381,7 @@ int do_client_put(client_t *client, bool *new_bits, bool *is_full)
 	if (memcmp(hash, buffer_out, hash_len) != 0)
 	{
 		dolog(LOG_WARNING, "Hash mismatch in retrieved entropy data!");
-		client -> stats_user -> inc_protocol_error();
+		client -> pu -> inc_protocol_error(client -> username);
 		client -> stats_glob -> inc_protocol_error();
 	}
 	else
@@ -390,7 +390,7 @@ int do_client_put(client_t *client, bool *new_bits, bool *is_full)
 		if (n_bits_added == -1)
 		{
 			dolog(LOG_CRIT, "put|%s error while adding data to pools", client -> host.c_str());
-			client -> stats_user -> inc_misc_errors();
+			client -> pu -> inc_misc_errors(client -> username);
 			client -> stats_glob -> inc_misc_errors();
 		}
 		else
@@ -403,7 +403,7 @@ int do_client_put(client_t *client, bool *new_bits, bool *is_full)
 			client -> bits_recv += n_bits_added;
 			my_mutex_unlock(&client -> stats_lck);
 
-			client -> stats_user -> track_recvs(n_bits_added, entropy_data_len * 8);
+			client -> pu -> track_recvs(client -> username, n_bits_added, entropy_data_len * 8);
 			client -> stats_glob -> track_recvs(n_bits_added, entropy_data_len * 8);
 
 			*new_bits = true;
@@ -423,9 +423,7 @@ int do_client(client_t *client, bool *no_bits, bool *new_bits, bool *is_full)
 {
 	char cmd[4];
 
-	user_t *u = client -> pu -> find_and_lock_user(client -> username);
-	u -> stats_user() -> inc_msg_cnt();
-	client -> pu -> unlock_user(u);
+	client -> pu -> inc_msg_cnt(client -> username);
 
 	client -> stats_glob -> inc_msg_cnt();
 
@@ -450,18 +448,14 @@ int do_client(client_t *client, bool *no_bits, bool *new_bits, bool *is_full)
 	{
 		dolog(LOG_DEBUG, "client|%s LOGOUT (fd: %d)", client -> host.c_str(), client -> socket_fd);
 
-		u = client -> pu -> find_and_lock_user(client -> username);
-		u -> stats_user() -> inc_disconnects();
-		client -> pu -> unlock_user(u);
+		client -> pu -> inc_disconnects(client -> username);
 
 		client -> stats_glob -> inc_disconnects();
 
 		return -1;
 	}
 
-	u = client -> pu -> find_and_lock_user(client -> username);
-	u -> stats_user() -> inc_protocol_error();
-	client -> pu -> unlock_user(u);
+	client -> pu -> inc_protocol_error(client -> username);
 
 	client -> last_message = get_ts();
 

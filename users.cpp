@@ -224,3 +224,427 @@ void users::unlock_user(user_t *u)
 
 	list_runlock();
 }
+
+// ***** user statistics *****
+void users::inc_disconnects(std::string username)
+{
+        user_t *u = find_and_lock_user(username);
+
+        if (u)
+        {
+		u -> stats_user() -> inc_disconnects();
+
+		unlock_user(u);
+	}
+}
+
+void users::inc_timeouts(std::string username)
+{
+        user_t *u = find_and_lock_user(username);
+
+        if (u)
+        {
+		u -> stats_user() -> inc_timeouts();
+
+		unlock_user(u);
+	}
+}
+
+void users::inc_n_times_empty(std::string username)
+{
+        user_t *u = find_and_lock_user(username);
+
+        if (u)
+        {
+		u -> stats_user() -> inc_n_times_empty();
+
+		unlock_user(u);
+	}
+}
+
+void users::inc_n_times_quota(std::string username)
+{
+        user_t *u = find_and_lock_user(username);
+
+        if (u)
+        {
+		u -> stats_user() -> inc_n_times_quota();
+
+		unlock_user(u);
+	}
+}
+
+void users::inc_n_times_full(std::string username)
+{
+        user_t *u = find_and_lock_user(username);
+
+        if (u)
+        {
+		u -> stats_user() -> inc_n_times_full();
+
+		unlock_user(u);
+	}
+}
+
+void users::inc_bps_cur(std::string username)
+{
+        user_t *u = find_and_lock_user(username);
+
+        if (u)
+        {
+		u -> stats_user() -> inc_bps_cur();
+
+		unlock_user(u);
+	}
+}
+
+void users::inc_msg_cnt(std::string username)
+{
+        user_t *u = find_and_lock_user(username);
+
+        if (u)
+        {
+		u -> stats_user() -> inc_msg_cnt();
+
+		unlock_user(u);
+	}
+}
+
+void users::inc_submit_while_full(std::string username)
+{
+        user_t *u = find_and_lock_user(username);
+
+        if (u)
+        {
+		u -> stats_user() -> inc_submit_while_full();
+
+		unlock_user(u);
+	}
+}
+
+void users::inc_network_error(std::string username)
+{
+        user_t *u = find_and_lock_user(username);
+
+        if (u)
+        {
+		u -> stats_user() -> inc_network_error();
+
+		unlock_user(u);
+	}
+}
+
+void users::inc_protocol_error(std::string username)
+{
+        user_t *u = find_and_lock_user(username);
+
+        if (u)
+        {
+		u -> stats_user() -> inc_protocol_error();
+
+		unlock_user(u);
+	}
+}
+
+void users::inc_misc_errors(std::string username)
+{
+        user_t *u = find_and_lock_user(username);
+
+        if (u)
+        {
+		u -> stats_user() -> inc_misc_errors();
+
+		unlock_user(u);
+	}
+}
+
+void users::track_sents(std::string username, int cur_n_bits)
+{
+        user_t *u = find_and_lock_user(username);
+
+        if (u)
+        {
+		u -> stats_user() -> track_sents(cur_n_bits);
+
+		unlock_user(u);
+	}
+}
+
+void users::track_recvs(std::string username, int n_bits_added, int n_bits_added_in)
+{
+        user_t *u = find_and_lock_user(username);
+
+        if (u)
+        {
+		u -> stats_user() -> track_recvs(n_bits_added, n_bits_added_in);
+
+		unlock_user(u);
+	}
+}
+
+void users::register_msg(std::string username, bool is_put)
+{
+	user_t *u = find_and_lock_user(username);
+
+	if (u)
+	{
+		u -> stats_user() -> register_msg(is_put);
+
+		unlock_user(u);
+	}
+}
+
+int users::get_reset_bps_cur(std::string username)
+{
+	int rc = -1;
+        user_t *u = find_and_lock_user(username); 
+        
+        if (u) 
+        {
+                rc = u -> stats_user() -> get_reset_bps_cur();
+
+                unlock_user(u);
+        }
+
+	return rc;
+}
+
+int users::get_msg_cnt(std::string username)
+{       
+	int rc = -1;
+        user_t *u = find_and_lock_user(username); 
+        
+        if (u) 
+        {
+                u -> stats_user() -> get_msg_cnt();
+        
+                unlock_user(u);
+        }
+
+	return rc;
+}
+
+int users::get_disconnects(std::string username)
+{       
+	int rc = -1;
+        user_t *u = find_and_lock_user(username); 
+        
+        if (u) 
+        {
+                u -> stats_user() -> get_disconnects();
+        
+                unlock_user(u);
+        }
+
+	return rc;
+}
+
+int users::get_times_empty(std::string username)
+{       
+	int rc = -1;
+        user_t *u = find_and_lock_user(username); 
+        
+        if (u) 
+        {
+                u -> stats_user() -> get_times_empty();
+        
+                unlock_user(u);
+        }
+
+	return rc;
+}
+
+int users::get_times_full(std::string username)
+{       
+	int rc = -1;
+        user_t *u = find_and_lock_user(username); 
+        
+        if (u) 
+        {
+                u -> stats_user() -> get_times_full();
+        
+                unlock_user(u);
+        }
+
+	return rc;
+}
+
+int users::get_times_quota(std::string username)
+{       
+	int rc = -1;
+        user_t *u = find_and_lock_user(username); 
+        
+        if (u) 
+        {
+                u -> stats_user() -> get_times_quota();
+        
+                unlock_user(u);
+        }
+
+	return rc;
+}
+
+int users::get_submit_while_full(std::string username)
+{       
+	int rc = -1;
+        user_t *u = find_and_lock_user(username); 
+        
+        if (u) 
+        {
+                u -> stats_user() -> get_submit_while_full();
+        
+                unlock_user(u);
+        }
+
+	return rc;
+}
+
+int users::get_network_error(std::string username)
+{       
+	int rc = -1;
+        user_t *u = find_and_lock_user(username); 
+        
+        if (u) 
+        {
+                u -> stats_user() -> get_network_error();
+        
+                unlock_user(u);
+        }
+
+	return rc;
+}
+
+int users::get_protocol_error(std::string username)
+{       
+	int rc = -1;
+        user_t *u = find_and_lock_user(username); 
+        
+        if (u) 
+        {
+                u -> stats_user() -> get_protocol_error();
+        
+                unlock_user(u);
+        }
+
+	return rc;
+}
+
+int users::get_misc_errors(std::string username)
+{       
+	int rc = -1;
+        user_t *u = find_and_lock_user(username); 
+        
+        if (u) 
+        {
+                u -> stats_user() -> get_misc_errors();
+        
+                unlock_user(u);
+        }
+
+	return rc;
+}
+
+void users::get_recvs(std::string username, long long int *total_bits, int *n_reqs, long long int *total_bits_in)
+{       
+        user_t *u = find_and_lock_user(username); 
+        
+        if (u) 
+        {
+                u -> stats_user() -> get_recvs(total_bits, n_reqs, total_bits_in);
+        
+                unlock_user(u);
+        }
+}
+
+void users::get_sents(std::string username, long long int *total_bits, int *n_sents)
+{       
+        user_t *u = find_and_lock_user(username); 
+        
+        if (u) 
+        {
+                u -> stats_user() -> get_sents(total_bits, n_sents);
+        
+                unlock_user(u);
+        }
+}
+
+double users::get_last_msg_ts(std::string username)
+{       
+	double rc = -1.0;
+        user_t *u = find_and_lock_user(username); 
+        
+        if (u) 
+        {
+                u -> stats_user() -> get_last_msg_ts();
+        
+                unlock_user(u);
+        }
+
+	return rc;
+}
+
+double users::get_last_put_msg_ts(std::string username)
+{       
+	double rc = -1.0;
+        user_t *u = find_and_lock_user(username); 
+        
+        if (u) 
+        {
+                u -> stats_user() -> get_last_put_msg_ts();
+        
+                unlock_user(u);
+        }
+
+	return rc;
+}
+
+double users::get_last_get_msg_ts(std::string username)
+{       
+	double rc = -1.0;
+        user_t *u = find_and_lock_user(username); 
+        
+        if (u) 
+        {
+                u -> stats_user() -> get_last_get_msg_ts();
+        
+                unlock_user(u);
+        }
+
+	return rc;
+}
+
+void users::get_sent_avg_sd(std::string username, double *avg, double *sd)
+{       
+        user_t *u = find_and_lock_user(username); 
+        
+        if (u) 
+        {
+                u -> stats_user() -> get_sent_avg_sd(avg, sd);
+        
+                unlock_user(u);
+        }
+}
+
+void users::get_recv_avg_sd(std::string username, double *avg, double *sd)
+{       
+        user_t *u = find_and_lock_user(username); 
+        
+        if (u) 
+        {
+                u -> stats_user() -> get_recv_avg_sd(avg, sd);
+        
+                unlock_user(u);
+        }
+}
+
+void users::get_recv_in_avg_sd(std::string username, double *avg, double *sd)
+{       
+        user_t *u = find_and_lock_user(username); 
+        
+        if (u) 
+        {
+                u -> stats_user() -> get_recv_in_avg_sd(avg, sd);
+        
+                unlock_user(u);
+        }
+}

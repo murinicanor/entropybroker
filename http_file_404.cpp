@@ -3,6 +3,7 @@
 #include <vector>
 
 #include "statistics.h"
+#include "statistics_global.h"
 #include "http_bundle.h"
 #include "http_request_t.h"
 #include "http_file.h"

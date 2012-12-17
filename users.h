@@ -47,4 +47,39 @@ public:
 	void unlock_user(user_t *u);
 
 	std::map<std::string, user_t> get_usermap();
+
+	// user statistics
+	void register_msg(std::string username, bool is_put);
+	void inc_disconnects(std::string username);
+	void inc_timeouts(std::string username);
+	void inc_n_times_empty(std::string username);
+	void inc_n_times_quota(std::string username);
+	void inc_n_times_full(std::string username);
+	void inc_bps_cur(std::string username);
+	void inc_msg_cnt(std::string username);
+	void inc_submit_while_full(std::string username);
+	void inc_network_error(std::string username);
+	void inc_protocol_error(std::string username);
+	void inc_misc_errors(std::string username);
+	void track_sents(std::string username, int cur_n_bits);
+	void track_recvs(std::string username, int n_bits_added, int n_bits_added_in);
+
+	int get_reset_bps_cur(std::string username);
+	int get_msg_cnt(std::string username);
+	int get_disconnects(std::string username);
+	int get_times_empty(std::string username);
+	int get_times_full(std::string username);
+	int get_times_quota(std::string username);
+	int get_submit_while_full(std::string username);
+	int get_network_error(std::string username);
+	int get_protocol_error(std::string username);
+	int get_misc_errors(std::string username);
+	void get_recvs(std::string username, long long int *total_bits, int *n_reqs, long long int *total_bits_in);
+	void get_sents(std::string username, long long int *total_bits, int *n_sents);
+	double get_last_msg_ts(std::string username);
+	double get_last_put_msg_ts(std::string username);
+	double get_last_get_msg_ts(std::string username);
+	void get_sent_avg_sd(std::string username, double *avg, double *sd);
+	void get_recv_avg_sd(std::string username, double *avg, double *sd);
+	void get_recv_in_avg_sd(std::string username, double *avg, double *sd);
 };

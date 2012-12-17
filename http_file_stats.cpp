@@ -69,7 +69,7 @@ http_bundle * http_file_stats::do_request(http_request_t request_type, std::stri
 			content += format("%lld is an unknown client id", id);
 		else
 		{
-			statistics_user *pcs = p -> stats_user;
+			users *pcs = p -> pu;
 
 			content += "<table class=\"table2 fullwidth\">\n";
 			content += std::string("<tr><td class=\"keys\">username:</td><td>") + p -> username + "</td></tr>\n";
@@ -79,17 +79,17 @@ http_bundle * http_file_stats::do_request(http_request_t request_type, std::stri
 
 			content += "<tr><td>connected since:</td><td>" + time_to_str((time_t)p -> connected_since) + "</td></tr>\n";
 			content += format("<tr><td>duration:</td><td>%fs</td></tr>\n", now - p -> connected_since);
-			content += format("<tr><td>avg time between msgs:</td><td>%fs</td></tr>\n", (now - p -> connected_since) / double(pcs -> get_msg_cnt()));
+			content += format("<tr><td>avg time between msgs:</td><td>%fs</td></tr>\n", (now - p -> connected_since) / double(pcs -> get_msg_cnt(p -> username)));
 			content += "<tr><td>last message:</td><td>" + time_to_str((time_t)p -> last_message) + "</td></tr>\n";
 			content += "<tr><td>last put message:</td><td>" + time_to_str((time_t)p -> last_put_message) + "</td></tr>\n";
 
-			content += format("<tr><td>denied because of quota:</td><td>%d</td></tr>\n", pcs -> get_times_quota());
-			content += format("<tr><td>denied because pools empty:</td><td>%d</td></tr>\n", pcs -> get_times_empty());
-			content += format("<tr><td>denied because full:</td><td>%d</td></tr>\n", pcs -> get_times_full());
-			content += format("<tr><td>allowed while full:</td><td>%d</td></tr>\n", pcs -> get_submit_while_full());
-			content += format("<tr><td>network errors:</td><td>%d</td></tr>\n", pcs -> get_network_error());
-			content += format("<tr><td>protocol errors:</td><td>%d</td></tr>\n", pcs -> get_protocol_error());
-			content += format("<tr><td>miscellaneous errors:</td><td>%d</td></tr>\n", pcs -> get_misc_errors());
+			content += format("<tr><td>denied because of quota:</td><td>%d</td></tr>\n", pcs -> get_times_quota(p -> username));
+			content += format("<tr><td>denied because pools empty:</td><td>%d</td></tr>\n", pcs -> get_times_empty(p -> username));
+			content += format("<tr><td>denied because full:</td><td>%d</td></tr>\n", pcs -> get_times_full(p -> username));
+			content += format("<tr><td>allowed while full:</td><td>%d</td></tr>\n", pcs -> get_submit_while_full(p -> username));
+			content += format("<tr><td>network errors:</td><td>%d</td></tr>\n", pcs -> get_network_error(p -> username));
+			content += format("<tr><td>protocol errors:</td><td>%d</td></tr>\n", pcs -> get_protocol_error(p -> username));
+			content += format("<tr><td>miscellaneous errors:</td><td>%d</td></tr>\n", pcs -> get_misc_errors(p -> username));
 
 			long long int total_bits_recv = 0, total_bits_recv_in = 0;
 			int n_recv = 0;
