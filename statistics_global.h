@@ -23,6 +23,9 @@ protected:
 	std::vector<history_logins> logins;
 
 public:
+	statistics_global();
+	~statistics_global();
+
 	void put_history_log(hl_type_t, std::string host_in, std::string type_in, std::string user_in, double start_ts, double duration_in, std::string details);
 	std::vector<history_logins> get_login_history();
 };
