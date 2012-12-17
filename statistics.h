@@ -54,7 +54,6 @@ public:
 	void inc_n_times_empty();
 	void inc_n_times_quota();
 	void inc_n_times_full();
-	void inc_bps_cur();
 	void inc_msg_cnt();
 	void inc_submit_while_full();
 	void inc_network_error();

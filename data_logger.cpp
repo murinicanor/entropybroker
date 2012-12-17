@@ -21,6 +21,7 @@
 #include "config.h"
 #include "encrypt_stream.h"
 #include "statistics.h"
+#include "statistics_global.h"
 #include "users.h"
 #include "handle_client.h"
 #include "data_store_int.h"

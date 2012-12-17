@@ -90,7 +90,7 @@ web_server::web_server(config_t *config, std::vector<client_t *> *clients, pthre
 	add_object(new http_file_file("/logo-bw.png", "image/png", WEB_DIR "/logo-bw.png"));
 	add_object(new http_file_file("/logfiles.png", "image/png", WEB_DIR "/logfiles.png"));
 	add_object(new http_file_file("/statistics.png", "image/png", WEB_DIR "/statistics.png"));
-	add_object(new http_file_users(clients, clients_mutex, pusers));
+	add_object(new http_file_users(pusers));
 	add_object(new http_file_file("/users.png", "image/png", WEB_DIR "/users.png"));
 }
 

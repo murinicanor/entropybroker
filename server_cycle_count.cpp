@@ -24,8 +24,9 @@ const char *pid_file = PID_DIR "/server_cycle_count.pid";
 #include "hasher.h"
 #include "protocol.h"
 #include "server_utils.h"
-#include "users.h"
 #include "statistics.h"
+#include "statistics_global.h"
+#include "users.h"
 #include "auth.h"
 
 bool do_exit = false;

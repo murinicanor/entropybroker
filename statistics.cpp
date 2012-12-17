@@ -10,13 +10,6 @@
 #include "utils.h"
 #include "statistics.h"
 
-double start_ts = get_ts();
-
-double get_start_ts()
-{
-	return start_ts;
-}
-
 statistics::statistics()
 {
 	pthread_check(pthread_mutex_init(&recv_lck, &global_mutex_attr), "pthread_mutex_init");

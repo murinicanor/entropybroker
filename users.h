@@ -60,7 +60,6 @@ public:
 	void inc_n_times_empty(std::string username);
 	void inc_n_times_quota(std::string username);
 	void inc_n_times_full(std::string username);
-	void inc_bps_cur(std::string username);
 	void inc_msg_cnt(std::string username);
 	void inc_submit_while_full(std::string username);
 	void inc_network_error(std::string username);

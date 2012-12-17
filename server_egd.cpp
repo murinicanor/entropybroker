@@ -26,8 +26,9 @@
 #include "hasher.h"
 #include "protocol.h"
 #include "server_utils.h"
-#include "users.h"
 #include "statistics.h"
+#include "statistics_global.h"
+#include "users.h"
 #include "auth.h"
 
 const char *pid_file = PID_DIR "/server_egd.pid";

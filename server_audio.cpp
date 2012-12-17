@@ -32,8 +32,9 @@ const char *pid_file = PID_DIR "/eb_server_audio.pid";
 #include "hasher.h"
 #include "protocol.h"
 #include "server_utils.h"
-#include "users.h"
 #include "statistics.h"
+#include "statistics_global.h"
+#include "users.h"
 #include "auth.h"
 
 #define DEFAULT_SAMPLE_RATE			11025

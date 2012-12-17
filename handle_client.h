@@ -39,7 +39,7 @@ typedef struct
 	users *pu;
 	config_t *config;
 	pools *ppools;
-	statistics *stats_glob;
+	statistics_global *stats_glob;
 	fips140 *output_fips140;
 	scc *output_scc;
 } client_t;
@@ -51,4 +51,4 @@ typedef struct
 } msg_pair_t;
 
 client_t *find_client_by_id(std::vector<client_t *> *clients, long long int id_in);
-void main_loop(std::vector<client_t *> *clients, pthread_mutex_t *clients_mutex, pools *ppools, config_t *config, fips140 *eb_output_fips140, scc *eb_output_scc, pool_crypto *pc, statistics *stats, users *user_map);
+void main_loop(std::vector<client_t *> *clients, pthread_mutex_t *clients_mutex, pools *ppools, config_t *config, fips140 *eb_output_fips140, scc *eb_output_scc, pool_crypto *pc, statistics_global *stats, users *user_map);

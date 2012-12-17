@@ -31,8 +31,9 @@ bool do_exit = false;
 #include "hasher.h"
 #include "protocol.h"
 #include "server_utils.h"
-#include "users.h"
 #include "statistics.h"
+#include "statistics_global.h"
+#include "users.h"
 #include "auth.h"
 
 void poke(libusb_device_handle *dev)

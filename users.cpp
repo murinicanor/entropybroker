@@ -317,18 +317,6 @@ void users::inc_n_times_full(std::string username)
 	}
 }
 
-void users::inc_bps_cur(std::string username)
-{
-        user_t *u = find_and_lock_user(username);
-
-        if (u)
-        {
-		u -> stats_user() -> inc_bps_cur();
-
-		unlock_user(u);
-	}
-}
-
 void users::inc_msg_cnt(std::string username)
 {
         user_t *u = find_and_lock_user(username);

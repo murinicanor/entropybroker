@@ -32,6 +32,7 @@
 #include "pool.h"
 #include "pools.h"
 #include "statistics.h"
+#include "statistics_global.h"
 #include "statistics_log.h"
 #include "users.h"
 #include "encrypt_stream.h"
@@ -49,13 +50,13 @@ extern const char *pid_file;
 
 long long int client_id = 1;
 
-void forget_client_index(statistics *s, std::vector<client_t *> *clients, int nr, bool force)
+void forget_client_index(statistics_global *sg, std::vector<client_t *> *clients, int nr, bool force)
 {
 	client_t *p = clients -> at(nr);
 
 	double now_ts = get_ts();
 	double since_ts = p -> connected_since;
-	s -> put_history_log(HL_LOGOUT_OK, p -> host, p -> type, p -> username, since_ts, now_ts - since_ts, "");
+	sg -> put_history_log(HL_LOGOUT_OK, p -> host, p -> type, p -> username, since_ts, now_ts - since_ts, "");
 
 	close(p -> socket_fd);
 	close(p -> to_thread[1]);
@@ -95,13 +96,13 @@ client_t *find_client_by_id(std::vector<client_t *> *clients, long long int id_i
 	return NULL;
 }
 
-void forget_client_thread_id(statistics *s, std::vector<client_t *> *clients, pthread_t *tid, bool force)
+void forget_client_thread_id(statistics_global *sg, std::vector<client_t *> *clients, pthread_t *tid, bool force)
 {
 	for(unsigned int index=0; index<clients -> size(); index++)
 	{
 		if (pthread_equal(clients -> at(index) -> th, *tid) != 0)
 		{
-			forget_client_index(s, clients, index, force);
+			forget_client_index(sg, clients, index, force);
 
 			break;
 		}
@@ -205,28 +206,6 @@ int send_request_from_main_to_clients(client_t *p)
 		}
 	}
 
-///
-	{
-		static int err1=0, err2=0, err3=0;
-
-		if (need_data && !p -> is_server)
-		{
-			err1++;
-			fprintf(stderr, "%d %d %d\n", err1, err2, err3);
-		}
-		if (have_data && p -> is_server)
-		{
-			err2++;
-			fprintf(stderr, "%d %d %d\n", err1, err2, err3);
-		}
-		if (is_full && !p -> is_server)
-		{
-			err3++;
-			fprintf(stderr, "%d %d %d\n", err1, err2, err3);
-		}
-	}
-///
-
 	int rc_client = 0;
 	if (need_data && rc_client == 0)
 		rc_client = notify_server_data_needed(p -> socket_fd, p -> config);
@@ -241,7 +220,7 @@ int send_request_from_main_to_clients(client_t *p)
 	{
 		dolog(LOG_INFO, "Connection with %s lost", p -> host.c_str());
 
-		p -> stats_user -> inc_network_error();
+		p -> pu -> inc_network_error(p -> username);
 		p -> stats_glob -> inc_network_error();
 
 		return -1;
@@ -390,7 +369,7 @@ void * thread(void *data)
 	return NULL;
 }
 
-void register_new_client(int listen_socket_fd, std::vector<client_t *> *clients, users *user_map, config_t *config, pools *ppools, statistics *stats, fips140 *output_fips140, scc *output_scc)
+void register_new_client(int listen_socket_fd, std::vector<client_t *> *clients, users *user_map, config_t *config, pools *ppools, statistics_global *stats, fips140 *output_fips140, scc *output_scc)
 {
 	int new_socket_fd = accept(listen_socket_fd, NULL, NULL);
 
@@ -546,7 +525,7 @@ void send_to_client_threads(std::vector<client_t *> *clients, std::vector<msg_pa
 	}
 }
 
-void terminate_threads(statistics *s, std::vector<client_t *> *clients)
+void terminate_threads(statistics_global *sg, std::vector<client_t *> *clients)
 {
 	for(unsigned int index=0; index<clients -> size(); index++)
 	{
@@ -569,11 +548,11 @@ void terminate_threads(statistics *s, std::vector<client_t *> *clients)
 
 		dolog(LOG_DEBUG, "... %s/%s (fd: %d)", p -> host.c_str(), p -> type.c_str(), p -> socket_fd);
 
-		forget_client_index(s, clients, 0, true);
+		forget_client_index(sg, clients, 0, true);
 	}
 }
 
-void main_loop(std::vector<client_t *> *clients, pthread_mutex_t *clients_mutex, pools *ppools, config_t *config, fips140 *eb_output_fips140, scc *eb_output_scc, pool_crypto *pc, statistics *stats, users *user_map)
+void main_loop(std::vector<client_t *> *clients, pthread_mutex_t *clients_mutex, pools *ppools, config_t *config, fips140 *eb_output_fips140, scc *eb_output_scc, pool_crypto *pc, statistics_global *gs, users *user_map)
 {
 	double last_counters_reset = get_ts();
 	double last_statistics_emit = last_counters_reset;
@@ -667,7 +646,7 @@ void main_loop(std::vector<client_t *> *clients, pthread_mutex_t *clients_mutex,
 		my_mutex_lock(clients_mutex);
 		if ((last_counters_reset + double(config -> reset_counters_interval)) <= now || force_stats)
 		{
-			emit_statistics_log(stats, clients -> size(), force_stats, config -> reset_counters_interval, ppools, eb_output_fips140, eb_output_scc);
+			emit_statistics_log(gs, clients -> size(), force_stats, config -> reset_counters_interval, ppools, eb_output_fips140, eb_output_scc);
 
 			if (!force_stats)
 			{
@@ -687,7 +666,7 @@ void main_loop(std::vector<client_t *> *clients, pthread_mutex_t *clients_mutex,
 		if ((config -> statistics_interval != 0 && (last_statistics_emit + double(config -> statistics_interval)) <= now) || force_stats)
 		{
 			if (config -> stats_file)
-				emit_statistics_file(config -> stats_file, stats, ppools, eb_output_scc, clients -> size());
+				emit_statistics_file(config -> stats_file, gs, ppools, eb_output_scc, clients -> size());
 
 			now = last_statistics_emit = get_ts();
 		}
@@ -703,8 +682,8 @@ void main_loop(std::vector<client_t *> *clients, pthread_mutex_t *clients_mutex,
 						p -> host.c_str(), p -> type.c_str(), p -> pfips140 -> stats(),
 						p -> pscc -> stats().c_str(),
 						p -> bits_sent, p -> bits_recv,
-						(long int)(now - p -> get_last_msg_ts()),
-						(long int)(now - p -> get_since_ts()));
+						(long int)(now - p -> pu -> get_last_msg_ts(p -> username)),
+						(long int)(now - p -> connected_since));
 				my_mutex_unlock(&p -> stats_lck);
 			}
 
@@ -738,22 +717,22 @@ void main_loop(std::vector<client_t *> *clients, pthread_mutex_t *clients_mutex,
 			{
 				dolog(LOG_INFO, "main|connection with %s/%s lost", clients -> at(loop) -> host.c_str(), clients -> at(loop) -> type.c_str());
 
-				clients -> at(loop) -> stats_user -> inc_misc_errors();
-				clients -> at(loop) -> stats_glob -> inc_misc_errors();
+				user_map -> inc_misc_errors(clients -> at(loop) -> username);
+				gs -> inc_misc_errors();
 
 				delete_ids.push_back(&clients -> at(loop) -> th);
 			}
 		}
 
 		for(unsigned int loop=0; loop<delete_ids.size(); loop++)
-			forget_client_thread_id(stats, clients, delete_ids.at(loop), true);
+			forget_client_thread_id(gs, clients, delete_ids.at(loop), true);
 
 		send_to_client_threads(clients, &msgs_clients, false, &send_have_data, &send_need_data, &send_is_full);
 		send_to_client_threads(clients, &msgs_servers, true, &send_have_data, &send_need_data, &send_is_full);
 
 		if (rc > 0 && FD_ISSET(listen_socket_fd, &rfds))
 		{
-			register_new_client(listen_socket_fd, clients, user_map, config, ppools, stats, eb_output_fips140, eb_output_scc);
+			register_new_client(listen_socket_fd, clients, user_map, config, ppools, gs, eb_output_fips140, eb_output_scc);
 			send_have_data = send_need_data = send_is_full = false;
 		}
 		my_mutex_unlock(clients_mutex);
@@ -762,7 +741,7 @@ void main_loop(std::vector<client_t *> *clients, pthread_mutex_t *clients_mutex,
 	my_mutex_lock(clients_mutex);
 	dolog(LOG_INFO, "Terminating %d threads...", clients -> size());
 
-	terminate_threads(stats, clients);
+	terminate_threads(gs, clients);
 	my_mutex_unlock(clients_mutex);
 
 	close(listen_socket_fd);
