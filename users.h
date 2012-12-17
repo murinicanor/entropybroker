@@ -12,6 +12,8 @@ public:
 	statistics *stats_user() { return &stats; }
 
 	double last_get_message, allowance;
+
+	double last_logon;
 };
 
 class users
@@ -46,7 +48,10 @@ public:
 	user_t *find_and_lock_user(std::string username);
 	void unlock_user(user_t *u);
 
-	std::map<std::string, user_t> get_usermap();
+	std::vector<std::string> get_users();
+
+	void set_last_login(std::string username, double when_ts);
+	double get_last_login(std::string username);
 
 	// user statistics
 	void register_msg(std::string username, bool is_put);

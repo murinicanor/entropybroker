@@ -179,7 +179,9 @@ int auth_eb_user(int fd, int to, users *user_map, std::string & username_out, st
 
 	dolog(LOG_INFO, "%s authentication ok (fd: %d, host: %s)", ts, fd, host.c_str());
 
-	sg -> put_history_log(HL_LOGIN_OK, host, type, username_out, get_ts(), 0, "");
+	double now_ts = get_ts();
+	user_map -> set_last_login(username_out, now_ts);
+	sg -> put_history_log(HL_LOGIN_OK, host, type, username_out, now_ts, 0, "");
 
 	return 0;
 }

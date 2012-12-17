@@ -18,15 +18,16 @@
 #include "pools.h"
 #include "config.h"
 #include "encrypt_stream.h"
-#include "users.h"
 #include "statistics.h"
+#include "statistics_global.h"
+#include "users.h"
 #include "handle_client.h"
 #include "http_bundle.h"
 #include "http_request_t.h"
 #include "http_file.h"
 #include "http_file_users.h"
 
-http_file_users::http_file_users(std::vector<client_t *> *clients_in, pthread_mutex_t *clients_mutex_in, users *pusers_in) : clients(clients_in), clients_mutex(clients_mutex_in), pusers(pusers_in)
+http_file_users::http_file_users(users *pusers_in) : pusers(pusers_in)
 {
 }
 
@@ -54,23 +55,25 @@ http_bundle * http_file_users::do_request(http_request_t request_type, std::stri
 
 	double now = get_ts();
 
-	std::map<std::string, user_t> user_map = pusers -> get_usermap();
+	std::vector<std::string> user_list = pusers -> get_users();
 
 	content += "<table class=\"table2 fullwidth\">\n";
 	content += "<tr class=\"lighttable\"><td>user</td><td>bits put</td><td>bits put raw</td><td>bits sent</td><td colspan=\"5\"></td></tr>\n";
 	content += "<tr class=\"lighttable\"><td colspan=\"2\">latest logon</td><td colspan=\"2\">last message</td><td colspan=\"2\">last put</td><td colspan=\"2\">last get</td><td></td></tr>\n";
 	content += "<tr class=\"lighttable\"><td>msgs</td><td>disconnects</td><td>empty</td><td>full</td><td>quota reached</td><td>submit while full</td><td>network error</td><td>protocol error</td><td>misc error</td></tr>\n";
 
-	std::map<std::string, user_t>::iterator uit = user_map.begin();
-	for(; uit != user_map.end(); uit++)
+	for(unsigned int index=0; index<user_list.size(); index++)
 	{
-		statistics *s = uit -> second.stats_user();
+		std::string username = user_list.at(index);
 
 		// ** emit
 		// row 1
 		content += "<tr class=\"lighttable3\"><td class=\"lighttable4\">";
-		content += uit -> second.username;
+		content += username;
 		content += "</td><td>";
+		long long int total_bits, total_bits_in;
+		int n_reqs;
+		pusers -> get_recvs(username, &total_bits, &n_reqs, &total_bits_in);
 		content += format("%lld", total_bits_recv);
 		content += "</td><td>";
 		content += format("%lld", total_bits_recv_in);
@@ -79,13 +82,13 @@ http_bundle * http_file_users::do_request(http_request_t request_type, std::stri
 		content += "</td><td colspan=\"5\"></td></tr>\n";
 		// row 2
 		content += "<tr class=\"lighttable2\"><td colspan=\"2\">";
-		content += time_to_str((time_t)since_ts);
+		content += time_to_str((time_t)pusers -> get_last_login(username));
 		content += "</td><td colspan=\"2\">";
-		content += time_to_str((time_t)s -> get_msg_ts);
+		content += time_to_str((time_t)pusers -> get_msg_ts(username));
 		content += "</td><td colspan=\"2\">";
-		content += time_to_str((time_t)s -> get_put_msg_ts);
+		content += time_to_str((time_t)pusers -> get_put_msg_ts(username));
 		content += "</td><td colspan=\"2\">";
-		content += time_to_str((time_t)s -> get_get_msg_ts);
+		content += time_to_str((time_t)pusers -> get_get_msg_ts(username));
 		content += "</td><td></td></tr>\n";
 		// row 3
 		content += "<tr><td>";
@@ -108,10 +111,10 @@ http_bundle * http_file_users::do_request(http_request_t request_type, std::stri
 		content += format("%d", misc_errors);
 		content += "</td></tr>\n";
 
-		my_mutex_unlock(clients_mutex);
-
 		content += "</td></tr>\n";
 	}
+
+	pusers -> usermap_unlock();
 
 	content += "</table>\n";
 

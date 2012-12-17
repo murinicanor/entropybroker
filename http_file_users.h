@@ -1,12 +1,10 @@
 class http_file_users : public http_file
 {
 private:
-	std::vector<client_t *> *clients;
-	pthread_mutex_t *clients_mutex;
 	users *pusers;
 
 public:
-	http_file_users(std::vector<client_t *> *clients_in, pthread_mutex_t *clients_mutex_in, users *pusers_in);
+	http_file_users(users *pusers_in);
 	~http_file_users();
 
 	std::string get_url();

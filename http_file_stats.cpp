@@ -93,7 +93,7 @@ http_bundle * http_file_stats::do_request(http_request_t request_type, std::stri
 
 			long long int total_bits_recv = 0, total_bits_recv_in = 0;
 			int n_recv = 0;
-			pcs -> get_recvs(&total_bits_recv, &n_recv, &total_bits_recv_in);
+			pcs -> get_recvs(p -> username, &total_bits_recv, &n_recv, &total_bits_recv_in);
 			content += format("<tr><td>put requests:</td><td>%d</td></tr>\n", n_recv);
 			content += format("<tr><td>bits put:</td><td>%lld</td></tr>\n", total_bits_recv);
 			content += format("<tr><td>bits put density:</td><td>%f%%</td></tr>\n", double(total_bits_recv * 100) / double(total_bits_recv_in));
@@ -102,7 +102,7 @@ http_bundle * http_file_stats::do_request(http_request_t request_type, std::stri
 
 			long long int total_bits_sent = 0;
 			int n_sent = 0;
-			pcs -> get_sents(&total_bits_sent, &n_sent);
+			pcs -> get_sents(p -> username, &total_bits_sent, &n_sent);
 			content += format("<tr><td>get requests:</td><td>%d</td></tr>\n", n_sent);
 			content += format("<tr><td>bits requested:</td><td>%lld</td></tr>\n", total_bits_sent);
 			content += format("<tr><td>avg bits/get:</td><td>%f</td></tr>\n", double(total_bits_sent) / double(n_sent));
@@ -142,15 +142,15 @@ http_bundle * http_file_stats::do_request(http_request_t request_type, std::stri
 			content += p -> host;
 			content += "</A></td><td>";
 
-			statistics_user *pcs = p -> stats_user;
+			users *pcs = p -> pu;
 
 			content += time_to_str((time_t)p -> connected_since);
 			double duration = now - p -> connected_since;
 
 			long long int total_bits_recv = 0, total_bits_recv_in = 0, total_bits_sent = 0;
 			int n_recv = 0, n_sent = 0;
-			pcs -> get_recvs(&total_bits_recv, &n_recv, &total_bits_recv_in);
-			pcs -> get_sents(&total_bits_sent, &n_sent);
+			pcs -> get_recvs(p -> username, &total_bits_recv, &n_recv, &total_bits_recv_in);
+			pcs -> get_sents(p -> username, &total_bits_sent, &n_sent);
 			content += "</td><td>";
 			content += format("%lld", total_bits_recv);
 			if (p -> is_server)
@@ -161,16 +161,16 @@ http_bundle * http_file_stats::do_request(http_request_t request_type, std::stri
 			content += format("%lld", total_bits_sent);
 			content += "</td><td>";
 			// errors
-			int errors = pcs -> get_network_error();
-			errors += pcs -> get_protocol_error();
-			errors += pcs -> get_misc_errors();
+			int errors = pcs -> get_network_error(p -> username);
+			errors += pcs -> get_protocol_error(p -> username);
+			errors += pcs -> get_misc_errors(p -> username);
 			content += format("%d", errors);
 			content += "</td><td>";
 			// warnings
-			int warnings = pcs -> get_times_quota();
-			warnings += pcs -> get_times_empty();
-			warnings += pcs -> get_times_full();
-			warnings += pcs -> get_submit_while_full();
+			int warnings = pcs -> get_times_quota(p -> username);
+			warnings += pcs -> get_times_empty(p -> username);
+			warnings += pcs -> get_times_full(p -> username);
+			warnings += pcs -> get_submit_while_full(p -> username);
 			content += format("%d", warnings);
 			content += "</td></tr>\n";
 		}

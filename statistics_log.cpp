@@ -17,7 +17,6 @@
 #include "fips140.h"
 #include "hasher_type.h"
 #include "stirrer_type.h"
-#include "users.h"
 #include "encrypt_stream.h"
 #include "encrypt_stream_blowfish.h"
 #include "pool_crypto.h"
@@ -26,6 +25,8 @@
 #include "scc.h"
 #include "pools.h"
 #include "statistics.h"
+#include "statistics_global.h"
+#include "users.h"
 #include "utils.h"
 #include "auth.h"
 

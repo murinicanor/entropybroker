@@ -196,13 +196,44 @@ bool users::cancel_allowance(std::string username)
 	return u ? true : false;
 }
 
-std::map<std::string, user_t> users::get_usermap()
+std::vector<std::string> users::get_users()
 {
+	std::vector<std::string> list;
+
+	std::map<std::string, user_t>::iterator it = user_map -> begin();
+
 	list_rlock();
-	std::map<std::string, user_t> result = *user_map;
+	for(;it != user_map -> end(); it++)
+		list.push_back(it -> first);
 	list_runlock();
 
-	return result;
+	return list;
+}
+
+double users::get_last_login(std::string username)
+{
+	double rc = 0.0;
+
+	list_rlock();
+
+	user_t *u = find_user(username);
+	if (u)
+		rc = u -> last_logon;
+
+	list_runlock();
+
+	return rc;
+}
+
+void users::set_last_login(std::string username, double when_ts)
+{
+	list_rlock();
+
+	user_t *u = find_user(username);
+	if (u)
+		u -> last_logon = when_ts;
+
+	list_runlock();
 }
 
 user_t *users::find_and_lock_user(std::string username)
