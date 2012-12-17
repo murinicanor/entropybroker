@@ -8,7 +8,7 @@ public:
 	std::string username, password;
 	int max_get_bps;
 
-	statistics stats;
+	statistics_user stats;
 	statistics *stats_user() { return &stats; }
 
 	double last_get_message, allowance;

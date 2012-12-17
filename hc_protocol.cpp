@@ -21,6 +21,7 @@
 #include "pool.h"
 #include "statistics.h"
 #include "statistics_global.h"
+#include "statistics_user.h"
 #include "users.h"
 #include "encrypt_stream.h"
 #include "config.h"
@@ -437,13 +438,17 @@ int do_client(client_t *client, bool *no_bits, bool *new_bits, bool *is_full)
 
 	if (memcmp(cmd, "0001", 4) == 0)		// GET bits
 	{
-		rc = do_client_get(client, no_bits);
-		return rc;
+		client -> pu -> register_msg(client -> username, false);
+		client -> stats_glob -> register_msg(false);
+
+		return do_client_get(client, no_bits);
 	}
 	else if (memcmp(cmd, "0002", 4) == 0)	// PUT bits
 	{
-		rc = do_client_put(client, new_bits, is_full);
-		return rc;
+		client -> pu -> register_msg(client -> username, true);
+		client -> stats_glob -> register_msg(true);
+
+		return do_client_put(client, new_bits, is_full);
 	}
 	else if (memcmp(cmd, "9999", 4) == 0)	// logout
 	{

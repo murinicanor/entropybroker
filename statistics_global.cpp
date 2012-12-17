@@ -10,6 +10,7 @@
 #include "utils.h"
 #include "statistics.h"
 #include "statistics_global.h"
+#include "statistics_user.h"
 
 double start_ts = get_ts();
 

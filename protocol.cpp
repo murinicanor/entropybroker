@@ -30,6 +30,7 @@
 #include "pools.h"
 #include "statistics.h"
 #include "statistics_global.h"
+#include "statistics_user.h"
 #include "users.h"
 #include "auth.h"
 

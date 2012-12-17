@@ -12,6 +12,7 @@
 #include "log.h"
 #include "statistics.h"
 #include "statistics_global.h"
+#include "statistics_user.h"
 #include "http_bundle.h"
 #include "http_request_t.h"
 #include "http_file.h"

@@ -10,6 +10,7 @@
 #include "log.h"
 #include "utils.h"
 #include "statistics.h"
+#include "statistics_user.h"
 #include "users.h"
 
 users::users(std::string filename_in, int default_max_get_bps_in) : filename(filename_in), default_max_get_bps(default_max_get_bps_in)

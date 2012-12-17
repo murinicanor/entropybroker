@@ -20,6 +20,7 @@
 #include "encrypt_stream.h"
 #include "statistics.h"
 #include "statistics_global.h"
+#include "statistics_user.h"
 #include "users.h"
 #include "handle_client.h"
 #include "http_bundle.h"
