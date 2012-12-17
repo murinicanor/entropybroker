@@ -24,15 +24,15 @@ void error_exit(const char *format, ...)
 	va_end(ap);
 
 	set_loglevel(1);
-	dolog(LOG_EMERG, "FATAL|%s|%s", get_current_thread_name().c_str(), buffer);
-	dolog(LOG_EMERG, "FATAL|%s|errno at that time: %d (%s)", get_current_thread_name().c_str(), errno, strerror(errno));
+	dolog(LOG_CRIT, "FATAL|%s|%s", get_current_thread_name().c_str(), buffer);
+	dolog(LOG_CRIT, "FATAL|%s|errno at that time: %d (%s)", get_current_thread_name().c_str(), errno, strerror(errno));
 
 	void *trace[128];
 	int trace_size = backtrace(trace, 128);
 	char **messages = backtrace_symbols(trace, trace_size);
-	dolog(LOG_EMERG, "Execution path:");
+	dolog(LOG_CRIT, "Execution path:");
 	for(int index=0; index<trace_size; ++index)
-		dolog(LOG_EMERG, "%d %s", index, messages[index]);
+		dolog(LOG_CRIT, "%d %s", index, messages[index]);
 
 	exit(EXIT_FAILURE);
 }
