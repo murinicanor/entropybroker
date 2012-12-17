@@ -112,7 +112,10 @@ user_t *users::find_user(std::string username)
 {
 	std::map<std::string, user_t>::iterator it = user_map -> find(username);
 	if (it == user_map -> end())
+	{
+		dolog(LOG_WARNING, "User %s not known", username.c_str());
 		return NULL;
+	}
 
 	return &it -> second;
 }
@@ -435,7 +438,7 @@ int users::get_msg_cnt(std::string username)
         
         if (u) 
         {
-                u -> stats_user() -> get_msg_cnt();
+                rc = u -> stats_user() -> get_msg_cnt();
         
                 unlock_user(u);
         }
@@ -450,7 +453,7 @@ int users::get_disconnects(std::string username)
         
         if (u) 
         {
-                u -> stats_user() -> get_disconnects();
+                rc = u -> stats_user() -> get_disconnects();
         
                 unlock_user(u);
         }
@@ -465,7 +468,7 @@ int users::get_times_empty(std::string username)
         
         if (u) 
         {
-                u -> stats_user() -> get_times_empty();
+                rc = u -> stats_user() -> get_times_empty();
         
                 unlock_user(u);
         }
@@ -480,7 +483,7 @@ int users::get_times_full(std::string username)
         
         if (u) 
         {
-                u -> stats_user() -> get_times_full();
+                rc = u -> stats_user() -> get_times_full();
         
                 unlock_user(u);
         }
@@ -495,7 +498,7 @@ int users::get_times_quota(std::string username)
         
         if (u) 
         {
-                u -> stats_user() -> get_times_quota();
+                rc = u -> stats_user() -> get_times_quota();
         
                 unlock_user(u);
         }
@@ -510,7 +513,7 @@ int users::get_submit_while_full(std::string username)
         
         if (u) 
         {
-                u -> stats_user() -> get_submit_while_full();
+                rc = u -> stats_user() -> get_submit_while_full();
         
                 unlock_user(u);
         }
@@ -525,7 +528,7 @@ int users::get_network_error(std::string username)
         
         if (u) 
         {
-                u -> stats_user() -> get_network_error();
+                rc = u -> stats_user() -> get_network_error();
         
                 unlock_user(u);
         }
@@ -540,7 +543,7 @@ int users::get_protocol_error(std::string username)
         
         if (u) 
         {
-                u -> stats_user() -> get_protocol_error();
+                rc = u -> stats_user() -> get_protocol_error();
         
                 unlock_user(u);
         }
@@ -555,7 +558,7 @@ int users::get_misc_errors(std::string username)
         
         if (u) 
         {
-                u -> stats_user() -> get_misc_errors();
+                rc = u -> stats_user() -> get_misc_errors();
         
                 unlock_user(u);
         }
@@ -594,7 +597,7 @@ double users::get_last_msg_ts(std::string username)
         
         if (u) 
         {
-                u -> stats_user() -> get_last_msg_ts();
+                rc = u -> stats_user() -> get_last_msg_ts();
         
                 unlock_user(u);
         }
@@ -609,7 +612,7 @@ double users::get_last_put_msg_ts(std::string username)
         
         if (u) 
         {
-                u -> stats_user() -> get_last_put_msg_ts();
+                rc = u -> stats_user() -> get_last_put_msg_ts();
         
                 unlock_user(u);
         }
@@ -624,7 +627,7 @@ double users::get_last_get_msg_ts(std::string username)
         
         if (u) 
         {
-                u -> stats_user() -> get_last_get_msg_ts();
+                rc = u -> stats_user() -> get_last_get_msg_ts();
         
                 unlock_user(u);
         }
