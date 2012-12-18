@@ -23,7 +23,7 @@ void error_exit(const char *format, ...)
 	vsnprintf(buffer, sizeof buffer, format, ap);
 	va_end(ap);
 
-	set_loglevel(1);
+	set_loglevel(255);
 	dolog(LOG_CRIT, "FATAL|%s|%s", get_current_thread_name().c_str(), buffer);
 	dolog(LOG_CRIT, "FATAL|%s|errno at that time: %d (%s)", get_current_thread_name().c_str(), errno, strerror(errno));
 
