@@ -91,6 +91,15 @@ else
 	echo \- libasound2 NOT found, disabling eb_server_audio
 fi
 
+g++ -O0 -o $FILE test_TFO.cpp 2> $FILE2
+if [ $? -eq 0 ] ; then
+	echo \+ system supports TCP fast open
+	TFO="TFO=yes"
+else
+	echo \- this system does NOT support TCP fast open
+	TFO=""
+fi
+
 g++ -O0 -o $FILE test_libusb.cpp 2> /dev/null
 if [ $? -eq 0 ] ; then
 	echo \+ libusb-1.0-0 detected, enabling eb_server_usb
@@ -118,6 +127,7 @@ fi
 
 echo B2=$B2 > makefile.inc
 echo $PCSC >> makefile.inc
+echo $TFO >> makefile.inc
 
 rm -f $FILE $FILE2
 

@@ -280,6 +280,12 @@ int start_listen(const char *adapter, int portnr, int listen_queue_size)
         if (fd == -1)
                 error_exit("failed creating socket");
 
+#ifdef TCP_TFO
+	int qlen = listen_queue_size;
+	if (setsockopt(fd, SOL_TCP, TCP_FASTOPEN, &qlen, sizeof(qlen)) == -1)
+		error_exit("Setting TCP_FASTOPEN on server socket failed");
+#endif
+
         int reuse_addr = 1;
         if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<char *>(&reuse_addr), sizeof reuse_addr) == -1)
                 error_exit("setsockopt(SO_REUSEADDR) failed");
@@ -635,6 +641,7 @@ void my_Assert2(bool flag, int line, const char *file, int debug_value)
 // *BSD need a different implemenation for this
 void set_thread_name(std::string name)
 {
+#ifdef linux
 	char *dummy = strdup(("eb:" + name).c_str());
 	if (!dummy)
 		error_exit("set_thread_name: out of memory");
@@ -651,6 +658,7 @@ void set_thread_name(std::string name)
 		dolog(LOG_WARNING, "set_thread_name(%s) failed: %s (%d)", dummy, strerror(rc), rc);
 
 	free(dummy);
+#endif
 }
 
 // *BSD need a different implemenation for this

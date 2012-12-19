@@ -21,6 +21,10 @@ LINT=-Wshadow -Wall # -W -Wconversion -Wwrite-strings -Wunused
 CXXFLAGS+=-O3 -ggdb -DVERSION=\"${VERSION}\" $(LINT) $(DEBUG) -DCONFIG=\"${ETC}/entropy_broker.conf\" -DCACHE_DIR=\"${CACHE}\" -DPID_DIR=\"${PID}\" -DVAR_DIR=\"${VAR}\" -DWEB_DIR=\"${WEB}\" -DFONT=\"${FONT}\" -rdynamic $(PCSC_CFLAGS)
 LDFLAGS+=$(DEBUG) -lrt -lz -lutil -rdynamic -lcryptopp
 
+ifeq ($(TFO),yes)
+CXXFLAGS+=-DTCP_TFO
+endif
+
 all:
 	@echo targets:
 	@echo -------
