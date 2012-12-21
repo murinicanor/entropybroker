@@ -177,7 +177,7 @@ distclean: clean
 package:
 	svn update
 	mkdir eb-$(VERSION) eb-$(VERSION)/ComScire_R2000KU
-	cp *.cpp *.h entropy_broker.conf Makefile bin_to_values.pl do_fft.sh auth.txt network_protocol.txt users.txt readme.txt design.txt interfacing.txt license.* eb-$(VERSION)
+	cp version configure *.cpp *.h entropy_broker.conf Makefile bin_to_values.pl do_fft.sh auth.txt network_protocol.txt users.txt readme.txt design.txt interfacing.txt license.* eb-$(VERSION)
 	cp ComScire_R2000KU/*.[ch]pp ComScire_R2000KU/LICENSE eb-$(VERSION)/ComScire_R2000KU
 	tar cf - doc --exclude=.svn  | tar xvf - -C eb-$(VERSION)
 	tar cf - redhat --exclude=.svn  | tar xvf - -C eb-$(VERSION)
