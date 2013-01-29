@@ -314,7 +314,6 @@ int auth_client_server_user(int fd, int to, std::string & username, std::string 
 	if (send_length_data(fd, const_cast<char *>(type.c_str()), type_length, to) == -1)
 	{
 		dolog(LOG_INFO, "Connection for fd %d closed (m2)", fd);
-		free(rnd_str);
 		return -1;
 	}
 
