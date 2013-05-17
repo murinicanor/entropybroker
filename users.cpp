@@ -165,12 +165,14 @@ int users::calc_max_allowance(std::string username, double now, int n_requested)
 			n = 0;
 		else
 			n = mymin(n_requested, allowance);
+
+		u -> allowance = allowance;
 	}
 
 	return n;
 }
 
-bool  users::use_allowance(std::string username, int n)
+bool users::use_allowance(std::string username, int n)
 {
 	user_t *u = find_user(username);
 
