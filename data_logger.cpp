@@ -1,3 +1,4 @@
+#include <map>
 #include <pthread.h>
 #include <string>
 #include <vector>

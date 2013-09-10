@@ -274,51 +274,6 @@ int WRITE_TO(int fd, const unsigned char *whereto, size_t len, double to, bool *
 	return WRITE_TO(fd, reinterpret_cast<const char *>(whereto), len, to, do_exit);
 }
 
-int start_listen(const char *adapter, int portnr, int listen_queue_size)
-{
-        int fd = socket(AF_INET6, SOCK_STREAM, 0);
-        if (fd == -1)
-                error_exit("failed creating socket");
-
-#ifdef TCP_TFO
-	int qlen = listen_queue_size;
-	if (setsockopt(fd, SOL_TCP, TCP_FASTOPEN, &qlen, sizeof(qlen)) == -1)
-		error_exit("Setting TCP_FASTOPEN on server socket failed");
-#endif
-
-        int reuse_addr = 1;
-        if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<char *>(&reuse_addr), sizeof reuse_addr) == -1)
-                error_exit("setsockopt(SO_REUSEADDR) failed");
-
-        struct sockaddr_in6 server_addr;
-
-        int server_addr_len = sizeof server_addr;
-
-        memset(reinterpret_cast<char *>(&server_addr), 0x00, server_addr_len);
-        server_addr.sin6_family = AF_INET6;
-        server_addr.sin6_port = htons(portnr);
-
-        if (!adapter || strcmp(adapter, "0.0.0.0") == 0)
-                server_addr.sin6_addr = in6addr_any;
-        else if (inet_pton(AF_INET6, adapter, &server_addr.sin6_addr) == 0)
-	{
-		fprintf(stderr, "\n");
-		fprintf(stderr, " * inet_pton(%s) failed: %s\n", adapter, strerror(errno));
-		fprintf(stderr, " * If you're trying to use an IPv4 address (e.g. 192.168.0.1 or so)\n");
-		fprintf(stderr, " * then do not forget to place ::FFFF: in front of the address,\n");
-		fprintf(stderr, " * e.g.: ::FFFF:192.168.0.1\n\n");
-		error_exit("listen socket initialisation failure: did you configure a correct listen adapter? (run with -n for details)");
-	}
-
-        if (bind(fd, (struct sockaddr *)&server_addr, server_addr_len) == -1)
-                error_exit("bind([%s]:%d) failed", adapter, portnr);
-
-        if (listen(fd, listen_queue_size) == -1)
-                error_exit("listen(%d) failed", listen_queue_size);
-
-	return fd;
-}
-
 int connect_to(const char *host, int portnr)
 {
 	struct addrinfo hints;
@@ -641,7 +596,8 @@ void my_Assert2(bool flag, int line, const char *file, int debug_value)
 // *BSD need a different implemenation for this
 void set_thread_name(std::string name)
 {
-#ifdef linux
+//#ifdef linux
+#if 0 // on ubuntu 10.04.4 this does not work (pthread_setname_np unknown)
 	char *dummy = strdup(("eb:" + name).c_str());
 	if (!dummy)
 		error_exit("set_thread_name: out of memory");
@@ -664,11 +620,15 @@ void set_thread_name(std::string name)
 // *BSD need a different implemenation for this
 std::string get_thread_name(pthread_t *thread)
 {
+//#ifdef linux
+#if 0 // on ubuntu 10.04.4 this does not work (pthread_setname_np unknown)
         char buffer[4096];
 
         pthread_check(pthread_getname_np(*thread, buffer, sizeof buffer), "pthread_getname_np");
 
         return std::string(buffer);
+#endif
+	return std::string("?");
 }
 
 std::string get_current_thread_name()
@@ -911,4 +871,49 @@ void put_long_long_int(FILE *fh, long long int value)
 {
 	put_int(fh, value >> 32);
 	put_int(fh, value & 0xffffffff);
+}
+
+int start_listen(const char *adapter, int portnr, int listen_queue_size)
+{
+        int fd = socket(AF_INET6, SOCK_STREAM, 0);
+        if (fd == -1)
+                error_exit("failed creating socket");
+
+#ifdef TCP_TFO
+	int qlen = listen_queue_size;
+	if (setsockopt(fd, SOL_TCP, TCP_FASTOPEN, &qlen, sizeof(qlen)) == -1)
+		error_exit("Setting TCP_FASTOPEN on server socket failed");
+#endif
+
+        int reuse_addr = 1;
+        if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<char *>(&reuse_addr), sizeof reuse_addr) == -1)
+                error_exit("setsockopt(SO_REUSEADDR) failed");
+
+        struct sockaddr_in6 server_addr;
+
+        int server_addr_len = sizeof server_addr;
+
+        memset(reinterpret_cast<char *>(&server_addr), 0x00, server_addr_len);
+        server_addr.sin6_family = AF_INET6;
+        server_addr.sin6_port = htons(portnr);
+
+        if (!adapter || strcmp(adapter, "0.0.0.0") == 0)
+                server_addr.sin6_addr = in6addr_any;
+        else if (inet_pton(AF_INET6, adapter, &server_addr.sin6_addr) == 0)
+	{
+		fprintf(stderr, "\n");
+		fprintf(stderr, " * inet_pton(%s) failed: %s\n", adapter, strerror(errno));
+		fprintf(stderr, " * If you're trying to use an IPv4 address (e.g. 192.168.0.1 or so)\n");
+		fprintf(stderr, " * then do not forget to place ::FFFF: in front of the address,\n");
+		fprintf(stderr, " * e.g.: ::FFFF:192.168.0.1\n\n");
+		error_exit("listen socket initialisation failure: did you configure a correct listen adapter? (run with -n for details)");
+	}
+
+        if (bind(fd, (struct sockaddr *)&server_addr, server_addr_len) == -1)
+                error_exit("bind([%s]:%d) failed", adapter, portnr);
+
+        if (listen(fd, listen_queue_size) == -1)
+                error_exit("listen(%d) failed", listen_queue_size);
+
+	return fd;
 }
