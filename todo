@@ -1,3 +1,7 @@
+- rdrand server
+
+- server voor dat dingetje met die usb
+
 - client: in classes
 - retrieve from other eb instance (eb_proxy)
 - keep stats of disk-get & put to advise user of ideal number of memory pools
