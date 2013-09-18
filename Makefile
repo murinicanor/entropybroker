@@ -40,6 +40,7 @@ all:
 	@echo eb_server_ext_proc
 	@echo eb_server_usb             requires libusb-1.0-0-dev
 	@echo eb_server_linux_kernel    linux only
+	@echo eb_server_Araneus_Alea	linux only
 	@echo eb_client_linux_kernel    linux only
 	@echo eb_client_file
 	@echo eb_client_kernel_generic
@@ -63,7 +64,7 @@ all:
 	@echo \*\*\*\*\* you need to run ./configure first \*\*\*\*\*
 	@echo
 
-BINARIES=entropy_broker eb_server_timers eb_server_v4l eb_server_stream eb_client_linux_kernel eb_server_egd eb_client_egd eb_server_linux_kernel eb_client_file eb_server_push_file eb_server_ext_proc eb_proxy_knuth_m eb_proxy_knuth_b eb_server_cycle_count ${B2}
+BINARIES=entropy_broker eb_server_timers eb_server_v4l eb_server_stream eb_client_linux_kernel eb_server_egd eb_client_egd eb_server_linux_kernel eb_client_file eb_server_push_file eb_server_ext_proc eb_proxy_knuth_m eb_proxy_knuth_b eb_server_cycle_count eb_server_Araneus_Alea ${B2}
 
 OBJSeb=auth.o pools.o statistics_user.o statistics_global.o statistics.o config.o error.o fips140.o kernel_prng_rw.o log.o protocol.o main.o math.o pool.o scc.o signals.o utils.o my_pty.o kernel_prng_io.o hasher.o stirrer.o hasher_sha512.o stirrer_blowfish.o stirrer_aes.o hasher_md5.o hasher_ripemd160.o stirrer_3des.o stirrer_camellia.o hasher_whirlpool.o users.o random_source.o encrypt_stream.o encrypt_stream_blowfish.o encrypt_stream_aes.o encrypt_stream_3des.o encrypt_stream_camellia.o pool_crypto.o http_bundle.o http_server.o http_file_root.o http_file_404.o http_file_version.o http_file.o http_file_file.o http_file_stats.o http_file_logfile.o web_server.o data_store_int.o data_logger.o graph.o http_file_graph_data_logger.o statistics_log.o http_file_users.o hc_protocol.o handle_client.o
 OBJSsa=server_audio.o error.o utils.o kernel_prng_rw.o log.o protocol.o server_utils.o auth.o my_pty.o kernel_prng_io.o users.o random_source.o encrypt_stream.o encrypt_stream_blowfish.o hasher.o hasher_md5.o hasher_ripemd160.o hasher_sha512.o hasher_whirlpool.o encrypt_stream_aes.o encrypt_stream_3des.o encrypt_stream_camellia.o statistics.o statistics_global.o statistics_user.o
@@ -83,6 +84,7 @@ OBJSpkm=proxy_knuth_m.o utils.o kernel_prng_rw.o kernel_prng_io.o log.o error.o 
 OBJSpkb=proxy_knuth_b.o utils.o kernel_prng_rw.o kernel_prng_io.o log.o error.o protocol.o server_utils.o auth.o my_pty.o users.o random_source.o encrypt_stream.o encrypt_stream_blowfish.o hasher.o hasher_md5.o hasher_ripemd160.o hasher_sha512.o hasher_whirlpool.o encrypt_stream_aes.o encrypt_stream_3des.o encrypt_stream_camellia.o statistics.o statistics_global.o statistics_user.o
 OBJSscc=server_cycle_count.o utils.o kernel_prng_rw.o kernel_prng_io.o log.o error.o protocol.o server_utils.o auth.o my_pty.o users.o random_source.o encrypt_stream.o encrypt_stream_blowfish.o hasher.o hasher_md5.o hasher_ripemd160.o hasher_sha512.o hasher_whirlpool.o encrypt_stream_aes.o encrypt_stream_3des.o encrypt_stream_camellia.o statistics.o statistics_global.o statistics_user.o
 OBJSpicc=server_smartcard.o utils.o kernel_prng_rw.o kernel_prng_io.o log.o error.o protocol.o server_utils.o auth.o my_pty.o users.o random_source.o encrypt_stream.o encrypt_stream_blowfish.o hasher.o hasher_md5.o hasher_ripemd160.o hasher_sha512.o hasher_whirlpool.o encrypt_stream_aes.o encrypt_stream_3des.o encrypt_stream_camellia.o statistics.o statistics_global.o statistics_user.o
+OBJSsal=server_Araneus_Alea.o utils.o kernel_prng_rw.o kernel_prng_io.o log.o error.o protocol.o server_utils.o auth.o my_pty.o users.o random_source.o encrypt_stream.o encrypt_stream_blowfish.o hasher.o hasher_md5.o hasher_ripemd160.o hasher_sha512.o hasher_whirlpool.o encrypt_stream_aes.o encrypt_stream_3des.o encrypt_stream_camellia.o statistics.o statistics_global.o statistics_user.o
 
 everything: $(BINARIES) makefile.inc
 
@@ -91,6 +93,9 @@ makefile.inc:
 
 entropy_broker: $(OBJSeb)
 	$(CXX) $(LINT) $(OBJSeb) $(LDFLAGS) -pthread -lpng -lgd -o entropy_broker
+
+eb_server_Araneus_Alea: $(OBJSsal)
+	$(CXX) $(LINT) $(OBJSsal) $(LDFLAGS) -lusb -o eb_server_Araneus_Alea
 
 eb_server_audio: $(OBJSsa)
 	$(CXX) $(LINT) $(OBJSsa) $(LDFLAGS) -lasound -o eb_server_audio
@@ -169,7 +174,7 @@ install_redhat_init:
 	cp redhat/* /etc/init.d
 
 clean:
-	rm -rf $(OBJSeb) $(OBJSsa) $(OBJSst) $(OBJSsv) $(OBJSss)$(OBJSse) $(OBJSclk) $(OBJSte) $(OBJSsk) $(OBJScf) $(OBJSpf) $(OBJSep) $(OBJSsu) $(OBJScsr2000ku) $(OBJScle) $(OBJSse) $(OBJSpkm) $(OBJSpkb) $(OBJSscc) $(OBJSpicc) plot.o core *.da *.gcov *.bb* $(BINARIES) cov-int
+	rm -rf $(OBJSeb) $(OBJSsa) $(OBJSst) $(OBJSsv) $(OBJSss)$(OBJSse) $(OBJSclk) $(OBJSte) $(OBJSsk) $(OBJScf) $(OBJSpf) $(OBJSep) $(OBJSsu) $(OBJScsr2000ku) $(OBJScle) $(OBJSse) $(OBJSpkm) $(OBJSpkb) $(OBJSscc) $(OBJSpicc) $(OBJSsal) plot.o core *.da *.gcov *.bb* $(BINARIES) cov-int
 
 distclean: clean
 	rm -f makefile.inc

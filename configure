@@ -102,10 +102,10 @@ fi
 
 g++ -O0 -o $FILE test_libusb.cpp 2> /dev/null
 if [ $? -eq 0 ] ; then
-	echo \+ libusb-1.0-0 detected, enabling eb_server_usb
-	B2="$B2 eb_server_usb"
+	echo \+ libusb-1.0-0 detected, enabling eb_server_usb and eb_server_Araneus_Alea
+	B2="$B2 eb_server_usb eb_server_Araneus_Alea"
 else
-	echo \- libusb-1.0-0 NOT found, disabling eb_server_usb
+	echo \- libusb-1.0-0 NOT found, disabling eb_server_usb and eb_server_Araneus_Alea
 fi
 
 g++ -O0 -o $FILE `pkg-config --cflags libpcsclite` test_pcsclite.cpp 2> /dev/null
