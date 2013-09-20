@@ -35,7 +35,7 @@
 #include "kernel_prng_io.h"
 
 #define DEFAULT_COMM_TO 15
-const char *pid_file = PID_DIR "/client_egd.pid";
+const char *pid_file = PID_DIR "/client_file.pid";
 const char *client_type = NULL;
 
 bool do_exit = false;
@@ -81,7 +81,7 @@ int main(int argc, char *argv[])
 	int sleep_time = 0;
 	char *prog = basename(strdup(argv[0]));
 	std::string username, password;
-	bool is_eb_client_file = strcmp(prog, "eb_client_file") == 0;
+	bool is_eb_client_file = strstr(prog, "eb_client_file") != NULL;
 	std::vector<std::string> hosts;
 	int log_level = LOG_INFO;
 
@@ -92,7 +92,7 @@ int main(int argc, char *argv[])
 		client_type = "eb_client_file v" VERSION;
 	else
 		client_type = "eb_client_kernel_generic v" VERSION;
-	printf("%s, (C) 2009-2012 by folkert@vanheusden.com\n", client_type);
+	printf("%s, (C) 2009-2013 by folkert@vanheusden.com\n", client_type);
 
 	while((c = getopt(argc, argv, "b:S:hc:f:X:P:I:L:l:sn")) != -1)
 	{

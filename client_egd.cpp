@@ -253,7 +253,7 @@ int main(int argc, char *argv[])
 	std::vector<std::string> hosts;
 	int log_level = LOG_INFO;
 
-	printf("eb_client_egd v" VERSION ", (C) 2009-2012 by folkert@vanheusden.com\n");
+	printf("eb_client_egd v" VERSION ", (C) 2009-2013 by folkert@vanheusden.com\n");
 
 	while((c = getopt(argc, argv, "t:T:hX:P:d:I:L:l:sn")) != -1)
 	{

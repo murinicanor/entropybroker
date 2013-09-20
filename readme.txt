@@ -188,8 +188,8 @@ von neumann software whitening.
 See: http://en.wikipedia.org/wiki/Hardware_random_number_generator#Software_whitening
 
 If you have a large amount of entropy data available in a file
-on disk, you can use server_file. Please note that you can use
-the data only once.
+on disk, you can use eb_server_push_file. Please note that you can
+use the data only once.
 
 Use eb_server_ComScire_R2000KU when you have a ComSire R2000KU
 device connected via USB.
@@ -287,7 +287,7 @@ to:
 
 Evaluating Entropy Broker
 -------------------------
-Use client_file to write a couple of bytes to a file.
+Use eb_client_file to write a couple of bytes to a file.
 Then with dieharder:
 	http://www.phy.duke.edu/~rgb/General/dieharder.php
 and also with ent:

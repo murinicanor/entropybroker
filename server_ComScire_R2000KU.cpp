@@ -77,7 +77,7 @@ int main(int argc, char *argv[])
 	std::vector<std::string> hosts;
 	int log_level = LOG_INFO;
 
-	fprintf(stderr, "eb_server_ComScire_R2000KU v" VERSION ", (C) 2009-2012 by folkert@vanheusden.com\n");
+	fprintf(stderr, "eb_server_ComScire_R2000KU v" VERSION ", (C) 2009-2013 by folkert@vanheusden.com\n");
 
 	while((c = getopt(argc, argv, "I:hSX:P:o:L:l:snv")) != -1)
 	{

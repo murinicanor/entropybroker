@@ -130,6 +130,7 @@ void set_serial_parameters(int fd, char *pars_in)
 			bps = B230400;
 			break;
 
+#ifdef linux
 		case 460800:
 			bps = B460800;
 			break;
@@ -177,7 +178,7 @@ void set_serial_parameters(int fd, char *pars_in)
 		case 4000000:
 			bps = B4000000;
 			break;
-
+#endif
 		default:
 			error_exit("baudrate %s is not understood", pars[0]);
 	}
@@ -249,7 +250,7 @@ int main(int argc, char *argv[])
 	std::vector<std::string> hosts;
 	int log_level = LOG_INFO;
 
-	fprintf(stderr, "%s, (C) 2009-2012 by folkert@vanheusden.com\n", server_type);
+	fprintf(stderr, "%s, (C) 2009-2013 by folkert@vanheusden.com\n", server_type);
 
 	while((c = getopt(argc, argv, "hSX:P:o:p:I:d:L:l:sn")) != -1)
 	{

@@ -71,7 +71,7 @@ OBJSsa=server_audio.o error.o utils.o kernel_prng_rw.o log.o protocol.o server_u
 OBJSst=server_timers.o log.o utils.o error.o kernel_prng_rw.o protocol.o server_utils.o auth.o my_pty.o kernel_prng_io.o users.o random_source.o encrypt_stream.o encrypt_stream_blowfish.o hasher.o hasher_md5.o hasher_ripemd160.o hasher_sha512.o hasher_whirlpool.o encrypt_stream_aes.o encrypt_stream_3des.o encrypt_stream_camellia.o statistics.o statistics_global.o statistics_user.o
 OBJSsv=server_v4l.o error.o log.o protocol.o kernel_prng_rw.o utils.o server_utils.o auth.o my_pty.o kernel_prng_io.o users.o random_source.o  encrypt_stream.o encrypt_stream_blowfish.o hasher.o hasher_md5.o hasher_ripemd160.o hasher_sha512.o hasher_whirlpool.o encrypt_stream_aes.o encrypt_stream_3des.o encrypt_stream_camellia.o statistics.o statistics_global.o statistics_user.o
 OBJSss=server_stream.o error.o log.o protocol.o kernel_prng_rw.o utils.o server_utils.o auth.o my_pty.o kernel_prng_io.o users.o random_source.o encrypt_stream.o encrypt_stream_blowfish.o hasher.o hasher_md5.o hasher_ripemd160.o hasher_sha512.o hasher_whirlpool.o encrypt_stream_aes.o encrypt_stream_3des.o encrypt_stream_camellia.o statistics.o statistics_global.o statistics_user.o
-OBJSse=server_egd.o error.o log.o kernel_prng_rw.o protocol.o utils.o server_utils.o auth.o my_pty.o kernel_prng_io.o users.o random_source.o encrypt_stream.o encrypt_stream_blowfish.o hasher.o hasher_md5.o hasher_ripemd160.o hasher_sha512.o hasher_whirlpool.o encrypt_stream_aes.o encrypt_stream_3des.o encrypt_stream_camellia.o statistics.o statistics_global.o statistics_user.o
+OBJSse=server_egd.o error.o log.o protocol.o utils.o server_utils.o auth.o my_pty.o kernel_prng_io.o users.o random_source.o encrypt_stream.o encrypt_stream_blowfish.o hasher.o hasher_md5.o hasher_ripemd160.o hasher_sha512.o hasher_whirlpool.o encrypt_stream_aes.o encrypt_stream_3des.o encrypt_stream_camellia.o statistics.o statistics_global.o statistics_user.o
 OBJSclk=client_linux_kernel.o error.o kernel_prng_io.o kernel_prng_rw.o log.o protocol.o utils.o auth.o my_pty.o math.o users.o random_source.o encrypt_stream.o encrypt_stream_blowfish.o hasher.o hasher_md5.o hasher_ripemd160.o hasher_sha512.o hasher_whirlpool.o encrypt_stream_aes.o encrypt_stream_3des.o encrypt_stream_camellia.o statistics.o statistics_global.o statistics_user.o
 OBJScle=client_egd.o error.o log.o kernel_prng_io.o kernel_prng_rw.o math.o protocol.o utils.o auth.o my_pty.o users.o random_source.o encrypt_stream.o encrypt_stream_blowfish.o hasher.o hasher_md5.o hasher_ripemd160.o hasher_sha512.o hasher_whirlpool.o encrypt_stream_aes.o encrypt_stream_3des.o encrypt_stream_camellia.o statistics.o statistics_global.o statistics_user.o
 OBJSsk=server_linux_kernel.o utils.o kernel_prng_rw.o kernel_prng_io.o log.o error.o protocol.o server_utils.o auth.o my_pty.o users.o random_source.o encrypt_stream.o encrypt_stream_blowfish.o hasher.o hasher_md5.o hasher_ripemd160.o hasher_sha512.o hasher_whirlpool.o encrypt_stream_aes.o encrypt_stream_3des.o encrypt_stream_camellia.o statistics.o statistics_global.o statistics_user.o
@@ -123,6 +123,8 @@ eb_server_linux_kernel: $(OBJSsk)
 
 eb_client_file: $(OBJScf)
 	$(CXX) $(LINT) $(OBJScf) $(LDFLAGS) -o eb_client_file
+
+eb_client_kernel_generic: eb_client_file
 
 eb_server_push_file: $(OBJSpf)
 	$(CXX) $(LINT) $(OBJSpf) $(LDFLAGS) -o eb_server_push_file
