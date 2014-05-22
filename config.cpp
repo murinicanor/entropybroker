@@ -77,6 +77,7 @@ void load_config(const char *config, config_t *pconfig)
 	pconfig -> default_sleep_when_pools_empty     = 16;
 	pconfig -> default_max_sleep_when_pools_empty = 60;
 	pconfig -> when_pools_full_allow_submit_interval = 15;
+	pconfig -> max_open_files = 1024;
 
 	pconfig -> default_max_bits_per_interval = 16000000;
 
@@ -194,6 +195,8 @@ void load_config(const char *config, config_t *pconfig)
 			pconfig -> listen_queue_size = parval;
 		else if (strcmp(cmd, "default_max_get_bps") == 0)
 			pconfig -> default_max_get_bps = parval;
+		else if (strcmp(cmd, "max_open_files") == 0)
+			pconfig -> max_open_files = parval;
 		else if (strcmp(cmd, "webserver_interface") == 0)
 			pconfig -> webserver_interface = par;
 		else if (strcmp(cmd, "webserver_port") == 0)

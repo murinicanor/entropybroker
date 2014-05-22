@@ -11,6 +11,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>
+#include <poll.h>
 #include <string.h>
 #include <stdlib.h>
 #include <sys/time.h>
@@ -54,12 +55,12 @@ long double get_ts_ns()
 
 double get_ts()
 {
-        struct timeval ts;
+	struct timeval ts;
 
-        if (gettimeofday(&ts, NULL) == -1)
-                error_exit("gettimeofday failed");
+	if (gettimeofday(&ts, NULL) == -1)
+		error_exit("gettimeofday failed");
 
-        return double(ts.tv_sec) + double(ts.tv_usec) / 1000000.0;
+	return double(ts.tv_sec) + double(ts.tv_usec) / 1000000.0;
 }
 
 int READ(int fd, char *whereto, size_t len, bool *do_exit)
@@ -107,8 +108,8 @@ int READ_TO(int fd, char *whereto, size_t len, double to, bool *do_exit)
 
 	while(len>0)
 	{
-		fd_set rfds;
-		struct timeval tv;
+		pollfd fds[1];
+		struct timespec tv;
 		double now_ts = get_ts();
 		double time_left = end_ts - now_ts;
 		ssize_t rc;
@@ -117,12 +118,12 @@ int READ_TO(int fd, char *whereto, size_t len, double to, bool *do_exit)
 			return -1;
 
 		tv.tv_sec = time_left;
-		tv.tv_usec = (time_left - static_cast<double>(tv.tv_sec)) * 1000000.0;
+		tv.tv_nsec = (time_left - static_cast<double>(tv.tv_sec)) * 1000000000.0;
 
-		FD_ZERO(&rfds);
-		FD_SET(fd, &rfds);
+		fds[0].fd = fd;
+		fds[0].events = POLLIN;
 
-		rc = select(fd + 1, &rfds, NULL, NULL, &tv);
+		rc = poll(fds, 1, &tv);
 		if (rc == -1)
 		{
 			if (do_exit && *do_exit)
@@ -138,7 +139,7 @@ int READ_TO(int fd, char *whereto, size_t len, double to, bool *do_exit)
 			return 0;
 		}
 
-		if (FD_ISSET(fd, &rfds))	// should always evaluate to true at this point
+		if (fds[0].revents & POLLIN)
 		{
 			rc = read(fd, whereto, len);
 
@@ -213,8 +214,8 @@ int WRITE_TO(int fd, const char *whereto, size_t len, double to, bool *do_exit)
 
 	while(len>0)
 	{
-		fd_set wfds;
-		struct timeval tv;
+		pollfd fds[1];
+		struct timespec tv;
 		double now_ts = get_ts();
 		double time_left = end_ts - now_ts;
 		ssize_t rc;
@@ -223,12 +224,12 @@ int WRITE_TO(int fd, const char *whereto, size_t len, double to, bool *do_exit)
 			return -1;
 
 		tv.tv_sec = time_left;
-		tv.tv_usec = (time_left - static_cast<double>(tv.tv_sec)) * 1000000.0;
+		tv.tv_nsec = (time_left - static_cast<double>(tv.tv_sec)) * 1000000000.0;
 
-		FD_ZERO(&wfds);
-		FD_SET(fd, &wfds);
+		fds[0].fd = fd;
+		fds[0].events = POLLOUT;
 
-		rc = select(fd + 1, NULL, &wfds, NULL, &tv);
+		rc = poll(fds, 1, &tv);
 		if (rc == -1)
 		{
 			if (do_exit && *do_exit)
@@ -244,7 +245,7 @@ int WRITE_TO(int fd, const char *whereto, size_t len, double to, bool *do_exit)
 			return -1;
 		}
 
-		if (FD_ISSET(fd, &wfds))	// should always evaluate to true at this point
+		if (fds[0].revents & POLLOUT) // should always evaluate to true at this point
 		{
 			rc = write(fd, whereto, len);
 
@@ -596,7 +597,7 @@ void my_Assert2(bool flag, int line, const char *file, int debug_value)
 // *BSD need a different implemenation for this
 void set_thread_name(std::string name)
 {
-//#ifdef linux
+	//#ifdef linux
 #if 0 // on ubuntu 10.04.4 this does not work (pthread_setname_np unknown)
 	char *dummy = strdup(("eb:" + name).c_str());
 	if (!dummy)
@@ -609,7 +610,7 @@ void set_thread_name(std::string name)
 	}
 
 	// ignore pthread errors: at least under helgrind this would always fail
-        int rc = pthread_setname_np(pthread_self(), dummy);
+	int rc = pthread_setname_np(pthread_self(), dummy);
 	if (rc)
 		dolog(LOG_WARNING, "set_thread_name(%s) failed: %s (%d)", dummy, strerror(rc), rc);
 
@@ -620,13 +621,13 @@ void set_thread_name(std::string name)
 // *BSD need a different implemenation for this
 std::string get_thread_name(pthread_t *thread)
 {
-//#ifdef linux
+	//#ifdef linux
 #if 0 // on ubuntu 10.04.4 this does not work (pthread_setname_np unknown)
-        char buffer[4096];
+	char buffer[4096];
 
-        pthread_check(pthread_getname_np(*thread, buffer, sizeof buffer), "pthread_getname_np");
+	pthread_check(pthread_getname_np(*thread, buffer, sizeof buffer), "pthread_getname_np");
 
-        return std::string(buffer);
+	return std::string(buffer);
 #endif
 	return std::string("?");
 }
@@ -782,11 +783,11 @@ void free_locked(void *p, size_t n)
 std::string format(const char *fmt, ...)
 {
 	char *buffer = NULL;
-        va_list ap;
+	va_list ap;
 
-        va_start(ap, fmt);
-        (void)vasprintf(&buffer, fmt, ap);
-        va_end(ap);
+	va_start(ap, fmt);
+	(void)vasprintf(&buffer, fmt, ap);
+	va_end(ap);
 
 	std::string result = buffer;
 	free(buffer);
@@ -875,9 +876,9 @@ void put_long_long_int(FILE *fh, long long int value)
 
 int start_listen(const char *adapter, int portnr, int listen_queue_size)
 {
-        int fd = socket(AF_INET6, SOCK_STREAM, 0);
-        if (fd == -1)
-                error_exit("failed creating socket");
+	int fd = socket(AF_INET6, SOCK_STREAM, 0);
+	if (fd == -1)
+		error_exit("failed creating socket");
 
 #ifdef TCP_TFO
 	int qlen = listen_queue_size;
@@ -885,21 +886,21 @@ int start_listen(const char *adapter, int portnr, int listen_queue_size)
 		error_exit("Setting TCP_FASTOPEN on server socket failed");
 #endif
 
-        int reuse_addr = 1;
-        if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<char *>(&reuse_addr), sizeof reuse_addr) == -1)
-                error_exit("setsockopt(SO_REUSEADDR) failed");
+	int reuse_addr = 1;
+	if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<char *>(&reuse_addr), sizeof reuse_addr) == -1)
+		error_exit("setsockopt(SO_REUSEADDR) failed");
 
-        struct sockaddr_in6 server_addr;
+	struct sockaddr_in6 server_addr;
 
-        int server_addr_len = sizeof server_addr;
+	int server_addr_len = sizeof server_addr;
 
-        memset(reinterpret_cast<char *>(&server_addr), 0x00, server_addr_len);
-        server_addr.sin6_family = AF_INET6;
-        server_addr.sin6_port = htons(portnr);
+	memset(reinterpret_cast<char *>(&server_addr), 0x00, server_addr_len);
+	server_addr.sin6_family = AF_INET6;
+	server_addr.sin6_port = htons(portnr);
 
-        if (!adapter || strcmp(adapter, "0.0.0.0") == 0)
-                server_addr.sin6_addr = in6addr_any;
-        else if (inet_pton(AF_INET6, adapter, &server_addr.sin6_addr) == 0)
+	if (!adapter || strcmp(adapter, "0.0.0.0") == 0)
+		server_addr.sin6_addr = in6addr_any;
+	else if (inet_pton(AF_INET6, adapter, &server_addr.sin6_addr) == 0)
 	{
 		fprintf(stderr, "\n");
 		fprintf(stderr, " * inet_pton(%s) failed: %s\n", adapter, strerror(errno));
@@ -909,11 +910,11 @@ int start_listen(const char *adapter, int portnr, int listen_queue_size)
 		error_exit("listen socket initialisation failure: did you configure a correct listen adapter? (run with -n for details)");
 	}
 
-        if (bind(fd, (struct sockaddr *)&server_addr, server_addr_len) == -1)
-                error_exit("bind([%s]:%d) failed", adapter, portnr);
+	if (bind(fd, (struct sockaddr *)&server_addr, server_addr_len) == -1)
+		error_exit("bind([%s]:%d) failed", adapter, portnr);
 
-        if (listen(fd, listen_queue_size) == -1)
-                error_exit("listen(%d) failed", listen_queue_size);
+	if (listen(fd, listen_queue_size) == -1)
+		error_exit("listen(%d) failed", listen_queue_size);
 
 	return fd;
 }

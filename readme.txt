@@ -316,6 +316,15 @@ To invoke:
 	plot input_data.dat result.png
 
 
+Thanks
+------
+Håvard Moen:
+	- added config variable to set max number of open files
+	- rewritten select/pselect to use poll/ppoll. This is to get around the hardcoded Linux kernel limit of 1024 file descriptors for the select system call. The code has been running nicely with hundreds of clients for a month now
+	- added rpm spec file
+	- added new qwqng server which uses libqwqng, this is for the ComScire QNG PQ4000KU
+
+
 License
 -------
 GPL2

@@ -5,6 +5,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/types.h>
+#include <sys/resource.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <arpa/inet.h>
@@ -195,6 +196,10 @@ int main(int argc, char *argv[])
 
 	if (config.webserver_port >= 1)
 		start_web_server(&config, &clients, &clients_mutex, ppools, &stats, eb_output_fips140, eb_output_scc, dl, user_map);
+
+	struct rlimit rlim = {config.max_open_files , config.max_open_files };
+	if (setrlimit(RLIMIT_NOFILE, &rlim) == -1)
+		error_exit("setrlimit(RLIMIT_NOFILE) failed");
 
 	main_loop(&clients, &clients_mutex, ppools, &config, eb_output_fips140, eb_output_scc, &pc, &stats, user_map);
 

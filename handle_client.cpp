@@ -14,6 +14,7 @@
 #include <sys/time.h>
 #include <sys/resource.h>
 #include <sys/types.h>
+#include <poll.h>
 #include <vector>
 #include <string>
 #include <map>
@@ -283,38 +284,36 @@ void * thread(void *data)
 
 		for(;;)
 		{
-			// dolog(LOG_DEBUG, "loop %d, %d", gettid(), p -> socket_fd);
-			struct timeval tv;
-
+			struct timespec tv;
 			tv.tv_sec = p -> config -> communication_session_timeout;
-			tv.tv_usec = (p -> config -> communication_session_timeout - double(tv.tv_sec)) * 999999.0 + 1.0;
+			tv.tv_nsec = (p -> config -> communication_session_timeout - double(tv.tv_sec)) * 999999999.0 + 1.0;
+
 			my_assert(tv.tv_sec >= 0);
-			my_assert(tv.tv_usec >= 0);
-			if (tv.tv_sec == 0 && tv.tv_usec == 0)
-				tv.tv_usec = 1000;
+			my_assert(tv.tv_nsec >= 0);
 
-			int max_fd = -1;
-			fd_set rfds;
-			FD_ZERO(&rfds);
+			if (tv.tv_sec == 0 && tv.tv_nsec == 0)
+				tv.tv_nsec = 1000000;
 
-			FD_SET(p -> socket_fd, &rfds);
-			max_fd = mymax(max_fd, p -> socket_fd);
-			FD_SET(p -> to_thread[0], &rfds);
-			max_fd = mymax(max_fd, p -> to_thread[0]);
+			std::vector<pollfd> fds;
+			pollfd fd;
 
-			int rc = select(max_fd + 1, &rfds, NULL, NULL, &tv);
+			fds.clear();
+			fd.fd = p -> socket_fd;
+			fd.events = POLLIN;
+			fds.push_back(fd);
 
-			// if (rc == -1)
-			// 	dolog(LOG_DEBUG, "select: -1, %s (%d)", strerror(errno), errno);
-			// else
-			// 	dolog(LOG_DEBUG, "select: %d, ls %d|%d", rc, FD_ISSET(p -> socket_fd, &rfds), FD_ISSET(p -> to_thread[0], &rfds));
+			fd.fd = p -> to_thread[0];
+			fd.events = POLLIN;
+			fds.push_back(fd);
+
+			int rc = poll(&fds[0], (nfds_t)fds.size(), &tv);
 
 			if (rc == -1)
 			{
 				if (errno == EINTR)
 					continue;
 
-				dolog(LOG_CRIT, "select() failed for thread %s", p -> host.c_str());
+				dolog(LOG_CRIT, "poll() failed for thread %s", p -> host.c_str());
 				break;
 			}
 			else if (rc == 0)
@@ -323,7 +322,7 @@ void * thread(void *data)
 				break;
 			}
 
-			if (FD_ISSET(p -> socket_fd, &rfds))
+			if (fds[0].revents & POLLIN)
 			{
 				bool no_bits = false, new_bits = false, is_full = false;
 
@@ -344,7 +343,7 @@ void * thread(void *data)
 				dolog(LOG_DEBUG, "finished processing fd: %d", p -> socket_fd);
 			}
 
-			if (FD_ISSET(p -> to_thread[0], &rfds))
+			if (fds[1].revents & POLLIN)
 			{
 				dolog(LOG_DEBUG, "process from main to fd: %d", p -> socket_fd);
 				if (send_request_from_main_to_clients(p) != 0)
@@ -518,10 +517,7 @@ void send_to_client_threads(std::vector<client_t *> *clients, std::vector<msg_pa
 			client_t *cur_cl = clients -> at(index);
 
 			if (cur_cl -> is_server == is_server_in && cur_cl -> socket_fd != cur_msg -> fd_sender)
-{
-			// printf("SEND TO thread: %s to %d\n", pipe_cmd_str[cur_msg -> cmd], cur_cl -> socket_fd);
 				(void)send_pipe_command(cur_cl -> to_thread[1], cur_msg -> cmd);
-}
 		}
 	}
 }
@@ -567,17 +563,15 @@ void main_loop(std::vector<client_t *> *clients, pthread_mutex_t *clients_mutex,
 	bool send_have_data = false, send_need_data = false, send_is_full = false;
 	for(;;)
 	{
-		fd_set rfds;
+		std::vector<pollfd> fds;
+		pollfd fd;
 		double now = get_ts();
 		struct timespec tv;
-		int max_fd = -1;
 		bool force_stats = false;
 		sigset_t sig_set;
 
 		if (sigemptyset(&sig_set) == -1)
 			error_exit("sigemptyset");
-
-		FD_ZERO(&rfds);
 
 		double time_left = 300.0, dummy1_time = -1.0;
 
@@ -593,16 +587,20 @@ void main_loop(std::vector<client_t *> *clients, pthread_mutex_t *clients_mutex,
 			time_left = mymin(time_left, dummy1_time);
 		}
 
+		fds.clear();
 		my_mutex_lock(clients_mutex);
 		for(unsigned int loop=0; loop<clients -> size(); loop++)
 		{
-			FD_SET(clients -> at(loop) -> to_main[0], &rfds);
-			max_fd = mymax(max_fd, clients -> at(loop) -> to_main[0]);
+			fd.fd = clients -> at(loop) -> to_main[0];
+			fd.events = POLLIN;
+			fd.revents = 0;
+			fds.push_back(fd);
 		}
 		my_mutex_unlock(clients_mutex);
 
-		FD_SET(listen_socket_fd, &rfds);
-		max_fd = mymax(max_fd, listen_socket_fd);
+		fd.fd = listen_socket_fd;
+		fd.events = POLLIN;
+		fds.push_back(fd);
 
 		tv.tv_sec = time_left;
 		tv.tv_nsec = (time_left - double(tv.tv_sec)) * 1000000000.0;
@@ -611,13 +609,9 @@ void main_loop(std::vector<client_t *> *clients, pthread_mutex_t *clients_mutex,
 		if (tv.tv_sec == 0 && tv.tv_nsec == 0)
 			tv.tv_nsec = 1000;
 
-		int rc = pselect(max_fd + 1, &rfds, NULL, NULL, &tv, &sig_set);
+		int rc = ppoll(&fds[0], (nfds_t) fds.size(), &tv, &sig_set);
 
 		now = get_ts();
-		// if (rc == -1)
-		// 	dolog(LOG_DEBUG, "pselect: -1, %s (%d) %f", strerror(errno), errno, time_left);
-		// else
-		// 	dolog(LOG_DEBUG, "pselect: %d, ls %d %f", rc, FD_ISSET(listen_socket_fd, &rfds), time_left);
 
 		if (is_SIGHUP())
 		{
@@ -635,13 +629,13 @@ void main_loop(std::vector<client_t *> *clients, pthread_mutex_t *clients_mutex,
 
 		if (rc == -1)
 		{
-			if (errno == EBADF || errno == ENOMEM || errno == EINVAL)
-				error_exit("pselect() failed");
+			if (errno == EFAULT || errno == ENOMEM || errno == EINVAL)
+				error_exit("ppoll() failed");
 
 			if (errno == EINTR)
 				continue;
 
-			dolog(LOG_DEBUG, "select returned with -1, errno: %s (%d)", strerror(errno), errno);
+			dolog(LOG_DEBUG, "poll returned with -1, errno: %s (%d)", strerror(errno), errno);
 		}
 
 		my_mutex_lock(clients_mutex);
@@ -695,13 +689,15 @@ void main_loop(std::vector<client_t *> *clients, pthread_mutex_t *clients_mutex,
 		if (rc == 0)
 			continue;
 
-		if (config -> allow_event_entropy_addition)
-		{
-			int event_bits = ppools -> add_event(now, reinterpret_cast<unsigned char *>(&rfds), sizeof rfds, double(config -> communication_timeout) * 0.05, pc);
+		/*
+		   if (config -> allow_event_entropy_addition)
+		   {
+		   int event_bits = ppools -> add_event(now, reinterpret_cast<unsigned char *>(&rfds), sizeof rfds, double(config -> communication_timeout) * 0.05, pc);
 
-			if (event_bits > 0)
-				dolog(LOG_DEBUG, "main|added %d bits of event-entropy to pool", event_bits);
-		}
+		   if (event_bits > 0)
+		   dolog(LOG_DEBUG, "main|added %d bits of event-entropy to pool", event_bits);
+		   }
+		 */
 
 		my_mutex_lock(clients_mutex);
 		std::vector<pthread_t *> delete_ids;
@@ -711,17 +707,24 @@ void main_loop(std::vector<client_t *> *clients, pthread_mutex_t *clients_mutex,
 		{
 			// this way we go through each fd in the process_pipe_from_client_thread part
 			// so that we detect closed fds
-			if (rc > 0 && !FD_ISSET(clients -> at(loop) -> to_main[0], &rfds))
-				continue;
+			int set = 0;
+			for(unsigned int i=0; i<fds.size(); i++) {
+				if(fds.at(i).fd == clients -> at(loop) -> to_main[0] && fds.at(i).revents & POLLIN) {
+					set = 1;
+					break;
+				};
+			};
+			if(rc > 0 && set == 1 ) {
 
-			if (process_pipe_from_client_thread(clients -> at(loop), &msgs_clients, &msgs_servers) == -1)
-			{
-				dolog(LOG_INFO, "main|connection with %s/%s lost", clients -> at(loop) -> host.c_str(), clients -> at(loop) -> type.c_str());
+				if (process_pipe_from_client_thread(clients -> at(loop), &msgs_clients, &msgs_servers) == -1)
+				{
+					dolog(LOG_INFO, "main|connection with %s/%s lost", clients -> at(loop) -> host.c_str(), clients -> at(loop) -> type.c_str());
 
-				user_map -> inc_misc_errors(clients -> at(loop) -> username);
-				gs -> inc_misc_errors();
+					user_map -> inc_misc_errors(clients -> at(loop) -> username);
+					gs -> inc_misc_errors();
 
-				delete_ids.push_back(&clients -> at(loop) -> th);
+					delete_ids.push_back(&clients -> at(loop) -> th);
+				}
 			}
 		}
 
@@ -731,7 +734,7 @@ void main_loop(std::vector<client_t *> *clients, pthread_mutex_t *clients_mutex,
 		send_to_client_threads(clients, &msgs_clients, false, &send_have_data, &send_need_data, &send_is_full);
 		send_to_client_threads(clients, &msgs_servers, true, &send_have_data, &send_need_data, &send_is_full);
 
-		if (rc > 0 && FD_ISSET(listen_socket_fd, &rfds))
+		if(rc > 0 && ( fds.at(fds.size() - 1).revents & POLLIN ) )
 		{
 			register_new_client(listen_socket_fd, clients, user_map, config, ppools, gs, eb_output_fips140, eb_output_scc);
 			send_have_data = send_need_data = send_is_full = false;

@@ -117,6 +117,15 @@ else
 	echo \- libpcsclite-dev NOT found, disabling eb_server_smartcard
 fi
 
+g++ -O0 -o $FILE `pkg-config --cflags libqwqng` test_libqwqng.cpp 2> /dev/null
+if [ $? -eq 0 ] ; then
+	echo \+ libqwqng-dev detected, enabling eb_server_qwqng
+	B2="$B2 eb_server_qwqng"
+	QWQNG='PCSC_CFLAGS=`pkg-config --cflags libqwqng`'
+else
+	echo \- libqwqng-dev NOT found, disabling eb_server_qwqng
+fi
+
 g++ -O0 -o $FILE test_libftdi.cpp 2> /dev/null
 if [ $? -eq 0 ] ; then
 	echo \+ libftdi-dev detected, enabling eb_server_ComScire_R2000KU
@@ -127,6 +136,7 @@ fi
 
 echo B2=$B2 > makefile.inc
 echo $PCSC >> makefile.inc
+echo $QWQNG >> makefile.inc
 echo $TFO >> makefile.inc
 
 rm -f $FILE $FILE2
