@@ -16,7 +16,7 @@
 #include <termios.h>
 #include <sys/socket.h>
 #include <sys/un.h>
-#include <usb.h>
+#include <libusb-1.0/libusb.h>
 
 #define USB_VENDOR_ARANEUS              0x12d8
 #define USB_ARANEUS_PRODUCT_ALEA        0x0001
@@ -74,11 +74,13 @@ int main(int argc, char *argv[])
 	int verbose = 0;
 	char server_type[128];
 	bool show_bps = false;
+	libusb_context *ctx = NULL;
+	libusb_device_handle *handle = NULL;
 	std::string username, password;
 	std::vector<std::string> hosts;
 	int log_level = LOG_INFO;
 
-	fprintf(stderr, "eb_server_Araneus_Alea v" VERSION ", (C) 2009-2013 by folkert@vanheusden.com\n");
+	fprintf(stderr, "eb_server_Araneus_Alea v" VERSION ", (C) 2009-2014 by folkert@vanheusden.com\n");
 
 	while((c = getopt(argc, argv, "I:hSX:P:o:L:l:snv")) != -1)
 	{
@@ -148,30 +150,19 @@ int main(int argc, char *argv[])
 
 	set_logging_parameters(log_console, log_logfile, log_syslog, log_level);
 
-	usb_init();
-	usb_find_busses();
-	usb_find_devices();
+	if(libusb_init(&ctx) < 0)
+		error_exit("Error initialising Araneus Alea");
 
-	struct usb_bus *bus = NULL;
-	struct usb_device *dev = NULL;
-	struct usb_dev_handle *handle = NULL;
+	libusb_set_debug(ctx, 3);
 
-	for(bus = usb_busses; bus != NULL && handle == NULL; bus = bus->next)
-	{
-		for(dev = bus->devices; dev != NULL && handle == NULL; dev = dev->next)
-		{
-			if (dev->descriptor.idVendor == USB_VENDOR_ARANEUS && dev->descriptor.idProduct == USB_ARANEUS_PRODUCT_ALEA)
-			{
-				handle = usb_open(dev);
-
-				if (usb_claim_interface(handle, 0) < 0)
-					error_exit("Unable to claim Alea interface 0");
-			}
-		}
-	}
+	handle = libusb_open_device_with_vid_pid(ctx,USB_VENDOR_ARANEUS,USB_ARANEUS_PRODUCT_ALEA);
 
 	if (!handle)
 		error_exit("No Alea device found");
+
+	if(libusb_claim_interface(handle, 0) < 0){
+        	error_exit("Cannot Claim Interface");
+	}
 
 	snprintf(server_type, sizeof server_type, "eb_server_Araneus_Alea v" VERSION);
 
@@ -197,10 +188,8 @@ int main(int argc, char *argv[])
 
 	for(;!do_exit;)
 	{
-        	int rc = usb_bulk_read(handle, 1, (char *)bytes, sizeof bytes, TIMEOUT);
-
-		if (rc != sizeof bytes)
-			error_exit("Failed to retrieve random bytes from device %x", rc);
+        	if (libusb_bulk_transfer(handle, (1 | LIBUSB_ENDPOINT_IN), (unsigned char *)bytes, sizeof bytes, &c, TIMEOUT) < 0)
+			error_exit("Failed to retrieve random bytes from device %x", c);
 
 		////////
 

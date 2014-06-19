@@ -42,14 +42,14 @@ pools::pools(std::string cache_dir_in, unsigned int max_n_mem_pools_in, unsigned
 
 	if (min_store_on_disk_n >= max_n_mem_pools)
 		error_exit("min_store_on_disk_n must be less than max_number_of_mem_pools");
-	if (min_store_on_disk_n < 1)
-		error_exit("min_store_on_disk_n must be > 0");
+	if (min_store_on_disk_n < 0)
+		error_exit("min_store_on_disk_n must be at least 0");
 
 	if (max_n_mem_pools < 3)
 		error_exit("maximum number of memory pools must be at least 3");
 
-	if (max_n_disk_pools < 1)
-		error_exit("maximum number of disk pools must be at least 1");
+	if (max_n_disk_pools < 0)
+		error_exit("maximum number of disk pools must be at least 0");
 
 	load_cachefiles_list();
 }
@@ -107,6 +107,11 @@ void pools::list_rlock()
 // keep_n == 0: means dump all
 void pools::store_caches(unsigned int keep_n)
 {
+	if(max_n_disk_pools == 0) {
+		dolog(LOG_DEBUG, "Disabled disk pools: not creating any");
+		return;
+	}
+
 	if (cache_list.size() >= max_n_disk_pools && keep_n != 0)
 	{
 		if (!disk_limit_reached_notified)
