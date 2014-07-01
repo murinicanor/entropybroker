@@ -97,7 +97,7 @@ entropy_broker: $(OBJSeb)
 	$(CXX) $(LINT) $(OBJSeb) $(LDFLAGS) -lpng -lgd -o entropy_broker
 
 eb_server_Araneus_Alea: $(OBJSsal)
-	$(CXX) $(LINT) $(OBJSsal) $(LDFLAGS) -lusb -o eb_server_Araneus_Alea
+	$(CXX) $(LINT) $(OBJSsal) $(LDFLAGS) -lusb-1.0 -o eb_server_Araneus_Alea
 
 eb_server_audio: $(OBJSsa)
 	$(CXX) $(LINT) $(OBJSsa) $(LDFLAGS) -lasound -o eb_server_audio
