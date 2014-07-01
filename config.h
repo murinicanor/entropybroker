@@ -32,8 +32,6 @@ typedef struct
 
 	int max_open_files;
 
-  int max_open_files;
-
 	bool ignore_rngtest_fips140, ignore_rngtest_scc;
 	double scc_threshold;
 
