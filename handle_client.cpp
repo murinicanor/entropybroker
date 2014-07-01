@@ -284,16 +284,6 @@ void * thread(void *data)
 
 		for(;;)
 		{
-			struct timespec tv;
-			tv.tv_sec = p -> config -> communication_session_timeout;
-			tv.tv_nsec = (p -> config -> communication_session_timeout - double(tv.tv_sec)) * 999999999.0 + 1.0;
-
-			my_assert(tv.tv_sec >= 0);
-			my_assert(tv.tv_nsec >= 0);
-
-			if (tv.tv_sec == 0 && tv.tv_nsec == 0)
-				tv.tv_nsec = 1000000;
-
 			std::vector<pollfd> fds;
 			pollfd fd;
 
@@ -306,7 +296,8 @@ void * thread(void *data)
 			fd.events = POLLIN;
 			fds.push_back(fd);
 
-			int rc = poll(&fds[0], (nfds_t)fds.size(), &tv);
+			int tv = p -> config -> communication_session_timeout * 1000.0;
+			int rc = poll(&fds[0], (nfds_t)fds.size(), tv);
 
 			if (rc == -1)
 			{

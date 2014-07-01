@@ -109,7 +109,6 @@ int READ_TO(int fd, char *whereto, size_t len, double to, bool *do_exit)
 	while(len>0)
 	{
 		pollfd fds[1];
-		struct timespec tv;
 		double now_ts = get_ts();
 		double time_left = end_ts - now_ts;
 		ssize_t rc;
@@ -117,13 +116,11 @@ int READ_TO(int fd, char *whereto, size_t len, double to, bool *do_exit)
 		if (time_left <= 0.0)
 			return -1;
 
-		tv.tv_sec = time_left;
-		tv.tv_nsec = (time_left - static_cast<double>(tv.tv_sec)) * 1000000000.0;
-
 		fds[0].fd = fd;
 		fds[0].events = POLLIN;
 
-		rc = poll(fds, 1, &tv);
+		int tv = time_left * 1000.0;
+		rc = poll(fds, 1, tv);
 		if (rc == -1)
 		{
 			if (do_exit && *do_exit)
@@ -215,7 +212,6 @@ int WRITE_TO(int fd, const char *whereto, size_t len, double to, bool *do_exit)
 	while(len>0)
 	{
 		pollfd fds[1];
-		struct timespec tv;
 		double now_ts = get_ts();
 		double time_left = end_ts - now_ts;
 		ssize_t rc;
@@ -223,13 +219,11 @@ int WRITE_TO(int fd, const char *whereto, size_t len, double to, bool *do_exit)
 		if (time_left <= 0.0)
 			return -1;
 
-		tv.tv_sec = time_left;
-		tv.tv_nsec = (time_left - static_cast<double>(tv.tv_sec)) * 1000000000.0;
-
 		fds[0].fd = fd;
 		fds[0].events = POLLOUT;
 
-		rc = poll(fds, 1, &tv);
+		int tv = time_left * 1000.0;
+		rc = poll(fds, 1, tv);
 		if (rc == -1)
 		{
 			if (do_exit && *do_exit)
