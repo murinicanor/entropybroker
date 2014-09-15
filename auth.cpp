@@ -102,7 +102,7 @@ int auth_eb_user(int fd, int to, users *user_map, std::string & username_out, st
 	bool user_known = user_map -> get_password(username_out, password);
 	if (!user_known)
 	{
-		dolog(LOG_WARNING, "User '%s' not known, (fd: %d, host: %s)", username, host.c_str());
+		dolog(LOG_WARNING, "User '%s' not known, (fd: %d, host: %s)", username, fd, host.c_str());
 
 		sg -> put_history_log(HL_LOGIN_USER_FAIL, host, "", username_out, get_ts(), 0, "username not known");
 
