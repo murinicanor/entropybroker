@@ -1,0 +1,121 @@
+body {
+	background: #282828;
+	border: 8px solid #585858;
+	color: #ffffff;
+	font: 16px/1.25 "HelveticaNeue-Light", "Helvetica Neue Light", "Helvetica Neue", Helvetica, Arial, "Lucida Grande", sans-serif;
+	margin: 0;
+}
+
+header, footer, section {
+	display: block;
+	overflow: hidden;
+}
+
+header {
+	background: #282828;
+	float: left;
+	width: 150px;
+}
+
+header img {
+	clear: both;
+	display: block;
+	margin: 0 0 15px 5px;
+}
+
+section.content {
+	padding: 10px;
+	min-height: 650px;
+}
+
+section.content h1 {
+	background: #282828;
+	font-size: 32px;
+	margin: 0;
+	padding: 30px 0 10px 10px;
+}
+
+section.content nav img {
+	vertical-align: middle;
+}
+
+.keys {
+	width: 200px;
+}
+
+.timestamp {
+	width: 240px;
+}
+
+td.alignright {
+	text-align: right;
+}
+
+table.fullwidth {
+	width: 100%;
+}
+
+section.content nav a {
+	background: #383838;
+	display: block;
+	margin: 0 0 0 0;
+	padding: 5px;
+}
+
+.tablemargins {
+	margin: 1px 1px 1px 1px;
+	padding: 1px;
+}
+
+.table2 {
+        background-color: #383838;
+        line-height: 1.25em;
+}
+
+.lighttable {
+        background-color: #585858;
+}
+
+.lighttable2 {
+        background-color: #484848;
+}
+
+.lighttable3 {
+        background-color: #686868;
+}
+
+.lighttable4 {
+        background-color: #787878;
+}
+
+.darkyellow {
+        background-color: #383828;
+}
+
+.darkred {
+        background-color: #382828;
+}
+
+footer {
+	text-align: right;
+}
+
+.adsense {
+	background-color: #ffffff;
+}
+
+a:link {
+	color: #0b9a0a
+}
+
+a:visited {
+	color: #018a00
+}
+
+a:active {
+	color: #007a00
+}
+
+a:hover {
+	color: #006a00
+}
