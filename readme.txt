@@ -44,6 +44,7 @@ libusb-1.0-0-dev is for eb_server_usb
 libftdi-dev is for eb_server_ComScire_R2000KU
 libpcsclite-dev is for eb_server_smartcard
 libpng12-dev is for plot
+libgd2-noxpm-dev or libgd2-xpm-dev
 The configure script will determine which libraries are available
 and then select which daemons to build.
 
