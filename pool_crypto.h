@@ -1,4 +1,3 @@
-// SVN: $Revision$
 class pool_crypto
 {
 private:

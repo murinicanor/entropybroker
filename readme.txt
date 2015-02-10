@@ -74,6 +74,11 @@ If you change the password and want to reload the user-file
 without restarting the complete broker, sent SIGHUP to it.
 Of course the size of the password depends on the cipher you
 configure for the password. E.g. 3DES requires 24 characters.
+You can also add a 3d and 4th parameter: maximum bps and allow
+write access. E.g.:
+user|password|1024|yes
+This allows the user 'user' to get a maximum of 1024 bits per
+second and also allow him to put new data into the server.
 
 All clients and servers need a '-I' commandline parameter.
 This parameter can be used 1 or more times. It selects one
@@ -333,6 +338,4 @@ GPL2
 
 Contact info
 ------------
-either folkert@vanheusden.com or folkert.mobiel@gmail.com
-
-SVN: $Revision$
+mail@vanheusden.com

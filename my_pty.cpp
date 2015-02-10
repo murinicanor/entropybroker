@@ -1,4 +1,3 @@
-// SVN: $Revision$
 #define _LARGEFILE64_SOURCE     /* required for GLIBC to enable stat64 and friends */
 /* I read somewhere that this is needed on HP-UX */
 #define _INCLUDE_HPUX_SOURCE

@@ -1,4 +1,3 @@
-// SVN: $Revision$
 #include <string.h>
 #include <string>
 

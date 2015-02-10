@@ -1,4 +1,3 @@
-// SVN: $Revision$
 #define MIN_SLEEP 0.0001
 
 class pools

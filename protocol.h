@@ -1,4 +1,3 @@
-// SVN: $Revision$
 #define PROTOCOL_VERSION 7
 
 int recv_length_data(int fd, char **data, unsigned int *len, double to);

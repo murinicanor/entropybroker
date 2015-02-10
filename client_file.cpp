@@ -1,4 +1,3 @@
-// SVN: $Revision$
 #include <arpa/inet.h>
 #include <vector>
 #include <string>
@@ -92,7 +91,7 @@ int main(int argc, char *argv[])
 		client_type = "eb_client_file v" VERSION;
 	else
 		client_type = "eb_client_kernel_generic v" VERSION;
-	printf("%s, (C) 2009-2013 by folkert@vanheusden.com\n", client_type);
+	printf("%s, (C) 2009-2015 by folkert@vanheusden.com\n", client_type);
 
 	while((c = getopt(argc, argv, "b:S:hc:f:X:P:I:L:l:sn")) != -1)
 	{

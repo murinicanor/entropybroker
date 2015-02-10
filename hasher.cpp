@@ -1,4 +1,3 @@
-// SVN: $Revision$
 #include <string>
 #include "hasher.h"
 #include "hasher_md5.h"

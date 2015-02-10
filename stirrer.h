@@ -1,4 +1,3 @@
-// SVN: $Revision$
 class stirrer
 {
 public:

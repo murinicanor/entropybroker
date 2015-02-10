@@ -1,4 +1,3 @@
-// SVN: $Revision$
 #include <arpa/inet.h>
 #include <string>
 #include <map>
@@ -333,7 +332,7 @@ int main(int argc, char *argv[])
 	std::vector<std::string> hosts;
 	int log_level = LOG_INFO;
 
-	fprintf(stderr, "eb_server_audio v" VERSION ", (C) 2009-2013 by folkert@vanheusden.com\n");
+	fprintf(stderr, "eb_server_audio v" VERSION ", (C) 2009-2015 by folkert@vanheusden.com\n");
 
 	while((c = getopt(argc, argv, "I:hX:P:So:d:L:l:sn")) != -1)
 	{

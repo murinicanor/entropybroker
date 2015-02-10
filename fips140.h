@@ -1,4 +1,3 @@
-// SVN: $Revision$
 class fips140
 {
 	/* ringbuffer of 20000 bits */

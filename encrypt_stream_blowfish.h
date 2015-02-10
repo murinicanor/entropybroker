@@ -1,4 +1,3 @@
-// SVN: $Revision$
 #include <cryptopp/modes.h>
 #include <cryptopp/blowfish.h>
 

@@ -1,5 +1,3 @@
-// SVN: $Revision$
-
 class statistics_user : public statistics
 {
 protected:

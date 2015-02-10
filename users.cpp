@@ -1,4 +1,3 @@
-// SVN: $Revision$
 #include <stdlib.h>
 #include <string>
 #include <map>
@@ -94,6 +93,11 @@ void users::load_usermap()
 		else
 			u.allowance = u.max_get_bps = default_max_get_bps;
 		u.last_get_message = 0.0;
+
+		if (pars.size() >= 4)
+			u.allow_rw = pars[3].compare("yes") == 0;
+		else
+			u.allow_rw = true;
 
 		pthread_check(pthread_mutex_init(&u.lck, &global_mutex_attr), "pthread_mutex_init");
 
@@ -672,4 +676,19 @@ void users::get_recv_in_avg_sd(std::string username, double *avg, double *sd)
         
                 unlock_user(u);
         }
+}
+
+bool users::get_is_rw(const std::string & username)
+{
+	bool allow = false;
+        user_t *u = find_and_lock_user(username); 
+        
+        if (u) 
+        {
+		allow = u -> allow_rw;
+
+		unlock_user(u);
+	}
+
+	return allow;
 }

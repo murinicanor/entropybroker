@@ -1,4 +1,3 @@
-// SVN: $Revision$
 #include <cryptopp/aes.h>
 #include <cryptopp/blowfish.h>
 #include <cryptopp/camellia.h>

@@ -1,4 +1,3 @@
-// SVN: $Revision$
 #include <sys/types.h>
 #include <stdlib.h>
 #include <string.h>
@@ -445,10 +444,17 @@ int do_client(client_t *client, bool *no_bits, bool *new_bits, bool *is_full)
 	}
 	else if (memcmp(cmd, "0002", 4) == 0)	// PUT bits
 	{
-		client -> pu -> register_msg(client -> username, true);
-		client -> stats_glob -> register_msg(true);
+		if (client -> pu -> get_is_rw(client -> username))
+		{
+			client -> pu -> register_msg(client -> username, true);
+			client -> stats_glob -> register_msg(true);
 
-		return do_client_put(client, new_bits, is_full);
+			return do_client_put(client, new_bits, is_full);
+		}
+
+		dolog(LOG_DEBUG, "client|%s PUT denied (fd: %d)", client -> host.c_str(), client -> socket_fd);
+
+		return -1;
 	}
 	else if (memcmp(cmd, "9999", 4) == 0)	// logout
 	{

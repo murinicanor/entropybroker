@@ -1,4 +1,3 @@
-// SVN: $Revision$
 enum bit_count_estimator_type_t { BCE_SHANNON, BCE_COMPRESSION };
 
 class bit_count_estimator

@@ -1,4 +1,3 @@
-// SVN: $Revision$
 #define SCC_BUFFER_SIZE 4096
 
 class scc

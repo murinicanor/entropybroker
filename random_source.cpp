@@ -1,4 +1,3 @@
-// SVN: $Revision$
 #include <unistd.h>
 #include <vector>
 #include <string>

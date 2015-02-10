@@ -1,5 +1,3 @@
-// SVN: $Revision$
-
 #define HISTORY_REMEMBER_N 128
 
 typedef enum { HL_LOGIN_OK, HL_LOGOUT_OK, HL_LOGIN_USER_FAIL, HL_LOGIN_PW_FAIL, HL_LOGIN_OTHER } hl_type_t;

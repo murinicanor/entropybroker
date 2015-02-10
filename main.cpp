@@ -1,4 +1,3 @@
-// SVN: $Revision$
 #include <sys/time.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -56,8 +55,7 @@
 #include "web_server.h"
 
 const char *pid_file = PID_DIR "/entropy_broker.pid";
-const char *revision = "SVN revision: $Revision$";
-const char *version = "entropy_broker v " VERSION ", (C) 2009-2013 by folkert@vanheusden.com";
+const char *version = "entropy_broker v " VERSION ", (C) 2009-2015 by folkert@vanheusden.com";
 
 void seed(pools *ppools, pool_crypto *pc)
 {
@@ -95,7 +93,6 @@ int main(int argc, char *argv[])
 	int log_level = LOG_INFO;
 
 	printf("%s\n", version);
-	printf("%s\n", revision);
 
 	eb_output_fips140 -> set_user("output");
 	eb_output_scc     -> set_user("output");
@@ -154,7 +151,6 @@ int main(int argc, char *argv[])
 		config.stats_file = stats_file;
 
 	dolog(LOG_INFO, "%s", version);
-	dolog(LOG_INFO, "%s", revision);
 
 	dolog(LOG_DEBUG, "Main thread id: %ld", gettid());
 

@@ -1,4 +1,3 @@
-// SVN: $Revision$
 #include <cryptopp/sha.h>
 
 class hasher_sha512 : public hasher

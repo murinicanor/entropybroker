@@ -1,4 +1,3 @@
-// SVN: $Revision$
 class stirrer_camellia : public stirrer
 {
 private:

@@ -1,4 +1,3 @@
-// SVN: $Revision$
 #define PIPE_CMD_HAVE_DATA 1
 #define PIPE_CMD_NEED_DATA 2
 #define PIPE_CMD_IS_FULL   3
@@ -9,6 +8,8 @@ typedef struct
 {
 	int to_thread[2], to_main[2];
 	pthread_t th;
+
+	bool allow_rw;
 
 	int socket_fd;
 	std::string host, type;

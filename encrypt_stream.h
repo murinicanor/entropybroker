@@ -1,4 +1,3 @@
-// SVN: $Revision$
 class encrypt_stream
 {
 public:

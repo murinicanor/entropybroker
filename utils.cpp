@@ -1,4 +1,3 @@
-// SVN: $Revision$
 #include <string>
 #include <pthread.h>
 #include <vector>

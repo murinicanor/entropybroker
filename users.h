@@ -1,5 +1,3 @@
-// SVN: $Revision$
-
 class user_t
 {
 public:
@@ -14,6 +12,8 @@ public:
 	double last_get_message, allowance;
 
 	double last_logon;
+
+	bool allow_rw;
 };
 
 class users
@@ -86,4 +86,5 @@ public:
 	void get_sent_avg_sd(std::string username, double *avg, double *sd);
 	void get_recv_avg_sd(std::string username, double *avg, double *sd);
 	void get_recv_in_avg_sd(std::string username, double *avg, double *sd);
+	bool get_is_rw(const std::string & username);
 };

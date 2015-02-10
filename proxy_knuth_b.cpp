@@ -1,4 +1,3 @@
-// SVN: $Revision$
 #include <vector>
 #include <string>
 #include <map>
@@ -396,7 +395,7 @@ int main(int argc, char *argv[])
 	random_source_t rst = RS_CRYPTOPP;
 	std::string cipher = "blowfish", handshake_hash = "sha512", mac_hasher = "md5";
 
-	printf("proxy_knuth_b, (C) 2009-2013 by folkert@vanheusden.com\n");
+	printf("proxy_knuth_b, (C) 2009-2015 by folkert@vanheusden.com\n");
 
 	while((c = getopt(argc, argv, "V:j:p:U:hf:X:P:I:L:l:sn")) != -1)
 	{
