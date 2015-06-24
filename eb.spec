@@ -54,7 +54,6 @@ rm -rf %{buildroot}
 %doc /usr/doc/entropy_broker/users.txt
 %doc /usr/doc/entropy_broker/license.txt
 %doc /usr/doc/entropy_broker/auth.txt
-%doc /usr/doc/entropy_broker/license.openssl
 %doc /usr/doc/entropy_broker/design.txt
 %config(noreplace) /etc/entropybroker/entropy_broker.conf
 %config /etc/entropybroker/entropy_broker.conf.dist
@@ -112,7 +111,6 @@ rm -rf %{buildroot}
 %doc /usr/doc/entropy_broker/users.txt
 %doc /usr/doc/entropy_broker/license.txt
 %doc /usr/doc/entropy_broker/auth.txt
-%doc /usr/doc/entropy_broker/license.openssl
 %doc /usr/doc/entropy_broker/design.txt
 /usr/bin/eb_client_egd
 /usr/bin/eb_client_kernel_generic

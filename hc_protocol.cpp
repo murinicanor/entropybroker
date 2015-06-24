@@ -85,7 +85,7 @@ int send_got_data(int fd, pools *ppools, config_t *config)
 	unsigned char buffer[4 + 4];
 
 	// data is an estimate; it can be different anyway as other clients may come first
-	make_msg(buffer, 9, mymin(9999, ppools -> get_bit_sum(config -> communication_timeout))); // 0009
+	make_msg(buffer, 9, std::min(9999, ppools -> get_bit_sum(config -> communication_timeout))); // 0009
 
 	return WRITE_TO(fd, buffer, 8, config -> communication_timeout) == 8 ? 0 : -1;
 }

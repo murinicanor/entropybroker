@@ -73,6 +73,3 @@ loop:
 
 
 *1 since version 2.0, all ciphers, hashers, etc are configurable
-
-
-SVN: $Revision$

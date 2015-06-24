@@ -1,6 +1,3 @@
-#define mymin(x, y)       ((x)<(y)?(x):(y))
-#define mymax(x, y)       ((x)>(y)?(x):(y))
-
 extern pthread_mutexattr_t global_mutex_attr;
 
 double get_ts(void);

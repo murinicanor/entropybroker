@@ -143,7 +143,7 @@ pthread_cond_t * pool::timed_lock_object(double max_time)
 
 		clock_gettime(CLOCK_REALTIME, &abs_time);
 
-		double cur_time = mymin(max_time, 1.0);
+		double cur_time = std::min(max_time, 1.0);
 		abs_time.tv_sec += cur_time;
 		abs_time.tv_nsec += (cur_time - floor(cur_time)) * 1000000000L;
 
@@ -217,7 +217,7 @@ int pool::add_entropy_data(unsigned char *entropy_data, int n_bytes_in, pool_cry
 		// when adding data to the pool, we encrypt the pool using blowfish with
 		// the entropy-data as the encryption-key. blowfish allows keysizes with
 		// a maximum of 448 bits which is 56 bytes
-		int cur_to_add = mymin(n_bytes_in, pc -> get_stirrer() -> get_stir_size());
+		int cur_to_add = std::min(n_bytes_in, pc -> get_stirrer() -> get_stir_size());
 
 		pc -> get_stirrer() -> do_stir(ivec, entropy_pool, pool_size_bytes, entropy_data, cur_to_add, entropy_pool_temp, true);
 
@@ -249,8 +249,8 @@ int pool::get_entropy_data(unsigned char *entropy_data, int n_bytes_requested, b
 
 	n_given = n_bytes_requested;
 	if (!prng_ok)
-		n_given = mymin(n_given, bits_in_pool / 8);
-	n_given = mymin(n_given, half_hash_len);
+		n_given = std::min(n_given, bits_in_pool / 8);
+	n_given = std::min(n_given, half_hash_len);
 
 	if (n_given > 0)
 	{
@@ -267,7 +267,7 @@ int pool::get_entropy_data(unsigned char *entropy_data, int n_bytes_requested, b
 		int stir_size = pc -> get_stirrer() -> get_stir_size(), index = 0;
 		while(index < hash_len)
 		{
-			int cur_hash_n = mymin(hash_len - index, stir_size);
+			int cur_hash_n = std::min(hash_len - index, stir_size);
 
 			pc -> get_stirrer() -> do_stir(ivec, entropy_pool, pool_size_bytes, dummy_hash_p, cur_hash_n, entropy_pool_temp, false);
 
@@ -343,7 +343,7 @@ int pool::add_event(double ts, unsigned char *event_data, int n_event_data, pool
 	if (delta == 0)
 		n_bits_added = 0;
 	else
-		n_bits_added = mymax(0, mymin(MAX_EVENT_BITS, log(delta) / log(2.0)));
+		n_bits_added = std::max(0, std::min(MAX_EVENT_BITS, int(log(delta) / log(2.0))));
 
 	bits_in_pool += n_bits_added;
 	if (bits_in_pool > (pool_size_bytes * 8))
@@ -355,7 +355,7 @@ int pool::add_event(double ts, unsigned char *event_data, int n_event_data, pool
 
 	while(n_event_data > 0)
 	{
-		int cur_n_event_data = mymin(n_event_data, pc -> get_stirrer() -> get_stir_size());
+		int cur_n_event_data = std::min(n_event_data, pc -> get_stirrer() -> get_stir_size());
 
 		pc -> get_stirrer() -> do_stir(ivec, entropy_pool, pool_size_bytes, event_data, cur_n_event_data, entropy_pool_temp, true);
 

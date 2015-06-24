@@ -41,5 +41,3 @@
 - clients/servers: logout (cleanly) when a signal has been received
 
 - move user-stats object from client_t to users-object
-
-SVN: $Revision$

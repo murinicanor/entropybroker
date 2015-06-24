@@ -1,5 +1,3 @@
-# SVN: $Revision$
-
 include version
 
 -include makefile.inc

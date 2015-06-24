@@ -8,7 +8,6 @@
 
 #include "error.h"
 
-
 bool log_console = true;
 char *log_file = NULL;
 bool log_syslog = false;

@@ -92,7 +92,7 @@ void calc_ivec(const char *password, long long unsigned int rnd, long long unsig
 	unsigned char *pcnt = reinterpret_cast<unsigned char *>(&counter);
 
 	memset(dest, 0x00, ivec_size);
-	memcpy(dest, password, mymin(strlen(password), ivec_size));
+	memcpy(dest, password, std::min(strlen(password), ivec_size));
 
 	unsigned int index_dest = 0, index_rnd = 0, rnd_len = sizeof rnd;
 	while(index_dest < ivec_size)
@@ -313,7 +313,7 @@ int protocol::message_transmit_entropy_data(unsigned char *bytes_in, unsigned in
 
 			dolog(LOG_DEBUG, "request to send %d bytes", n_bytes);
 
-			make_msg(header, 2, mymin(max_get_put_size, n_bytes * 8)); // 0002 xmit data request
+			make_msg(header, 2, std::min(max_get_put_size, n_bytes * 8)); // 0002 xmit data request
 
 			// header
 			if (WRITE_TO(socket_fd, header, 8, comm_time_out, do_exit) != 8)
@@ -470,7 +470,7 @@ int protocol::request_bytes(unsigned char *where_to, unsigned int n_bits, bool f
 			request_sent = false;
 
 		unsigned char request[8];
-		make_msg(request, 1, mymin(max_get_put_size, n_bits)); // 0001
+		make_msg(request, 1, std::min(max_get_put_size, n_bits)); // 0001
 
 		if (!request_sent || (sleep_trigger > 0.0 && get_ts() >= sleep_trigger))
 		{

@@ -11,12 +11,11 @@
 #include "utils.h"
 #include "math.h"
 
-bit_count_estimator::bit_count_estimator(bit_count_estimator_type_t type_in)
+bit_count_estimator::bit_count_estimator(const bit_count_estimator_type_t type_in) : type(type_in)
 {
-	type = type_in;
 }
 
-int bit_count_estimator::get_bit_count(unsigned char *data, unsigned int n_bytes)
+int bit_count_estimator::get_bit_count(const unsigned char *const data, const unsigned int n_bytes)
 {
 	if (n_bytes == 0)
 		return 0;
@@ -42,11 +41,11 @@ int bit_count_estimator::get_bit_count(unsigned char *data, unsigned int n_bytes
 	return -1;
 }
 
-int bit_count_estimator::determine_number_of_bits_of_data_shannon(unsigned char *data, unsigned int n_bytes)
+int bit_count_estimator::determine_number_of_bits_of_data_shannon(const unsigned char *const data, const unsigned int n_bytes)
 {
-	int cnts[256];
 	double ent = 0.0, nbytesd = double(n_bytes);
 
+	int cnts[256];
 	memset(cnts, 0x00, sizeof cnts);
 
 	for(unsigned int loop=0; loop<n_bytes; loop++)
@@ -67,21 +66,21 @@ int bit_count_estimator::determine_number_of_bits_of_data_shannon(unsigned char 
 	if (ent < 0.0)
 		ent=0.0;
 
-	ent = mymin(nbytesd * 8.0, ent);
+	ent = std::min(nbytesd * 8.0, ent);
 
 	return ent;
 }
 
-int bit_count_estimator::determine_number_of_bits_of_data_compression(unsigned char *data, unsigned int n_bytes)
+int bit_count_estimator::determine_number_of_bits_of_data_compression(const unsigned char *const data, const unsigned int n_bytes)
 {
 	uLongf destLen = n_bytes * 2 + 512;
-	unsigned char *dest = (unsigned char *)malloc(destLen);
+	unsigned char *dest = new unsigned char[destLen];
 
 	int rc = -1;
 	if ((rc = compress2(dest, &destLen, data, n_bytes, 9)) != Z_OK)
 		error_exit("Failed invoking zlib %d", rc);
 
-	free(dest);
+	delete [] dest;
 
 	// zlib adds a 6 byte header
 	double factor = double(destLen - 6) / double(n_bytes);

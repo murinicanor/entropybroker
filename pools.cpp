@@ -63,7 +63,7 @@ pools::~pools()
 
 double calc_time_left(double start_ts, double max_time)
 {
-	return mymax(MIN_SLEEP, max_time - (get_ts() - start_ts));
+	return std::max(MIN_SLEEP, max_time - (get_ts() - start_ts));
 }
 
 double calc_time_left(double start_ts, unsigned int cur, unsigned int n, double max_duration)
@@ -449,7 +449,7 @@ int pools::select_pool_to_add_to(bool timed, double max_time, pool_crypto *pc)
 		// wlock), there may already be a non-empty pool: that is not a problem
 
 		if (pool_vector.size() >= max_n_mem_pools)
-			store_caches(mymax(0, int(pool_vector.size()) - int(min_store_on_disk_n)));
+			store_caches(std::max(0, int(pool_vector.size()) - int(min_store_on_disk_n)));
 
 		// see if the number of in-memory pools is reduced after the call to store_caches
 		// it might have not stored any on disk if the limit on the number of files has been reached
@@ -569,14 +569,14 @@ int pools::get_bits_from_pools(int n_bits_requested, unsigned char **buffer, boo
 	if (n == 0)
 	{
 		pool_block_size = pc -> get_hasher() -> get_hash_size() / 2;
-		get_per_pool_n = mymax(pool_block_size, n_bits_requested);
+		get_per_pool_n = std::max(pool_block_size, n_bits_requested);
 	}
 	else
 	{
 		pool_block_size = pool_vector.at(0) -> get_get_size();
-		get_per_pool_n = mymax(pool_block_size, n_bits_requested / int(n));
+		get_per_pool_n = std::max(pool_block_size, n_bits_requested / int(n));
 	}
-	get_per_pool_n = mymin(get_per_pool_n, new_pool_size);
+	get_per_pool_n = std::min(get_per_pool_n, new_pool_size);
 
 	int index_offset = rand();
 	if (index_offset >= INT_MAX - int(n + 1))
@@ -680,7 +680,7 @@ int pools::add_bits_to_pools(unsigned char *data, int n_bytes, bool ignore_rngte
 			if (space_available <= pool_vector.at(index) -> get_get_size_in_bits())
 				space_available = pool_vector.at(index) -> get_pool_size();
 
-			unsigned int n_bytes_to_add = mymin(n_bytes, (space_available + 7) / 8);
+			unsigned int n_bytes_to_add = std::min(n_bytes, (space_available + 7) / 8);
 			dolog(LOG_DEBUG, "Adding %d bits to pool %d", n_bytes_to_add * 8, index);
 
 			if (verify_quality(data, n_bytes_to_add, ignore_rngtest_fips140, pfips, ignore_rngtest_scc, pscc))

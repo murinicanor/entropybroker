@@ -201,7 +201,7 @@ int main(int argc, char *argv[])
 
 	while((count > 0 || count == -1) && do_exit == false)
 	{
-		int n_bytes_to_get = mymin(block_size, mymin(count <= 0 ? 4096 : count, 4096));
+		int n_bytes_to_get = std::min(block_size, std::min(count <= 0 ? 4096 : count, 4096));
 		int n_bits_to_get = n_bytes_to_get * 8;
 
 		dolog(LOG_INFO, "will get %d bits", n_bits_to_get);

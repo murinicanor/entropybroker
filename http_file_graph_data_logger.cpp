@@ -64,11 +64,11 @@ http_bundle * http_file_graph_data_logger::do_request(http_request_t request_typ
 
 	it = request_parameters.find("width");
 	if (it != request_parameters.end())
-		width = mymax(240, atoi(it -> second.c_str()));
+		width = std::max(240, atoi(it -> second.c_str()));
 
 	it = request_parameters.find("height");
 	if (it != request_parameters.end())
-		height = mymax(200, atoi(it -> second.c_str()));
+		height = std::max(200, atoi(it -> second.c_str()));
 
 	std::string title = type;
 

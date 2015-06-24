@@ -251,7 +251,7 @@ int main(int argc, char *argv[])
 	for(;!do_exit;)
 	{
 		unsigned char request[2], reply[1];
-		int bytes_to_read = mymin(255, mymin(sizeof bytes - index, read_bytes_per_interval));
+		int bytes_to_read = std::min(255u, std::min((unsigned int)(sizeof bytes - index), read_bytes_per_interval));
 
 		// gather random data from EGD
 		request[0] = 1;

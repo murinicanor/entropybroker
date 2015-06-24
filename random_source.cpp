@@ -9,12 +9,12 @@
 #include "kernel_prng_rw.h"
 #include "random_source.h"
 
-random_source::random_source(random_source_t rs_in) : rs(rs_in), notified_errors(false)
+random_source::random_source(const random_source_t rs_in) : rs(rs_in), notified_errors(false)
 {
 	rng = new CryptoPP::AutoSeededRandomPool();
 }
 
-random_source::random_source(random_source_t rs_in, std::string state_file_in) : rs(rs_in), state_file(state_file_in), notified_errors(false)
+random_source::random_source(const random_source_t rs_in, const std::string & state_file_in) : rs(rs_in), state_file(state_file_in), notified_errors(false)
 {
 	retrieve_state(state_file_in);
 
@@ -29,7 +29,7 @@ random_source::~random_source()
 	delete rng;
 }
 
-void random_source::get(unsigned char *p, size_t n)
+void random_source::get(unsigned char *const p, const size_t n)
 {
 	if (rs == RS_CRYPTOPP)
 	{
@@ -78,21 +78,21 @@ void random_source::get(unsigned char *p, size_t n)
 	}
 }
 
-bool random_source::check_empty()
+bool random_source::check_empty() const
 {
 	// FIXME /dev/[u]random, check if kernel_rng_get_entropy_count() < write_threshold
 
 	return false;
 }
 
-void random_source::seed(unsigned char *in, size_t n, double byte_count)
+void random_source::seed(const unsigned char *const in, const size_t n, const double byte_count)
 {
 }
 
-void random_source::dump_state(std::string file)
+void random_source::dump_state(const std::string & file)
 {
 }
 
-void random_source::retrieve_state(std::string file)
+void random_source::retrieve_state(const std::string & file)
 {
 }

@@ -168,7 +168,7 @@ int users::calc_max_allowance(std::string username, double now, int n_requested)
 		if (allowance < 8.0) // 8 bits in a byte
 			n = 0;
 		else
-			n = mymin(n_requested, allowance);
+			n = std::min(n_requested, int(allowance));
 
 		u -> allowance = allowance;
 	}

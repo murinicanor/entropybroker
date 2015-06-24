@@ -232,7 +232,7 @@ int put_data(proxy_client_t *client, lookup_t *lt, bool is_A)
 		{
 			int n = lt -> t_size - lt -> t_offset;
 
-			int do_n_bytes = mymin(n * sizeof(unsigned short), cur_n_bytes);
+			int do_n_bytes = std::min((unsigned int)(n * sizeof(unsigned short)), cur_n_bytes);
 			memcpy(lt -> table, buffer_out, do_n_bytes);
 
 			lt -> t_offset += do_n_bytes / sizeof(unsigned short);
@@ -247,7 +247,7 @@ int put_data(proxy_client_t *client, lookup_t *lt, bool is_A)
 		{
 			int n = A_B_SIZE - lt -> n_A;
 
-			int do_n_bytes = mymin(n * sizeof(unsigned short), cur_n_bytes);
+			int do_n_bytes = std::min((unsigned int)(n * sizeof(unsigned short)), cur_n_bytes);
 			if (do_n_bytes > 0)
 			{
 				memcpy(&lt -> A[lt -> n_A], buffer_out, do_n_bytes);
@@ -261,7 +261,7 @@ int put_data(proxy_client_t *client, lookup_t *lt, bool is_A)
 	{
 		int n = A_B_SIZE - lt -> n_B;
 
-		int do_n_bytes = mymin(n * sizeof(unsigned short), cur_n_bytes);
+		int do_n_bytes = std::min((unsigned int)(n * sizeof(unsigned short)), cur_n_bytes);
 		if (do_n_bytes > 0)
 		{
 			memcpy(&lt -> B[lt -> n_B], buffer_out, do_n_bytes);
@@ -335,7 +335,7 @@ void * thread(void *pars)
 		{
 			int n_short = 4096 / sizeof(unsigned short);
 
-			int n = mymin(n_short, mymin(p -> lt -> n_A, p -> lt -> n_B));
+			int n = std::min(n_short, std::min(p -> lt -> n_A, p -> lt -> n_B));
 
 			int n_bytes = n * sizeof(unsigned short);
 			unsigned short *out = (unsigned short *)malloc(n_bytes);
@@ -543,14 +543,14 @@ int main(int argc, char *argv[])
 		int max_fd = -1;
 
 		FD_SET(listen_socket_fd, &rfds);
-		max_fd = mymax(max_fd, listen_socket_fd);
+		max_fd = std::max(max_fd, listen_socket_fd);
 
 		for(int client_index=0; client_index<2; client_index++)
 		{
 			if (clients[client_index] -> fd != -1)
 			{
 				FD_SET(clients[client_index] -> fd, &rfds);
-				max_fd = mymax(max_fd, clients[client_index] -> fd);
+				max_fd = std::max(max_fd, clients[client_index] -> fd);
 			}
 		}
 

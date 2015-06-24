@@ -567,14 +567,14 @@ void main_loop(std::vector<client_t *> *clients, pthread_mutex_t *clients_mutex,
 
 		if (config -> statistics_interval > 0)
 		{
-			dummy1_time = mymax(0, (last_statistics_emit + config -> statistics_interval) - now);
-			time_left = mymin(time_left, dummy1_time);
+			dummy1_time = std::max(0.0, (last_statistics_emit + config -> statistics_interval) - now);
+			time_left = std::min(time_left, dummy1_time);
 		}
 
 		if (config -> reset_counters_interval > 0)
 		{
-			dummy1_time = mymax(0, (last_counters_reset + config -> reset_counters_interval) - now);
-			time_left = mymin(time_left, dummy1_time);
+			dummy1_time = std::max(0.0, (last_counters_reset + config -> reset_counters_interval) - now);
+			time_left = std::min(time_left, dummy1_time);
 		}
 
 		fds.clear();

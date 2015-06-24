@@ -171,7 +171,7 @@ void graph::do_draw(int width, int height, std::string title, long int *ts, doub
 		bool date = true;
 		int xPosDate = -1, xPosTime = -1;
 		if (xti == 0)
-			xPosTime = xPosDate = mymax(0, x - dateWidth / 2);
+			xPosTime = xPosDate = std::max(0, x - dateWidth / 2);
 		else if (xti == xTicks)
 		{
 			xPosDate = width - dateWidth;

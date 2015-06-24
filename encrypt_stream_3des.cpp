@@ -42,7 +42,7 @@ bool encrypt_stream_3des::init(unsigned char *key_in, int key_len, unsigned char
 		delete dec;
 
 	unsigned char dummy[24] = { 0 };
-	memcpy(dummy, key_in, mymin(sizeof dummy, key_len));
+	memcpy(dummy, key_in, std::min(int(sizeof dummy), key_len));
 
 	enc = new CryptoPP::CFB_Mode<CryptoPP::DES_EDE3>::Encryption(dummy, sizeof dummy, ivec_in);
 	dec = new CryptoPP::CFB_Mode<CryptoPP::DES_EDE3>::Decryption(dummy, sizeof dummy, ivec_in);

@@ -228,7 +228,7 @@ int main(int argc, char *argv[])
 				unsigned char *pnt = reinterpret_cast<unsigned char *>(buffer);
 				while(got_bytes > 0)
 				{
-					int cur_count = mymin(got_bytes, 4096);
+					int cur_count = std::min(got_bytes, 4096);
 
 					if (p -> message_transmit_entropy_data(pnt, cur_count, &do_exit) == -1)
 					{
