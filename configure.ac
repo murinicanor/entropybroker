@@ -1,0 +1,13 @@
+AC_INIT([entropy_broker], [2.8])
+AC_CONFIG_SRCDIR=([src/main.cpp])
+
+AM_INIT_AUTOMAKE([foreign])
+
+#INTI_REQUIRED_VERSION=1.0.7
+#PKG_CHECK_MODULES(INTI, inti-1.0 >= $INTI_REQUIRED_VERSION)
+#AC_SUBST(INTI_CFLAGS)
+#AC_SUBST(INTI_LIBS)
+
+AC_PROG_CXX
+
+AC_OUTPUT(Makefile src/Makefile)

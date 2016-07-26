@@ -2,4 +2,5 @@ bin_PROGRAMS = entropy_broker eb_server_timers eb_server_v4l eb_server_stream eb
 
 AM_CXXFLAGS = $(INTI_CFLAGS)
 
-entropy_broker_SOURCES = 
+entropy_broker_SOURCES = auth.cpp pools.cpp statistics_user.cpp statistics_global.cpp statistics.cpp config.cpp error.cpp fips140.cpp kernel_prng_rw.cpp log.cpp protocol.cpp main.cpp math.cpp pool.cpp scc.cpp signals.cpp utils.cpp my_pty.cpp kernel_prng_io.cpp hasher.cpp stirrer.cpp hasher_sha512.cpp stirrer_blowfish.cpp stirrer_aes.cpp hasher_md5.cpp hasher_ripemd160.cpp stirrer_3des.cpp stirrer_camellia.cpp hasher_whirlpool.cpp users.cpp random_source.cpp encrypt_stream.cpp encrypt_stream_blowfish.cpp encrypt_stream_aes.cpp encrypt_stream_3des.cpp encrypt_stream_camellia.cpp pool_crypto.cpp http_bundle.cpp http_server.cpp http_file_root.cpp http_file_404.cpp http_file_version.cpp http_file.cpp http_file_file.cpp http_file_stats.cpp http_file_logfile.cpp web_server.cpp data_store_int.cpp data_logger.cpp graph.cpp http_file_graph_data_logger.cpp statistics_log.cpp http_file_users.cpp hc_protocol.cpp handle_client.cpp
+entropy_broker_LDADD = $(INTI_LIBS)
