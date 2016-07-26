@@ -1,0 +1,5 @@
+bin_PROGRAMS = entropy_broker eb_server_timers eb_server_v4l eb_server_stream eb_client_linux_kernel eb_server_egd eb_client_egd eb_server_linux_kernel eb_client_file eb_server_push_file eb_server_ext_proc eb_proxy_knuth_m eb_proxy_knuth_b eb_server_cycle_count eb_server_Araneus_Alea eb_server_audio eb_server_usb eb_server_smartcard eb_server_qwqng eb_server_ComScire_R2000KU
+
+AM_CXXFLAGS = $(INTI_CFLAGS)
+
+entropy_broker_SOURCES = 
