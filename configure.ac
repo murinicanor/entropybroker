@@ -15,3 +15,4 @@ AC_CONFIG_FILES(Makefile src/Makefile)
 AC_OUTPUT
 
 PKG_CHECK_MODULES([cryptopp], [libcrypto++], [AC_MSG_FAILURE([cryptopp development files not found!])])
+PKG_CHECK_MODULES([zlib], [zlib], [AC_MSG_FAILURE([zlib development files not found!])])
