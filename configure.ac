@@ -1,5 +1,6 @@
 AC_INIT([entropy_broker], [2.8])
-AC_CONFIG_SRCDIR=([src/main.cpp])
+AC_CONFIG_SRCDIR([src/])
+AC_CONFIG_HEADERS([config.h])
 
 AM_INIT_AUTOMAKE([foreign])
 
@@ -8,6 +9,7 @@ AM_INIT_AUTOMAKE([foreign])
 #AC_SUBST(INTI_CFLAGS)
 #AC_SUBST(INTI_LIBS)
 
+AC_PROG_CC
 AC_PROG_CXX
-
-AC_OUTPUT(Makefile src/Makefile)
+AC_CONFIG_FILES(Makefile src/Makefile)
+AC_OUTPUT

@@ -1,6 +1,3 @@
 bin_PROGRAMS = entropy_broker eb_server_timers eb_server_v4l eb_server_stream eb_client_linux_kernel eb_server_egd eb_client_egd eb_server_linux_kernel eb_client_file eb_server_push_file eb_server_ext_proc eb_proxy_knuth_m eb_proxy_knuth_b eb_server_cycle_count eb_server_Araneus_Alea eb_server_audio eb_server_usb eb_server_smartcard eb_server_qwqng eb_server_ComScire_R2000KU
 
-AM_CXXFLAGS = $(INTI_CFLAGS)
-
 entropy_broker_SOURCES = auth.cpp pools.cpp statistics_user.cpp statistics_global.cpp statistics.cpp config.cpp error.cpp fips140.cpp kernel_prng_rw.cpp log.cpp protocol.cpp main.cpp math.cpp pool.cpp scc.cpp signals.cpp utils.cpp my_pty.cpp kernel_prng_io.cpp hasher.cpp stirrer.cpp hasher_sha512.cpp stirrer_blowfish.cpp stirrer_aes.cpp hasher_md5.cpp hasher_ripemd160.cpp stirrer_3des.cpp stirrer_camellia.cpp hasher_whirlpool.cpp users.cpp random_source.cpp encrypt_stream.cpp encrypt_stream_blowfish.cpp encrypt_stream_aes.cpp encrypt_stream_3des.cpp encrypt_stream_camellia.cpp pool_crypto.cpp http_bundle.cpp http_server.cpp http_file_root.cpp http_file_404.cpp http_file_version.cpp http_file.cpp http_file_file.cpp http_file_stats.cpp http_file_logfile.cpp web_server.cpp data_store_int.cpp data_logger.cpp graph.cpp http_file_graph_data_logger.cpp statistics_log.cpp http_file_users.cpp hc_protocol.cpp handle_client.cpp
-entropy_broker_LDADD = $(INTI_LIBS)
